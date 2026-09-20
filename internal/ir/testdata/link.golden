@@ -1,0 +1,17 @@
+document "link" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/link.html focusable #1
+  paragraph #7
+    link "Absolute link" url=https://example.com/page?x=1#f focusable #8
+  paragraph #9
+    link "Relative link" url=file:///relative/path focusable #10
+  paragraph #11
+    link "Mail link" url=mailto:a@b.c focusable #12
+  paragraph #13
+    link "Picture link" url=file:///img focusable #14
+  paragraph #19
+    link url=file:///noalt focusable #20
+  paragraph #25
+    text "Anchor without href" #36
+  paragraph #27
+    link "Rich content link" url=file:///rich focusable #28
+  paragraph #31
+    link "Opens new tab" url=file:///new focusable #32

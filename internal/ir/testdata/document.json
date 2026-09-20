@@ -1,0 +1,213 @@
+{
+ "nodes": [
+  {
+   "nodeId": "1",
+   "ignored": false,
+   "role": {
+    "type": "internalRole",
+    "value": "RootWebArea"
+   },
+   "chromeRole": {
+    "type": "internalRole",
+    "value": 144
+   },
+   "name": {
+    "type": "computedString",
+    "value": "A titled page",
+    "sources": [
+     {
+      "type": "relatedElement",
+      "attribute": "aria-labelledby",
+      "superseded": false,
+      "invalid": false
+     },
+     {
+      "type": "attribute",
+      "attribute": "aria-label",
+      "superseded": false,
+      "invalid": false
+     },
+     {
+      "type": "attribute",
+      "attribute": "aria-label",
+      "superseded": true,
+      "invalid": false
+     },
+     {
+      "type": "relatedElement",
+      "value": {
+       "type": "computedString",
+       "value": "A titled page"
+      },
+      "superseded": false,
+      "nativeSource": "title",
+      "invalid": false
+     }
+    ]
+   },
+   "properties": [
+    {
+     "name": "focusable",
+     "value": {
+      "type": "booleanOrUndefined",
+      "value": true
+     }
+    },
+    {
+     "name": "url",
+     "value": {
+      "type": "string",
+      "value": "file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/document.html"
+     }
+    }
+   ],
+   "childIds": [
+    "3"
+   ],
+   "backendDOMNodeId": 1,
+   "frameId": "17A9D871C8CA23D0F7B57C41A77602E9"
+  },
+  {
+   "nodeId": "3",
+   "ignored": true,
+   "ignoredReasons": [
+    {
+     "name": "uninteresting",
+     "value": {
+      "type": "boolean",
+      "value": true
+     }
+    }
+   ],
+   "role": {
+    "type": "role",
+    "value": "none"
+   },
+   "chromeRole": {
+    "type": "internalRole",
+    "value": 0
+   },
+   "parentId": "1",
+   "childIds": [
+    "5"
+   ],
+   "backendDOMNodeId": 3
+  },
+  {
+   "nodeId": "5",
+   "ignored": true,
+   "ignoredReasons": [
+    {
+     "name": "uninteresting",
+     "value": {
+      "type": "boolean",
+      "value": true
+     }
+    }
+   ],
+   "role": {
+    "type": "role",
+    "value": "none"
+   },
+   "chromeRole": {
+    "type": "internalRole",
+    "value": 0
+   },
+   "parentId": "3",
+   "childIds": [
+    "7"
+   ],
+   "backendDOMNodeId": 5
+  },
+  {
+   "nodeId": "7",
+   "ignored": false,
+   "role": {
+    "type": "role",
+    "value": "paragraph"
+   },
+   "chromeRole": {
+    "type": "internalRole",
+    "value": 133
+   },
+   "name": {
+    "type": "computedString",
+    "value": "",
+    "sources": [
+     {
+      "type": "relatedElement",
+      "attribute": "aria-labelledby",
+      "superseded": false,
+      "invalid": false
+     },
+     {
+      "type": "attribute",
+      "attribute": "aria-label",
+      "superseded": false,
+      "invalid": false
+     }
+    ]
+   },
+   "parentId": "5",
+   "childIds": [
+    "8"
+   ],
+   "backendDOMNodeId": 7
+  },
+  {
+   "nodeId": "8",
+   "ignored": false,
+   "role": {
+    "type": "internalRole",
+    "value": "StaticText"
+   },
+   "chromeRole": {
+    "type": "internalRole",
+    "value": 158
+   },
+   "name": {
+    "type": "computedString",
+    "value": "Just a page.",
+    "sources": [
+     {
+      "type": "contents",
+      "value": {
+       "type": "computedString",
+       "value": "Just a page."
+      },
+      "superseded": false,
+      "invalid": false
+     }
+    ]
+   },
+   "parentId": "7",
+   "childIds": [
+    "-1000000002"
+   ],
+   "backendDOMNodeId": 8
+  },
+  {
+   "nodeId": "-1000000002",
+   "ignored": false,
+   "role": {
+    "type": "internalRole",
+    "value": "InlineTextBox"
+   },
+   "chromeRole": {
+    "type": "internalRole",
+    "value": 101
+   },
+   "name": {
+    "type": "computedString",
+    "value": "Just a page."
+   },
+   "parentId": "8"
+  }
+ ],
+ "display": {
+  "3": "block",
+  "5": "block",
+  "7": "block",
+  "8": "block"
+ }
+}

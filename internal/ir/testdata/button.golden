@@ -1,0 +1,11 @@
+document "button" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/button.html focusable #1
+  button "Plain" focusable #7
+  button "Disabled" disabled #8
+  button "Input button" focusable #9
+  button "Submit" focusable #10
+  button "Reset" focusable #11
+  button "Menu open" focusable expanded #12
+  button "Pressed" focusable #13
+  button "ARIA button" focusable block #14
+  button "Icon" focusable #15
+  button "Close" focusable #20

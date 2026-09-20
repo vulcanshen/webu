@@ -1,0 +1,28 @@
+document "table" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/table.html focusable #1
+  table "People" #6
+    row #14
+      cell:columnheader "Name" header #15
+        text "Name" #30
+      cell:columnheader "Age" header #16
+        text "Age" #31
+      cell:columnheader "Link" header #17
+        text "Link" #32
+    row #18
+      cell "Ann" #19
+        text "Ann" #33
+      cell "30" #20
+        text "30" #34
+      cell "profile" #21
+        link "profile" url=file:///ann focusable #22
+    row #23
+      cell:rowheader "Bob" header #24
+        text "Bob" #36
+      cell "25" #25
+        text "25" #37
+      cell #26
+  table #7
+    row "g1 g2" #27
+      cell:gridcell "g1" #28
+        text "g1" #38
+      cell:gridcell "g2" #29
+        text "g2" #39

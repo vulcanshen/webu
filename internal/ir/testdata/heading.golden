@@ -1,0 +1,17 @@
+document "heading" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/heading.html focusable #1
+  heading "Level one" level=1 #7
+    text "Level one" #16
+  heading "Level two" level=2 #8
+    text "Level two" #17
+  heading "Level three" level=3 #9
+    text "Level three" #18
+  heading "Level four" level=4 #10
+    text "Level four" #19
+  heading "Level five" level=5 #11
+    text "Level five" #20
+  heading "Level six" level=6 #12
+    text "Level six" #21
+  heading "A heading that is a link" level=2 #13
+    link "A heading that is a link" url=file:///story focusable #14
+  heading "ARIA heading" level=2 #15
+    text "ARIA heading" #23

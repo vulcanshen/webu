@@ -1,0 +1,49 @@
+document "unsupported" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/unsupported.html focusable #4
+  unsupported:slider "Volume" focusable block #10
+  unsupported:slider "Range" focusable #11
+  group #15
+    unsupported:DisclosureTriangle "Show more" focusable block #19
+      text "Show more" #72
+  group #21
+    unsupported:DisclosureTriangle "Already open" focusable expanded block #25
+      text "Already open" #74
+    paragraph #26
+      text "Visible text." #75
+  unsupported:progressbar "Loading" #27
+  unsupported:tablist block #31
+    unsupported:tab "Tab A" focusable selected #32
+      text "Tab A" #76
+    unsupported:tab "Tab B" focusable #33
+      text "Tab B" #77
+  unsupported:tabpanel block #34
+    text "Panel A content" #78
+  unsupported:status block #35
+    text "Saved." #79
+  unsupported:alert block #36
+    text "Something happened." #80
+  unsupported:dialog focusable block #37
+    paragraph #38
+      text "Dialog text" #81
+    button "OK" focusable #39
+  unsupported:tree block #40
+    unsupported:treeitem "Leaf" level=1 focusable block #41
+      text "Leaf" #83
+  group:generic #42
+    text "Clickable div without a role" #84
+  group:figure #43
+    media:image "Fig" url=file:///f.png #44
+    group:Figcaption #48
+      text "Caption" #85
+  list #49
+    listitem marker="• " #50
+      button "Menu button" focusable #51
+  unsupported:meter "Meter" #52
+  unsupported:ColorWell "Colour" focusable #56
+  unsupported:Date "Date" focusable #3
+    textbox:spinbutton "Year Year" value="0" focusable #62
+    text "/" #89
+    textbox:spinbutton "Month Month" value="0" focusable #64
+    text "/" #91
+    textbox:spinbutton "Day Day" value="0" focusable #66
+    button "Show date picker Show date picker" focusable #67
+  button "File" value="No file chosen" focusable #68

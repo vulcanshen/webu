@@ -1,0 +1,12 @@
+document "quote" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/quote.html focusable #1
+  quote #7
+    paragraph #8
+      text "Quoted paragraph." #12
+    paragraph #9
+      text "Second one." #13
+  paragraph #10
+    text "Inline " #14
+    text "“"
+    text "short quote" #16
+    text "”"
+    text " here." #18

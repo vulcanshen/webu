@@ -1,0 +1,27 @@
+document "text" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/text.html focusable #1
+  paragraph #7
+    text "Plain paragraph with " #25
+    text "bold" #26
+    text ", " #27
+    text "italic" #28
+    text " and " #29
+    text "marked" #30
+    text " words." #31
+  paragraph #11
+    text "First line" #32
+    text "\n" #12
+    text "second line after a break." #33
+  group:generic #13
+    text "A div " #34
+    text "with a span" #35
+    text " inside." #36
+  group:generic #17
+    text "Deeply nested text." #37
+  paragraph #21
+    text "Time " #41
+    text "today" #42
+    text " and " #43
+    text "sup" #44
+    text " " #45
+    text "sub" #46
+    text "." #47

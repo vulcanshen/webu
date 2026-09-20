@@ -1,0 +1,14 @@
+<!doctype html><html><head><title>check</title></head><body>
+<label><input type="checkbox" checked> Checked</label>
+<label><input type="checkbox"> Unchecked</label>
+<label><input type="checkbox" id="mixed"> Mixed</label>
+<label><input type="checkbox" disabled> Disabled</label>
+<fieldset><legend>Radios</legend>
+<label><input type="radio" name="r" checked> One</label>
+<label><input type="radio" name="r"> Two</label>
+</fieldset>
+<button role="switch" aria-checked="true">Switch on</button>
+<button role="switch" aria-checked="false">Switch off</button>
+<div role="checkbox" aria-checked="true" tabindex="0">ARIA checkbox</div>
+<script>document.getElementById("mixed").indeterminate = true;</script>
+</body></html>

@@ -1,0 +1,13 @@
+document "check" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/check.html focusable #1
+  check "Checked" on focusable #8
+  check "Unchecked" off focusable #10
+  check "Mixed" mixed focusable #12
+  check "Disabled" off disabled #14
+  group "Radios" #15
+    group:Legend #16
+      text "Radios" #29
+    check:radio "One" on focusable #18
+    check:radio "Two" off focusable #20
+  check:switch "Switch on" on focusable #21
+  check:switch "Switch off" off focusable #22
+  check "ARIA checkbox" on focusable block #23

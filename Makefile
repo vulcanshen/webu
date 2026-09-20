@@ -52,7 +52,7 @@ test: ## 跑所有測試
 
 .PHONY: fixtures
 fixtures: ## 用釘死版本的 Chromium 重新產生 internal/ir 的 role fixture
-	go test ./internal/ir -run TestUpdateFixtures -update
+	go test ./internal/ir -run "TestFixtures|TestSupportDoc" -capture -update
 
 .PHONY: vet
 vet: ## go vet ./...

@@ -1,0 +1,15 @@
+document "media" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/media.html focusable #2
+  paragraph #8
+    media:image "Has alt text" url=file:///with-alt.png #23
+  paragraph #9
+    media:image url=file:///no-alt.png #27
+  paragraph #10
+  paragraph #11
+    media:image "Aria labelled" url=file:///aria.png #35
+  media:Video "A video" #1
+  text " " #190
+  media:Audio focusable #7
+  media:Canvas "A chart" #14
+  media:Iframe "Embedded frame" #15
+  media:image "An svg" #17
+  media:image "ARIA image" block #18
