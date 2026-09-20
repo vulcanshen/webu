@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	cdppage "github.com/chromedp/cdproto/page"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
@@ -49,9 +52,13 @@ type AppModel struct {
 	shown     int // index into tabs panel [3] displays; -1 for none
 	nextTabID int
 	browser   *browser.Browser
-	events    chan pageEventMsg
+	events    chan tea.Msg // page and browser events, read by waitEvent
 	startURL  string
 	session   store.Session // what to restore on the first frame
+	// zoom: panel [3] alone fills the screen (ux.md §A.1 [Z]).
+	zoom bool
+	// sel is selection mode on the shown tab (ux.md §1).
+	sel selectMode
 
 	// webu's own files, loaded by main and written back as they change.
 	bookmarks []store.Bookmark
@@ -62,7 +69,10 @@ type AppModel struct {
 	// above (§6.4). The toast rides on top of everything.
 	spaceMenu spaceMenu
 	options   spaceMenu // a textbox's Submit/Edit/Clear/Yank, or a select's options
+	outline   spaceMenu // the page's landmarks and headings
 	lists     listPopup // Bookmarks / Shortcuts / History
+	viewer    viewerPopup
+	message   messagePopup
 	help      helpPopup
 	confirm   confirmPopup
 	input     inputPopup
@@ -70,6 +80,11 @@ type AppModel struct {
 
 	// optionsFor is the node the options menu is about.
 	optionsFor *ir.Node
+	// outlineFor is what the outline's rows stand for.
+	outlineFor []outlineEntry
+	// dialog is the page's question being asked (function.md §5); the page
+	// is stalled until it is answered, and settle captures wait too.
+	dialog *dialogMsg
 	// pendingG holds the first half of the gg chord.
 	pendingG bool
 }
@@ -77,20 +92,25 @@ type AppModel struct {
 // New builds the app over a running browser. startURL, when given, opens as
 // a tab in front of whatever the session restores (function.md §12).
 func New(b *browser.Browser, startURL string) AppModel {
-	return AppModel{
+	m := AppModel{
 		focus:     panel3,
 		shown:     -1,
 		browser:   b,
-		events:    make(chan pageEventMsg, 8),
+		events:    make(chan tea.Msg, 16),
 		startURL:  startURL,
 		spaceMenu: newSpaceMenu(),
 		options:   spaceMenu{anim: newPopupAnimator("options")},
+		outline:   newOutlineMenu(),
 		lists:     newListPopup(),
+		viewer:    newViewerPopup(),
+		message:   newMessagePopup(),
 		help:      newHelpPopup(),
 		confirm:   newConfirmPopup(),
 		input:     newInputPopup(),
 		toast:     newToast(),
 	}
+	m.listenBrowser()
+	return m
 }
 
 // WithStore hands the app its files. The UI never reads them itself.
@@ -136,7 +156,7 @@ func (m AppModel) Close() {
 func (m AppModel) narrow() bool { return m.w < narrowW }
 func (m AppModel) panelH() int  { return m.h - 1 } // one footer row
 func (m AppModel) layer() int {
-	if m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() {
+	if m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() || m.outline.isActive() {
 		return 2
 	}
 	return 1
@@ -166,15 +186,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		first := m.w == 0
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
-			&m.spaceMenu, &m.options, &m.lists, &m.help, &m.confirm, &m.input, &m.toast} {
+			&m.spaceMenu, &m.options, &m.outline, &m.lists, &m.viewer, &m.message,
+			&m.help, &m.confirm, &m.input, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
-		for _, t := range m.tabs {
-			if t.layW != m.pageW() {
-				t.relayout(m.pageW())
-				t.scrollToCursor(m.pageVisible())
-			}
-		}
+		m.relayoutTabs()
 		if first {
 			return m, m.firstFrame()
 		}
@@ -182,8 +198,33 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AnimTickMsg:
 		return m, tea.Batch(
-			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.lists.anim.tick(msg),
+			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.outline.anim.tick(msg),
+			m.lists.anim.tick(msg), m.viewer.anim.tick(msg), m.message.anim.tick(msg),
 			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.toast.anim.tick(msg))
+
+	case dialogMsg:
+		return m.askDialog(msg)
+
+	case newTargetMsg:
+		// A window the page opened becomes a tab at the end of the list, and
+		// panel [3] switches to it, the way Chrome does (ux.md §6).
+		t := m.newTabFor(msg.id)
+		t.url = msg.url
+		m.tabs = append(m.tabs, t)
+		m.leaveSelect()
+		m.shown = len(m.tabs) - 1
+		m.cur2 = m.shown
+		m.focus = panel3
+		return m, tea.Batch(waitEvent(m.events), t.adopt())
+
+	case downloadMsg:
+		switch {
+		case msg.failed:
+			return m, tea.Batch(waitEvent(m.events), m.toast.show("download cancelled", toastError))
+		case msg.done:
+			return m, tea.Batch(waitEvent(m.events), m.toast.show("saved "+msg.path, toastInfo))
+		}
+		return m, tea.Batch(waitEvent(m.events), m.toast.show("downloading "+msg.name, toastInfo))
 
 	case toastExpireMsg:
 		return m, m.toast.expire(msg)
@@ -196,6 +237,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case actionErrMsg:
 		return m, m.toast.show(msg.err.Error(), toastError)
+
+	case sourceMsg:
+		return m, m.viewer.show(glyphInfo, "Source · "+oneLine(nameOr(msg.title, "page")), msg.html, msg.layer)
 
 	case pageEventMsg:
 		// Chromium says the tab moved or changed; look again shortly. Always
@@ -211,6 +255,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t == nil || msg.gen != t.gen {
 			return m, nil
 		}
+		// A page with a dialog up answers no CDP call that touches it; the
+		// capture would only time out. It is re-asked once the dialog is.
+		if m.dialog != nil && m.dialog.tabID == t.id {
+			return m, nil
+		}
 		return m, t.refresh()
 
 	case pageMsg:
@@ -218,9 +267,22 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t == nil || msg.gen != t.gen {
 			return m, nil
 		}
+		// Selection mode holds the page still (ux.md §1): the capture is
+		// kept and applied when the mode ends.
+		if m.sel.on && i == m.shown {
+			t.frozen = &msg
+			return m, nil
+		}
 		t.apply(msg, m.pageW())
 		t.scrollToCursor(m.pageVisible())
 		m.recordVisit(t)
+		if i == m.shown && t.certErr && !t.certAsked {
+			t.certAsked = true
+			return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Certificate error",
+				lines: []string{"Chromium does not trust this site's certificate.", fitURL(t.url, 60),
+					"Continue anyway, for this tab, for as long as it is open?"},
+				accept: "continue", warn: true, action: confirmCert, tabID: t.id}, m.layer())
+		}
 		if i == m.shown && msg.err == nil && t.cursor >= 0 {
 			id := t.current().ID
 			return m, t.act(func(ctx context.Context) error { return page.Reveal(ctx, id) })
@@ -252,7 +314,171 @@ func (m *AppModel) firstFrame() tea.Cmd {
 	} else if t := m.shownTab(); t != nil && t.pending {
 		cmds = append(cmds, t.load(t.url))
 	}
+	if m.browser != nil {
+		ctx, dir := m.browser.Ctx, m.downloadDir()
+		cmds = append(cmds, func() tea.Msg {
+			if err := page.SetDownloads(ctx, dir); err != nil {
+				return actionErrMsg{err: fmt.Errorf("downloads: %w", err)}
+			}
+			return nil
+		})
+	}
 	return tea.Batch(cmds...)
+}
+
+// downloadDir is config.yaml's download_dir, or ~/Downloads (ui.md §6).
+func (m AppModel) downloadDir() string {
+	dir := m.cfg.DownloadDir
+	if dir == "" {
+		dir = "~/Downloads"
+	}
+	if strings.HasPrefix(dir, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			dir = filepath.Join(home, dir[2:])
+		}
+	}
+	return dir
+}
+
+// relayoutTabs re-lays every tab whose layout is for another width.
+func (m *AppModel) relayoutTabs() {
+	for i, t := range m.tabs {
+		if t.layW != m.pageW() {
+			t.relayout(m.pageW())
+			t.scrollToCursor(m.pageVisible())
+			if m.sel.on && i == m.shown {
+				m.sel.resize(t)
+			}
+		}
+	}
+}
+
+// ---------------------------------------------------------------- dialogs
+
+// askDialog puts a page's question on screen (function.md §5): alert,
+// confirm and beforeunload are a confirm popup, prompt is the input popup.
+// The dialog is remembered so that Esc, too, sends an answer — a page left
+// waiting on a dialog nobody answers is a page that has stopped.
+func (m AppModel) askDialog(msg dialogMsg) (tea.Model, tea.Cmd) {
+	_, t := m.tabByID(msg.tabID)
+	if t == nil {
+		return m, tea.Batch(waitEvent(m.events), m.answerDialogOn(msg.tabID, false, ""))
+	}
+	m.dialog = &msg
+	title := "The page says"
+	lines := []string{msg.message}
+	accept := "ok"
+	switch msg.kind {
+	case cdppage.DialogTypeConfirm:
+		title = "The page asks"
+		accept = "yes"
+	case cdppage.DialogTypeBeforeunload:
+		title = "Leave this page?"
+		lines = []string{"The page says it has unsaved changes."}
+		accept = "leave"
+	case cdppage.DialogTypePrompt:
+		return m, tea.Batch(waitEvent(m.events), m.input.ask(inputPopup{
+			title: "The page asks", glyph: glyphPencil, prompt: msg.message,
+			value: msg.defaultPrompt, accept: "answer", action: inputPrompt}, m.layer()))
+	}
+	if strings.TrimSpace(msg.message) == "" {
+		lines = []string{"(no message)"}
+	}
+	return m, tea.Batch(waitEvent(m.events), m.confirm.ask(confirmPopup{glyph: glyphInfo, title: title,
+		lines: lines, accept: accept, action: confirmDialog, tabID: msg.tabID}, m.layer()))
+}
+
+// answerDialog sends the pending dialog its answer and forgets it. An
+// alert has only one answer, so a cancel on it still accepts.
+func (m *AppModel) answerDialog(accept bool, text string) tea.Cmd {
+	d := m.dialog
+	if d == nil {
+		return nil
+	}
+	m.dialog = nil
+	if d.kind == cdppage.DialogTypeAlert {
+		accept = true
+	}
+	return m.answerDialogOn(d.tabID, accept, text)
+}
+
+func (m AppModel) answerDialogOn(tabID int, accept bool, text string) tea.Cmd {
+	_, t := m.tabByID(tabID)
+	if t == nil {
+		return nil
+	}
+	return t.act(func(ctx context.Context) error { return page.HandleDialog(ctx, accept, text) })
+}
+
+// ---------------------------------------------------------- selection
+
+// enterSelect starts selection mode on the shown tab, typing a search at
+// once when asked (ux.md §1: `/` enters the mode and opens the search).
+func (m *AppModel) enterSelect(typing bool) tea.Cmd {
+	t := m.shownTab()
+	if t == nil || t.root == nil {
+		return m.toast.show("no page to select from", toastInfo)
+	}
+	m.focus = panel3
+	m.sel.enter(t, typing)
+	return nil
+}
+
+// leaveSelect ends the mode: the item cursor lands nearest the character
+// cursor, and a capture held back while it was on is applied now.
+func (m *AppModel) leaveSelect() {
+	if !m.sel.on {
+		return
+	}
+	m.sel.on = false
+	t := m.shownTab()
+	if t == nil {
+		return
+	}
+	if i := t.lay.nearestItem(m.sel.row); i >= 0 {
+		t.cursor = i
+	}
+	if t.frozen != nil {
+		msg := *t.frozen
+		t.frozen = nil
+		t.apply(msg, m.pageW())
+		m.recordVisit(t)
+	}
+	t.scrollToCursor(m.pageVisible())
+}
+
+func (m AppModel) selectKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	t := m.shownTab()
+	if t == nil {
+		m.sel.on = false
+		return m, nil
+	}
+	res, text := m.sel.key(msg, m.pageVisible())
+	// Keep the character cursor on screen.
+	if m.sel.row < t.top {
+		t.top = m.sel.row
+	}
+	if m.sel.row >= t.top+m.pageVisible() {
+		t.top = m.sel.row - m.pageVisible() + 1
+	}
+	switch res {
+	case selLeave:
+		m.leaveSelect()
+	case selYank:
+		if text == "" {
+			return m, m.toast.show("nothing to copy", toastInfo)
+		}
+		return m, copyToClipboard(text)
+	case selClick:
+		i := t.lay.itemAtCol(m.sel.row, m.sel.col)
+		if i < 0 {
+			return m, m.toast.show("nothing to click here", toastInfo)
+		}
+		t.cursor = i
+		m.leaveSelect()
+		return m.enterItem()
+	}
+	return m, nil
 }
 
 // recordVisit appends a loaded page to the history log (ux.md §6): the
@@ -272,20 +498,26 @@ func (m *AppModel) recordVisit(t *tab) {
 // ------------------------------------------------------------------- keys
 
 func (m AppModel) popupOpen() bool {
-	return m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() ||
+	return m.spaceMenu.isActive() || m.options.isActive() || m.outline.isActive() ||
+		m.lists.isActive() || m.viewer.isActive() || m.message.isActive() ||
 		m.help.isActive() || m.confirm.isActive() || m.input.isActive()
 }
 
 // typing reports whether a float is taking text: every printable key is a
-// character then (§4.5).
+// character then (§4.5). A search being typed in selection mode counts.
 func (m AppModel) typing() bool {
-	return m.input.anim.owns() || (m.lists.anim.owns() && m.lists.typing)
+	return m.input.anim.owns() || (m.lists.anim.owns() && m.lists.typing) ||
+		(m.sel.on && m.sel.typing && !m.popupOpen())
 }
 
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Esc is one role, resolved in one place: close the topmost float (§4.3).
-	// With nothing up it does nothing — the previous page is P (ux.md §A.0.K).
+	// With nothing up it belongs to selection mode when that is on, and
+	// otherwise does nothing — the previous page is P (ux.md §A.0.K).
 	if msg.Type == tea.KeyEscape {
+		if m.sel.on && !m.popupOpen() {
+			return m.selectKey(msg)
+		}
 		return m.closeTop()
 	}
 	if msg.Type == tea.KeyCtrlC {
@@ -310,13 +542,35 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.confirmKey(msg)
 	case m.options.anim.owns():
 		return m.optionsKey(msg)
+	case m.outline.anim.owns():
+		return m.outlineKey(msg)
 	case m.lists.anim.owns():
 		return m.listKey(msg)
+	case m.viewer.anim.owns():
+		m.viewer.update(msg)
+		return m, nil
+	case m.message.anim.owns():
+		// The cheatsheet passes its keys through (messagePopup.passKeys):
+		// the sheet closes and the key runs, one step.
+		if m.message.passKeys && m.sel.on {
+			closeCmd := m.message.close()
+			mm, cmd := m.selectKey(msg)
+			return mm, tea.Batch(closeCmd, cmd)
+		}
+		return m, nil
 	case m.help.anim.owns():
 		m.help.update(msg)
 		return m, nil
 	case m.spaceMenu.anim.owns():
 		return m.menuKey(msg)
+	}
+	if m.sel.on {
+		// The mode holds the keyboard (ux.md §1): Space is its cheatsheet,
+		// everything else is its own.
+		if msg.Type == tea.KeySpace && !m.sel.typing {
+			return m, m.message.show(glyphMenu, "Selection mode", selectCheatsheet, true, m.layer())
+		}
+		return m.selectKey(msg)
 	}
 	return m.panelKey(msg)
 }
@@ -333,17 +587,30 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 	case m.toast.anim.owns():
 		return m, m.toast.close()
 	case m.input.anim.owns():
+		// Cancelling a page's prompt is an answer too: "no".
+		if m.input.action == inputPrompt {
+			return m, tea.Batch(m.input.close(), m.answerDialog(false, ""))
+		}
 		return m, m.input.close()
 	case m.confirm.anim.owns():
+		if m.confirm.action == confirmDialog {
+			return m, tea.Batch(m.confirm.close(), m.answerDialog(false, ""))
+		}
 		return m, m.confirm.close()
 	case m.options.anim.owns():
 		return m, m.options.close()
+	case m.outline.anim.owns():
+		return m, m.outline.close()
 	case m.lists.anim.owns():
 		// A filter being typed is the innermost thing Esc can drop.
 		if m.lists.escTyping() {
 			return m, nil
 		}
 		return m, m.lists.close()
+	case m.viewer.anim.owns():
+		return m, m.viewer.close()
+	case m.message.anim.owns():
+		return m, m.message.close()
 	case m.help.anim.owns():
 		return m, m.help.close()
 	case m.spaceMenu.anim.owns():
@@ -356,7 +623,8 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 // over, and the user is back on the panel (§7.1).
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.input.close(), m.confirm.close(), m.options.close(),
-		m.lists.close(), m.help.close(), m.spaceMenu.close())
+		m.outline.close(), m.lists.close(), m.viewer.close(), m.message.close(),
+		m.help.close(), m.spaceMenu.close())
 }
 
 func (m AppModel) quit() (tea.Model, tea.Cmd) {
@@ -399,6 +667,10 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.dispatch("forward")
 	case " ":
 		return m.openMenu()
+	case "alt+v":
+		return m, m.enterSelect(false)
+	case "/":
+		return m, m.enterSelect(true)
 	}
 
 	switch m.focus {
@@ -434,9 +706,9 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "R", "U", "Y", "A":
+		case "R", "U", "Y", "A", "O", "Z", "V":
 			return m.dispatch(k)
-		case "O", "D", "Z", "V", "/":
+		case "D":
 			return m, m.toast.show("not in this build yet", toastInfo)
 		}
 	}
@@ -649,14 +921,14 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Reload", key: "R", hint: "this page", disabled: t == nil},
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
-		menuItem{label: "Search", key: "/", hint: "not in this build yet", disabled: true},
-		menuItem{label: "Select mode", key: "alt+v", hint: "not in this build yet", disabled: true},
+		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
+		menuItem{label: "Select mode", key: "alt+v", hint: "walk the text, copy some", disabled: t == nil},
 		menuItem{label: "URL", key: "U", hint: "go to one"},
 		menuItem{label: "Add to…", key: "A", hint: "Bookmarks or Shortcuts", disabled: t == nil},
-		menuItem{label: "Outline", key: "O", hint: "not in this build yet", disabled: true},
+		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
 		menuItem{label: "DevTools", key: "D", hint: "not in this build yet", disabled: true},
-		menuItem{label: "Zoom", key: "Z", hint: "not in this build yet", disabled: true},
-		menuItem{label: "View source", key: "V", hint: "not in this build yet", disabled: true},
+		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
+		menuItem{label: "View source", key: "V", hint: "the HTML as it is now", disabled: t == nil},
 		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil})
 	return items
 }
@@ -787,6 +1059,28 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		if t != nil {
 			return m, copyToClipboard(t.url)
 		}
+	case "O":
+		return m, m.openOutline()
+	case "Z":
+		m.zoom = !m.zoom
+		m.relayoutTabs()
+		return m, nil
+	case "V":
+		if t != nil {
+			ctx, title := t.ctx, t.title
+			layer := m.layer()
+			return m, func() tea.Msg {
+				src, err := page.Source(ctx)
+				if err != nil {
+					return actionErrMsg{err: fmt.Errorf("view source: %w", err)}
+				}
+				return sourceMsg{title: title, html: src, layer: layer}
+			}
+		}
+	case "/":
+		return m, m.enterSelect(true)
+	case "alt+v":
+		return m, m.enterSelect(false)
 	case "A":
 		if t != nil {
 			m.optionsFor = nil
@@ -818,7 +1112,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "inspect":
 		if n := t.current(); n != nil {
-			return m, m.toast.show(fmt.Sprintf("%s %q #%d %s", n.Role, oneLine(n.Name), n.ID, n.URL), toastInfo)
+			return m, m.message.show(glyphInfo, "Inspect", inspectLines(n), false, m.layer())
 		}
 	case "submit":
 		if n := t.current(); n != nil {
@@ -920,8 +1214,48 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.closeStack()
 		}
 		return m, tea.Batch(m.closeStack(), t.act(func(ctx context.Context) error { return page.Type(ctx, id, value) }))
+	case inputPrompt:
+		return m, tea.Batch(m.input.close(), m.answerDialog(true, value))
 	}
 	return m, m.closeStack()
+}
+
+// sourceMsg carries the page's HTML to the viewer.
+type sourceMsg struct {
+	title, html string
+	layer       int
+}
+
+// inspectLines is what the Inspect popup shows about a node (ux.md §A.1):
+// the facts the IR has, nothing invented.
+func inspectLines(n *ir.Node) []string {
+	lines := []string{
+		"role     " + n.Role + " (" + n.Kind.String() + ")",
+		"name     " + oneLine(n.Name),
+	}
+	if n.Value != "" {
+		lines = append(lines, "value    "+oneLine(n.Value))
+	}
+	if n.URL != "" {
+		lines = append(lines, "url      "+n.URL)
+	}
+	var states []string
+	for _, f := range []struct {
+		on   bool
+		name string
+	}{{n.Focusable, "focusable"}, {n.Disabled, "disabled"}, {n.Expanded, "expanded"},
+		{n.Selected, "selected"}, {n.Multiline, "multiline"}, {n.Protected, "protected"}} {
+		if f.on {
+			states = append(states, f.name)
+		}
+	}
+	if n.Kind == ir.Check {
+		states = append(states, n.Checked.String())
+	}
+	if len(states) > 0 {
+		lines = append(lines, "state    "+strings.Join(states, ", "))
+	}
+	return append(lines, "node     #"+itoa(int(n.ID)))
 }
 
 func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -936,6 +1270,21 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		i, _ := m.tabByID(m.confirm.tabID)
 		mm, cmd := m.closeTab(i)
 		return mm, tea.Batch(closeCmd, cmd)
+	case confirmDialog:
+		return m, tea.Batch(closeCmd, m.answerDialog(true, ""))
+	case confirmCert:
+		_, t := m.tabByID(m.confirm.tabID)
+		if t == nil {
+			return m, closeCmd
+		}
+		ctx, url := t.ctx, t.url
+		ignore := func() tea.Msg {
+			if err := page.IgnoreCertErrors(ctx); err != nil {
+				return actionErrMsg{err: err}
+			}
+			return nil
+		}
+		return m, tea.Batch(closeCmd, tea.Sequence(ignore, t.load(url)))
 	case confirmDeleteEntry:
 		return m, tea.Batch(closeCmd, m.deleteEntry(m.confirm.at))
 	case confirmClearHistory:
@@ -993,6 +1342,7 @@ func (m *AppModel) openTab(url string, show bool) tea.Cmd {
 // showTab is Enter on panel [2]: panel [3] switches, and the keyboard goes
 // with it (ux.md §6). A pending tab loads now.
 func (m AppModel) showTab(i int) (tea.Model, tea.Cmd) {
+	m.leaveSelect()
 	m.shown = i
 	m.focus = panel3
 	t := m.tabs[i]
@@ -1008,6 +1358,9 @@ func (m AppModel) showTab(i int) (tea.Model, tea.Cmd) {
 func (m AppModel) closeTab(i int) (tea.Model, tea.Cmd) {
 	if i < 0 || i >= len(m.tabs) {
 		return m, nil
+	}
+	if i == m.shown {
+		m.sel.on = false
 	}
 	m.tabs[i].close()
 	m.tabs = append(m.tabs[:i], m.tabs[i+1:]...)
@@ -1038,7 +1391,7 @@ func (m AppModel) View() string {
 	ph := m.panelH()
 	var out string
 	switch {
-	case m.narrow() && m.focus == panel3:
+	case m.zoom || (m.narrow() && m.focus == panel3):
 		out = m.pagePanel(m.w, ph)
 	case m.narrow():
 		out = m.sideColumn(m.w, ph)
@@ -1054,8 +1407,17 @@ func (m AppModel) View() string {
 	if m.lists.isActive() {
 		out = overlay.Composite(m.lists.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.outline.isActive() {
+		out = overlay.Composite(m.outline.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.options.isActive() {
 		out = overlay.Composite(m.options.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.viewer.isActive() {
+		out = overlay.Composite(m.viewer.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.message.isActive() {
+		out = overlay.Composite(m.message.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.help.isActive() {
 		out = overlay.Composite(m.help.view(), out, overlay.Center, overlay.Center, 0, 0)
@@ -1093,14 +1455,21 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 		}
 	}
 	tone := toneIdle
-	if m.focus == panel3 {
+	switch {
+	case m.sel.on:
+		tone = toneSelect // Yellow: the keyboard is here, doing something else (ux.md §B)
+	case m.focus == panel3:
 		tone = toneFocus
 	}
 	return panelFrame(innerW, fitLines(m.pageBody(innerW, innerH), innerW, innerH), "[3]", hint, tone)
 }
 
 // footer is the mandatory disclosure of the entry keys (§A.1 / §A.2): one
-// row, locked (ui.md §5).
+// row, locked (ui.md §5). Selection mode replaces it with only the keys
+// that work there (ux.md §B: the footer is honest).
 func (m AppModel) footer() string {
+	if m.sel.on && !m.popupOpen() {
+		return keyLegend(selectLegendPairs(m.sel.typing), m.w)
+	}
 	return keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"tab/1-3", "panels"}, {"q", "quit"}}, m.w)
 }

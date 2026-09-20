@@ -33,9 +33,20 @@ func reveal(ctx context.Context, id cdp.BackendNodeID) error {
 	return err
 }
 
-// Click is a mouse click on the node: a real one at the centre of its box,
-// so the page sees the same events a pointer would (hover, down, up), and
-// el.click() when the node has no box to aim at.
+// Click is a mouse click on the node: a synthetic left press and release
+// at the centre of its box, so the page sees mousedown, mouseup and a
+// TRUSTED click — which is what lets a target=_blank link open its window;
+// el.click() is untrusted and Chrome refuses it that. A node with no box
+// gets el.click(), the only click there is for it.
+//
+// There is deliberately NO mouseMoved before the press. Measured against
+// the pinned Chromium: a lone synthetic move is acknowledged by the
+// headless renderer only after a five-second timeout, so a click that
+// opened a dialog showed it five seconds late, and every other click
+// paid the same. Press and release alone are answered in a millisecond.
+// The cost is hover: a menu that opens on pointer-over does not open for
+// webu yet (function.md §4 asked for it; webu-implementation.md §4 says
+// why not).
 func Click(ctx context.Context, id cdp.BackendNodeID) error {
 	return run(ctx, func(ctx context.Context) error {
 		if err := reveal(ctx, id); err != nil {
@@ -48,9 +59,6 @@ func Click(ctx context.Context, id cdp.BackendNodeID) error {
 		x, y := quadCentre(box.Content)
 		if x < 0 || y < 0 {
 			return jsClick(ctx, id)
-		}
-		if err := input.DispatchMouseEvent(input.MouseMoved, x, y).Do(ctx); err != nil {
-			return err
 		}
 		if err := input.DispatchMouseEvent(input.MousePressed, x, y).
 			WithButton(input.Left).WithClickCount(1).Do(ctx); err != nil {

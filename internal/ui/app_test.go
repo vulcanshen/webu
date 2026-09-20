@@ -65,6 +65,11 @@ func (d *driver) send(msg tea.Msg) {
 		}()
 		return
 	}
+	// A capture that failed is worth a line in the log: the app shows it as
+	// an error page, and a test that then times out says only "timed out".
+	if pm, ok := msg.(pageMsg); ok && pm.err != nil {
+		d.t.Logf("%s pageMsg tab %d gen %d: %v", time.Now().Format("15:04:05.000"), pm.tabID, pm.gen, pm.err)
+	}
 	model, cmd := d.m.Update(msg)
 	d.m = model.(AppModel)
 	d.exec(cmd)
@@ -84,6 +89,14 @@ func (d *driver) key(k string) {
 // until pumps messages until cond holds, or fails the test.
 func (d *driver) until(what string, cond func() bool) {
 	d.t.Helper()
+	start := time.Now()
+	defer func() {
+		// A step that took seconds is a step worth knowing about, whether
+		// or not it eventually passed.
+		if el := time.Since(start); el > 2*time.Second {
+			d.t.Logf("%s took %s", what, el.Round(time.Millisecond))
+		}
+	}()
 	deadline := time.After(20 * time.Second)
 	for !cond() {
 		select {

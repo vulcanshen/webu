@@ -23,10 +23,18 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)
 	out := make([]string, 0, innerH)
-	out = append(out, txt.Render(padRight(" "+fitURL(t.url, innerW-1), innerW)))
+	// The first row is the URL — or, while a search is being typed, the
+	// query and its count (ux.md §1.1): the page under it does not move.
+	if st := m.sel.status(); m.sel.on && st != "" {
+		out = append(out, lipgloss.NewStyle().Foreground(selectColor).Render(padRight(" "+st, innerW)))
+	} else {
+		out = append(out, txt.Render(padRight(" "+fitURL(t.url, innerW-1), innerW)))
+	}
 	out = append(out, dim.Render(strings.Repeat("─", innerW)))
 	rest := innerH - pageHeaderRows
 	switch {
+	case m.sel.on && t.root != nil:
+		out = append(out, m.selectRows(t, innerW, rest)...)
 	case t.errText != "":
 		out = append(out, emptyBody(innerW, rest, "could not load",
 			emptyHint(t.errText+" — press R to retry", "R"))...)
@@ -72,18 +80,7 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	}
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	curOff := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim)
-	styles := map[segKind]lipgloss.Style{
-		segPlain:       lipgloss.NewStyle().Foreground(textColor),
-		segDim:         lipgloss.NewStyle().Foreground(dimColor),
-		segHeading:     lipgloss.NewStyle().Foreground(textColor).Bold(true),
-		segLink:        lipgloss.NewStyle().Foreground(linkColor),
-		segButton:      lipgloss.NewStyle().Foreground(textColor).Bold(true),
-		segInput:       lipgloss.NewStyle().Foreground(editColor),
-		segCheck:       lipgloss.NewStyle().Foreground(textColor),
-		segMedia:       lipgloss.NewStyle().Foreground(dimColor),
-		segCode:        lipgloss.NewStyle().Foreground(peachColor),
-		segUnsupported: lipgloss.NewStyle().Foreground(dimColor),
-	}
+	styles := segStyles()
 	out := make([]string, 0, innerH)
 	end := min(len(t.lay.rows), t.top+innerH)
 	for i := t.top; i < end; i++ {
@@ -116,6 +113,23 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	return out
 }
 
+// segStyles is the colour of each kind of segment: one table, shared by the
+// ordinary page and selection mode so the two cannot drift.
+func segStyles() map[segKind]lipgloss.Style {
+	return map[segKind]lipgloss.Style{
+		segPlain:       lipgloss.NewStyle().Foreground(textColor),
+		segDim:         lipgloss.NewStyle().Foreground(dimColor),
+		segHeading:     lipgloss.NewStyle().Foreground(textColor).Bold(true),
+		segLink:        lipgloss.NewStyle().Foreground(linkColor),
+		segButton:      lipgloss.NewStyle().Foreground(textColor).Bold(true),
+		segInput:       lipgloss.NewStyle().Foreground(editColor),
+		segCheck:       lipgloss.NewStyle().Foreground(textColor),
+		segMedia:       lipgloss.NewStyle().Foreground(dimColor),
+		segCode:        lipgloss.NewStyle().Foreground(peachColor),
+		segUnsupported: lipgloss.NewStyle().Foreground(dimColor),
+	}
+}
+
 // pageVisible is how many page rows panel [3] shows at the current size.
 func (m AppModel) pageVisible() int {
 	return max(1, m.panelH()-2-pageHeaderRows)
@@ -123,7 +137,7 @@ func (m AppModel) pageVisible() int {
 
 // pageW is panel [3]'s inner width at the current size.
 func (m AppModel) pageW() int {
-	if m.narrow() {
+	if m.narrow() || m.zoom {
 		return max(1, m.w-2)
 	}
 	return max(1, m.w-sideW-2)

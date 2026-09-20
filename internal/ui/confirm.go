@@ -14,6 +14,8 @@ const (
 	confirmQuit                       // leave webu with a download in flight
 	confirmDeleteEntry                // remove a bookmark, shortcut or visit
 	confirmClearHistory               // empty the history log
+	confirmDialog                     // a page's alert / confirm / beforeunload
+	confirmCert                       // proceed past a certificate error
 )
 
 // confirmPopup is the message class (§6.1): a short question with one yes and

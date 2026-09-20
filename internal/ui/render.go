@@ -58,6 +58,9 @@ type item struct {
 type layout struct {
 	rows  []row
 	items []item
+	// marks is the first row of every landmark and heading, for the
+	// outline to jump to (ui.md §3.1).
+	marks map[*ir.Node]int
 }
 
 // itemAt is the first item whose span includes row, or -1.
@@ -68,6 +71,42 @@ func (l layout) itemAt(row int) int {
 		}
 	}
 	return -1
+}
+
+// itemAtCol is the item under the character at row/col (a rune index), or
+// -1: what Enter clicks in selection mode.
+func (l layout) itemAtCol(row, col int) int {
+	if row < 0 || row >= len(l.rows) {
+		return -1
+	}
+	at := 0
+	for _, s := range l.rows[row].segs {
+		n := len([]rune(s.text))
+		if col >= at && col < at+n {
+			return s.item
+		}
+		at += n
+	}
+	return -1
+}
+
+// nearestItem is the item whose rows are closest to row — where the item
+// cursor lands when selection mode ends (ux.md §1).
+func (l layout) nearestItem(row int) int {
+	best, bestD := -1, 1<<30
+	for i, it := range l.items {
+		d := 0
+		switch {
+		case row < it.first:
+			d = it.first - row
+		case row > it.last:
+			d = row - it.last
+		}
+		if d < bestD {
+			best, bestD = i, d
+		}
+	}
+	return best
 }
 
 // atom is one unbreakable unit of inline flow: a word, a glyph, a space.
@@ -91,13 +130,17 @@ type renderer struct {
 	// emitting rows of its own — which would land ABOVE the table, since the
 	// table's rows are emitted after every cell has been measured.
 	inCell bool
+	// markNext are nodes waiting for their first row: assigned by emit, so
+	// a gap row owed before them is not counted as theirs.
+	markNext []*ir.Node
+	marks    map[*ir.Node]int
 }
 
 func render(root *ir.Node, width int) layout {
-	r := &renderer{width: max(1, width)}
+	r := &renderer{width: max(1, width), marks: map[*ir.Node]int{}}
 	r.block(root, 0)
 	r.flush()
-	return layout{rows: r.rows, items: r.items}
+	return layout{rows: r.rows, items: r.items, marks: r.marks}
 }
 
 // ------------------------------------------------------------------ blocks
@@ -108,11 +151,13 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.children(n, depth)
 	case ir.Landmark:
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		r.children(n, depth)
 		r.flush()
 		r.gap = true
 	case ir.Heading:
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		id := -1
 		if !hasItem(n) {
 			id = r.newItem(n)
@@ -782,6 +827,10 @@ func (r *renderer) emit(rw row) {
 	for _, s := range rw.segs {
 		r.touch(s.item, at)
 	}
+	for _, n := range r.markNext {
+		r.marks[n] = at
+	}
+	r.markNext = r.markNext[:0]
 }
 
 // touch records that item is on row at. Only emit calls it: a row index

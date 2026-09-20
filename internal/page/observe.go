@@ -27,16 +27,20 @@ const observerScript = `(() => {
 	new MutationObserver(report).observe(document, {subtree: true, childList: true, characterData: true});
 })();`
 
-// Prepare arms a fresh tab before its first navigation: the binding the
-// observer will call, and the observer itself, injected into every document
-// the tab loads from now on. Run once per tab.
+// Prepare arms a tab: the binding the observer will call, the observer
+// itself injected into every document the tab loads from now on, and — for
+// a tab that already has a document, one the page opened itself — the
+// observer run in that document too. Run once per tab.
 func Prepare(ctx context.Context) error {
 	return chromedp.Run(ctx,
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			if err := runtime.AddBinding(MutationBinding).Do(ctx); err != nil {
 				return err
 			}
-			_, err := cdppage.AddScriptToEvaluateOnNewDocument(observerScript).Do(ctx)
+			if _, err := cdppage.AddScriptToEvaluateOnNewDocument(observerScript).Do(ctx); err != nil {
+				return err
+			}
+			_, _, err := runtime.Evaluate(observerScript).Do(ctx)
 			return err
 		}),
 	)
