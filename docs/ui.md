@@ -140,6 +140,7 @@ u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬�
 | **Storage** | cookies `Network.getCookies(url)`；local / session `DOMStorage.getDOMStorageItems` | 三個 section 各一張表；cookie 欄位 name、value 截斷、domain、path、expires、flags | Delete 該筆（`Network.deleteCookies` / `DOMStorage.removeDOMStorageItem`）、Yank value、Clear site data（`Storage.clearDataForOrigin`）、`/` 過濾 | **完整** |
 | **Network** | `Network.enable` 後 `requestWillBeSent` / `responseReceived` / `loadingFinished` / `loadingFailed`；WebSocket frame 事件 | 一列一 request：method、status、type、URL 縮短、size、耗時 | Enter → detail 子 popup（headers + body，`Network.getResponseBody`）、`/` 過濾、Clear | 清單 + detail |
 | **Console** | `Runtime.consoleAPICalled`、`Runtime.exceptionThrown`、`Log.entryAdded` | viewport，等級 glyph，warn / error 用 override 色 | `/` 過濾、Clear、Eval（`Runtime.evaluate`） | **完整**（修訂 2026-09-20：Eval 提前到 v1，Enter 開輸入列、REPL、`>` / `<` 回到清單） |
+| **Source** | `DOM.getOuterHTML` | viewport，行號 | `/` grep（只留含關鍵字的行） | **完整**（修訂 2026-09-20：原本是 `[3]` 的 `[V] View source`，搬進來把 `V` 讓給 visual mode） |
 
 實作註記：
 - `Network.enable` 要在導航前開，否則抓不到第一波 request → 每個 target attach 時就開；
@@ -236,7 +237,7 @@ function.md §8 的清單各落到哪個 surface、哪一版：
 | network log | `[3]` Space menu → DevTools › Network | ✓ 清單 + detail |
 | console | `[3]` Space menu → DevTools › Console | ✓ viewport；Eval v2 |
 | 清除某站資料 | DevTools › Storage 的 Clear site data | ✓ |
-| view source | `[3]` Space menu panel operation | ✓ |
+| view source | `[3]` Space menu → DevTools › Source（修訂 2026-09-20） | ✓ |
 | print to PDF / 整頁截圖 | — | **移除**（2026-09-20） |
 | 下載清單面板 | — | v2 |
 | 隱私分頁 | — | v2 |

@@ -156,6 +156,19 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 	d.key("esc")
 	d.until("prompt gone", func() bool { return !d.m.input.isActive() && d.m.devtools.isInteractive() })
 
+	// The Source tab is the page's HTML, and / greps it.
+	d.key("l")
+	d.until("source tab", func() bool { return d.m.devtools.tab == devSource })
+	d.until("html fetched", func() bool {
+		return strings.Contains(strings.Join(d.m.devtools.source.lines, "\n"), "<title>Dev</title>")
+	})
+	d.key("/")
+	d.key("h1")
+	d.key("enter")
+	if v := d.m.devtools.source.visible("h1"); len(v) != 1 || !strings.Contains(v[0], "Dev page") {
+		t.Errorf("grep h1: %q", v)
+	}
+	d.key("esc") // the filter
 	d.key("esc")
 	d.until("devtools closed", func() bool { return !d.m.devtools.isActive() })
 }

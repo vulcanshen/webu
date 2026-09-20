@@ -74,7 +74,6 @@ type AppModel struct {
 	outline   spaceMenu // the page's landmarks and headings
 	lists     listPopup // Bookmarks / Shortcuts / History
 	devtools  devtoolsPopup
-	viewer    viewerPopup
 	message   messagePopup
 	help      helpPopup
 	confirm   confirmPopup
@@ -119,7 +118,6 @@ func New(b *browser.Browser, startURL string) AppModel {
 		outline:   newOutlineMenu(),
 		lists:     newListPopup(),
 		devtools:  newDevtoolsPopup(),
-		viewer:    newViewerPopup(),
 		message:   newMessagePopup(),
 		help:      newHelpPopup(),
 		confirm:   newConfirmPopup(),
@@ -204,7 +202,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		first := m.w == 0
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
-			&m.spaceMenu, &m.options, &m.outline, &m.lists, &m.devtools, &m.viewer, &m.message,
+			&m.spaceMenu, &m.options, &m.outline, &m.lists, &m.devtools, &m.message,
 			&m.help, &m.confirm, &m.input, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
@@ -218,7 +216,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(
 			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.outline.anim.tick(msg),
 			m.lists.anim.tick(msg), m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
-			m.viewer.anim.tick(msg), m.message.anim.tick(msg),
+			m.message.anim.tick(msg),
 			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.toast.anim.tick(msg))
 
 	case devTickMsg:
@@ -327,8 +325,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.toast.show(msg.what+": "+msg.err.Error(), toastError)
 
-	case sourceMsg:
-		return m, m.viewer.show(glyphInfo, "Source · "+oneLine(nameOr(msg.title, "page")), msg.html, msg.layer)
+	case devSourceMsg:
+		if m.devtools.isActive() && msg.tabID == m.devtools.tabID {
+			m.devtools.source.set(msg.html, msg.err)
+		}
+		return m, nil
 
 	case pageEventMsg:
 		// Chromium says the tab moved or changed; look again shortly. Always
@@ -588,7 +589,7 @@ func (m *AppModel) recordVisit(t *tab) {
 
 func (m AppModel) popupOpen() bool {
 	return m.spaceMenu.isActive() || m.options.isActive() || m.outline.isActive() ||
-		m.lists.isActive() || m.devtools.isActive() || m.viewer.isActive() || m.message.isActive() ||
+		m.lists.isActive() || m.devtools.isActive() || m.message.isActive() ||
 		m.help.isActive() || m.confirm.isActive() || m.input.isActive()
 }
 
@@ -638,9 +639,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.listKey(msg)
 	case m.devtools.anim.owns():
 		return m.devtoolsKey(msg)
-	case m.viewer.anim.owns():
-		m.viewer.update(msg)
-		return m, nil
 	case m.message.anim.owns():
 		// The cheatsheet passes its keys through (messagePopup.passKeys):
 		// the sheet closes and the key runs, one step.
@@ -660,7 +658,7 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// The mode holds the keyboard (ux.md §1): Space is its cheatsheet,
 		// everything else is its own.
 		if msg.Type == tea.KeySpace && !m.sel.typing {
-			return m, m.message.show(glyphMenu, "Selection mode", selectCheatsheet, true, m.layer())
+			return m, m.message.show(glyphMenu, "Visual mode", selectCheatsheet, true, m.layer())
 		}
 		return m.selectKey(msg)
 	}
@@ -714,8 +712,6 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.devtools.close()
-	case m.viewer.anim.owns():
-		return m, m.viewer.close()
 	case m.message.anim.owns():
 		return m, m.message.close()
 	case m.help.anim.owns():
@@ -730,7 +726,7 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 // over, and the user is back on the panel (§7.1).
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.input.close(), m.confirm.close(), m.options.close(),
-		m.outline.close(), m.lists.close(), m.devtools.close(), m.viewer.close(), m.message.close(),
+		m.outline.close(), m.lists.close(), m.devtools.close(), m.message.close(),
 		m.help.close(), m.spaceMenu.close())
 }
 
@@ -782,10 +778,11 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.openMenu()
 	case "/":
 		return m, m.enterSelect(true)
-	case "v":
-		// The way into the text itself: the item cursor stops only on
-		// items, and a paragraph is reached by character (ux.md §1). vim's
-		// letter, and it reads the same from any panel, like /.
+	case "V":
+		// Visual mode, the way into the text itself: the item cursor stops
+		// only on items, and a paragraph is reached by character (ux.md
+		// §1). Upper case like every other panel operation, and it reads
+		// the same from any panel, like /.
 		return m, m.enterSelect(false)
 	}
 
@@ -822,7 +819,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "R", "U", "Y", "A", "O", "Z", "V", "D", "W":
+		case "R", "U", "Y", "A", "O", "Z", "D", "W":
 			return m.dispatch(k)
 		}
 	}
@@ -839,7 +836,25 @@ func (m *AppModel) openDevtools() tea.Cmd {
 		return m.toast.show("no page for DevTools", toastInfo)
 	}
 	m.devtools.refresh(t.dev)
-	return tea.Batch(m.devtools.open(t.id, m.layer()), m.fetchStorage())
+	fetch := m.fetchStorage()
+	if m.devtools.tab == devSource {
+		fetch = m.fetchSource()
+	}
+	return tea.Batch(m.devtools.open(t.id, m.layer()), fetch)
+}
+
+// fetchSource reads the shown page's HTML for the Source tab.
+func (m *AppModel) fetchSource() tea.Cmd {
+	t := m.shownTab()
+	if t == nil {
+		return nil
+	}
+	m.devtools.source.lines = nil
+	ctx, id := t.ctx, t.id
+	return func() tea.Msg {
+		html, err := page.Source(ctx)
+		return devSourceMsg{tabID: id, html: html, err: err}
+	}
 }
 
 func (m AppModel) fetchStorage() tea.Cmd {
@@ -877,6 +892,8 @@ func (m AppModel) devtoolsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch action {
 	case devFetchStorage:
 		return m, m.fetchStorage()
+	case devFetchSource:
+		return m, m.fetchSource()
 	case devYank:
 		return m, copyToClipboard(text)
 	case devDeleteCookie:
@@ -1163,13 +1180,12 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
 		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
-		menuItem{label: "v select text", key: "v", hint: "walk by character, copy some", disabled: t == nil},
+		menuItem{label: "Visual mode", key: "V", hint: "walk the text by character, copy some", disabled: t == nil},
 		menuItem{label: "URL", key: "U", hint: "go to one"},
 		menuItem{label: "Add to…", key: "A", hint: "Bookmarks or Shortcuts", disabled: t == nil},
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
-		menuItem{label: "DevTools", key: "D", hint: "storage, network, console", disabled: t == nil},
+		menuItem{label: "DevTools", key: "D", hint: "storage, network, console, source", disabled: t == nil},
 		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
-		menuItem{label: "View source", key: "V", hint: "the HTML as it is now", disabled: t == nil},
 		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil},
 		menuItem{label: "W close", key: "W", hint: "this tab", disabled: t == nil})
 	return items
@@ -1347,21 +1363,9 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		m.zoom = !m.zoom
 		m.relayoutTabs()
 		return m, nil
-	case "V":
-		if t != nil {
-			ctx, title := t.ctx, t.title
-			layer := m.layer()
-			return m, func() tea.Msg {
-				src, err := page.Source(ctx)
-				if err != nil {
-					return actionErrMsg{err: fmt.Errorf("view source: %w", err)}
-				}
-				return sourceMsg{title: title, html: src, layer: layer}
-			}
-		}
 	case "/":
 		return m, m.enterSelect(true)
-	case "v", "select":
+	case "V", "select":
 		return m, m.enterSelect(false)
 	case "A":
 		if t != nil {
@@ -1605,12 +1609,6 @@ func (m *AppModel) cancelAuth() tea.Cmd {
 	return t.act(func(ctx context.Context) error { return page.CancelAuth(ctx, a.id) })
 }
 
-// sourceMsg carries the page's HTML to the viewer.
-type sourceMsg struct {
-	title, html string
-	layer       int
-}
-
 // inspectLines is what the Inspect popup shows about a node (ux.md §A.1):
 // the facts the IR has, nothing invented.
 func inspectLines(n *ir.Node) []string {
@@ -1819,9 +1817,6 @@ func (m AppModel) View() string {
 	}
 	if m.options.isActive() {
 		out = overlay.Composite(m.options.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.viewer.isActive() {
-		out = overlay.Composite(m.viewer.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.message.isActive() {
 		out = overlay.Composite(m.message.view(), out, overlay.Center, overlay.Center, 0, 0)

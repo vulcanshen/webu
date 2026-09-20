@@ -25,9 +25,10 @@ const (
 	devStorage devTab = iota
 	devNetwork
 	devConsole
+	devSource // the page's HTML (was [V]iew source on the page; moved 2026-09-20)
 )
 
-var devTabLabels = []string{"Storage", "Network", "Console"}
+var devTabLabels = []string{"Storage", "Network", "Console", "Source"}
 
 // devTickMsg refreshes the popup while it is open: the log fills on
 // another goroutine and nothing else would redraw it.
@@ -42,10 +43,11 @@ type devtoolsPopup struct {
 	storage devStorageTab
 	network devNetworkTab
 	console devConsoleTab
+	source  devSourceTab
 	detail  devDetailPopup
 
 	// filter is typed with / and applies to the current tab's rows.
-	filter  [3]string
+	filter  [4]string
 	typing  bool
 	tickGen int
 	layer   int
@@ -120,7 +122,8 @@ const (
 	devClearNet
 	devClearConsole
 	devDetail
-	devEval // Console: open the prompt
+	devEval        // Console: open the prompt
+	devFetchSource // Source: read the HTML
 )
 
 // update handles one key. The tab sub-models get the navigation keys and
@@ -149,24 +152,27 @@ func (m *devtoolsPopup) update(msg tea.KeyMsg) (devAction, string) {
 		}
 		return devNone, ""
 	}
+	n := devTab(len(devTabLabels))
 	switch k {
-	case "h", "left":
-		m.tab = (m.tab + 2) % 3
-		if m.tab == devStorage {
-			return devFetchStorage, ""
+	case "h", "left", "l", "right":
+		if k == "h" || k == "left" {
+			m.tab = (m.tab + n - 1) % n
+		} else {
+			m.tab = (m.tab + 1) % n
 		}
-		return devNone, ""
-	case "l", "right":
-		m.tab = (m.tab + 1) % 3
-		if m.tab == devStorage {
+		// The tabs that are fetched, not observed, fetch on arrival.
+		switch m.tab {
+		case devStorage:
 			return devFetchStorage, ""
+		case devSource:
+			return devFetchSource, ""
 		}
 		return devNone, ""
 	case "/":
 		m.typing = true
 		return devNone, ""
 	}
-	if navKeys[k] && k != "h" && k != "l" && k != "left" && k != "right" {
+	if navKeys[k] {
 		switch m.tab {
 		case devStorage:
 			m.storage.move(k, m.listRows(), m.filter[m.tab])
@@ -174,6 +180,8 @@ func (m *devtoolsPopup) update(msg tea.KeyMsg) (devAction, string) {
 			m.network.move(k, m.listRows(), m.filter[m.tab])
 		case devConsole:
 			m.console.move(k, m.listRows(), m.filter[m.tab])
+		case devSource:
+			m.source.move(k, m.listRows(), m.filter[m.tab])
 		}
 		return devNone, ""
 	}
@@ -259,6 +267,8 @@ func (m devtoolsPopup) view() string {
 		rows = append(rows, m.network.view(innerW, n, m.filter[m.tab])...)
 	case devConsole:
 		rows = append(rows, m.console.view(innerW, n, m.filter[m.tab])...)
+	case devSource:
+		rows = append(rows, m.source.view(innerW, n, m.filter[m.tab])...)
 	}
 	for len(rows) < m.rows() {
 		rows = append(rows, strings.Repeat(" ", innerW))
@@ -279,6 +289,8 @@ func (m devtoolsPopup) view() string {
 		pairs = [][2]string{{"x", "delete"}, {"y", "yank value"}, {"C", "clear site data"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
 	case m.tab == devNetwork:
 		pairs = [][2]string{{"Enter", "detail"}, {"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
+	case m.tab == devSource:
+		pairs = [][2]string{{"j/k", "scroll"}, {"u/d", "half page"}, {"/", "grep"}, {"h/l", "tab"}, {"Esc", "close"}}
 	default:
 		pairs = [][2]string{{"Enter", "eval"}, {"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
 	}

@@ -37,9 +37,9 @@ textbox 的 Submit、select 的 Choose），再按一次 Enter 執行；**Space 
 VTP §A.0.K 只要求同一 app 內跨 surface 不變。
 
 **不是 core-key 的**：`q` 離開、`Ctrl+C` 硬退、`P` / `N` 前後頁、`/` 搜尋、`[1]` 三個全域
-字母、`v` 選取模式。它們是 §A.2 軌的動作，全部列在 `?` help。選取模式的鍵是 `v`（修訂 2026-09-20：
-`Alt+v` 先拿掉、再以裸 `v` 補回 —— item 游標只停在 item 上，要進到段落文字裡得有一個直接的鍵，
-vim 的 `v` 是現成的；`/` 搜尋與 Space menu 的 Select text 也都進得去）。
+字母、`V` visual mode。它們是 §A.2 軌的動作，全部列在 `?` help。Visual mode（本文件其他地方的
+「選取模式」）的鍵是 `V`（修訂 2026-09-20：`Alt+v` 先拿掉、補回裸 `v`、再改成大寫 `V` 與其他 panel
+operation 一致 —— item 游標只停在 item 上，要進到段落文字裡得有一個直接的鍵；`/` 搜尋也進得去）。
 
 ### §A.1 Contextual track — Space menu
 
@@ -73,9 +73,10 @@ vim 的 `v` 是現成的；`/` 搜尋與 Space menu 的 Select text 也都進得
 頁面**沒有任何 item**（純文字頁）：Space menu 只剩 panel operation，扁平不分 region。
 
 **`[3]` 一般模式，panel operation**：`[R] Reload`、`[P] Previous`、`[N] Next`、
-`[/] Search`（進選取模式）、`[v] Select text`（進選取模式）、`[U] Go to URL`、`[A] Add to…`
+`[/] Search`（進 visual mode）、`[V] Visual mode`（修訂 2026-09-20：原 `[V] View source` 搬進 DevTools › Source，
+`V` 讓給 visual mode——panel operation 一律大寫，小寫 `v` 在這一區很突兀）、`[U] Go to URL`、`[A] Add to…`
 （picker：Bookmarks / Shortcuts，多對象可選 → menu）、`[O] Outline`、`[D] DevTools`、
-`[Z] Zoom`、`[V] View source`、`[Y] Yank page url`、`[W] Close`（關掉 `[3]` 正在顯示的分頁；
+`[Z] Zoom`、`[Y] Yank page url`、`[W] Close`（關掉 `[3]` 正在顯示的分頁；
 `[2]` 的小寫 `w` 關的是游標列，同字依 focus 面板不同義，修訂 2026-09-20）。
 
 Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡，不在 `[1]`、不在 §A.2
@@ -107,7 +108,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 | History popup | `H` | `[1]` + help |
 | 上一頁 / 下一頁 | `P` / `N` | help |
 | 切面板 | `Tab`、`1`–`3` | footer + help |
-| 選取模式 | `v`（從 `[1]` `[2]` 按 → 先把焦點移到 `[3]` 再進模式）；`/` 與 `[3]` Space menu 的 Select text 亦可 | help |
+| Visual mode（選取模式） | `V`（從 `[1]` `[2]` 按 → 先把焦點移到 `[3]` 再進模式）；`/` 亦可 | help |
 | 頁內搜尋 | `/`；同上 | help |
 | 離開 | `q`（有下載進行中先 confirm；**浮層內不作用**，浮層只認 Esc）、`Ctrl+C` 硬退 | footer + help |
 | 導覽詞彙 | §3 | help |
@@ -226,11 +227,11 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `B` `S` `H` `P` `N`、`q`、`?`、`/`、`v`、`Tab`、`1`–`3` |
+| 全域 | `B` `S` `H` `P` `N`、`q`、`?`、`/`、`V`、`Tab`、`1`–`3` |
 | `[2]` item | `w` `c` `r` `y` |
 | `[2]` panel | `T` `X` `U` |
 | `[3]` item | **無**（menu-only） |
-| `[3]` panel | `R` `U` `A` `O` `D` `Z` `V` `Y` `W` |
+| `[3]` panel | `R` `U` `A` `O` `D` `Z` `Y` `W`（`V` 是全域的 visual mode） |
 | Bookmarks popup | `o` `e` `x` `m` `y` / `A` `F` `/` |
 | Shortcuts popup | `o` `e` `x` `y` / `A` |
 | History popup | `o` `x` / `C` |
@@ -310,13 +311,13 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 `Tab` 切面板 · `Enter` click · `Esc` 關浮層 / 離開選取模式 · `Space` menu · `?` help
 
 ### 全域
-`B` Bookmarks · `S` Shortcuts · `H` History · `P` 上一頁 · `N` 下一頁 · `q` quit · `/` 搜尋（進選取模式）· `v` 選取模式
+`B` Bookmarks · `S` Shortcuts · `H` History · `P` 上一頁 · `N` 下一頁 · `q` quit · `/` 搜尋（進 visual mode）· `V` visual mode
 
 ### `[2]` Tabs
 `w` close · `c` clone · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
 
 ### `[3]` Page
-`R` reload · `U` go to URL · `A` add to · `O` outline · `D` devtools · `Z` zoom · `V` view source · `Y` yank page url · `W` close this tab
+`R` reload · `U` go to URL · `A` add to · `O` outline · `D` devtools（storage / network / console / source）· `Z` zoom · `Y` yank page url · `W` close this tab
 
 ### 導覽（跨 surface 同義）
 `j/k` · `u/d` · `gg/G` · `h/l`（DevTools 分頁）· `1-3`

@@ -153,12 +153,13 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - **坑**：`tea.Sequence(t.act(...), fetch)` 不會等內層 Sequence 跑完（Bubble Tea 把巢狀 Sequence 當 message 交回去就往下走），
   刪 cookie 後的重抓會搶先。要先後執行就寫成一個 cmd（`storageThen`）
 
-### Outline / Zoom / View source / Inspect
+### Outline / Zoom / Inspect
 
 - Outline：`layout.marks` 記每個 landmark / heading 的第一列；popup 是 spaceMenu 實例（同 sshu picker 的重用），
   開啟時游標停在「目前位置之前最後一個」項目；Enter → `tab.jumpTo`
 - Zoom：`m.zoom` 讓 `[3]` 獨佔整個畫面（narrow 模式同一條路），寬度改變會重排
-- View source：`chromedp.OuterHTML("html")` → viewer popup（viewport 類，無 padRow）
+- View source 已搬進 DevTools › Source（`devsource.go`：`chromedp.OuterHTML("html")`、行號、`/` grep；
+  修訂 2026-09-20，`V` 讓給 visual mode）；獨立的 viewer popup 一併移除
 - Inspect：message popup 列 role / name / value / url / state / node id
 
 **Bubble Tea 的 value receiver 陷阱**（踩過兩次）：會改 popup 狀態的 helper 若是 value receiver、
@@ -190,7 +191,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - 歷史：每個分頁 load 完的最終 URL + 標題記一筆，同 URL 的 settle 重抓不重複記
 - 即時更新（function.md §6）：`page.Prepare` 在第一次導航前 `Runtime.addBinding` + 注入 MutationObserver
   （childList / characterData / subtree，150 ms 合併），`Runtime.bindingCalled` 走與 load event 同一條 settle 路
-- 選取模式與 `/` 搜尋、Outline、Zoom、View source、Inspect popup、DevTools 三分頁與 Network detail（§A）
+- Visual mode（`V`）與 `/` 搜尋、Outline、Zoom、Inspect popup、DevTools 四分頁（Storage / Network / Console / Source）與 Network detail（§A）
 - JS dialog、`target=_blank` 新分頁、憑證錯誤 confirm、下載 toast、HTTP auth、檔案上傳、Undo close、離開時下載中的 confirm（§5）
 - 整合測試 `TestAppNavigatesAndFillsAForm`（本機頁：載入 → 點 → 回 → 打字 → Submit → 選 option）、
   `TestListPopupsAndSession`（無瀏覽器：B 開 / 過濾 / 刪 / 存檔）、`hooks_test.go` 五支（新視窗、三種
