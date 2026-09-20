@@ -29,8 +29,9 @@ const (
 )
 
 const (
-	// sideW is the side column's outer width, fixed (ui.md §1.2).
-	sideW = 28
+	// sideW is the side column's outer width, fixed (ui.md §1.2). 28 was
+	// the drawing; 24 is what the content needs, and the page gets the rest.
+	sideW = 24
 	// narrowW is where the grid gives up and only the focused side is drawn.
 	narrowW = 72
 	// minAppH is the least height at which the frame is worth drawing.
@@ -79,8 +80,11 @@ type AppModel struct {
 	input     inputPopup
 	toast     toastModel
 
-	// optionsFor is the node the options menu is about.
-	optionsFor *ir.Node
+	// optionsFor is the node the options menu is about, and optionsKind
+	// what the menu is: an item's operations, a select's options, or the
+	// Add to… picker.
+	optionsFor  *ir.Node
+	optionsKind optionsKind
 	// outlineFor is what the outline's rows stand for.
 	outlineFor []outlineEntry
 	// dialog is the page's question being asked (function.md §5); the page
@@ -752,8 +756,6 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.dispatch("forward")
 	case " ":
 		return m.openMenu()
-	case "alt+v":
-		return m, m.enterSelect(false)
 	case "/":
 		return m, m.enterSelect(true)
 	}
@@ -1044,43 +1046,61 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 	return m, m.spaceMenu.open()
 }
 
-// pageMenuItems is panel [3]'s Space menu: the item's operations by role
-// (menu-only, no letters — ux.md §A.1), then the page's.
+// optionsKind says what the options menu is showing.
+type optionsKind int
+
+const (
+	optItemMenu optionsKind = iota // an item's operations (Enter on [3])
+	optSelect                      // a <select>'s options, keyed by index
+	optAddTo                       // Bookmarks / Shortcuts
+)
+
+// itemMenuItems is an item's operations by role (menu-only, no letters —
+// ux.md §A.1). The first row is the item's main action, so Enter twice
+// does the obvious thing: open a link, press a button, edit a field.
+func itemMenuItems(n *ir.Node) []menuItem {
+	var items []menuItem
+	switch n.Kind {
+	case ir.Link:
+		items = append(items,
+			menuItem{label: "Open", key: "click", hint: "click it"},
+			menuItem{label: "Open in new tab", key: "newtab", hint: "and switch to it"},
+			menuItem{label: "Yank url", key: "yankurl", hint: oneLine(n.URL)})
+	case ir.Button, ir.Check:
+		items = append(items, menuItem{label: "Click", key: "click", hint: "press it"})
+	case ir.Media:
+		items = append(items,
+			menuItem{label: "Click", key: "click", hint: "the page decides"},
+			menuItem{label: "Yank url", key: "yankurl", hint: oneLine(n.URL), disabled: n.URL == ""})
+	case ir.Textbox:
+		if n.Value == "" {
+			items = append(items, menuItem{label: "Edit", key: "edit", hint: "type a value"})
+		} else {
+			items = append(items, textboxItems(n)...)
+		}
+	case ir.Combobox:
+		items = append(items, menuItem{label: "Choose", key: "choose", hint: "pick an option"})
+	case ir.Heading:
+		items = append(items, menuItem{label: "Fold section", key: "fold", hint: "not in this build yet", disabled: true})
+	case ir.Unsupported:
+		items = append(items,
+			menuItem{label: "role: " + n.Role + ", not supported yet — only click", key: "unsupported", disabled: true},
+			menuItem{label: "Click", key: "click", hint: "the page decides"})
+	}
+	return append(items,
+		menuItem{label: "Yank text", key: "yanktext", hint: "what it says"},
+		menuItem{label: "Inspect", key: "inspect", hint: "role, name, node id"})
+}
+
+// pageMenuItems is panel [3]'s Space menu: the item's operations, then the
+// page's — the whole of what can be done here (ux.md §A.1).
 func (m AppModel) pageMenuItems() []menuItem {
 	var items []menuItem
 	t := m.shownTab()
 	if n := t.current(); t != nil && n != nil {
 		items = append(items, menuItem{header: true, label: "item operation"})
-		switch n.Kind {
-		case ir.Link:
-			items = append(items,
-				menuItem{label: "Open", key: "enter", hint: "click it"},
-				menuItem{label: "Open in new tab", key: "newtab", hint: "and switch to it"},
-				menuItem{label: "Yank url", key: "yankurl", hint: oneLine(n.URL)})
-		case ir.Button, ir.Check:
-			items = append(items, menuItem{label: "Click", key: "enter", hint: "press it"})
-		case ir.Media:
-			items = append(items,
-				menuItem{label: "Click", key: "enter", hint: "the page decides"},
-				menuItem{label: "Yank url", key: "yankurl", hint: oneLine(n.URL), disabled: n.URL == ""})
-		case ir.Textbox:
-			if n.Value == "" {
-				items = append(items, menuItem{label: "Edit", key: "enter", hint: "type a value"})
-			} else {
-				items = append(items, textboxItems(n)...)
-			}
-		case ir.Combobox:
-			items = append(items, menuItem{label: "Choose", key: "enter", hint: "pick an option"})
-		case ir.Heading:
-			items = append(items, menuItem{label: "Fold section", key: "fold", hint: "not in this build yet", disabled: true})
-		case ir.Unsupported:
-			items = append(items,
-				menuItem{label: "role: " + n.Role + ", not supported yet — only click", key: "enter", disabled: true},
-				menuItem{label: "Click", key: "enter", hint: "the page decides"})
-		}
+		items = append(items, itemMenuItems(n)...)
 		items = append(items,
-			menuItem{label: "Yank text", key: "yanktext", hint: "what it says"},
-			menuItem{label: "Inspect", key: "inspect", hint: "role, name, node id"},
 			menuItem{separator: true},
 			menuItem{header: true, label: "panel operation"})
 	}
@@ -1089,7 +1109,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
 		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
-		menuItem{label: "Select mode", key: "alt+v", hint: "walk the text, copy some", disabled: t == nil},
+		menuItem{label: "Select text", key: "select", hint: "walk by character, copy some", disabled: t == nil},
 		menuItem{label: "URL", key: "U", hint: "go to one"},
 		menuItem{label: "Add to…", key: "A", hint: "Bookmarks or Shortcuts", disabled: t == nil},
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
@@ -1140,8 +1160,11 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if t == nil {
 		return m, m.options.close()
 	}
-	if n == nil {
-		// The Add to… picker: keys name the list.
+	if i := m.options.cursor; i < len(m.options.items) && m.options.items[i].disabled && m.options.items[i].key == key {
+		return m, m.toast.show(m.options.items[i].hint, toastInfo)
+	}
+	switch m.optionsKind {
+	case optAddTo:
 		closeCmd := m.options.close()
 		switch key {
 		case "b":
@@ -1150,18 +1173,21 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(closeCmd, m.addEntry(listShortcuts, t.title, t.url))
 		}
 		return m, closeCmd
-	}
-	if n.Kind == ir.Combobox {
+	case optSelect:
 		idx, err := strconv.Atoi(key)
-		if err != nil || idx < 0 || idx >= len(n.Children) {
+		if n == nil || err != nil || idx < 0 || idx >= len(n.Children) {
 			return m, m.options.close()
 		}
 		opt := n.Children[idx]
 		return m, tea.Batch(m.closeStack(), t.act(func(ctx context.Context) error { return page.Choose(ctx, opt.ID) }))
 	}
-	// Close BEFORE dispatching: dispatch returns its own copy of the model,
-	// and a close applied to this one afterwards would be applied to a model
-	// nobody returns.
+	// An item's operation. Close BEFORE dispatching: dispatch returns its
+	// own copy of the model, and a close applied to this one afterwards
+	// would be applied to a model nobody returns. Choose keeps the float
+	// open, swapping it for the option list.
+	if key == "choose" {
+		return m.chooseOptions()
+	}
 	closeCmd := m.options.close()
 	mm, cmd := m.dispatch(key)
 	return mm, tea.Batch(closeCmd, cmd)
@@ -1257,11 +1283,11 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "/":
 		return m, m.enterSelect(true)
-	case "alt+v":
+	case "select":
 		return m, m.enterSelect(false)
 	case "A":
 		if t != nil {
-			m.optionsFor = nil
+			m.optionsFor, m.optionsKind = nil, optAddTo
 			m.options.setItems([]menuItem{
 				{label: "Bookmarks", key: "b", hint: "the tree you keep"},
 				{label: "Shortcuts", key: "s", hint: "the few you reach for"},
@@ -1272,6 +1298,13 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	// ---- panel [3], item
 	case "enter":
 		return m.enterItem()
+	case "click":
+		if n := t.current(); n != nil {
+			id := n.ID
+			return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
+		}
+	case "choose":
+		return m.chooseOptions()
 	case "newtab":
 		if n := t.current(); n != nil && n.URL != "" {
 			return m, m.openTab(n.URL, true)
@@ -1310,45 +1343,55 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// enterItem is Enter on panel [3]: a click, with the two exceptions that
-// need a second step — a textbox and a select (ux.md §A.0.K, §2).
+// enterItem is Enter on panel [3]: the item's operations, as a menu of
+// their own, first row the main one (ux.md §A.0.K as revised 2026-09-20).
+// Space is the whole menu — this region and the page's — so Enter is the
+// short way to "what can I do with THIS".
 func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	n := t.current()
 	if t == nil || n == nil {
 		return m, nil
 	}
-	switch n.Kind {
-	case ir.Textbox:
-		if n.Value == "" {
-			return m, m.editField(n)
-		}
-		m.optionsFor = n
-		m.options.setItems(textboxItems(n), oneLine(nameOr(n.Name, "field")), m.layer())
-		return m, m.options.open()
-	case ir.Combobox:
-		items := make([]menuItem, 0, len(n.Children))
-		for i, o := range n.Children {
-			hint := ""
-			if o.Selected {
-				hint = "current"
-			}
-			items = append(items, menuItem{label: oneLine(o.Name), key: strconv.Itoa(i), hint: hint})
-		}
-		if len(items) == 0 {
-			return m, m.toast.show("no options to choose from", toastInfo)
-		}
-		m.optionsFor = n
-		m.options.setItems(items, oneLine(nameOr(n.Name, "choose")), m.layer())
-		for i, o := range n.Children {
-			if o.Selected {
-				m.options.cursor = i
-			}
-		}
-		return m, m.options.open()
+	m.optionsFor, m.optionsKind = n, optItemMenu
+	title := oneLine(n.Text())
+	if title == "" {
+		title = oneLine(nameOr(n.Name, n.Kind.String()))
 	}
-	id := n.ID
-	return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
+	m.options.setItems(itemMenuItems(n), truncate(title, 40), m.layer())
+	return m, m.options.open()
+}
+
+// chooseOptions lists a select's options in the options menu, cursor on
+// the current one; picking one sets it (ux.md §2.4).
+func (m AppModel) chooseOptions() (tea.Model, tea.Cmd) {
+	t := m.shownTab()
+	n := t.current()
+	if t == nil || n == nil || n.Kind != ir.Combobox {
+		return m, m.options.close()
+	}
+	items := make([]menuItem, 0, len(n.Children))
+	for i, o := range n.Children {
+		hint := ""
+		if o.Selected {
+			hint = "current"
+		}
+		items = append(items, menuItem{label: oneLine(o.Name), key: strconv.Itoa(i), hint: hint})
+	}
+	if len(items) == 0 {
+		return m, tea.Batch(m.options.close(), m.toast.show("no options to choose from", toastInfo))
+	}
+	m.optionsFor, m.optionsKind = n, optSelect
+	m.options.setItems(items, oneLine(nameOr(n.Name, "choose")), m.layer())
+	for i, o := range n.Children {
+		if o.Selected {
+			m.options.cursor = i
+		}
+	}
+	if m.options.isActive() {
+		return m, nil // swapped in place under the open float
+	}
+	return m, m.options.open()
 }
 
 // editField opens the input popup on a textbox. A pointer receiver on
@@ -1704,7 +1747,7 @@ func (m AppModel) View() string {
 // sideColumn is panel [1] over panel [2], outerW wide and outerH tall.
 func (m AppModel) sideColumn(outerW, outerH int) string {
 	innerW := outerW - 2
-	p1 := panelChrome(innerW, fitLines(m.panel1Body(innerW), innerW, panel1Rows), "[1]", m.focus == panel1)
+	p1 := panelChrome(innerW, fitLines(m.panel1Body(innerW), innerW, panel1Rows), "[1] Places", m.focus == panel1)
 	h2 := outerH - (panel1Rows + 2) - 2
 	p2 := panelChrome(innerW, fitLines(m.panel2Body(innerW, h2), innerW, h2), "[2] Tabs", m.focus == panel2)
 	return joinVertical(p1, p2)
@@ -1728,7 +1771,7 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	case m.focus == panel3:
 		tone = toneFocus
 	}
-	return panelFrame(innerW, fitLines(m.pageBody(innerW, innerH), innerW, innerH), "[3]", hint, tone)
+	return panelFrame(innerW, fitLines(m.pageBody(innerW, innerH), innerW, innerH), "[3] Page", hint, tone)
 }
 
 // footer is the mandatory disclosure of the entry keys (§A.1 / §A.2): one

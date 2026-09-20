@@ -110,6 +110,15 @@ func (d *driver) until(what string, cond func() bool) {
 
 func (d *driver) page() *tab { return d.m.shownTab() }
 
+// act is Enter on an item and Enter again on the first row of its menu —
+// the obvious thing, done the way a user does it (ux.md §A.0.K).
+func (d *driver) act() {
+	d.t.Helper()
+	d.key("enter")
+	d.until("item menu", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	d.key("enter")
+}
+
 func (d *driver) loaded(title string) func() bool {
 	return func() bool {
 		t := d.page()
@@ -152,8 +161,13 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		t.Fatalf("page not drawn:\n%s", v)
 	}
 
-	// Enter on a link is a click, and the click navigates.
+	// Enter on a link opens its menu; Open is the first row, and it navigates.
 	d.cursorOn(ir.Link, "a link to B")
+	d.key("enter")
+	d.until("item menu", func() bool { return d.m.options.isInteractive() })
+	if got := d.m.options.items[d.m.options.cursor].label; got != "Open" {
+		t.Errorf("first row of a link's menu is %q", got)
+	}
 	d.key("enter")
 	d.until("page B", d.loaded("Page B"))
 	if !strings.Contains(d.m.View(), "You made it.") {
@@ -167,10 +181,10 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		t.Errorf("url after back: %s", d.page().url)
 	}
 
-	// Enter on an empty textbox opens the input popup; Enter there writes
-	// the value into the page, and the next capture shows it.
+	// An empty textbox's menu leads with Edit: the input popup; Enter there
+	// writes the value into the page, and the next capture shows it.
 	d.cursorOn(ir.Textbox, "Name")
-	d.key("enter")
+	d.act()
 	d.until("input popup", func() bool { return d.m.input.isInteractive() })
 	d.key("hi there")
 	d.key("enter")
@@ -179,10 +193,10 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		return n != nil && n.Kind == ir.Textbox && n.Value == "hi there"
 	})
 
-	// A filled textbox's Enter is the Submit/Edit/Clear/Yank menu; Submit
-	// presses Enter in the field, and the form's handler sees the value.
+	// A filled textbox's menu leads with Submit, which presses Enter in the
+	// field, and the form's handler sees the value.
 	d.key("enter")
-	d.until("options menu", func() bool { return d.m.options.isInteractive() })
+	d.until("item menu", func() bool { return d.m.options.isInteractive() })
 	if got := d.m.options.items[d.m.options.cursor].label; got != "Submit" {
 		t.Errorf("cursor should rest on Submit, is on %q", got)
 	}
@@ -191,10 +205,10 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		return strings.Contains(dumpLayout(d.page().lay), "submitted:hi there")
 	})
 
-	// A select lists its options; choosing one sets the value.
+	// A select's menu leads with Choose, which swaps in the option list.
 	d.cursorOn(ir.Combobox, "Pick")
-	d.key("enter")
-	d.until("options menu", func() bool { return d.m.options.isInteractive() })
+	d.act()
+	d.until("option list", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optSelect })
 	d.key("j")
 	d.key("enter")
 	d.until("option chosen", func() bool {

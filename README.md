@@ -24,7 +24,7 @@ u-family 成員（kbu / filu / sshu 之後），依 VTP（`thoughts/tui-design`�
 - **多媒體**：只畫佔位框；ASCII 轉換 / 內建 viewer / 外部工具全部擱置
 - **CAPTCHA**：第一版不支援，明講；交棒機制擱置
 - **版面**：側欄 28 欄固定，`[1]` 三項（Bookmarks / Shortcuts / History，Enter 開 popup）、`[2]` Tabs（cursor 反白 vs 綠字 = `[3]` 正在顯示）、`[3]` 永遠是頁面、第一列 URL
-- **語意**：Enter = 滑鼠左鍵、Space = 右鍵選單、Esc 只做取消 / 關閉；`P` / `N` 前後頁；`Alt+v` 選取模式（字元游標、Yellow 邊框、`/` 搜尋自動進入）
+- **語意**：Enter = 該 item 的 item operation 選單（第一列是主要動作，再 Enter 執行）、Space = 完整選單（item + panel）、Esc 只做取消 / 關閉；`P` / `N` 前後頁；選取模式（字元游標、Yellow 邊框）由 `/` 搜尋或 Space menu 的 Select text 進入（修訂 2026-09-20）
 - **文字輸入**：所有 textbox Enter 開 input popup（Enter 確認 / Tab no-op / Esc 取消）；有值的 textbox Enter 開選單（Submit / Edit / Clear / Yank）
 - **hotkey**：小寫 = item、大寫 = panel 或全域；全域 `B S H P N`；`[3]` item operation 無 letter hotkey、menu-only
 

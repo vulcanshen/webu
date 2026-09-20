@@ -46,7 +46,7 @@ func TestNewWindowBecomesATab(t *testing.T) {
 	d := startAt(t, b, "file://"+abs, store.Config{})
 	d.until("page A", d.loaded("Page A"))
 	d.cursorOn(ir.Link, "B in a new tab")
-	d.key("enter")
+	d.act()
 	d.until("a second tab showing page B", func() bool {
 		return len(d.m.tabs) == 2 && d.m.shown == 1 && d.m.tabs[1].title == "Page B" && !d.m.tabs[1].loading
 	})
@@ -65,7 +65,7 @@ func TestDialogsAreAnswered(t *testing.T) {
 	d.until("page A", d.loaded("Page A"))
 
 	d.cursorOn(ir.Button, "Alert")
-	d.key("enter")
+	d.act()
 	d.until("alert shown", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmDialog })
 	if !strings.Contains(strings.Join(d.m.confirm.lines, " "), "hello from the page") {
 		t.Errorf("alert text: %v", d.m.confirm.lines)
@@ -74,7 +74,7 @@ func TestDialogsAreAnswered(t *testing.T) {
 	d.until("alert gone", func() bool { return !d.m.confirm.isActive() && d.m.dialog == nil })
 
 	d.cursorOn(ir.Button, "Prompt")
-	d.key("enter")
+	d.act()
 	d.until("prompt shown", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputPrompt })
 	if d.m.input.value != "anon" {
 		t.Errorf("prompt default %q", d.m.input.value)
@@ -85,7 +85,7 @@ func TestDialogsAreAnswered(t *testing.T) {
 	d.until("prompt answered", func() bool { return strings.Contains(dumpLayout(d.page().lay), "answer:bob") })
 
 	d.cursorOn(ir.Button, "Confirm")
-	d.key("enter")
+	d.act()
 	d.until("confirm shown", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmDialog })
 	d.key("esc")
 	d.until("confirm declined", func() bool { return strings.Contains(dumpLayout(d.page().lay), "confirmed:false") })
@@ -109,7 +109,7 @@ func TestCertificateErrorAsksOnce(t *testing.T) {
 	d.until("page loads once allowed", d.loaded("Secure"))
 	// A second navigation in the same tab is not asked again.
 	d.cursorOn(ir.Link, "two")
-	d.key("enter")
+	d.act()
 	d.until("second page", func() bool { return strings.HasSuffix(d.page().url, "/two") && !d.page().loading })
 	if d.m.confirm.isActive() {
 		t.Error("asked again for the same tab")
@@ -133,7 +133,7 @@ func TestDownloadToasts(t *testing.T) {
 	d := startAt(t, b, srv.URL, store.Config{DownloadDir: dir})
 	d.until("files page", d.loaded("Files"))
 	d.cursorOn(ir.Link, "get the file")
-	d.key("enter")
+	d.act()
 	d.until("saved toast", func() bool {
 		return d.m.toast.isActive() && strings.HasPrefix(d.m.toast.msg, "saved ")
 	})
@@ -188,7 +188,7 @@ func TestFileUploadIsAsked(t *testing.T) {
 	d := startAt(t, b, srv.URL, store.Config{})
 	d.until("upload page", d.loaded("Upload"))
 	d.cursorOn(ir.Button, "Attach")
-	d.key("enter")
+	d.act()
 	d.until("path asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFile })
 	d.key(file)
 	d.key("enter")
@@ -235,9 +235,13 @@ func TestSearchThenEnterClicks(t *testing.T) {
 	if v := d.m.View(); !strings.Contains(v, "/link to b") {
 		t.Errorf("the query is not on the URL row:\n%s", v)
 	}
+	// Enter on the match leaves the mode and opens the link's menu; Enter
+	// again opens the link.
+	d.key("enter")
+	d.until("item menu", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	if d.m.sel.on {
+		t.Error("Enter out of selection mode should leave it")
+	}
 	d.key("enter")
 	d.until("page B", d.loaded("Page B"))
-	if d.m.sel.on {
-		t.Error("clicking out of selection mode should leave it")
-	}
 }

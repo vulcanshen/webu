@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -56,6 +57,26 @@ func (m AppModel) panel2Body(innerW, innerH int) []string {
 	txt := lipgloss.NewStyle().Foreground(textColor)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 
+	// Tabs on the same URL are told apart by a number in the order they
+	// were OPENED — the tab id — not the order they sit in, which X and
+	// undo can change.
+	seq := map[*tab]int{}
+	byURL := map[string][]*tab{}
+	for _, t := range m.tabs {
+		if t.url != "" {
+			byURL[t.url] = append(byURL[t.url], t)
+		}
+	}
+	for _, same := range byURL {
+		if len(same) < 2 {
+			continue
+		}
+		sort.Slice(same, func(i, j int) bool { return same[i].id < same[j].id })
+		for i, t := range same {
+			seq[t] = i + 1
+		}
+	}
+
 	top := scrollTo(m.top2, m.cur2, innerH)
 	out := make([]string, 0, innerH)
 	for i := top; i < len(m.tabs) && len(out) < innerH; i++ {
@@ -66,6 +87,9 @@ func (m AppModel) panel2Body(innerW, innerH int) []string {
 		}
 		if title == "" {
 			title = "new tab"
+		}
+		if n := seq[t]; n > 0 {
+			title = "(" + itoa(n) + ") " + title
 		}
 		mark := " "
 		if t.loading {
