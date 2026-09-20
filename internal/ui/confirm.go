@@ -16,6 +16,7 @@ const (
 	confirmClearHistory               // empty the history log
 	confirmDialog                     // a page's alert / confirm / beforeunload
 	confirmCert                       // proceed past a certificate error
+	confirmClearSite                  // DevTools: clear everything for the origin
 )
 
 // confirmPopup is the message class (§6.1): a short question with one yes and
