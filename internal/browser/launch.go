@@ -3,7 +3,11 @@ package browser
 import (
 	"context"
 	"fmt"
+	"io"
 	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/chromedp/chromedp"
 )
@@ -29,7 +33,31 @@ type Browser struct {
 //     is not looking at still has to poll (function.md §6).
 //   - `--user-data-dir` is webu's own profile, so a login survives a restart
 //     and the user's Chrome is never touched.
-func Launch(exe, profile string) (*Browser, error) {
+//
+// logw takes chromedp's own log lines. They MUST go somewhere other than
+// stderr: the TUI owns the terminal, and chromedp's default is log.Printf,
+// which paints over it — the first real-site run showed "unhandled node
+// event" (a CDP event newer than this chromedp knows) across the page.
+// nil discards.
+func Launch(exe, profile string, logw io.Writer) (*Browser, error) {
+	if logw == nil {
+		logw = io.Discard
+	}
+	var mu sync.Mutex
+	logf := func(prefix string) func(string, ...any) {
+		return func(format string, args ...any) {
+			line := fmt.Sprintf(format, args...)
+			// A CDP event this chromedp has no case for is not news: the
+			// page works without it, and w3schools sends one a second.
+			if strings.Contains(line, "unhandled node event") || strings.Contains(line, "unhandled page event") {
+				return
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			fmt.Fprintf(logw, "%s %s%s\n", time.Now().Format("2006-01-02 15:04:05"), prefix, line)
+		}
+	}
+	lf, ef := logf(""), logf("ERROR: ")
 	opts := []chromedp.ExecAllocatorOption{
 		chromedp.ExecPath(exe),
 		chromedp.UserDataDir(profile),
@@ -67,7 +95,12 @@ func Launch(exe, profile string) (*Browser, error) {
 		chromedp.WindowSize(1280, 900),
 	}
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	ctx, _ := chromedp.NewContext(allocCtx)
+	// The Browser's errf is what every Target inherits (chromedp
+	// browser.go), so the browser option is the one that matters; the
+	// context options cover the rest.
+	ctx, _ := chromedp.NewContext(allocCtx,
+		chromedp.WithLogf(lf), chromedp.WithErrorf(ef),
+		chromedp.WithBrowserOption(chromedp.WithBrowserLogf(lf), chromedp.WithBrowserErrorf(ef)))
 	// Run with no actions starts the process and opens the first target; an
 	// error here is the browser failing to come up at all.
 	if err := chromedp.Run(ctx); err != nil {

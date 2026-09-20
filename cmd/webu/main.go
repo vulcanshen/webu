@@ -6,8 +6,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -55,7 +57,16 @@ func main() {
 		fmt.Fprintln(os.Stderr, "webu:", err)
 		os.Exit(1)
 	}
-	b, err := browser.Launch(exe, profile)
+	// chromedp's own log goes to a file next to the profile, never to the
+	// terminal the TUI is drawing on. Failing to open it is not fatal: the
+	// lines are dropped instead.
+	var logw io.Writer = io.Discard
+	if f, err := os.OpenFile(filepath.Join(filepath.Dir(profile), "webu.log"),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil {
+		defer f.Close()
+		logw = f
+	}
+	b, err := browser.Launch(exe, profile, logw)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "webu:", err)
 		os.Exit(1)

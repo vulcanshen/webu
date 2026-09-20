@@ -46,7 +46,7 @@ func TestFixtures(t *testing.T) {
 		if !ok {
 			t.Fatal("-capture needs the pinned Chromium; run webu once to download it")
 		}
-		b, err = browser.Launch(exe, t.TempDir())
+		b, err = browser.Launch(exe, t.TempDir(), nil)
 		if err != nil {
 			t.Fatal(err)
 		}

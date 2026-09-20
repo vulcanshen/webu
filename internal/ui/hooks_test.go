@@ -24,7 +24,7 @@ func hookBrowser(t *testing.T) *browser.Browser {
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
 	}
-	b, err := browser.Launch(exe, t.TempDir())
+	b, err := browser.Launch(exe, t.TempDir(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,7 @@ func TestLaunchAnswers(t *testing.T) {
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
 	}
-	b, err := Launch(exe, t.TempDir())
+	b, err := Launch(exe, t.TempDir(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
