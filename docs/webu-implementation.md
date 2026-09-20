@@ -107,7 +107,7 @@ backendDOMNodeId，找不到落到同序位。
 
 依 ux.md §A 落地。已實作的入口：footer `space menu   ? help   tab/1-3 panels   q quit`；
 `[3]` 的 **Enter 開 item operation 選單**（`itemMenuItems`，第一列主要動作；修訂 2026-09-20），
-Space 開完整選單（同一份 item 列 + panel region `[R] [P] [N] [/] Select text [U] [A] [O] [D] [Z] [V] [Y]`）；
+Space 開完整選單（同一份 item 列 + panel region `[R] [P] [N] [/] Select text [U] [A] [O] [D] [Z] [V] [Y] [W]`）；
 `[2]` 的 `[w] [c] [r] [y]` / `[T] [X] [U]`；`[1]` 三列各只有一個動作，Space = Enter。help popup 列全域鍵。
 options popup（`m.options`）以 `optionsKind` 區分三種內容：item 選單、select 的 option 清單（Choose
 在原浮層內換內容）、Add to… picker。

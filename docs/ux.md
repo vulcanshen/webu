@@ -74,7 +74,8 @@ VTP §A.0.K 只要求同一 app 內跨 surface 不變。
 **`[3]` 一般模式，panel operation**：`[R] Reload`、`[P] Previous`、`[N] Next`、
 `[/] Search`（進選取模式）、`Select text`（無 hotkey，進選取模式）、`[U] Go to URL`、`[A] Add to…`
 （picker：Bookmarks / Shortcuts，多對象可選 → menu）、`[O] Outline`、`[D] DevTools`、
-`[Z] Zoom`、`[V] View source`、`[Y] Yank page url`。
+`[Z] Zoom`、`[V] View source`、`[Y] Yank page url`、`[W] Close`（關掉 `[3]` 正在顯示的分頁；
+`[2]` 的小寫 `w` 關的是游標列，同字依 focus 面板不同義，修訂 2026-09-20）。
 
 Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡，不在 `[1]`、不在 §A.2
 （決定 2026-09-20）。使用者不用切面板，體驗留在頁面上。
@@ -228,14 +229,14 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 | `[2]` item | `w` `c` `r` `y` |
 | `[2]` panel | `T` `X` `U` |
 | `[3]` item | **無**（menu-only） |
-| `[3]` panel | `R` `U` `A` `O` `D` `Z` `V` `Y` |
+| `[3]` panel | `R` `U` `A` `O` `D` `Z` `V` `Y` `W` |
 | Bookmarks popup | `o` `e` `x` `m` `y` / `A` `F` `/` |
 | Shortcuts popup | `o` `e` `x` `y` / `A` |
 | History popup | `o` `x` / `C` |
 | DevTools | `x` `y` / `C` `/`；`h/l` 切分頁 |
 | 選取模式 | `hjkl` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
 
-撞字檢查：全域 `B S H P N` 與各面板大寫 `R U A O D Z V Y T X C F` 無重疊。`D` 與導覽 `d` 只差大小寫，
+撞字檢查：全域 `B S H P N` 與各面板大寫 `R U A O D Z V Y W T X C F` 無重疊。`D` 與導覽 `d` 只差大小寫，
 sshu 的 `[D]isconnect` 同例。`U` 在 `[2]`
 是 undo close、在 `[3]` 是 go to URL，同字依 focus 面板不同義（決定 2026-09-20，kbu 的 `C` 同例）。Bookmarks 的新目錄用 `F`
 不用 `N`，避開全域 `N`。
@@ -314,7 +315,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 `w` close · `c` clone · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
 
 ### `[3]` Page
-`R` reload · `U` go to URL · `A` add to · `O` outline · `D` devtools · `Z` zoom · `V` view source · `Y` yank page url
+`R` reload · `U` go to URL · `A` add to · `O` outline · `D` devtools · `Z` zoom · `V` view source · `Y` yank page url · `W` close this tab
 
 ### 導覽（跨 surface 同義）
 `j/k` · `u/d` · `gg/G` · `h/l`（DevTools 分頁）· `1-3`

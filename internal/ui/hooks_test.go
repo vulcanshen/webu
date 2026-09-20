@@ -211,6 +211,19 @@ func TestUndoCloseAndQuitConfirm(t *testing.T) {
 		t.Errorf("undo should pop the stack: %d left", len(d.m.closed))
 	}
 
+	// W in [3] closes the page being shown, whatever [2]'s cursor says.
+	d.key("3")
+	d.key("W")
+	if len(d.m.tabs) != 0 || len(d.m.closed) != 1 || d.m.shownTab() != nil {
+		t.Fatalf("after W: %d tabs, %d closed", len(d.m.tabs), len(d.m.closed))
+	}
+	if !strings.Contains(d.m.View(), "no page") {
+		t.Errorf("[3] should be empty:\n%s", d.m.View())
+	}
+	d.key("2")
+	d.key("U")
+	d.until("page B is back again", d.loaded("Page B"))
+
 	d.m.downloads = 1
 	d.key("q")
 	if !d.m.confirm.isActive() || d.m.confirm.action != confirmQuit {
