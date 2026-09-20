@@ -183,6 +183,7 @@ u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬�
 | code | inline code 與 code block | Pink `#f5c2e7`；block 另鋪 Surface0 `#313244` 底、寬到 measure | 不用 Peach：Peach 是 override 的「值得注意」（console warn、4xx），code 不是警告 |
 | table header | 表頭 cell | Mauve `#cba6f7` 粗體 | 定案 2026-09-20 |
 | visual mode 選取 | 掃過的字元 | Lavender `#b4befe` 底、Base 字 | 與「正在改的欄位」同一條帶：選取中的文字就是正在動的東西 |
+| code 內的語法色 | JSON / YAML / TOML / Markdown / XML / JS / CSS 文件（依 content type，chroma 切 token） | key Mauve（與表頭同義：值的名字）、string Pink、number Flamingo `#f2cdcd`、常數與關鍵字 Sky、註解 dim 斜體、標點 Overlay2 `#9399b2`；Markdown 標題 / 粗體 / 斜體用字重 | 修訂 2026-09-20；只分「不同種類的東西」，避開 app 保留的 Green / Yellow / Red / Peach |
 
 focus 二態同 kbu §8.4：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，cell 數相同、零位移。
 

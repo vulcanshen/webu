@@ -113,6 +113,10 @@ type Node struct {
 	Block bool
 	// Marker is a ListItem's bullet as Chromium rendered it: "• ", "1. ".
 	Marker string
+	// Lang is a Code block's language when it is known — a whole document
+	// that was JSON, YAML, TOML, Markdown… — for syntax colour. Empty for
+	// code found inside a page, which the AX tree does not name.
+	Lang string
 
 	Children []*Node
 }
