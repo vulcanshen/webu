@@ -9,9 +9,11 @@ import (
 type confirmAction int
 
 const (
-	confirmNone     confirmAction = iota
-	confirmCloseTab               // close a tab with a download in flight
-	confirmQuit                   // leave webu with a download in flight
+	confirmNone         confirmAction = iota
+	confirmCloseTab                   // close a tab with a download in flight
+	confirmQuit                       // leave webu with a download in flight
+	confirmDeleteEntry                // remove a bookmark, shortcut or visit
+	confirmClearHistory               // empty the history log
 )
 
 // confirmPopup is the message class (§6.1): a short question with one yes and
@@ -26,6 +28,7 @@ type confirmPopup struct {
 	warn    bool   // render the first line in the warning colour
 	action  confirmAction
 	tabID   int
+	at      int // the list entry the action is about
 	layer   int
 	screenW int
 	screenH int

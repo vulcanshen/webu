@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
+	"github.com/vulcanshen/webu/internal/store"
 )
 
 // driver runs an AppModel the way Bubble Tea would, without a terminal:
@@ -118,6 +119,7 @@ func (d *driver) cursorOn(kind ir.Kind, want string) {
 }
 
 func TestAppNavigatesAndFillsAForm(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir()) // the history log goes to a scratch dir, not the user's
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -186,6 +188,52 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		n := d.page().current()
 		return n != nil && n.Kind == ir.Combobox && n.Value == "Two"
 	})
+}
+
+// TestListPopupsAndSession drives panel [1] without a browser: B opens the
+// bookmarks, the filter narrows them, x asks before deleting, and the
+// session written on the way out is what was open.
+func TestListPopupsAndSession(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	m := New(nil, "").WithStore(
+		[]store.Bookmark{{Title: "Hacker News", URL: "https://news.ycombinator.com/"}, {Title: "Go", URL: "https://go.dev"}},
+		store.Config{Shortcuts: []store.Shortcut{{Title: "Mail", URL: "https://mail.example"}}},
+		nil)
+	d := newDriver(t, m)
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+
+	d.key("B")
+	d.until("bookmarks open", func() bool { return d.m.lists.isInteractive() })
+	if got := len(d.m.lists.visible()); got != 2 {
+		t.Fatalf("visible %d", got)
+	}
+	d.key("/")
+	d.key("go")
+	d.key("enter")
+	if got := len(d.m.lists.visible()); got != 1 {
+		t.Fatalf("filtered %d", got)
+	}
+	d.key("x")
+	d.until("confirm", func() bool { return d.m.confirm.isInteractive() })
+	d.key("enter")
+	d.until("deleted", func() bool { return len(d.m.bookmarks) == 1 })
+	if saved, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Title != "Hacker News" {
+		t.Errorf("bookmarks.yaml after delete: %+v", saved)
+	}
+	d.key("esc") // the filter
+	d.key("esc") // the popup
+	d.until("closed", func() bool { return !d.m.lists.isActive() })
+
+	d.key("S")
+	d.until("shortcuts open", func() bool { return d.m.lists.isInteractive() })
+	if e, _, ok := d.m.lists.current(); !ok || e.title != "Mail" {
+		t.Errorf("shortcut row: %+v %v", e, ok)
+	}
+
+	// No tabs, no browser: the session is empty and does not panic.
+	if s := d.m.Session(); len(s.Tabs) != 0 {
+		t.Errorf("session: %+v", s)
+	}
 }
 
 func TestResolveURL(t *testing.T) {

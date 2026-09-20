@@ -12,6 +12,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/vulcanshen/webu/internal/paths"
 )
 
 // Revision is the one Chromium webu runs. Pinned, not overridable: the
@@ -71,7 +73,7 @@ func snapshotURL(p platform) string {
 // InstallDir is the directory the pinned revision unpacks into. The revision
 // is in the name so an update never overwrites a build that is still running.
 func InstallDir() (string, error) {
-	cache, err := CacheDir()
+	cache, err := paths.Cache()
 	if err != nil {
 		return "", err
 	}

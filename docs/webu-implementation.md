@@ -119,12 +119,22 @@ backendDOMNodeId，找不到落到同序位。
 - goto popup（`U` / `T`）：非 URL 當 DuckDuckGo 搜尋
 - `P` / `N` / `R`、Yank url / text / value、Inspect（暫以 toast 呈現）
 - 窄寬只畫焦點側；`TestViewFitsTheTerminal` 檢查四種尺寸每列寬度
-- 整合測試 `TestAppNavigatesAndFillsAForm`（本機頁：載入 → 點 → 回 → 打字 → Submit → 選 option）；
+- `[1]` 三個 popup（`listpopup.go` 一個 model 三種內容）：Enter 開啟、`o` 新分頁、`x` 刪（confirm）、`A` 加目前頁、
+  History 的 `C` 清（confirm）、`/` 打字過濾（子字串，fuzzy 之後）；`[3]` 的 `[A] Add to…` 二選一
+- `internal/store`：`bookmarks.yaml`（flat，`folder` 欄位先留著）、`config.yaml`（`search_engine` / `download_dir` / `shortcuts`）、
+  `history`（append-only、tab 分隔、無限保留）、`session.yaml`；目錄解析在 `internal/paths`，browser / store 共用
+- session：離開（q 或 signal）時 main 寫下所有分頁，啟動時還原成 pending（dim、不預載），切到才載
+- 歷史：每個分頁 load 完的最終 URL + 標題記一筆，同 URL 的 settle 重抓不重複記
+- 即時更新（function.md §6）：`page.Prepare` 在第一次導航前 `Runtime.addBinding` + 注入 MutationObserver
+  （childList / characterData / subtree，150 ms 合併），`Runtime.bindingCalled` 走與 load event 同一條 settle 路
+- 整合測試 `TestAppNavigatesAndFillsAForm`（本機頁：載入 → 點 → 回 → 打字 → Submit → 選 option）、
+  `TestListPopupsAndSession`（無瀏覽器：B 開 / 過濾 / 刪 / 存檔）；
   真站 smoke `WEBU_SMOKE=1 go test ./internal/ui -run TestSmoke -v`（Hacker News、GitHub）
 
 ### 未做（v1 清單，ui.md §7）
 
-Bookmarks / Shortcuts / History popup 與存檔、session 還原、Outline、DevTools（Storage / Network / Console）、
-`/` 搜尋、選取模式、Zoom、View source、Add to、下載 toast、憑證錯誤 confirm、`beforeunload` / JS dialog /
-HTTP auth / 檔案上傳 hook（function.md §5）、MutationObserver 即時更新（§6）、heading Fold、
-Inspect 的 message popup、iframe 內容、`h/l` 在 table row 內移動。
+Bookmarks 的目錄樹與 Edit / Move、History fuzzy、Undo close、`target=_blank` 接 `Target.targetCreated`、
+Outline、DevTools（Storage / Network / Console）、`/` 搜尋、選取模式、Zoom、View source、下載 toast、
+憑證錯誤 confirm、`beforeunload` / JS dialog / HTTP auth / 檔案上傳 hook（function.md §5）、heading Fold、
+Inspect 的 message popup、iframe 內容、`h/l` 在 table row 內移動、textarea 的 `$EDITOR` 鏈、
+`download_dir` 的實際使用。
