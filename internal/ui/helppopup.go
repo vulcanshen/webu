@@ -35,13 +35,13 @@ type helpEntry struct{ key, desc string }
 // walk the app (§A.0.K).
 var helpContent = []helpEntry{
 	{"", "Core keys"},
-	{"Tab · 1-3", "next panel / this panel"},
+	{"Tab · 1-2", "next panel / this panel"},
 	{"Enter", "what can I do with this item (first row: the obvious thing)"},
 	{"Esc", "close the top float"},
 	{"Space", "what can I do here: the item and the panel"},
 	{"?", "this help"},
 	{"", "Global"},
-	{"B · S · H", "Bookmarks · Shortcuts · History"},
+	{"B · H · D", "Bookmarks · History · Downloads"},
 	{"P · N", "previous / next page"},
 	{"L", "go to a URL: this page's own is offered, Tab edits it"},
 	{"/", "search the page (enters selection mode)"},

@@ -8,22 +8,27 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// listPopup is the menu behind panel [1]'s three rows: Bookmarks,
-// Shortcuts and History (ui.md §3.1). One model, three contents — the
-// rows are the same shape (a title and a URL), the operations differ by
-// kind and the hint says which. Typing `/` filters in place, the History
-// popup's "type to find" (a substring match for now; fuzzy later).
+// listPopup is the popup behind each of the header's three chips:
+// Bookmarks, History and Downloads (ui.md §3.1). One model, three contents
+// — the rows are the same shape (a title and a line under it), the
+// operations differ by kind and the hint says which. Typing `/` filters in
+// place, the History popup's "type to find" (a substring match for now;
+// fuzzy later).
 type listKind int
 
+// In the header's order: the lit chip is the open kind (app.go header).
 const (
 	listBookmarks listKind = iota
-	listShortcuts
 	listHistory
+	listDownloads
 )
 
 type listEntry struct {
 	title, url string
-	at         time.Time // History only
+	// meta is what the row shows beside the title when it is not the URL:
+	// a download's progress, or where it landed.
+	meta string
+	at   time.Time // History only
 }
 
 type listPopup struct {
@@ -62,8 +67,8 @@ func (m *listPopup) setEntries(entries []listEntry) {
 
 func (m listPopup) title() (glyph, text string) {
 	switch m.kind {
-	case listShortcuts:
-		return glyphShortcut, "Shortcuts"
+	case listDownloads:
+		return glyphDownload, "Downloads"
 	case listHistory:
 		return glyphHistory, "History"
 	}
@@ -95,8 +100,8 @@ func (m listPopup) current() (listEntry, int, bool) {
 func (m listPopup) rows() int { return max(1, min(m.screenH-8, 20)) }
 
 // update handles one key. It returns the action committed: "open",
-// "newtab", "delete", "add", "clear", or "" — the app runs it, since the
-// popup does not know what a URL is for. Esc is the app's (§4.3); while
+// "newtab", "delete", "add", "clear", "yank", or "" — the app runs it,
+// since the popup does not know what a URL is for. Esc is the app's (§4.3); while
 // typing, Esc clearing the filter is answered by escTyping.
 func (m *listPopup) update(msg tea.KeyMsg) string {
 	if !m.anim.isInteractive() {
@@ -133,12 +138,14 @@ func (m *listPopup) update(msg tea.KeyMsg) string {
 		return "newtab"
 	case "x":
 		return "delete"
+	case "y":
+		return "yank"
 	case "A":
-		if m.kind != listHistory {
+		if m.kind == listBookmarks {
 			return "add"
 		}
 	case "C":
-		if m.kind == listHistory {
+		if m.kind != listBookmarks {
 			return "clear"
 		}
 	}
@@ -191,6 +198,9 @@ func (m listPopup) view() string {
 		e := m.entries[vis[r]]
 		title := padRight(oneLine(nameOr(e.title, e.url)), titleW)
 		meta := e.url
+		if e.meta != "" {
+			meta = e.meta
+		}
 		if m.kind == listHistory && !e.at.IsZero() {
 			meta = e.at.Local().Format("01-02 15:04") + "  " + e.url
 		}
@@ -206,11 +216,14 @@ func (m listPopup) view() string {
 	if m.typing {
 		pairs = [][2]string{{"Enter", "done"}, {"Esc", "clear"}}
 	} else {
-		pairs = [][2]string{{"Enter", "open"}, {"o", "new tab"}, {"x", "delete"}}
-		if m.kind == listHistory {
-			pairs = append(pairs, [2]string{"C", "clear"})
-		} else {
-			pairs = append(pairs, [2]string{"A", "add this page"})
+		switch m.kind {
+		case listDownloads:
+			pairs = [][2]string{{"Enter", "open file"}, {"o", "source in new tab"}, {"x", "remove"},
+				{"y", "yank path"}, {"C", "clear done"}}
+		case listHistory:
+			pairs = [][2]string{{"Enter", "open"}, {"o", "new tab"}, {"x", "delete"}, {"y", "yank url"}, {"C", "clear"}}
+		default:
+			pairs = [][2]string{{"Enter", "open"}, {"o", "new tab"}, {"x", "delete"}, {"y", "yank url"}, {"A", "add this page"}}
 		}
 		pairs = append(pairs, [2]string{"/", "filter"}, [2]string{"Esc", "close"})
 	}

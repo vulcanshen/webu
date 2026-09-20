@@ -20,7 +20,7 @@ var (
 	// is wrong", peach is "worth catching, nothing broken".
 	warnColor  = lipgloss.Color("#f38ba8") // red
 	peachColor = lipgloss.Color("#fab387") // peach
-	// the tab panel [3] is showing (ui.md §4): the ONE thing green says.
+	// the tab panel [2] is showing (ui.md §4): the ONE thing green says.
 	liveColor = lipgloss.Color("#a6e3a1") // green
 	// selection mode's frame (ux.md §1).
 	selectColor = lipgloss.Color("#f9e2af") // yellow
@@ -42,7 +42,7 @@ var (
 	selectionBg = lipgloss.Color("#b4befe") // lavender
 	// the cursor row in a list.
 	rowSelColor = focusColor
-	// the URL on panel [3]'s first row: "where you are", which is the
+	// the URL on panel [2]'s first row: "where you are", which is the
 	// structural band's question, so it shares the hex on purpose (as
 	// sshu's nestColor shares editColor). Named separately so the sharing
 	// is deliberate and greppable.
@@ -75,20 +75,18 @@ var (
 	glyphPencil = string(rune(0xf040))  // nf-fa-pencil          — input popup
 	glyphList   = string(rune(0xf0279)) // nf-md-format_list_bulleted — outline
 
-	// Panel [1] items. A shortcut is a link the user keeps, so it wears a
-	// link — the VARIANT, so the page's own links (glyphLink) keep their
-	// one shape (ux.md §B).
+	// The header's three popups (ux.md §B: one role, one glyph).
 	glyphBookmark = string(rune(0xf00c0)) // nf-md-bookmark
-	glyphShortcut = string(rune(0xf0339)) // nf-md-link_variant
 	glyphHistory  = string(rune(0xf02da)) // nf-md-history
+	glyphDownload = string(rune(0xf01da)) // nf-md-download
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 
-	// Panel [2]: a tab still loading; also panel [3]'s URL row while the
+	// Panel [1]: a tab still loading; also panel [2]'s URL row while the
 	// page is on its way. The same codepoint as kbu's Logs live glyph
 	// (ui.md §2): the family says "live" with one shape.
 	glyphLive = string(rune(0xf0753)) // kbu logsLiveGlyph, U+F0753
-	// Panel [3]'s URL row, at rest.
+	// Panel [2]'s URL row, at rest.
 	glyphWeb = string(rune(0xf059f)) // nf-md-web
 
 	// Page roles (ux.md §B: one role, one glyph).

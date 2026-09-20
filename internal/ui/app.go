@@ -20,13 +20,15 @@ import (
 	"github.com/vulcanshen/webu/internal/store"
 )
 
-// The three panels, numbered left to right, top to bottom (ui.md §1.1).
+// The two panels, left and right (ui.md §1.1). What used to be a third —
+// Bookmarks / Shortcuts / History as a three-row panel — is the header row
+// now: those are global popups, and a panel that never changes and is never
+// the thing you are doing is a bar, not a panel (revised 2026-09-20).
 type panelID int
 
 const (
-	panel1 panelID = iota // Bookmarks / Shortcuts / History
-	panel2                // Tabs
-	panel3                // the page
+	panelTabs panelID = iota // [1] the tabs
+	panelPage                // [2] the page
 )
 
 const (
@@ -46,18 +48,17 @@ const searchEngine = store.DefaultSearch
 type AppModel struct {
 	w, h  int
 	focus panelID
-	cur1  int
 	cur2  int
 	top2  int
 
 	tabs      []*tab
-	shown     int // index into tabs panel [3] displays; -1 for none
+	shown     int // index into tabs panel [2] displays; -1 for none
 	nextTabID int
 	browser   *browser.Browser
 	events    chan tea.Msg // page and browser events, read by waitEvent
 	startURL  string
 	session   store.Session // what to restore on the first frame
-	// zoom: panel [3] alone fills the screen (ux.md §A.1 [Z]).
+	// zoom: panel [2] alone fills the screen (ux.md §A.1 [Z]).
 	zoom bool
 	// sel is selection mode on the shown tab (ux.md §1).
 	sel selectMode
@@ -72,7 +73,7 @@ type AppModel struct {
 	spaceMenu spaceMenu
 	options   spaceMenu // a textbox's Submit/Edit/Clear/Yank, or a select's options
 	outline   spaceMenu // the page's landmarks and headings
-	lists     listPopup // Bookmarks / Shortcuts / History
+	lists     listPopup // Bookmarks / History / Downloads
 	devtools  devtoolsPopup
 	message   messagePopup
 	help      helpPopup
@@ -96,10 +97,11 @@ type AppModel struct {
 	authUser string
 	// upload is the file chooser waiting on a path.
 	upload *fileMsg
-	// closed is the tabs closed this session, for [U]ndo close in [2].
+	// closed is the tabs closed this session, for [U]ndo close in [1].
 	closed []store.SessionTab
-	// downloads is how many are in flight: q asks first while any is.
-	downloads int
+	// dls is this session's downloads, oldest first: the Downloads popup
+	// lists them, the header counts the ones still running.
+	dls []download
 	// pendingG holds the first half of the gg chord.
 	pendingG bool
 }
@@ -108,7 +110,7 @@ type AppModel struct {
 // a tab in front of whatever the session restores (function.md §12).
 func New(b *browser.Browser, startURL string) AppModel {
 	m := AppModel{
-		focus:     panel3,
+		focus:     panelPage,
 		shown:     -1,
 		browser:   b,
 		events:    make(chan tea.Msg, 16),
@@ -142,7 +144,7 @@ func (m AppModel) WithSession(s store.Session) AppModel {
 }
 
 // Session is what to write down on the way out: every tab's URL, and which
-// one panel [3] was on.
+// one panel [2] was on.
 func (m AppModel) Session() store.Session {
 	s := store.Session{Shown: max(0, m.shown)}
 	for _, t := range m.tabs {
@@ -169,7 +171,7 @@ func (m AppModel) Close() {
 }
 
 func (m AppModel) narrow() bool { return m.w < narrowW }
-func (m AppModel) panelH() int  { return m.h - 1 } // one footer row
+func (m AppModel) panelH() int  { return m.h - 2 } // the header row and the footer row
 func (m AppModel) layer() int {
 	if m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() ||
 		m.outline.isActive() || m.devtools.isActive() {
@@ -259,27 +261,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case newTargetMsg:
 		// A window the page opened becomes a tab at the end of the list, and
-		// panel [3] switches to it, the way Chrome does (ux.md §6).
+		// panel [2] switches to it, the way Chrome does (ux.md §6).
 		t := m.newTabFor(msg.id)
 		t.url = msg.url
 		m.tabs = append(m.tabs, t)
 		m.leaveSelect()
 		m.shown = len(m.tabs) - 1
 		m.cur2 = m.shown
-		m.focus = panel3
+		m.focus = panelPage
 		return m, tea.Batch(waitEvent(m.events), t.adopt())
 
 	case downloadMsg:
-		switch {
-		case msg.failed:
-			m.downloads = max(0, m.downloads-1)
-			return m, tea.Batch(waitEvent(m.events), m.toast.show("download cancelled", toastError))
-		case msg.done:
-			m.downloads = max(0, m.downloads-1)
-			return m, tea.Batch(waitEvent(m.events), m.toast.show("saved "+msg.path, toastInfo))
-		}
-		m.downloads++
-		return m, tea.Batch(waitEvent(m.events), m.toast.show("downloading "+msg.name, toastInfo))
+		return m, tea.Batch(waitEvent(m.events), m.noteDownload(msg))
 
 	case authMsg:
 		// The name first, the password second (masked); the request waits.
@@ -512,7 +505,7 @@ func (m *AppModel) enterSelect(typing bool) tea.Cmd {
 	if t == nil || t.root == nil {
 		return m.toast.show("no page to select from", toastInfo)
 	}
-	m.focus = panel3
+	m.focus = panelPage
 	m.sel.enter(t, typing)
 	return nil
 }
@@ -754,23 +747,23 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch k {
 	case "tab":
-		m.focus = (m.focus + 1) % 3
+		m.focus = (m.focus + 1) % 2
 		return m, nil
-	case "1", "2", "3":
+	case "1", "2":
 		m.focus = panelID(k[0] - '1')
 		return m, nil
 	case "q":
 		// A download in flight would be cut off (ux.md §5): ask first.
-		if m.downloads > 0 {
+		if n := m.downloading(); n > 0 {
 			return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Quit",
-				lines:  []string{plural(m.downloads, "download") + " still in progress.", "Quitting stops it."},
+				lines:  []string{plural(n, "download") + " still in progress.", "Quitting stops it."},
 				accept: "quit", warn: true, action: confirmQuit}, m.layer())
 		}
 		return m.quit()
 	case "B":
 		return m, m.openList(listBookmarks)
-	case "S":
-		return m, m.openList(listShortcuts)
+	case "D":
+		return m, m.openList(listDownloads)
 	case "H":
 		return m, m.openList(listHistory)
 	case "L":
@@ -792,17 +785,9 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch m.focus {
-	case panel1:
+	case panelTabs:
 		if navKeys[k] {
-			m.cur1 = moveCursor(m.cur1, len(side1Items), k, panel1Rows)
-			return m, nil
-		}
-		if k == "enter" {
-			return m, m.openList(listKind(m.cur1))
-		}
-	case panel2:
-		if navKeys[k] {
-			m.cur2 = moveCursor(m.cur2, len(m.tabs), k, m.panelH()-panel1Rows-4)
+			m.cur2 = moveCursor(m.cur2, len(m.tabs), k, m.panelH()-2)
 			return m, nil
 		}
 		switch k {
@@ -811,7 +796,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "w", "c", "r", "y", "T", "X", "U":
 			return m.dispatch(k)
 		}
-	case panel3:
+	case panelPage:
 		t := m.shownTab()
 		if navKeys[k] && t != nil {
 			t.moveItem(k, m.pageVisible())
@@ -824,7 +809,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "R", "Y", "A", "O", "Z", "D", "W":
+		case "R", "Y", "A", "O", "Z", "I", "W":
 			return m.dispatch(k)
 		}
 	}
@@ -956,7 +941,7 @@ type evalMsg struct {
 
 // ------------------------------------------------------------------- lists
 
-// openList shows one of panel [1]'s popups with its current content.
+// openList shows one of the header's popups with its current content.
 func (m *AppModel) openList(kind listKind) tea.Cmd {
 	return m.lists.open(kind, m.listEntries(kind), m.layer())
 }
@@ -968,9 +953,10 @@ func (m AppModel) listEntries(kind listKind) []listEntry {
 		for _, b := range m.bookmarks {
 			out = append(out, listEntry{title: b.Title, url: b.URL})
 		}
-	case listShortcuts:
-		for _, s := range m.cfg.Shortcuts {
-			out = append(out, listEntry{title: s.Title, url: s.URL})
+	case listDownloads:
+		for i := len(m.dls) - 1; i >= 0; i-- { // newest first, as Chrome lists them
+			d := m.dls[i]
+			out = append(out, listEntry{title: d.name, url: d.url, meta: d.describe(), at: d.at})
 		}
 	case listHistory:
 		for _, v := range m.history {
@@ -991,8 +977,11 @@ func (m AppModel) listKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if !ok {
 			return m, nil
 		}
+		if m.lists.kind == listDownloads {
+			return m, m.openDownload(at)
+		}
 		if t := m.shownTab(); t != nil {
-			m.focus = panel3
+			m.focus = panelPage
 			return m, tea.Batch(m.closeStack(), t.load(e.url))
 		}
 		return m, tea.Batch(m.closeStack(), m.openTab(e.url, true))
@@ -1007,14 +996,31 @@ func (m AppModel) listKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.toast.show("no page to add", toastInfo)
 		}
 		return m, m.addEntry(m.lists.kind, t.title, t.url)
+	case "yank":
+		if !ok {
+			return m, nil
+		}
+		if m.lists.kind == listDownloads {
+			return m, m.yankDownload(at)
+		}
+		return m, copyToClipboard(e.url)
 	case "delete":
 		if !ok {
 			return m, nil
+		}
+		if m.lists.kind == listDownloads {
+			// Not destructive: the file stays; only the row goes (and a
+			// download still running is stopped, which is what x on it says).
+			return m, m.deleteEntry(at)
 		}
 		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Delete",
 			lines: []string{nameOr(e.title, e.url), e.url}, accept: "delete", warn: true,
 			action: confirmDeleteEntry, at: at}, m.layer()+1)
 	case "clear":
+		if m.lists.kind == listDownloads {
+			m.clearDownloads()
+			return m, nil
+		}
 		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Clear history",
 			lines:  []string{"Every visit ever recorded goes.", "This is the only way the log shrinks."},
 			accept: "clear", warn: true, action: confirmClearHistory}, m.layer()+1)
@@ -1022,8 +1028,9 @@ func (m AppModel) listKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// addEntry puts the current page in Bookmarks or Shortcuts and writes the
-// file; a page already there is not added twice.
+// addEntry puts the current page in Bookmarks and writes the file; a page
+// already there is not added twice. (Shortcuts, the second list a page
+// could be added to, went with the Places panel — revised 2026-09-20.)
 func (m *AppModel) addEntry(kind listKind, title, url string) tea.Cmd {
 	switch kind {
 	case listBookmarks:
@@ -1035,16 +1042,6 @@ func (m *AppModel) addEntry(kind listKind, title, url string) tea.Cmd {
 		m.bookmarks = append(m.bookmarks, store.Bookmark{Title: title, URL: url})
 		if err := store.SaveBookmarks(m.bookmarks); err != nil {
 			return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
-		}
-	case listShortcuts:
-		for _, s := range m.cfg.Shortcuts {
-			if s.URL == url {
-				return m.toast.show("already a shortcut", toastInfo)
-			}
-		}
-		m.cfg.Shortcuts = append(m.cfg.Shortcuts, store.Shortcut{Title: title, URL: url})
-		if err := store.SaveConfig(m.cfg); err != nil {
-			return m.toast.show("config.yaml: "+err.Error(), toastError)
 		}
 	default:
 		return nil
@@ -1062,11 +1059,8 @@ func (m *AppModel) deleteEntry(at int) tea.Cmd {
 			m.bookmarks = append(m.bookmarks[:at], m.bookmarks[at+1:]...)
 			err = store.SaveBookmarks(m.bookmarks)
 		}
-	case listShortcuts:
-		if at < len(m.cfg.Shortcuts) {
-			m.cfg.Shortcuts = append(m.cfg.Shortcuts[:at], m.cfg.Shortcuts[at+1:]...)
-			err = store.SaveConfig(m.cfg)
-		}
+	case listDownloads:
+		return m.removeDownload(at)
 	case listHistory:
 		if at < len(m.history) {
 			v := m.history[at]
@@ -1084,19 +1078,17 @@ func (m *AppModel) deleteEntry(at int) tea.Cmd {
 // ------------------------------------------------------------------- menus
 
 // openMenu is Space: the contextual list for the focused panel (ux.md
-// §A.1). Panel [1] has one action per row, so Space is Enter there.
+// §A.1).
 func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 	var items []menuItem
 	title := ""
 	switch m.focus {
-	case panel1:
-		return m, m.openList(listKind(m.cur1))
-	case panel2:
+	case panelTabs:
 		title = "Tabs"
 		if len(m.tabs) > 0 {
 			items = append(items,
 				menuItem{header: true, label: "item operation"},
-				menuItem{label: "Switch to", key: "enter", hint: "show this tab in [3]"},
+				menuItem{label: "Switch to", key: "enter", hint: "show this tab in [2]"},
 				menuItem{label: "Close", key: "w", hint: "this tab"},
 				menuItem{label: "Clone", key: "c", hint: "the same page, a new tab"},
 				menuItem{label: "Reload", key: "r", hint: "this tab"},
@@ -1108,7 +1100,7 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 			menuItem{label: "Tab", key: "T", hint: "a new one, at a URL"},
 			menuItem{label: "X close others", key: "X", hint: "every tab but this one", disabled: len(m.tabs) < 2},
 			menuItem{label: "Undo close", key: "U", hint: "reopen the last closed tab", disabled: len(m.closed) == 0})
-	case panel3:
+	case panelPage:
 		title = "Page"
 		items = m.pageMenuItems()
 	}
@@ -1120,9 +1112,8 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 type optionsKind int
 
 const (
-	optItemMenu optionsKind = iota // an item's operations (Enter on [3])
+	optItemMenu optionsKind = iota // an item's operations (Enter on [2])
 	optSelect                      // a <select>'s options, keyed by index
-	optAddTo                       // Bookmarks / Shortcuts
 )
 
 // itemMenuItems is an item's operations by role (menu-only, no letters —
@@ -1171,7 +1162,7 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 		menuItem{label: "Inspect", key: "inspect", hint: "role, name, node id"})
 }
 
-// pageMenuItems is panel [3]'s Space menu: the item's operations, then the
+// pageMenuItems is panel [2]'s Space menu: the item's operations, then the
 // page's — the whole of what can be done here (ux.md §A.1).
 func (m AppModel) pageMenuItems() []menuItem {
 	var items []menuItem
@@ -1190,9 +1181,9 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
 		menuItem{label: "Visual mode", key: "V", hint: "walk the text by character, copy some", disabled: t == nil},
 		menuItem{label: "URL", key: "L", hint: "go to one; this page's own is offered"},
-		menuItem{label: "Add to…", key: "A", hint: "Bookmarks or Shortcuts", disabled: t == nil},
+		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
-		menuItem{label: "DevTools", key: "D", hint: "storage, network, console, source", disabled: t == nil},
+		menuItem{label: "Inspect", key: "I", hint: "DevTools: storage, network, console, source", disabled: t == nil},
 		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
 		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil},
 		menuItem{label: "W close", key: "W", hint: "this tab", disabled: t == nil})
@@ -1243,15 +1234,6 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.toast.show(m.options.items[i].hint, toastInfo)
 	}
 	switch m.optionsKind {
-	case optAddTo:
-		closeCmd := m.options.close()
-		switch key {
-		case "b":
-			return m, tea.Batch(closeCmd, m.addEntry(listBookmarks, t.title, t.url))
-		case "s":
-			return m, tea.Batch(closeCmd, m.addEntry(listShortcuts, t.title, t.url))
-		}
-		return m, closeCmd
 	case optSelect:
 		idx, err := strconv.Atoi(key)
 		if n == nil || err != nil || idx < 0 || idx >= len(n.Children) {
@@ -1296,7 +1278,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	}
 	switch key {
-	// ---- panel [2]
+	// ---- panel [1]
 	case "show":
 		if m.cur2 >= 0 && m.cur2 < len(m.tabs) {
 			return m.showTab(m.cur2)
@@ -1346,7 +1328,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, m.input.ask(p, m.layer())
 
-	// ---- panel [3], page
+	// ---- panel [2], page
 	case "R":
 		if t != nil {
 			return m, t.load(t.url)
@@ -1365,11 +1347,13 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "O":
 		return m, m.openOutline()
-	case "D":
+	case "I":
+		// Inspect, Chrome's word for it (Cmd+Opt+I); D is the header's
+		// Downloads from any panel (revised 2026-09-20).
 		return m, m.openDevtools()
 	case "W":
-		// The page's own close: the tab [3] is showing, wherever [2]'s
-		// cursor is. Its lowercase twin in [2] closes the cursor's tab.
+		// The page's own close: the tab [2] is showing, wherever [1]'s
+		// cursor is. Its lowercase twin in [1] closes the cursor's tab.
 		if t != nil {
 			return m.closeTab(m.shown)
 		}
@@ -1383,15 +1367,10 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		return m, m.enterSelect(false)
 	case "A":
 		if t != nil {
-			m.optionsFor, m.optionsKind = nil, optAddTo
-			m.options.setItems([]menuItem{
-				{label: "Bookmarks", key: "b", hint: "the tree you keep"},
-				{label: "Shortcuts", key: "s", hint: "the few you reach for"},
-			}, "Add to…", m.layer())
-			return m, m.options.open()
+			return m, m.addEntry(listBookmarks, t.title, t.url)
 		}
 
-	// ---- panel [3], item
+	// ---- panel [2], item
 	case "enter":
 		return m.enterItem()
 	case "click":
@@ -1444,7 +1423,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// enterItem is Enter on panel [3]: the item's operations, as a menu of
+// enterItem is Enter on panel [2]: the item's operations, as a menu of
 // their own, first row the main one (ux.md §A.0.K as revised 2026-09-20).
 // Space is the whole menu — this region and the page's — so Enter is the
 // short way to "what can I do with THIS".
@@ -1523,7 +1502,7 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if t == nil {
 			return m, tea.Batch(m.closeStack(), m.openTab(m.resolveURL(value), true))
 		}
-		m.focus = panel3
+		m.focus = panelPage
 		return m, tea.Batch(m.closeStack(), t.load(m.resolveURL(value)))
 	case inputGotoNewTab:
 		if strings.TrimSpace(value) == "" {
@@ -1730,7 +1709,7 @@ func resolveURLWith(s, search string) string {
 
 // ------------------------------------------------------------------- tabs
 
-// openTab creates a tab at url; show says whether panel [3] switches to it
+// openTab creates a tab at url; show says whether panel [2] switches to it
 // (a new tab does, ux.md §6).
 func (m *AppModel) openTab(url string, show bool) tea.Cmd {
 	t := m.newTab()
@@ -1738,7 +1717,7 @@ func (m *AppModel) openTab(url string, show bool) tea.Cmd {
 	if show || m.shown < 0 {
 		m.shown = len(m.tabs) - 1
 		m.cur2 = m.shown
-		m.focus = panel3
+		m.focus = panelPage
 	}
 	return t.load(url)
 }
@@ -1754,12 +1733,12 @@ func (m *AppModel) remember(t *tab) {
 	}
 }
 
-// showTab is Enter on panel [2]: panel [3] switches, and the keyboard goes
+// showTab is Enter on panel [1]: panel [2] switches, and the keyboard goes
 // with it (ux.md §6). A pending tab loads now.
 func (m AppModel) showTab(i int) (tea.Model, tea.Cmd) {
 	m.leaveSelect()
 	m.shown = i
-	m.focus = panel3
+	m.focus = panelPage
 	t := m.tabs[i]
 	if t.pending {
 		return m, t.load(t.url)
@@ -1807,14 +1786,14 @@ func (m AppModel) View() string {
 	ph := m.panelH()
 	var out string
 	switch {
-	case m.zoom || (m.narrow() && m.focus == panel3):
+	case m.zoom || (m.narrow() && m.focus == panelPage):
 		out = m.pagePanel(m.w, ph)
 	case m.narrow():
-		out = m.sideColumn(m.w, ph)
+		out = m.tabsPanel(m.w, ph)
 	default:
-		out = joinHorizontal(m.sideColumn(sideW, ph), m.pagePanel(m.w-sideW, ph))
+		out = joinHorizontal(m.tabsPanel(sideW, ph), m.pagePanel(m.w-sideW, ph))
 	}
-	out += "\n" + m.footer()
+	out = m.header() + "\n" + out + "\n" + m.footer()
 
 	// Bottom to top: the menu first so what it opened lands above it.
 	if m.spaceMenu.isActive() {
@@ -1850,13 +1829,28 @@ func (m AppModel) View() string {
 	return out
 }
 
-// sideColumn is panel [1] over panel [2], outerW wide and outerH tall.
-func (m AppModel) sideColumn(outerW, outerH int) string {
-	innerW := outerW - 2
-	p1 := panelChrome(innerW, fitLines(m.panel1Body(innerW), innerW, panel1Rows), "[1] Places", m.focus == panel1)
-	h2 := outerH - (panel1Rows + 2) - 2
-	p2 := panelChrome(innerW, fitLines(m.panel2Body(innerW, h2), innerW, h2), "[2] Tabs", m.focus == panel2)
-	return joinVertical(p1, p2)
+// header is the top row (ui.md §1.1): the three global popups as one
+// chain of chips — lit while one of them is open — and, on the right, the
+// downloads still in flight. sshu's tab row, reused: it is the same shape
+// for the same reason, chrome above the surfaces that never moves.
+var headerLabels = []string{"[B]ookmarks", "[H]istory", "[D]ownloads"}
+
+func (m AppModel) header() string {
+	active := -1
+	if m.lists.isActive() {
+		active = int(m.lists.kind)
+	}
+	status, live := "", false
+	if n := m.downloading(); n > 0 {
+		status, live = plural(n, "download")+" in flight", true
+	}
+	return tabRow(m.w, headerLabels, active, status, live)
+}
+
+// tabsPanel is panel [1], outerW wide and outerH tall.
+func (m AppModel) tabsPanel(outerW, outerH int) string {
+	innerW, innerH := outerW-2, outerH-2
+	return panelChrome(innerW, fitLines(m.tabsBody(innerW, innerH), innerW, innerH), "[1] Tabs", m.focus == panelTabs)
 }
 
 func (m AppModel) pagePanel(outerW, outerH int) string {
@@ -1874,10 +1868,10 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	switch {
 	case m.sel.on:
 		tone = toneSelect // Yellow: the keyboard is here, doing something else (ux.md §B)
-	case m.focus == panel3:
+	case m.focus == panelPage:
 		tone = toneFocus
 	}
-	return panelFrame(innerW, fitLines(m.pageBody(innerW, innerH), innerW, innerH), "[3] Page", hint, tone)
+	return panelFrame(innerW, fitLines(m.pageBody(innerW, innerH), innerW, innerH), "[2] Page", hint, tone)
 }
 
 // footer is the mandatory disclosure of the entry keys (§A.1 / §A.2): one
@@ -1887,5 +1881,5 @@ func (m AppModel) footer() string {
 	if m.sel.on && !m.popupOpen() {
 		return keyLegend(selectLegendPairs(m.sel.typing), m.w)
 	}
-	return keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"tab/1-3", "panels"}, {"q", "quit"}}, m.w)
+	return keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"tab/1-2", "panels"}, {"q", "quit"}}, m.w)
 }

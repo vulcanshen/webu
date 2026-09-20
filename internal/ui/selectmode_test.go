@@ -185,15 +185,15 @@ func TestVEntersSelectionFromAnyPanel(t *testing.T) {
 	m.shown = 0
 	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("V")})
 	mm := model.(AppModel)
-	if !mm.sel.on || mm.sel.typing || mm.focus != panel3 {
+	if !mm.sel.on || mm.sel.typing || mm.focus != panelPage {
 		t.Errorf("V: on=%v typing=%v focus=%d", mm.sel.on, mm.sel.typing, mm.focus)
 	}
-	mm.focus = panel2
+	mm.focus = panelTabs
 	mm.sel.on = false
 	model, _ = mm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("V")})
 	mm = model.(AppModel)
-	if !mm.sel.on || mm.focus != panel3 {
-		t.Errorf("V from [2] moves to [3] first: on=%v focus=%d", mm.sel.on, mm.focus)
+	if !mm.sel.on || mm.focus != panelPage {
+		t.Errorf("V from [1] moves to [2] first: on=%v focus=%d", mm.sel.on, mm.focus)
 	}
 }
 

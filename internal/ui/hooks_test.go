@@ -50,7 +50,7 @@ func TestNewWindowBecomesATab(t *testing.T) {
 	d.until("a second tab showing page B", func() bool {
 		return len(d.m.tabs) == 2 && d.m.shown == 1 && d.m.tabs[1].title == "Page B" && !d.m.tabs[1].loading
 	})
-	if d.m.cur2 != 1 || d.m.focus != panel3 {
+	if d.m.cur2 != 1 || d.m.focus != panelPage {
 		t.Errorf("the new tab is where the cursor and keyboard went: cur2 %d focus %d", d.m.cur2, d.m.focus)
 	}
 	if !strings.Contains(d.m.View(), "You made it.") {
@@ -200,7 +200,7 @@ func TestUndoCloseAndQuitConfirm(t *testing.T) {
 	abs, _ := filepath.Abs("testdata/nav2.html")
 	d := startAt(t, b, "file://"+abs, store.Config{})
 	d.until("page B", d.loaded("Page B"))
-	d.key("2")
+	d.key("1")
 	d.key("w")
 	if len(d.m.tabs) != 0 || len(d.m.closed) != 1 {
 		t.Fatalf("after w: %d tabs, %d closed", len(d.m.tabs), len(d.m.closed))
@@ -211,20 +211,20 @@ func TestUndoCloseAndQuitConfirm(t *testing.T) {
 		t.Errorf("undo should pop the stack: %d left", len(d.m.closed))
 	}
 
-	// W in [3] closes the page being shown, whatever [2]'s cursor says.
-	d.key("3")
+	// W in [2] closes the page being shown, whatever [1]'s cursor says.
+	d.key("2")
 	d.key("W")
 	if len(d.m.tabs) != 0 || len(d.m.closed) != 1 || d.m.shownTab() != nil {
 		t.Fatalf("after W: %d tabs, %d closed", len(d.m.tabs), len(d.m.closed))
 	}
 	if !strings.Contains(d.m.View(), "no page") {
-		t.Errorf("[3] should be empty:\n%s", d.m.View())
+		t.Errorf("[2] should be empty:\n%s", d.m.View())
 	}
-	d.key("2")
+	d.key("1")
 	d.key("U")
 	d.until("page B is back again", d.loaded("Page B"))
 
-	d.m.downloads = 1
+	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
 	d.key("q")
 	if !d.m.confirm.isActive() || d.m.confirm.action != confirmQuit {
 		t.Error("q with a download in flight should ask first")

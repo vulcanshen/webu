@@ -24,13 +24,12 @@ func TestRoundTrips(t *testing.T) {
 	if cfg.Search() != DefaultSearch {
 		t.Errorf("default search %q", cfg.Search())
 	}
-	cfg.Shortcuts = []Shortcut{{"Mail", "https://mail"}}
 	cfg.SearchEngine = "https://www.google.com/search?q="
 	if err := SaveConfig(cfg); err != nil {
 		t.Fatal(err)
 	}
 	cfg2, _ := LoadConfig()
-	if len(cfg2.Shortcuts) != 1 || cfg2.Search() != cfg.SearchEngine {
+	if cfg2.Search() != cfg.SearchEngine {
 		t.Errorf("config: %+v", cfg2)
 	}
 

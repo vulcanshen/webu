@@ -20,7 +20,7 @@ import (
 
 // tab is one Chromium target and everything webu knows about it: the page
 // as last captured, laid out for the panel's width, and where the cursor is
-// in it. Panel [2] lists them; panel [3] shows one.
+// in it. Panel [1] lists them; panel [1] shows one.
 type tab struct {
 	id     int
 	ctx    context.Context
@@ -92,12 +92,12 @@ type newTargetMsg struct {
 	url string
 }
 
-// downloadMsg is a download starting or finishing (function.md §8).
+// downloadMsg is a download starting, moving, or finishing (function.md
+// §8); guid is how the events of one download are told from another's.
 type downloadMsg struct {
-	name   string
-	path   string
-	done   bool
-	failed bool
+	guid, name, url, path string
+	received, total       int64
+	begin, done, failed   bool
 }
 
 // authMsg is an HTTP basic / digest challenge waiting on credentials
@@ -202,17 +202,14 @@ func (m *AppModel) listenBrowser() {
 			msg := newTargetMsg{id: info.TargetID, url: info.URL}
 			go func() { ch <- msg }()
 		case *cdpbrowser.EventDownloadWillBegin:
-			msg := downloadMsg{name: e.SuggestedFilename}
+			msg := downloadMsg{guid: e.GUID, name: e.SuggestedFilename, url: e.URL, begin: true}
 			go func() { ch <- msg }()
 		case *cdpbrowser.EventDownloadProgress:
-			switch e.State {
-			case cdpbrowser.DownloadProgressStateCompleted:
-				msg := downloadMsg{done: true, path: e.FilePath}
-				go func() { ch <- msg }()
-			case cdpbrowser.DownloadProgressStateCanceled:
-				msg := downloadMsg{failed: true}
-				go func() { ch <- msg }()
-			}
+			msg := downloadMsg{guid: e.GUID, path: e.FilePath,
+				received: int64(e.ReceivedBytes), total: int64(e.TotalBytes),
+				done:   e.State == cdpbrowser.DownloadProgressStateCompleted,
+				failed: e.State == cdpbrowser.DownloadProgressStateCanceled}
+			go func() { ch <- msg }()
 		}
 	})
 }

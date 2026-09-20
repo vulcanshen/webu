@@ -24,21 +24,14 @@ type Bookmark struct {
 	Folder string `yaml:"folder,omitempty"`
 }
 
-// Shortcut is one of the user's own quick links — the new-tab-page kind,
-// flat and few (ui.md §3.1). They live in config.yaml.
-type Shortcut struct {
-	Title string `yaml:"title"`
-	URL   string `yaml:"url"`
-}
-
-// Config is config.yaml. Read-only from webu's side except for shortcuts,
-// which the Shortcuts popup edits; a hand-written comment elsewhere in the
-// file does not survive that write, which is the price of one file.
+// Config is config.yaml, hand-written. webu reads it and does not write
+// it back — a shortcuts list used to live here and be edited from a popup;
+// it went with the Places panel (2026-09-20), and a `shortcuts:` key left
+// in an old file is ignored.
 type Config struct {
-	SearchEngine string     `yaml:"search_engine,omitempty"`
-	DownloadDir  string     `yaml:"download_dir,omitempty"`
-	Measure      int        `yaml:"measure,omitempty"` // text width cap in panel [3]; 0 is the default
-	Shortcuts    []Shortcut `yaml:"shortcuts,omitempty"`
+	SearchEngine string `yaml:"search_engine,omitempty"`
+	DownloadDir  string `yaml:"download_dir,omitempty"`
+	Measure      int    `yaml:"measure,omitempty"` // text width cap in panel [2]; 0 is the default
 }
 
 // DefaultMeasure is how wide a paragraph flows before it wraps, whatever
