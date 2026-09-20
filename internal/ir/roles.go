@@ -100,7 +100,7 @@ var Roles = map[string]Spec{
 
 	"LayoutTable":     {Transparent: true, Display: "a table used for layout: invisible"},
 	"LayoutTableRow":  {Kind: Group, Display: "a layout-table row: one line of flow (the Hacker News shape)"},
-	"LayoutTableCell": {Transparent: true, Display: "a layout-table cell: invisible"},
+	"LayoutTableCell": {Kind: Cell, Display: "a layout-table cell: its content, a space apart from the next"},
 
 	"image":  {Kind: Media, Action: Click, Display: "placeholder: glyph, alt or (no alt)"},
 	"img":    {Kind: Media, Action: Click, Display: "placeholder: glyph, alt or (no alt)"},

@@ -1,0 +1,10 @@
+<!doctype html><html><head><title>Page A</title></head><body>
+<h1>Page A</h1>
+<p>Some text and <a href="nav2.html">a link to B</a> here.</p>
+<form onsubmit="event.preventDefault(); document.querySelector(&quot;#out&quot;).textContent = &quot;submitted:&quot; + this.n.value;">
+<label>Name <input name="n"></label>
+<label>Pick <select name="s"><option>One</option><option>Two</option></select></label>
+<button type="submit">Send</button>
+</form>
+<p id="out"></p>
+</body></html>
