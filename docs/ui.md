@@ -180,7 +180,7 @@ focus 二態同 kbu §8.4：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─�
 
 | 件 | webu |
 |---|---|
-| Border title chip | `[1]`（無 label）、`[2] Tabs`、`[3]`（無 label）。文字固定 |
+| Border title chip | `[1] Places`、`[2] Tabs`、`[3] Page`（修訂 2026-09-20：原本 `[1]` `[3]` 無 label，實機看了三個面板要一致）。文字固定 |
 | Panel tab bar | 面板都沒有；tab bar 只出現在 DevTools popup |
 | Border hint | 只承載 tab-contextual 鍵（§6.6.2）。`[3]` 的 loading 狀態、`X of Y` 捲動指示放這裡 |
 

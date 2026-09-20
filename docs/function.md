@@ -208,6 +208,8 @@ tree / treeitem、grid、slider、spinbutton、article、figure、iframe 內容�
 ### 兩個核心語意（決定 2026-09-20，細節在 `ux.md`）
 
 - **Enter = 滑鼠左鍵點一下。** 對任何節點都是對它 click，頁面自己決定會發生什麼。
+  **修訂（2026-09-20，實機試用後）**：Enter 改為開該 item 的 item operation 選單，click 是選單第一列；
+  Space 開完整選單。分派表不變，只是多了一層揭露。細節在 `ux.md` §A.0.K。
   與 filu「Enter 只進目錄、不交給外部程式」不同：對象不同，網頁裡的 drill into
   就是左鍵進入，沒有第二種代價要區分。VTP §A.0.K 只要求同一 app 內跨 surface 不變。
 - **Space menu = 滑鼠右鍵 context menu。** 對節點的 item operation 對應右鍵選單

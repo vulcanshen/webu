@@ -46,7 +46,10 @@ var (
 	dividerHard = string(rune(0xe0b0)) // pl-left_hard_divider
 	dividerSoft = string(rune(0xe0b1)) // pl-left_soft_divider
 
-	// Popup titles — the type signal half of a surface label.
+	// Popup titles — the type signal half of a surface label. Every
+	// codepoint below was read out of the Nerd Font glyph table
+	// (glyphnames.json), not remembered: the first draft of this file had
+	// six that were not what their comments said.
 	glyphMenu   = string(rune(0xf0c9))  // nf-fa-bars            — Space menu
 	glyphHelp   = string(rune(0xf059))  // nf-fa-question_circle — help
 	glyphWarn   = string(rune(0xf071))  // nf-fa-warning         — confirm
@@ -55,22 +58,26 @@ var (
 	glyphPencil = string(rune(0xf040))  // nf-fa-pencil          — input popup
 	glyphList   = string(rune(0xf0279)) // nf-md-format_list_bulleted — outline
 
-	// Panel [1] items, as ui.md §1.1 draws them.
+	// Panel [1] items. A shortcut is a link the user keeps, so it wears a
+	// link — the VARIANT, so the page's own links (glyphLink) keep their
+	// one shape (ux.md §B).
 	glyphBookmark = string(rune(0xf00c0)) // nf-md-bookmark
-	glyphShortcut = string(rune(0xf024b)) // nf-md-folder
+	glyphShortcut = string(rune(0xf0339)) // nf-md-link_variant
 	glyphHistory  = string(rune(0xf02da)) // nf-md-history
-	glyphDevTools = string(rune(0xf0668)) // nf-md-tools
+	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
+	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 
-	// Panel [2]: a tab still loading.
-	glyphLive = string(rune(0xf0753)) // nf-md-... the kbu Logs live glyph
+	// Panel [2]: a tab still loading. The same codepoint as kbu's Logs
+	// live glyph (ui.md §2): the family says "live" with one shape.
+	glyphLive = string(rune(0xf0753)) // kbu logsLiveGlyph, U+F0753
 
 	// Page roles (ux.md §B: one role, one glyph).
-	glyphLink        = string(rune(0xf0337)) // nf-md-link_variant
-	glyphInput       = string(rune(0xf06ff)) // nf-md-form_textbox
+	glyphLink        = string(rune(0xf0337)) // nf-md-link
+	glyphInput       = string(rune(0xf060e)) // nf-md-form_textbox
 	glyphImage       = string(rune(0xf02e9)) // nf-md-image
 	glyphVideo       = string(rune(0xf0567)) // nf-md-video
-	glyphAudio       = string(rune(0xf0759)) // nf-md-music_note
-	glyphFrame       = string(rune(0xf0614)) // nf-md-application
-	glyphCanvas      = string(rune(0xf0202)) // nf-md-drawing
-	glyphUnsupported = string(rune(0xf0ba2)) // nf-md-help_rhombus_outline
+	glyphAudio       = string(rune(0xf0387)) // nf-md-music_note
+	glyphFrame       = string(rune(0xf0614)) // nf-md-application_outline
+	glyphCanvas      = string(rune(0xf01de)) // nf-md-drawing
+	glyphUnsupported = string(rune(0xf0ba6)) // nf-md-help_rhombus_outline
 )

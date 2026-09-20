@@ -106,13 +106,15 @@ backendDOMNodeId，找不到落到同序位。
 ## §A VTP in webu
 
 依 ux.md §A 落地。已實作的入口：footer `space menu   ? help   tab/1-3 panels   q quit`；
-`[3]` 的 Space menu item region 依 role（menu-only、無字母）、panel region `[R] [P] [N] [/] [Alt+v]
-[U] [A] [O] [Z] [V] [Y]` 有效，`[D] DevTools` 以 disabled 呈現並註明 not in this build；`[2]` 的
-`[w] [c] [r] [y]` / `[T] [X]`；`[1]` 三列各只有一個動作，Space = Enter。help popup 列全域鍵。
+`[3]` 的 **Enter 開 item operation 選單**（`itemMenuItems`，第一列主要動作；修訂 2026-09-20），
+Space 開完整選單（同一份 item 列 + panel region `[R] [P] [N] [/] Select text [U] [A] [O] [D] [Z] [V] [Y]`）；
+`[2]` 的 `[w] [c] [r] [y]` / `[T] [X] [U]`；`[1]` 三列各只有一個動作，Space = Enter。help popup 列全域鍵。
+options popup（`m.options`）以 `optionsKind` 區分三種內容：item 選單、select 的 option 清單（Choose
+在原浮層內換內容）、Add to… picker。
 
 ### 選取模式（ux.md §1、ui/selectmode.go）
 
-`Alt+v` 或 `/` 進入；字元游標走 `t.lay.rows` 的純文字（rune index）。`hjkl` / `w e b`（vim 的
+`/` 或 Space menu 的 Select text 進入（`Alt+v` 已拿掉，修訂 2026-09-20）；字元游標走 `t.lay.rows` 的純文字（rune index）。`hjkl` / `w e b`（vim 的
 W / E / B：以空白切詞、跨列）/ `0 $` / `u d` / `gg G` / `v V` / `y`（無選取時 yank 整列）/ `/`
 smart case / `n N` / Enter 點字元所屬的 item（`layout.itemAtCol`）後離開模式。進入時 IR 凍結：
 pageMsg 存到 `tab.frozen`，離開時套用；item 游標落到最近的 item（`layout.nearestItem`）。

@@ -103,6 +103,28 @@ func TestSmokeHackerNews(t *testing.T) {
 	if countKind(l, ir.Textbox) == 0 {
 		t.Errorf("the search box at the bottom is missing")
 	}
+
+	// Enter on the first story opens its menu; Enter again follows the
+	// link — the click works on a real page, not only on the fixtures.
+	story := -1
+	for i, it := range l.items {
+		if it.node.Kind == ir.Link && strings.HasPrefix(it.node.URL, "http") &&
+			!strings.Contains(it.node.URL, "ycombinator.com") {
+			story = i
+			break
+		}
+	}
+	if story < 0 {
+		t.Fatal("no external story link on the front page")
+	}
+	d.page().cursor = story
+	target := l.items[story].node.URL
+	d.act()
+	d.until("the story loads", func() bool {
+		p := d.page()
+		return !p.loading && p.root != nil && !strings.Contains(p.url, "ycombinator.com")
+	})
+	t.Logf("followed %s → %s — %q", target, d.page().url, d.page().title)
 }
 
 func TestSmokeGitHub(t *testing.T) {

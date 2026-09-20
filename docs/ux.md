@@ -21,20 +21,24 @@
 | Core-key | 一般模式 | 選取模式（§1） | 對應通用 |
 |---|---|---|---|
 | `Tab` | `[1]` → `[2]` → `[3]` 繞；`1`–`3` 直達 | 同 | §4.1 |
-| `Enter` | **滑鼠左鍵點一下**：click 游標所在 item，頁面自己決定會發生什麼 | click 字元游標所屬的節點 | §4.1 |
+| `Enter` | **開游標所在 item 的 item operation 選單**，第一列是主要動作，再按 Enter 執行（修訂 2026-09-20，見下） | 離開模式、對字元游標所屬的節點開同一個選單 | §4.1 |
 | `Esc` | 關最上層浮層；沒有浮層時**無作用**（上一頁是 `P`，Esc 不兼職） | 打字中：取消搜尋輸入；否則離開選取模式 | §4.3 |
 | `Space` | **滑鼠右鍵 context menu**；再按關閉；在浮層上按 = 關掉它 | 熱鍵 cheatsheet，按列出的鍵即執行並關閉 | §A.1 |
 | `?` | help；再按關閉；可疊在任何浮層上 | 同 | §A.2 |
 
-**Enter = click 的唯一例外**：**有值的 textbox**，Enter 開選單（= 該 textbox 的 Space
-menu），見 §2。理由：使用者剛填完回到欄位，下一步是送出或改字，兩者都不是「再點一次」。
+**修訂（2026-09-20，實機試用後）**：Enter 不再直接 click。**Enter = 開該 item 的 item
+operation 選單**，第一列是主要動作（link 的 Open、button 的 Click、空 textbox 的 Edit、有值
+textbox 的 Submit、select 的 Choose），再按一次 Enter 執行；**Space = 完整選單**（item operation
++ panel operation）。理由：Enter 底下原本只有一個看不見的動作，使用者按下去不知道發生了什麼；
+開選單讓「對這個東西能做什麼」被揭露，主要動作只多一次 Enter。原本「有值 textbox 是唯一例外」
+的規則因此不再是例外，而是通則。
 
-**與 filu 的差異是刻意的**：filu 的 Enter 只進目錄不開檔（進入 vs 交給外部程式代價不同）；
-webu 的對象是網頁，drill into 就是左鍵進入，沒有第二種代價要區分。VTP §A.0.K 只要求同一
-app 內跨 surface 不變。
+**與 filu 一致了**：filu 的 Enter 只進目錄不開檔；webu 的 Enter 也只開清單，不直接交給頁面。
+VTP §A.0.K 只要求同一 app 內跨 surface 不變。
 
-**不是 core-key 的**：`q` 離開、`Ctrl+C` 硬退、`P` / `N` 前後頁、`/` 搜尋、`Alt+v`
-選取模式、`[1]` 三個全域字母。它們是 §A.2 軌的動作，全部列在 `?` help。
+**不是 core-key 的**：`q` 離開、`Ctrl+C` 硬退、`P` / `N` 前後頁、`/` 搜尋、`[1]` 三個全域
+字母。它們是 §A.2 軌的動作，全部列在 `?` help。選取模式沒有自己的全域鍵（修訂 2026-09-20：
+`Alt+v` 拿掉，item 游標已經夠用；模式只為複製文字與搜尋，由 `/` 或 Space menu 的 Select text 進入）。
 
 ### §A.1 Contextual track — Space menu
 
@@ -68,7 +72,7 @@ app 內跨 surface 不變。
 頁面**沒有任何 item**（純文字頁）：Space menu 只剩 panel operation，扁平不分 region。
 
 **`[3]` 一般模式，panel operation**：`[R] Reload`、`[P] Previous`、`[N] Next`、
-`[/] Search`（進選取模式）、`[Alt+v] Select mode`、`[U] Go to URL`、`[A] Add to…`
+`[/] Search`（進選取模式）、`Select text`（無 hotkey，進選取模式）、`[U] Go to URL`、`[A] Add to…`
 （picker：Bookmarks / Shortcuts，多對象可選 → menu）、`[O] Outline`、`[D] DevTools`、
 `[Z] Zoom`、`[V] View source`、`[Y] Yank page url`。
 
@@ -101,7 +105,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 | History popup | `H` | `[1]` + help |
 | 上一頁 / 下一頁 | `P` / `N` | help |
 | 切面板 | `Tab`、`1`–`3` | footer + help |
-| 選取模式 | `Alt+v`；從 `[1]` `[2]` 按 → 先把焦點移到 `[3]` 再進模式 | help |
+| 選取模式 | 無全域鍵（修訂 2026-09-20）：`/` 或 `[3]` Space menu 的 Select text | help |
 | 頁內搜尋 | `/`；同上 | help |
 | 離開 | `q`（有下載進行中先 confirm；**浮層內不作用**，浮層只認 Esc）、`Ctrl+C` 硬退 | footer + help |
 | 導覽詞彙 | §3 | help |
@@ -129,7 +133,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 
 `[3]` 有兩種游標，各管一種事：
 
-| | 一般模式 | 選取模式 `Alt+v` |
+| | 一般模式 | 選取模式（`/` 或 Space menu 的 Select text） |
 |---|---|---|
 | 游標單位 | item：互動節點 + heading；純文字是 item 之間的 flow | 字元 |
 | 移動 | `j/k` item、`u/d` 半頁、`gg/G` | `hjkl`、`w/e/b`、`0/$`、`u/d`、`gg/G`（sshu copymode） |
@@ -220,7 +224,7 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `B` `S` `H` `P` `N`、`q`、`?`、`/`、`Alt+v`、`Tab`、`1`–`3` |
+| 全域 | `B` `S` `H` `P` `N`、`q`、`?`、`/`、`Tab`、`1`–`3` |
 | `[2]` item | `w` `c` `r` `y` |
 | `[2]` panel | `T` `X` `U` |
 | `[3]` item | **無**（menu-only） |
@@ -304,7 +308,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 `Tab` 切面板 · `Enter` click · `Esc` 關浮層 / 離開選取模式 · `Space` menu · `?` help
 
 ### 全域
-`B` Bookmarks · `S` Shortcuts · `H` History · `P` 上一頁 · `N` 下一頁 · `q` quit · `Alt+v` 選取模式 · `/` 搜尋
+`B` Bookmarks · `S` Shortcuts · `H` History · `P` 上一頁 · `N` 下一頁 · `q` quit · `/` 搜尋（進選取模式）
 
 ### `[2]` Tabs
 `w` close · `c` clone · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
