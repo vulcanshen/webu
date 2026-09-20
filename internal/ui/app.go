@@ -793,7 +793,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "R", "U", "Y", "A", "O", "Z", "V", "D":
+		case "R", "U", "Y", "A", "O", "Z", "V", "D", "W":
 			return m.dispatch(k)
 		}
 	}
@@ -1116,7 +1116,8 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "DevTools", key: "D", hint: "storage, network, console", disabled: t == nil},
 		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
 		menuItem{label: "View source", key: "V", hint: "the HTML as it is now", disabled: t == nil},
-		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil})
+		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil},
+		menuItem{label: "W close", key: "W", hint: "this tab", disabled: t == nil})
 	return items
 }
 
@@ -1265,6 +1266,12 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		return m, m.openOutline()
 	case "D":
 		return m, m.openDevtools()
+	case "W":
+		// The page's own close: the tab [3] is showing, wherever [2]'s
+		// cursor is. Its lowercase twin in [2] closes the cursor's tab.
+		if t != nil {
+			return m.closeTab(m.shown)
+		}
 	case "Z":
 		m.zoom = !m.zoom
 		m.relayoutTabs()
