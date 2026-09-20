@@ -216,6 +216,33 @@ func TestMeasureCapsTextNotTables(t *testing.T) {
 	}
 }
 
+func TestCodeBlockFoldsAtTheMeasure(t *testing.T) {
+	long := `"body": "` + strings.Repeat("quia et suscipit ", 8) + `"`
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Code, Children: []*ir.Node{text("{\n  " + long + "\n}")}},
+	}}
+	l := renderWith(root, renderOpts{width: 200, measure: 40})
+	if len(l.rows) < 5 {
+		t.Fatalf("the long line should fold onto several rows:\n%s", dumpLayout(l))
+	}
+	joined := ""
+	for i, r := range l.rows {
+		if w := dispW(r.plain()); w > 40 {
+			t.Errorf("row %d is %d wide, measure is 40", i, w)
+		}
+		if !r.code {
+			t.Errorf("row %d lost its code ground", i)
+		}
+		if strings.Contains(r.plain(), "…") {
+			t.Errorf("row %d was cut instead of folded: %q", i, r.plain())
+		}
+		joined += r.plain()
+	}
+	if !strings.Contains(joined, strings.Repeat("quia et suscipit ", 8)) {
+		t.Error("text was lost in the fold")
+	}
+}
+
 func TestRowNavigation(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		para(link("A", "/a", 1), text(" "), link("B", "/b", 2), text(" "), link("C", "/c", 3)),

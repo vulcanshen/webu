@@ -747,9 +747,23 @@ func oneLine(s string) string {
 // codeBlock draws a code node's lines verbatim: no wrapping, clipped at the
 // width, because a wrapped line of code reads as two lines of code.
 func (r *renderer) codeBlock(n *ir.Node) {
+	// A line wider than the block folds onto the next row at the block's
+	// width — the text measure, which is also where its ground stops —
+	// rather than being cut: a cut line of code or JSON is a line lost.
+	width := max(1, r.textW-dispW(r.indent))
 	for _, line := range strings.Split(n.Text(), "\n") {
 		line = strings.ReplaceAll(line, "\t", "    ")
-		r.emit(row{segs: []seg{{text: r.indent + truncate(line, r.width-dispW(r.indent)), item: -1, kind: segCode}}, code: true})
+		for {
+			head := truncateNoEllipsis(line, width)
+			if head == "" && line != "" {
+				head = line // a single cell wider than the block: let it be
+			}
+			r.emit(row{segs: []seg{{text: r.indent + head, item: -1, kind: segCode}}, code: true})
+			line = strings.TrimPrefix(line, head)
+			if line == "" {
+				break
+			}
+		}
 	}
 }
 
