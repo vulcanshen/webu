@@ -171,7 +171,7 @@ func (m AppModel) Close() {
 }
 
 func (m AppModel) narrow() bool { return m.w < narrowW }
-func (m AppModel) panelH() int  { return m.h - 2 } // the header row and the footer row
+func (m AppModel) panelH() int  { return m.h - 3 } // the header row, its rule, and the footer row
 func (m AppModel) layer() int {
 	if m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() ||
 		m.outline.isActive() || m.devtools.isActive() {
@@ -1796,7 +1796,7 @@ func (m AppModel) View() string {
 	default:
 		out = joinHorizontal(m.tabsPanel(sideW, ph), m.pagePanel(m.w-sideW, ph))
 	}
-	out = m.header() + "\n" + out + "\n" + m.footer()
+	out = m.header() + "\n" + m.headerRule() + "\n" + out + "\n" + m.footer()
 
 	// Bottom to top: the menu first so what it opened lands above it.
 	if m.spaceMenu.isActive() {
@@ -1848,6 +1848,15 @@ func (m AppModel) header() string {
 		status, live = plural(n, "download")+" in flight", true
 	}
 	return tabRow(m.w, headerLabels, active, status, live)
+}
+
+// headerRule is the line under the header (ui.md §1.1): it keeps the
+// chips from reading as one strip with the panel titles below, and while
+// a download runs it is the thinnest progress bar there is — sshu's
+// tabRule, doing for downloads what it does there for transfers.
+func (m AppModel) headerRule() string {
+	pct, moving := m.downloadProgress()
+	return tabRule(m.w, pct, moving)
 }
 
 // tabsPanel is panel [1], outerW wide and outerH tall.

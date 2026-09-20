@@ -290,6 +290,9 @@ func TestListPopupsAndSession(t *testing.T) {
 	if h := d.m.header(); !strings.Contains(h, "1 download in flight") {
 		t.Errorf("header: %q", h)
 	}
+	if pct, moving := d.m.downloadProgress(); pct != 50 || !moving {
+		t.Errorf("rule progress: %d%% moving=%v", pct, moving)
+	}
 	d.key("D")
 	d.until("downloads open", func() bool { return d.m.lists.isInteractive() })
 	if e, _, ok := d.m.lists.current(); !ok || e.title != "a.zip" || !strings.Contains(e.meta, "50%") {

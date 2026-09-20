@@ -15,6 +15,7 @@
 
 ```
  [B]ookmarks  [H]istory  [D]ownloads                       1 download in flight   ← header，chip 列
+────────────────────────────────────────────────────────────────────────────────  ← 分隔線；下載中兼進度條
 ╭ [1] Tabs ────────────────────╮╭ [2] Page ─────────────────────────────────────╮
 │ ▸ chromedp/chromedp · GitHub ││ 󰖟 github.com/chromedp/chromedp    ← 第一列 URL │
 │   Hacker News                ││ ───────────────────────────────────────────── │
@@ -41,7 +42,7 @@
 | `[1]` 高 | header 與 footer 之間全部；分頁數不設上限，清單捲動 | — |
 | `[2]` | 右側全部 | — |
 | 窄寬 | `w < 72` 只畫**焦點那一側**：焦點在 `[2]` 畫頁面，`Tab` / `1` 到 Tabs 就改畫 Tabs；`Z` zoom 讓頁面佔滿（header / footer 仍在） | sshu §1.2 窄寬只畫 focus 側 |
-| header / footer | 各 1 列，鎖死不 reflow | 通用 §1.3 |
+| header + 分隔線 + footer | 各 1 列，共 3 列 chrome，鎖死不 reflow（修訂 2026-09-20：分隔線是 sshu `tabRule`，讓 chip 列與面板 title chip 不會讀成同一排按鈕；有下載進行中時從左端以 live 綠填到混合百分比，是最薄的進度條） | 通用 §1.3 |
 | 寬度穩定 | 邊框 chip 文字固定；URL 用 filu `fitPathSegments` 縮，host 永不縮；分頁標題截斷不折行 | 通用 §1.2 |
 
 ---
@@ -55,7 +56,7 @@
 `[M]anage / [F]ile transfer / [S]SH` 那種 chip 列。Shortcuts 一併拿掉——有 Bookmarks、goto popup 又帶目前 URL
 當 placeholder，它沒有自己的理由；Downloads 補上，就是原本排到 v2 的下載清單）。每個 chip 一個全域鍵開 popup（§3），
 **`[2]` 不換內容**；開著的 chip 點亮（sshu active tab 的畫法），沒有 cursor、Tab 不停在這一列。
-右端是狀態槽：有下載進行中時顯示 `N download(s) in flight`（live 綠），否則空。
+右端是狀態槽：有下載進行中時顯示 `N download(s) in flight`（live 綠），否則空。header 下面一列分隔線（sshu `tabRule`），下載中兼作進度條。
 
 Outline 與 DevTools **不在這裡**（決定 2026-09-20）：它們的作用對象是目前頁面，是 contextual
 動作，走 `[2]` 的 Space menu panel operation（`ux.md` §A.1）。使用者體驗留在頁面上、不切面板。
