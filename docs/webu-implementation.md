@@ -81,7 +81,7 @@ executor，直接 `.Do(ctx)` 得到 `invalid context`。
 
 | 動作 | CDP |
 |---|---|
-| Click | `scrollIntoViewIfNeeded` → `getBoxModel` → 真滑鼠 moved / pressed / released 在 box 中心；沒有 box 就 `el.click()` |
+| Click | `scrollIntoViewIfNeeded` → `getBoxModel` → 真滑鼠 pressed / released 在 box 中心（trusted click，`target=_blank` 才開得了視窗；`el.click()` 是 untrusted、Chrome 不給開）；沒有 box 才 `el.click()`。**不送 `mouseMoved`**：實測 headless 下單獨的 mouseMoved 要等 renderer ack 逾時整整 5 秒，每個點擊都在付，開 dialog 的點擊晚 5 秒才看到 dialog；press + release 2 ms。代價是 hover 才出現的選單 v1 打不開（function.md §4 要的 hover 同步暫緩） |
 | Type | focus → select all → `Input.insertText`（框架會收到 input 事件）；空字串是 Backspace |
 | Choose | option 元素 `selected = true` + 對 select dispatch `input` / `change` |
 | Submit | focus + 送 Enter keydown / keyup（implicit submission） |
@@ -91,12 +91,39 @@ executor，直接 `.Do(ctx)` 得到 `invalid context`。
 / `frameNavigated` 也觸發 250 ms 後 capture。`gen` 計數丟掉過期的 capture。游標留位：先比
 backendDOMNodeId，找不到落到同序位。
 
+## §5 非 DOM 事件（function.md §5、page/hooks.go）
+
+| 事件 | 落地 |
+|---|---|
+| alert / confirm / prompt / beforeunload | tab 的 `ListenTarget` 收 `Page.javascriptDialogOpening` → `dialogMsg`（goroutine 送、不丟）→ alert / confirm / beforeunload 開 confirm popup，prompt 開 input popup（帶預設值）；Enter / Esc 都會 `Page.handleJavaScriptDialog` 回答（alert 的 Esc 也是 accept）。dialog 開著時 settle capture 暫停，因為碰 renderer 的 CDP 呼叫會卡到 dialog 關掉 |
+| `target=_blank` / `window.open` | `ListenBrowser` 收 `Target.targetCreated`（`Type=="page"` 且有 `OpenerID`、未 attached）→ `newTargetMsg` → `NewContext(WithTargetID)` + `Run` attach → `Prepare`（observer 也直接跑進現有 document）→ capture；加到 `[2]` 尾端並自動切換。實測 `rel=noopener` 預設下 `OpenerID` 仍有值 |
+| 憑證錯誤 | **偏離 function.md §8**：`Security.certificateError` 事件已從協定移除，只剩 `Security.setIgnoreCertificateErrors`。做法：導航失敗字串含 `ERR_CERT` → confirm「這個分頁、開著期間都放行？」→ 對該 tab `setIgnoreCertificateErrors(true)` 後重載；同分頁後續導航不再問，新分頁會再問 |
+| 下載 | 第一個 frame 對 browser 執行 `Browser.setDownloadBehavior(allow, downloadPath, eventsEnabled)`；`ListenBrowser` 收 `downloadWillBegin` → toast「downloading <name>」、`downloadProgress completed` → toast「saved <path>」、canceled → error toast。目錄 = `config.yaml` 的 `download_dir`，預設 `~/Downloads` |
+| HTTP auth、檔案上傳 | 未做 |
+
 ## §A VTP in webu
 
 依 ux.md §A 落地。已實作的入口：footer `space menu   ? help   tab/1-3 panels   q quit`；
-`[3]` 的 Space menu item region 依 role（menu-only、無字母）、panel region `[R] [P] [N] [U] [Y]`
-有效，其餘列以 disabled 呈現並註明 not in this build；`[2]` 的 `[w] [c] [r] [y]` / `[T] [X]`；
-`[1]` 三列各只有一個動作，Space = Enter。help popup 列全域鍵。
+`[3]` 的 Space menu item region 依 role（menu-only、無字母）、panel region `[R] [P] [N] [/] [Alt+v]
+[U] [A] [O] [Z] [V] [Y]` 有效，`[D] DevTools` 以 disabled 呈現並註明 not in this build；`[2]` 的
+`[w] [c] [r] [y]` / `[T] [X]`；`[1]` 三列各只有一個動作，Space = Enter。help popup 列全域鍵。
+
+### 選取模式（ux.md §1、ui/selectmode.go）
+
+`Alt+v` 或 `/` 進入；字元游標走 `t.lay.rows` 的純文字（rune index）。`hjkl` / `w e b`（vim 的
+W / E / B：以空白切詞、跨列）/ `0 $` / `u d` / `gg G` / `v V` / `y`（無選取時 yank 整列）/ `/`
+smart case / `n N` / Enter 點字元所屬的 item（`layout.itemAtCol`）後離開模式。進入時 IR 凍結：
+pageMsg 存到 `tab.frozen`，離開時套用；item 游標落到最近的 item（`layout.nearestItem`）。
+Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 popup 並執行）。URL 列搜尋中
+換成 `/query  n/m`（Yellow）、邊框 `toneSelect`、footer 只列模式內的鍵。
+
+### Outline / Zoom / View source / Inspect
+
+- Outline：`layout.marks` 記每個 landmark / heading 的第一列；popup 是 spaceMenu 實例（同 sshu picker 的重用），
+  開啟時游標停在「目前位置之前最後一個」項目；Enter → `tab.jumpTo`
+- Zoom：`m.zoom` 讓 `[3]` 獨佔整個畫面（narrow 模式同一條路），寬度改變會重排
+- View source：`chromedp.OuterHTML("html")` → viewer popup（viewport 類，無 padRow）
+- Inspect：message popup 列 role / name / value / url / state / node id
 
 **Bubble Tea 的 value receiver 陷阱**（踩過兩次）：會改 popup 狀態的 helper 若是 value receiver、
 只回傳 `tea.Cmd`，改到的是沒人保留的副本。規則：這類 helper 用 pointer receiver（作用在呼叫者的
@@ -127,14 +154,16 @@ backendDOMNodeId，找不到落到同序位。
 - 歷史：每個分頁 load 完的最終 URL + 標題記一筆，同 URL 的 settle 重抓不重複記
 - 即時更新（function.md §6）：`page.Prepare` 在第一次導航前 `Runtime.addBinding` + 注入 MutationObserver
   （childList / characterData / subtree，150 ms 合併），`Runtime.bindingCalled` 走與 load event 同一條 settle 路
+- 選取模式與 `/` 搜尋、Outline、Zoom、View source、Inspect popup（§A）
+- JS dialog、`target=_blank` 新分頁、憑證錯誤 confirm、下載 toast（§5）
 - 整合測試 `TestAppNavigatesAndFillsAForm`（本機頁：載入 → 點 → 回 → 打字 → Submit → 選 option）、
-  `TestListPopupsAndSession`（無瀏覽器：B 開 / 過濾 / 刪 / 存檔）；
+  `TestListPopupsAndSession`（無瀏覽器：B 開 / 過濾 / 刪 / 存檔）、`hooks_test.go` 五支（新視窗、三種
+  dialog、自簽憑證 via `httptest.NewTLSServer`、下載、搜尋後 Enter 點連結）、`selectmode_test.go`
+  （motion / smart case / yank / outline 純邏輯）；
   真站 smoke `WEBU_SMOKE=1 go test ./internal/ui -run TestSmoke -v`（Hacker News、GitHub）
 
 ### 未做（v1 清單，ui.md §7）
 
-Bookmarks 的目錄樹與 Edit / Move、History fuzzy、Undo close、`target=_blank` 接 `Target.targetCreated`、
-Outline、DevTools（Storage / Network / Console）、`/` 搜尋、選取模式、Zoom、View source、下載 toast、
-憑證錯誤 confirm、`beforeunload` / JS dialog / HTTP auth / 檔案上傳 hook（function.md §5）、heading Fold、
-Inspect 的 message popup、iframe 內容、`h/l` 在 table row 內移動、textarea 的 `$EDITOR` 鏈、
-`download_dir` 的實際使用。
+DevTools（Storage / Network / Console）、Bookmarks 的目錄樹與 Edit / Move、History fuzzy、Undo close、
+HTTP auth / 檔案上傳 hook、hover 同步（§4 的 mouseMoved 坑）、heading Fold、iframe 內容、
+`h/l` 在 table row 內移動、textarea 的 `$EDITOR` 鏈、關分頁 / 離開時「下載進行中」的 confirm。

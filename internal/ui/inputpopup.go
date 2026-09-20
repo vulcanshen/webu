@@ -16,6 +16,7 @@ const (
 	inputGoto                   // open a URL in the shown tab (ux.md §7)
 	inputGotoNewTab             // open a URL in a new tab
 	inputField                  // write a textbox's value back to the page (ux.md §2)
+	inputPrompt                 // answer a page's prompt() (function.md §5)
 )
 
 // inputPopup is one line of text with a question above it — the message

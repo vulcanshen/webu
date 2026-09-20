@@ -3,11 +3,14 @@ package ui
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	cdpbrowser "github.com/chromedp/cdproto/browser"
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
+	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/page"
@@ -43,6 +46,12 @@ type tab struct {
 	// lastVisit is the URL last written to the history log for this tab,
 	// so a settle capture of the same page does not log it again.
 	lastVisit string
+	// certErr: the last navigation failed on the certificate; certAsked:
+	// the user has been asked about it once already for this page.
+	certErr, certAsked bool
+	// frozen is a capture that arrived while selection mode held the page
+	// still (ux.md §1); applied when the mode ends.
+	frozen *pageMsg
 }
 
 // pageMsg is a capture landing: the page as Chromium has it now.
@@ -59,6 +68,30 @@ type pageMsg struct {
 // the app re-captures after a short settle.
 type pageEventMsg struct{ tabID int }
 
+// dialogMsg is a page asking something through alert / confirm / prompt /
+// beforeunload (function.md §5). The page is stalled until it is answered.
+type dialogMsg struct {
+	tabID         int
+	kind          cdppage.DialogType
+	message       string
+	defaultPrompt string
+}
+
+// newTargetMsg is a page opening a window of its own — target=_blank,
+// window.open — which becomes a tab (function.md §5).
+type newTargetMsg struct {
+	id  target.ID
+	url string
+}
+
+// downloadMsg is a download starting or finishing (function.md §8).
+type downloadMsg struct {
+	name   string
+	path   string
+	done   bool
+	failed bool
+}
+
 // settleMsg fires the re-capture a pageEventMsg or an action asked for.
 type settleMsg struct {
 	tabID int
@@ -67,7 +100,15 @@ type settleMsg struct {
 
 // newTab opens a target on the browser and starts listening to it.
 func (m *AppModel) newTab() *tab {
-	ctx, cancel := chromedp.NewContext(m.browser.Ctx)
+	return m.newTabWith(chromedp.NewContext(m.browser.Ctx))
+}
+
+// newTabFor adopts a target the page opened itself.
+func (m *AppModel) newTabFor(id target.ID) *tab {
+	return m.newTabWith(chromedp.NewContext(m.browser.Ctx, chromedp.WithTargetID(id)))
+}
+
+func (m *AppModel) newTabWith(ctx context.Context, cancel context.CancelFunc) *tab {
 	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1}
 	m.nextTabID++
 	ch := m.events
@@ -80,6 +121,11 @@ func (m *AppModel) newTab() *tab {
 			if e.Name != page.MutationBinding {
 				return
 			}
+		case *cdppage.EventJavascriptDialogOpening:
+			// Never dropped: the page is stalled until this is answered.
+			msg := dialogMsg{tabID: id, kind: e.Type, message: e.Message, defaultPrompt: e.DefaultPrompt}
+			go func() { ch <- msg }()
+			return
 		default:
 			return
 		}
@@ -91,10 +137,64 @@ func (m *AppModel) newTab() *tab {
 	return t
 }
 
-// waitEvent hands the next page event to Update; the app re-issues it after
-// every one, so the channel is always being read.
-func waitEvent(ch <-chan pageEventMsg) tea.Cmd {
+// listenBrowser wires the browser-level events: a page opening a window of
+// its own, and downloads. Both are handed over in a goroutine rather than
+// dropped — a tab or a file the user never hears about is worse than a
+// late message.
+func (m *AppModel) listenBrowser() {
+	if m.browser == nil {
+		return
+	}
+	ch := m.events
+	chromedp.ListenBrowser(m.browser.Ctx, func(ev any) {
+		switch e := ev.(type) {
+		case *target.EventTargetCreated:
+			info := e.TargetInfo
+			if info.Type != "page" || info.OpenerID == "" || info.Attached {
+				return
+			}
+			msg := newTargetMsg{id: info.TargetID, url: info.URL}
+			go func() { ch <- msg }()
+		case *cdpbrowser.EventDownloadWillBegin:
+			msg := downloadMsg{name: e.SuggestedFilename}
+			go func() { ch <- msg }()
+		case *cdpbrowser.EventDownloadProgress:
+			switch e.State {
+			case cdpbrowser.DownloadProgressStateCompleted:
+				msg := downloadMsg{done: true, path: e.FilePath}
+				go func() { ch <- msg }()
+			case cdpbrowser.DownloadProgressStateCanceled:
+				msg := downloadMsg{failed: true}
+				go func() { ch <- msg }()
+			}
+		}
+	})
+}
+
+// waitEvent hands the next browser or page event to Update; the app
+// re-issues it after every one, so the channel is always being read.
+func waitEvent(ch <-chan tea.Msg) tea.Cmd {
 	return func() tea.Msg { return <-ch }
+}
+
+// adopt attaches to a target the page opened and captures it. The target
+// already has a document, so Prepare runs the observer in it as well.
+func (t *tab) adopt() tea.Cmd {
+	t.gen++
+	t.loading, t.prepared = true, true
+	gen, id, ctx := t.gen, t.id, t.ctx
+	return func() tea.Msg {
+		if err := chromedp.Run(ctx); err != nil {
+			return pageMsg{tabID: id, gen: gen, err: fmt.Errorf("attach: %w", err)}
+		}
+		if err := page.Prepare(ctx); err != nil {
+			return pageMsg{tabID: id, gen: gen, err: fmt.Errorf("prepare: %w", err)}
+		}
+		if err := chromedp.Run(ctx, chromedp.WaitReady("body")); err != nil {
+			return pageMsg{tabID: id, gen: gen, err: fmt.Errorf("wait: %w", err)}
+		}
+		return capture(ctx, id, gen)
+	}
 }
 
 func (t *tab) close() {
@@ -177,9 +277,16 @@ func (t *tab) apply(msg pageMsg, width int) {
 		t.errText = msg.err.Error()
 		t.root, t.lay = nil, layout{}
 		t.cursor = -1
+		// net::ERR_CERT_* is Chromium refusing the site's certificate; the
+		// user gets to overrule it (function.md §8).
+		if was := t.certErr; !was {
+			t.certAsked = false
+		}
+		t.certErr = strings.Contains(t.errText, "ERR_CERT")
 		return
 	}
 	t.errText = ""
+	t.certErr = false
 	if msg.url != "" {
 		t.url = msg.url
 	}
