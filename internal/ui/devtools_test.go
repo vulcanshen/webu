@@ -47,7 +47,7 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 	d.until("dev page", d.loaded("Dev"))
 	d.until("the fetch has landed", func() bool { return strings.Contains(dumpLayout(d.page().lay), "yes") })
 
-	d.key("D")
+	d.key("I")
 	d.until("devtools open", func() bool { return d.m.devtools.isInteractive() })
 	d.until("storage fetched", func() bool { return len(d.m.devtools.storage.data.Cookies) > 0 })
 	st := d.m.devtools.storage.data

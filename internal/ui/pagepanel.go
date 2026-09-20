@@ -6,19 +6,19 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Panel [3]: the page (ui.md §2). One job, always the page: the first row is
+// Panel [2]: the page (ui.md §2). One job, always the page: the first row is
 // the URL, the second a rule, and the rest is the laid-out IR with the
 // cursor on one item.
 
 // pageHeaderRows is the URL row and the rule under it.
 const pageHeaderRows = 2
 
-// pageBody draws panel [3]'s inside at innerW × innerH.
+// pageBody draws panel [2]'s inside at innerW × innerH.
 func (m AppModel) pageBody(innerW, innerH int) []string {
 	t := m.shownTab()
 	if t == nil {
 		return emptyBody(innerW, innerH, "no page",
-			emptyHint("Press L to go to a URL, or T in [2] for a new tab", "L", "T"))
+			emptyHint("Press L to go to a URL, or T in [1] for a new tab", "L", "T"))
 	}
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	out := make([]string, 0, innerH)
@@ -122,7 +122,7 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 			}
 			used += dispW(text)
 			switch {
-			case s.item >= 0 && s.item == t.cursor && m.focus == panel3:
+			case s.item >= 0 && s.item == t.cursor && m.focus == panelPage:
 				b.WriteString(cur.Render(text))
 			case s.item >= 0 && s.item == t.cursor:
 				b.WriteString(curOff.Render(text))
@@ -192,12 +192,12 @@ func codeStyles() map[segKind]lipgloss.Style {
 	}
 }
 
-// pageVisible is how many page rows panel [3] shows at the current size.
+// pageVisible is how many page rows panel [2] shows at the current size.
 func (m AppModel) pageVisible() int {
 	return max(1, m.panelH()-2-pageHeaderRows)
 }
 
-// pageW is panel [3]'s inner width at the current size.
+// pageW is panel [2]'s inner width at the current size.
 func (m AppModel) pageW() int {
 	if m.narrow() || m.zoom {
 		return max(1, m.w-2)
@@ -206,7 +206,7 @@ func (m AppModel) pageW() int {
 }
 
 // panelFrame is panelChromeTone with a hint in the bottom border — where
-// panel [3] says "loading" and "12 of 40" (ui.md §5).
+// panel [2] says "loading" and "12 of 40" (ui.md §5).
 func panelFrame(innerW int, body []string, title, hint string, tone borderTone) string {
 	out := panelChromeTone(innerW, body, title, tone)
 	if hint == "" {

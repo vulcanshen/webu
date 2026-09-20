@@ -37,7 +37,7 @@ type spaceMenu struct {
 	screenH int
 }
 
-// newHostPicker is a second spaceMenu instance reused as tab [2]'s host chooser.
+// newHostPicker is a second spaceMenu instance reused as tab [1]'s host chooser.
 // The distinct animator name keeps its ticks from colliding with the Space menu,
 // which stays open behind it.
 func newHostPicker() spaceMenu {

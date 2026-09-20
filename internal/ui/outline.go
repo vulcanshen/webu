@@ -9,7 +9,7 @@ import (
 )
 
 // The Outline popup (ui.md §3.1): the page's landmarks and headings, indented
-// by nesting, Enter jumps panel [3] to the one chosen. It is a menu, so it
+// by nesting, Enter jumps panel [2] to the one chosen. It is a menu, so it
 // is a spaceMenu instance with its own animator — the same reuse sshu makes
 // for its pickers — and the rows are built here.
 
@@ -95,7 +95,7 @@ func (m AppModel) outlineKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// A heading inside a folded landmark has no row yet: open the way to it.
 	t.reveal(m.outlineFor[i].node, m.pageW())
 	t.jumpTo(m.outlineFor[i].node, m.pageVisible())
-	m.focus = panel3
+	m.focus = panelPage
 	return m, closeCmd
 }
 

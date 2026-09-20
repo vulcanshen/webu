@@ -250,7 +250,7 @@ func TestListPopupsAndSession(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir())
 	m := New(nil, "").WithStore(
 		[]store.Bookmark{{Title: "Hacker News", URL: "https://news.ycombinator.com/"}, {Title: "Go", URL: "https://go.dev"}},
-		store.Config{Shortcuts: []store.Shortcut{{Title: "Mail", URL: "https://mail.example"}}},
+		store.Config{},
 		nil)
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
@@ -277,11 +277,40 @@ func TestListPopupsAndSession(t *testing.T) {
 	d.key("esc") // the popup
 	d.until("closed", func() bool { return !d.m.lists.isActive() })
 
-	d.key("S")
-	d.until("shortcuts open", func() bool { return d.m.lists.isInteractive() })
-	if e, _, ok := d.m.lists.current(); !ok || e.title != "Mail" {
-		t.Errorf("shortcut row: %+v %v", e, ok)
+	// Downloads: the header counts what is in flight, the popup lists it,
+	// newest first, and the row follows the file as it lands.
+	if h := d.m.header(); !strings.Contains(h, "[B]ookmarks") || strings.Contains(h, "in flight") {
+		t.Errorf("header at rest: %q", h)
 	}
+	d.send(downloadMsg{guid: "g1", name: "a.zip", url: "https://x/a.zip", begin: true})
+	d.send(downloadMsg{guid: "g1", received: 512, total: 1024})
+	if got := d.m.downloading(); got != 1 {
+		t.Fatalf("downloading %d", got)
+	}
+	if h := d.m.header(); !strings.Contains(h, "1 download in flight") {
+		t.Errorf("header: %q", h)
+	}
+	d.key("D")
+	d.until("downloads open", func() bool { return d.m.lists.isInteractive() })
+	if e, _, ok := d.m.lists.current(); !ok || e.title != "a.zip" || !strings.Contains(e.meta, "50%") {
+		t.Errorf("download row: %+v %v", e, ok)
+	}
+	d.send(downloadMsg{guid: "g1", received: 1024, total: 1024, done: true, path: "/tmp/a.zip"})
+	if e, _, _ := d.m.lists.current(); e.meta != "/tmp/a.zip" {
+		t.Errorf("finished row: %+v", e)
+	}
+	if d.m.downloading() != 0 || strings.Contains(d.m.header(), "in flight") {
+		t.Errorf("header after: %q", d.m.header())
+	}
+	d.key("C") // clear the done ones
+	if len(d.m.dls) != 0 || len(d.m.lists.visible()) != 0 {
+		t.Errorf("after clear: %+v", d.m.dls)
+	}
+	// The "saved" toast is the topmost float, so Esc takes it first (§4.3).
+	d.key("esc")
+	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
+	d.key("esc")
+	d.until("downloads closed", func() bool { return !d.m.lists.isActive() })
 
 	// No tabs, no browser: the session is empty and does not panic.
 	if s := d.m.Session(); len(s.Tabs) != 0 {
@@ -310,7 +339,7 @@ func TestViewFitsTheTerminal(t *testing.T) {
 	for _, size := range [][2]int{{100, 30}, {72, 20}, {60, 15}, {40, 10}} {
 		model, _ := m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 		mm := model.(AppModel)
-		for _, focus := range []panelID{panel1, panel2, panel3} {
+		for _, focus := range []panelID{panelTabs, panelPage} {
 			mm.focus = focus
 			lines := strings.Split(mm.View(), "\n")
 			if len(lines) != size[1] {
@@ -332,7 +361,7 @@ func TestGotoOffersThePageURL(t *testing.T) {
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.m.tabs = []*tab{{id: 1, url: "https://example.com/a"}}
 	d.m.shown = 0
-	d.m.focus = panel2 // from any panel, like Cmd+L
+	d.m.focus = panelTabs // from any panel, like Cmd+L
 
 	d.key("L")
 	d.until("goto open", func() bool { return d.m.input.isInteractive() })

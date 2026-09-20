@@ -95,3 +95,12 @@ func SetDownloads(ctx context.Context, dir string) error {
 		WithDownloadPath(dir).WithEventsEnabled(true).
 		Do(cdp.WithExecutor(ctx, c.Browser))
 }
+
+// CancelDownload stops one download, by the GUID its events carry.
+func CancelDownload(ctx context.Context, guid string) error {
+	c := chromedp.FromContext(ctx)
+	if c == nil || c.Browser == nil {
+		return chromedp.ErrInvalidContext
+	}
+	return browser.CancelDownload(guid).Do(cdp.WithExecutor(ctx, c.Browser))
+}

@@ -440,7 +440,7 @@ webu 拿掉 `--enable-automation`、走 `--headless=new`、profile 持久帶 coo
 | # | 決定 | 傾向 |
 |---|---|---|
 | 1 | ~~attach 還是 headless~~ | **已決（2026-09-20）**：自帶釘死版本的 Chromium、不開放覆寫、一律 headless 無視窗，見 §9 |
-| 2 | ~~Shell 功能做到哪~~ | **已決**：逐項落點與版次在 `ui.md` §7；四個附帶問題已決（非 URL 當搜尋、下載目錄 config、憑證每次問、歷史與書籤是 `[1]` 開的 popup） |
+| 2 | ~~Shell 功能做到哪~~ | **已決**：逐項落點與版次在 `ui.md` §7；四個附帶問題已決（非 URL 當搜尋、下載目錄 config、憑證每次問、歷史與書籤是 header 開的 popup） |
 | 3 | ~~逃生口~~ | **已決（2026-09-20）**：多媒體只畫佔位框；CAPTCHA 等 session 關卡第一版不支援、明講並給 Yank url；交棒機制擱置（§9.1） |
 | 4 | ~~翻譯層品質底線~~ | **已決（2026-09-20）**：不以站為單位保證，以 **AX role 白名單**為單位（§3）。未支援 role 一律 fallback、不隱藏，Enter 仍可 click。站只當 smoke test |
 
