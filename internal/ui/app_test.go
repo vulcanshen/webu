@@ -395,4 +395,13 @@ func TestGotoOffersThePageURL(t *testing.T) {
 	if got := bracketHotkey("URL", "L"); got != "UR[L]" {
 		t.Errorf("bracketHotkey(URL, L) = %q", got)
 	}
+
+	// T on the page is the same new tab as T on the tabs list.
+	d.m.focus = panelPage
+	d.key("T")
+	d.until("new tab box", func() bool { return d.m.input.isInteractive() })
+	if d.m.input.action != inputGotoNewTab || d.m.input.placeholder != "" {
+		t.Errorf("T on [2]: action %v placeholder %q", d.m.input.action, d.m.input.placeholder)
+	}
+	d.key("esc")
 }

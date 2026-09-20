@@ -72,7 +72,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 
 頁面**沒有任何 item**（純文字頁）：Space menu 只剩 panel operation，扁平不分 region。
 
-**`[2]` 一般模式，panel operation**：`[R] Reload`、`[P] Previous`、`[N] Next`、
+**`[2]` 一般模式，panel operation**：`[R] Reload`、`[T]ab`（新分頁，與 `[1]` 的 `[T]` 一模一樣；修訂 2026-09-20）、`[P] Previous`、`[N] Next`、
 `[/] Search`（進 visual mode）、`[V] Visual mode`（修訂 2026-09-20：原 `[V] View source` 搬進 DevTools › Source，
 `V` 讓給 visual mode——panel operation 一律大寫，小寫 `v` 在這一區很突兀）、`UR[L]`（修訂 2026-09-20：原 `[U]`，改成對應 Chrome 的 Cmd+L；全域鍵，任何面板都能按，見 §7）、`[A]dd bookmark`（修訂 2026-09-20：原 `[A] Add to…` picker 二選一，Shortcuts 拿掉後只剩 Bookmarks，直接加）、`[O] Outline`、`[I]nspect`（DevTools；修訂 2026-09-20：原 `[D]`，`D` 讓給 header 的 Downloads，`I` 對應 Chrome 的 Cmd+Opt+I）、
 `[Z] Zoom`、`[Y] Yank page url`、`[W] Close`（關掉 `[2]` 正在顯示的分頁；
@@ -230,7 +230,7 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 | `[1]` item | `w` `c` `r` `y` |
 | `[1]` panel | `T` `X` `U` |
 | `[2]` item | **無**（menu-only） |
-| `[2]` panel | `R` `A` `O` `I` `Z` `Y` `W`（`V` 是全域的 visual mode，`L` 是全域的 go to URL） |
+| `[2]` panel | `R` `T` `A` `O` `I` `Z` `Y` `W`（`V` 是全域的 visual mode，`L` 是全域的 go to URL；`T` 與 `[1]` 同義） |
 | Bookmarks popup | `o` `e` `x` `m` `y` / `A` `F` `/` |
 | Downloads popup | `o` `x` `y` / `C` |
 | History popup | `o` `x` / `C` |
@@ -284,7 +284,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 
 ## §7 goto popup
 
-`L`（全域，對應 Chrome 的 Cmd+L；或 `[1]` 的 `T`）開 goto popup，filu goto picker 形式：
+`L`（全域，對應 Chrome 的 Cmd+L；或 `[1]` / `[2]` 的 `T`）開 goto popup，filu goto picker 形式：
 
 0. 開啟時輸入列是空的，以 dim 帶出目前分頁的 URL 當 placeholder（修訂 2026-09-20）：
    `Tab` 把它接進輸入列編輯、`Backspace` 整個清掉、直接打字則從頭來。
@@ -320,7 +320,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 `w` close · `c` clone · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
 
 ### `[2]` Page
-`R` reload · `A` add bookmark · `O` outline · `I` inspect（DevTools：storage / network / console / source）· `Z` zoom · `Y` yank page url · `W` close this tab
+`R` reload · `T` new tab · `A` add bookmark · `O` outline · `I` inspect（DevTools：storage / network / console / source）· `Z` zoom · `Y` yank page url · `W` close this tab
 
 ### 導覽（跨 surface 同義）
 `j/k` · `u/d` · `gg/G` · `h/l`（DevTools 分頁）· `1-2`

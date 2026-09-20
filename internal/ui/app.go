@@ -809,7 +809,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "R", "Y", "A", "O", "Z", "I", "W":
+		case "R", "T", "Y", "A", "O", "Z", "I", "W":
 			return m.dispatch(k)
 		}
 	}
@@ -1176,6 +1176,9 @@ func (m AppModel) pageMenuItems() []menuItem {
 	}
 	items = append(items,
 		menuItem{label: "Reload", key: "R", hint: "this page", disabled: t == nil},
+		// The same T as [1]'s: a new tab is wanted from the page as often as
+		// from the list (revised 2026-09-20).
+		menuItem{label: "Tab", key: "T", hint: "a new one, at a URL"},
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
 		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
