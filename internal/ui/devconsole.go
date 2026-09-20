@@ -31,6 +31,23 @@ func (t *devConsoleTab) move(k string, page int, filter string) {
 	t.cursor = moveCursor(t.cursor, len(t.visible(filter)), k, page)
 }
 
+func (t devConsoleTab) current(filter string) (page.ConsoleEntry, bool) {
+	v := t.visible(filter)
+	if t.cursor < 0 || t.cursor >= len(v) {
+		return page.ConsoleEntry{}, false
+	}
+	return v[t.cursor], true
+}
+
+// detailHead is the facts above a console entry's message in its detail.
+func detailHead(e page.ConsoleEntry) []string {
+	head := []string{"level    " + e.Level, "at       " + e.At.Local().Format("15:04:05")}
+	if e.Where != "" {
+		head = append(head, "from     "+e.Where)
+	}
+	return append(head, "")
+}
+
 func (t devConsoleTab) view(innerW, n int, filter string) []string {
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)

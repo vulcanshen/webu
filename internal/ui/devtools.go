@@ -122,8 +122,9 @@ const (
 	devClearNet
 	devClearConsole
 	devDetail
-	devEval        // Console: open the prompt
-	devFetchSource // Source: read the HTML
+	devEval          // Console: open the prompt
+	devConsoleDetail // Console: the entry, whole
+	devFetchSource   // Source: read the HTML
 )
 
 // update handles one key. The tab sub-models get the navigation keys and
@@ -216,6 +217,13 @@ func (m *devtoolsPopup) update(msg tea.KeyMsg) (devAction, string) {
 		case "C":
 			return devClearConsole, ""
 		case "enter":
+			// The list cuts a long message at the width; Enter is the
+			// whole of it (revised 2026-09-20 — Enter was the prompt).
+			if _, ok := m.console.current(m.filter[m.tab]); ok {
+				return devConsoleDetail, ""
+			}
+		case "i":
+			// vim's letter for "start typing": the eval prompt.
 			return devEval, ""
 		}
 	}
@@ -292,7 +300,7 @@ func (m devtoolsPopup) view() string {
 	case m.tab == devSource:
 		pairs = [][2]string{{"j/k", "scroll"}, {"u/d", "half page"}, {"/", "grep"}, {"h/l", "tab"}, {"Esc", "close"}}
 	default:
-		pairs = [][2]string{{"Enter", "eval"}, {"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
+		pairs = [][2]string{{"Enter", "detail"}, {"i", "insert: eval"}, {"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
 	}
 	hint := clipANSI(hintLegend(pairs), innerW-1)
 	b.WriteString(bs.Render("╰─") + hint + bs.Render(strings.Repeat("─", max(0, innerW-1-dispW(hint)))+"╯"))
