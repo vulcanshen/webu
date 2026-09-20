@@ -20,6 +20,7 @@ const (
 	inputAuthUser               // an HTTP challenge: the name, then…
 	inputAuthPass               // …the password, masked
 	inputFile                   // a path for a file chooser
+	inputEval                   // the console prompt: JavaScript, run in the page
 )
 
 // inputPopup is one line of text with a question above it — the message

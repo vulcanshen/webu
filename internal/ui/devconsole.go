@@ -55,6 +55,12 @@ func (t devConsoleTab) view(innerW, n int, filter string) []string {
 			glyph, style = glyphWarn, peach
 		case "info":
 			glyph = glyphInfo
+		case "input":
+			// What was typed at the prompt, and what came back: the same
+			// > and < Chrome's console uses.
+			glyph, style = ">", dim
+		case "result":
+			glyph = "<"
 		}
 		where := ""
 		if e.Where != "" {

@@ -244,6 +244,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case evalMsg:
+		_, t := m.tabByID(msg.tabID)
+		if t == nil {
+			return m, nil
+		}
+		t.dev.Add(msg.entry)
+		if m.devtools.isActive() && m.devtools.tabID == msg.tabID {
+			m.devtools.refresh(t.dev)
+			m.devtools.console.cursor = max(0, len(m.devtools.console.entries)-1)
+		}
+		return m, nil
+
 	case dialogMsg:
 		return m.askDialog(msg)
 
@@ -892,8 +904,24 @@ func (m AppModel) devtoolsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return bodyMsg{tabID: id, id: string(reqID), body: body, err: err}
 		}
 		return m, tea.Batch(m.devtools.detail.show(e, m.layer()+1), fetch)
+	case devEval:
+		return m, m.openEvalPrompt()
 	}
 	return m, nil
+}
+
+// openEvalPrompt is the console's prompt (ui.md §3.2 Eval): an input popup
+// over the DevTools popup. It stays open after each run, so the console is
+// a REPL — Esc is how it ends.
+func (m *AppModel) openEvalPrompt() tea.Cmd {
+	return m.input.ask(inputPopup{title: "Console", glyph: ">", prompt: "JavaScript, run in the page (Esc ends)",
+		accept: "run", action: inputEval}, m.layer()+1)
+}
+
+// evalMsg is the console's answer to one expression.
+type evalMsg struct {
+	tabID int
+	entry page.ConsoleEntry
 }
 
 // ------------------------------------------------------------------- lists
@@ -1473,6 +1501,20 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.closeStack(), t.act(func(ctx context.Context) error { return page.Type(ctx, id, value) }))
 	case inputPrompt:
 		return m, tea.Batch(m.input.close(), m.answerDialog(true, value))
+	case inputEval:
+		// The prompt stays; the expression and, when it comes, its result
+		// go to the console list behind it.
+		_, dt := m.tabByID(m.devtools.tabID)
+		expr := strings.TrimSpace(value)
+		if dt == nil || expr == "" {
+			return m, nil
+		}
+		m.input.value = ""
+		dt.dev.Add(page.ConsoleEntry{Level: "input", Text: expr})
+		m.devtools.refresh(dt.dev)
+		m.devtools.console.cursor = max(0, len(m.devtools.console.entries)-1)
+		ctx, id := dt.ctx, dt.id
+		return m, func() tea.Msg { return evalMsg{tabID: id, entry: page.Eval(ctx, expr)} }
 	case inputAuthUser:
 		if m.auth == nil {
 			return m, m.input.close()

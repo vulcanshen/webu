@@ -140,7 +140,8 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - Network：method / status / type / URL / size / ms；Enter → detail 子 popup（自己的 animator、在外殼 view 內 composite），
   headers 立刻、body 由 `Network.getResponseBody` 非同步補上（cdproto 已解 base64）
 - Console：`consoleAPICalled`（args 轉文字：string 去引號、其餘 description）、`exceptionThrown`、`Log.entryAdded`；
-  warn / error 用 override 色；Eval v2
+  warn / error 用 override 色。Eval：Enter 開 input popup（`inputEval`）、`Runtime.evaluate(returnByValue,
+  awaitPromise, replMode)`，輸入與結果以 level `input` / `result` 進同一份 log（`DevLog.Add`）；popup 每次執行後留著、值清空，Esc 才關
 - **坑**：`tea.Sequence(t.act(...), fetch)` 不會等內層 Sequence 跑完（Bubble Tea 把巢狀 Sequence 當 message 交回去就往下走），
   刪 cookie 後的重抓會搶先。要先後執行就寫成一個 cmd（`storageThen`）
 
