@@ -43,7 +43,7 @@ var helpContent = []helpEntry{
 	{"", "Global"},
 	{"B · S · H", "Bookmarks · Shortcuts · History"},
 	{"P · N", "previous / next page"},
-	{"U", "go to a URL (in [3]); in [2], reopen the last closed tab"},
+	{"L", "go to a URL: this page's own is offered, Tab edits it"},
 	{"/", "search the page (enters selection mode)"},
 	{"V", "visual mode: walk the text by character, v/V select, y copy"},
 	{"q", "quit"},

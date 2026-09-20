@@ -274,5 +274,10 @@ func bracketHotkey(label, key string) string {
 	if label != "" && strings.EqualFold(label[:1], key) {
 		return "[" + key + "]" + label[1:]
 	}
+	// The letter elsewhere in the label, exactly as declared, is bracketed
+	// there: UR[L] (ux.md §A.1.2's in-place form, as [go]to).
+	if i := strings.Index(label, key); i > 0 {
+		return label[:i] + "[" + key + "]" + label[i+len(key):]
+	}
 	return "[" + key + "] " + label
 }

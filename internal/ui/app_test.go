@@ -324,3 +324,46 @@ func TestViewFitsTheTerminal(t *testing.T) {
 		}
 	}
 }
+
+// L is Chrome's Cmd+L: the box opens with the page's own URL on offer.
+func TestGotoOffersThePageURL(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	d := newDriver(t, New(nil, ""))
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.m.tabs = []*tab{{id: 1, url: "https://example.com/a"}}
+	d.m.shown = 0
+	d.m.focus = panel2 // from any panel, like Cmd+L
+
+	d.key("L")
+	d.until("goto open", func() bool { return d.m.input.isInteractive() })
+	if d.m.input.value != "" || d.m.input.placeholder != "https://example.com/a" {
+		t.Fatalf("value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
+	}
+	if v := d.m.input.view(); !strings.Contains(v, "Tab") || !strings.Contains(v, "edit it") {
+		t.Errorf("hint does not offer Tab:\n%s", v)
+	}
+	// Tab takes the offer into the line; typing then edits it.
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	d.key("b")
+	if d.m.input.value != "https://example.com/ab" || d.m.input.placeholder != "" {
+		t.Fatalf("after Tab: value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
+	}
+	d.key("esc")
+	d.until("closed", func() bool { return !d.m.input.isActive() })
+
+	// Backspace on the empty line declines it.
+	d.key("L")
+	d.until("goto open again", func() bool { return d.m.input.isInteractive() })
+	d.send(tea.KeyMsg{Type: tea.KeyBackspace})
+	if d.m.input.placeholder != "" {
+		t.Fatalf("Backspace kept the offer %q", d.m.input.placeholder)
+	}
+	if v := d.m.input.view(); strings.Contains(v, "edit it") {
+		t.Errorf("hint still offers Tab with nothing to take:\n%s", v)
+	}
+	d.key("esc")
+
+	if got := bracketHotkey("URL", "L"); got != "UR[L]" {
+		t.Errorf("bracketHotkey(URL, L) = %q", got)
+	}
+}
