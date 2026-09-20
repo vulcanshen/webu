@@ -89,6 +89,9 @@ letter hotkey；`[1]` 就是 kbu statusbar chip 那種 Layer 2 ambient 揭露，
   （`▸ banner · 14 items`），main 裡的全開；沒有 main 的頁全開。Outline 跳進摺疊的 landmark 會先把它打開
 - **導覽清單一行流式**：navigation 裡、每項都短的 list 畫成 `Platform · Solutions · Resources` 一行折行
 - **文字欄寬上限**：段落折行寬度 = min(面板寬, `config.yaml` 的 `measure`，預設 100)；表格、code、分隔線仍用整個面板寬
+- **非 HTML 的回應**（修訂 2026-09-20）：JSON / 純文字 / XML / CSV 等依 `document.contentType` 整份畫成一個 code block，
+  JSON 自動縮排；不畫 Chrome 自己的 JSON viewer（Pretty-print 表單）
+- **新頁載入**：游標回 main 裡第一個 item、視窗在頂端；不跟著游標捲（同頁重畫才留位）
 - 空狀態（沒有分頁）：置中事實「no page」+ 提示（該按什麼），sshu `empty.go` 的形狀
 - 載入中：邊框 hint 顯示 loading；即時更新重畫時 cursor 留位（function.md §4 / §6）
 

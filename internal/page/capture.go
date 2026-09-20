@@ -6,10 +6,12 @@ package page
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/domsnapshot"
+	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
@@ -42,6 +44,14 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 			return err
 		}
 		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs)}
+		// What the response was: a JSON or plain-text document is drawn as
+		// its text, not as Chrome's viewer for it (ir.Build).
+		if obj, _, err := runtime.Evaluate("document.contentType").WithReturnByValue(true).Do(ctx); err == nil && obj != nil {
+			var ct string
+			if json.Unmarshal(obj.Value, &ct) == nil {
+				c.ContentType = ct
+			}
+		}
 		return nil
 	})
 	return c, err

@@ -358,6 +358,11 @@ func (t *tab) apply(msg pageMsg, width int) {
 	}
 	t.errText = ""
 	t.certErr = false
+	// fresh: another page than the one drawn, so the cursor starts over
+	// (the first item, inside main when there is one — ux.md §6) and the
+	// window is at the top, wherever that item sits. A redraw of the same
+	// page keeps both.
+	fresh := msg.url != "" && msg.url != t.lastVisit
 	if msg.url != "" {
 		t.url = msg.url
 	}
@@ -372,6 +377,10 @@ func (t *tab) apply(msg pageMsg, width int) {
 	}
 	t.root = ir.Build(msg.cap)
 	t.relayout(width)
+	if fresh {
+		t.cursor, t.top = t.firstItem(), 0
+		return
+	}
 	t.cursor = -1
 	for i, it := range t.lay.items {
 		if int64(it.node.ID) == wasID {
@@ -383,6 +392,25 @@ func (t *tab) apply(msg pageMsg, width int) {
 		t.cursor = clamp(wasIdx, 0, len(t.lay.items)-1)
 	}
 	t.scrollToCursor(0)
+}
+
+// firstItem is where the cursor starts on a new page: the first item
+// inside main, else the first item at all, else -1.
+func (t *tab) firstItem() int {
+	if len(t.lay.items) == 0 {
+		return -1
+	}
+	for i, it := range t.lay.items {
+		if it.node.Kind == ir.Landmark && it.node.Role == "main" {
+			for j := i + 1; j < len(t.lay.items); j++ {
+				if t.lay.items[j].node.Kind != ir.Landmark {
+					return j
+				}
+			}
+			break
+		}
+	}
+	return 0
 }
 
 func (t *tab) relayout(width int) {

@@ -231,6 +231,32 @@ func TestUndoCloseAndQuitConfirm(t *testing.T) {
 	}
 }
 
+// A JSON document is drawn as the JSON, indented, on the code ground —
+// not as Chrome's viewer with its Pretty-print form — and the window
+// starts at the top.
+func TestJSONDocumentIsCode(t *testing.T) {
+	b := hookBrowser(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[{"id":1,"title":"first"},{"id":2,"title":"second"}]`))
+	}))
+	defer srv.Close()
+	d := startAt(t, b, srv.URL, store.Config{})
+	d.until("json page", func() bool { p := d.page(); return p != nil && !p.loading && p.root != nil })
+	rows := d.page().lay.rows
+	if len(rows) < 8 || !rows[0].code || !strings.HasPrefix(rows[0].plain(), "[") || !strings.Contains(rows[2].plain(), `"id": 1`) {
+		t.Fatalf("JSON not drawn as an indented code block:\n%s", dumpLayout(d.page().lay))
+	}
+	if d.page().top != 0 {
+		t.Errorf("a fresh page starts at the top, not at %d", d.page().top)
+	}
+	for _, it := range d.page().lay.items {
+		if it.node.Kind == ir.Check {
+			t.Error("Chrome's Pretty-print checkbox leaked into the page")
+		}
+	}
+}
+
 func TestSearchThenEnterClicks(t *testing.T) {
 	b := hookBrowser(t)
 	abs, _ := filepath.Abs("testdata/nav.html")
