@@ -175,7 +175,9 @@ u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬�
 | **Green** | **`[3]` 正在顯示的分頁**（`[2]` 專用） | `#a6e3a1` | 全 app 只表達這一件事，不拿去表達成功 / 線上 |
 | popup layer scale | 浮層層級 | 依 §2.5 插值 | 同 kbu |
 | override | warn / error（console 等級、憑證錯誤） | 同 kbu §2.4 | 不參與 z-axis |
-| link 色 | `[3]` 內 link | **待定** | 從剩餘錨點挑一條未被佔用的，全 app 唯一 |
+| link 色 | `[3]` 內 link | Teal `#94e2d5` + 底線 | 定案 2026-09-20；底線讓色彩被壓平的終端機仍看得出是連結 |
+| code | inline code 與 code block | Mauve `#cba6f7`；block 另鋪 Surface0 `#313244` 底、寬到 measure | 不用 Peach：Peach 是 override 的「值得注意」（console warn、4xx），code 不是警告 |
+| table header | 表頭 cell | Sky `#89dceb` 粗體 | 沒有其他元素用這條 |
 
 focus 二態同 kbu §8.4：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，cell 數相同、零位移。
 

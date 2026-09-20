@@ -96,12 +96,21 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 		}
 		cur = curOff
 	}
+	// A code block's rows sit on their own background, padding included,
+	// so the block reads as one thing; the text width is what the block
+	// spans, not the panel, so it does not run under the side of the page.
+	codeRow := lipgloss.NewStyle().Foreground(codeColor).Background(codeBg)
+	codePad := lipgloss.NewStyle().Background(codeBg)
+	if t.loading {
+		codeRow = lipgloss.NewStyle().Foreground(dimColor).Background(codeBg)
+	}
 	out := make([]string, 0, innerH)
 	end := min(len(t.lay.rows), t.top+innerH)
 	for i := t.top; i < end; i++ {
 		var b strings.Builder
 		used := 0
-		for _, s := range t.lay.rows[i].segs {
+		row := t.lay.rows[i]
+		for _, s := range row.segs {
 			text := s.text
 			if used+dispW(text) > innerW {
 				text = truncate(text, innerW-used)
@@ -115,11 +124,19 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 				b.WriteString(cur.Render(text))
 			case s.item >= 0 && s.item == t.cursor:
 				b.WriteString(curOff.Render(text))
+			case row.code:
+				b.WriteString(codeRow.Render(text))
 			default:
 				b.WriteString(styles[s.kind].Render(text))
 			}
 		}
-		b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
+		if row.code {
+			span := min(innerW, max(used, t.textWidth()))
+			b.WriteString(codePad.Render(strings.Repeat(" ", max(0, span-used))))
+			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
+		} else {
+			b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
+		}
 		out = append(out, b.String())
 	}
 	for len(out) < innerH {
@@ -135,14 +152,15 @@ func segStyles() map[segKind]lipgloss.Style {
 		segPlain:       lipgloss.NewStyle().Foreground(textColor),
 		segDim:         lipgloss.NewStyle().Foreground(dimColor),
 		segHeading:     lipgloss.NewStyle().Foreground(textColor).Bold(true),
-		segLink:        lipgloss.NewStyle().Foreground(linkColor),
+		segLink:        lipgloss.NewStyle().Foreground(linkColor).Underline(true),
 		segButton:      lipgloss.NewStyle().Foreground(textColor).Bold(true),
 		segInput:       lipgloss.NewStyle().Foreground(editColor),
 		segCheck:       lipgloss.NewStyle().Foreground(textColor),
 		segMedia:       lipgloss.NewStyle().Foreground(dimColor),
-		segCode:        lipgloss.NewStyle().Foreground(peachColor),
+		segCode:        lipgloss.NewStyle().Foreground(codeColor),
 		segUnsupported: lipgloss.NewStyle().Foreground(dimColor),
 		segLandmark:    lipgloss.NewStyle().Foreground(dimColor).Bold(true),
+		segTableHeader: lipgloss.NewStyle().Foreground(headerColor).Bold(true),
 	}
 }
 

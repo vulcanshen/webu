@@ -178,6 +178,53 @@ func TestSelectRowsDrawTheCursor(t *testing.T) {
 	}
 }
 
+func TestVEntersSelectionFromAnyPanel(t *testing.T) {
+	m := New(nil, "")
+	tb := selectFixture()
+	m.tabs = append(m.tabs, tb)
+	m.shown = 0
+	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	mm := model.(AppModel)
+	if !mm.sel.on || mm.sel.typing || mm.focus != panel3 {
+		t.Errorf("v: on=%v typing=%v focus=%d", mm.sel.on, mm.sel.typing, mm.focus)
+	}
+	mm.focus = panel2
+	mm.sel.on = false
+	model, _ = mm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	mm = model.(AppModel)
+	if !mm.sel.on || mm.focus != panel3 {
+		t.Errorf("v from [2] moves to [3] first: on=%v focus=%d", mm.sel.on, mm.focus)
+	}
+}
+
+func TestCodeRowsAndTableHeaders(t *testing.T) {
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Code, Children: []*ir.Node{{Kind: ir.Text, Name: "one\ntwo"}}},
+		{Kind: ir.Table, Children: []*ir.Node{{Kind: ir.Row, Children: []*ir.Node{
+			{Kind: ir.Cell, Header: true, Children: []*ir.Node{{Kind: ir.Text, Name: "H"}}},
+			{Kind: ir.Cell, Children: []*ir.Node{{Kind: ir.Text, Name: "c"}}},
+		}}}},
+	}}
+	l := render(root, 40)
+	if !l.rows[0].code || !l.rows[1].code {
+		t.Errorf("code block rows should be flagged: %+v", l.rows[:2])
+	}
+	var header, cell segKind = segPlain, segPlain
+	for _, r := range l.rows {
+		for _, s := range r.segs {
+			if s.text == "H" {
+				header = s.kind
+			}
+			if s.text == "c" {
+				cell = s.kind
+			}
+		}
+	}
+	if header != segTableHeader || cell != segPlain {
+		t.Errorf("header kind %d, cell kind %d", header, cell)
+	}
+}
+
 func TestOutlineEntriesAndJump(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		{Kind: ir.Landmark, Role: "banner", Children: []*ir.Node{{Kind: ir.Text, Name: "top"}}},

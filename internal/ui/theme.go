@@ -26,8 +26,16 @@ var (
 	selectColor = lipgloss.Color("#f9e2af") // yellow
 	// a link in the page. ui.md §4 left this band open ("pick one unused,
 	// draw it, then decide"); teal is the anchor nothing else in the family
-	// has claimed. Unique to links across the whole app.
+	// has claimed. Unique to links across the whole app; underlined too, so
+	// a link is a link on a terminal with the colours flattened.
 	linkColor = lipgloss.Color("#94e2d5") // teal
+	// code, inline and block. Mauve rather than peach: peach is the
+	// override band for "worth catching" (console warnings, 4xx rows), and
+	// code is not a warning. A block sits on surface0 so it reads as a block.
+	codeColor = lipgloss.Color("#cba6f7") // mauve
+	codeBg    = lipgloss.Color("#313244") // surface0
+	// a table's header cells: sky, bold — a band nothing else wears.
+	headerColor = lipgloss.Color("#89dceb") // sky
 	// the cursor row in a list.
 	rowSelColor = focusColor
 	// the URL on panel [3]'s first row: "where you are", which is the
