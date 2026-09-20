@@ -1,0 +1,20 @@
+document "combobox" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/combobox.html focusable #2
+  group:generic #6
+    text "Pick one " #82
+    combobox "Pick one" value="Beta" focusable #12
+      option "Alpha" #19
+      option "Beta" selected #22
+      option "Gamma" #25
+    text "Grouped " #83
+    combobox "Grouped" value="b" focusable #29
+      option "a" #39
+      option "b" selected #45
+    text "Disabled " #84
+    combobox "Disabled" value="x" disabled #1
+      option "x" #55
+    text "Multi " #85
+    unsupported:listbox "Multi" focusable #59
+      option "m1" focusable selected block #63
+      option "m2" focusable block #66
+    text "Datalist " #86
+    combobox "Datalist" focusable #70

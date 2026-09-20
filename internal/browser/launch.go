@@ -3,6 +3,7 @@ package browser
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/chromedp/chromedp"
 )
@@ -41,6 +42,13 @@ func Launch(exe, profile string) (*Browser, error) {
 		chromedp.Flag("disable-backgrounding-occluded-windows", true),
 		chromedp.Flag("disable-renderer-backgrounding", true),
 		chromedp.Flag("disable-breakpad", true),
+		// Honoured on Linux, where the crash database would otherwise land
+		// in the default profile. macOS ignores it and every other switch
+		// tried (--disable-breakpad, --disable-crash-reporter): Chromium
+		// there always keeps an empty Crashpad database under
+		// ~/Library/Application Support/Chromium — a few KB, and nothing
+		// webu can redirect.
+		chromedp.Flag("crash-dumps-dir", filepath.Join(profile, "Crashpad")),
 		chromedp.Flag("disable-client-side-phishing-detection", true),
 		chromedp.Flag("disable-default-apps", true),
 		chromedp.Flag("disable-dev-shm-usage", true),

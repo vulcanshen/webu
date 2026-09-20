@@ -1,0 +1,31 @@
+document "landmarks" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/landmarks.html focusable #2
+  landmark:banner #7
+    text "Site header " #39
+    link "Home" url=file:/// focusable #25
+  landmark:navigation "Primary" #8
+    link "A" url=file:///a focusable #26
+    text " " #42
+    link "B" url=file:///b focusable #27
+  landmark:main #9
+    heading "Main heading" level=1 #14
+      text "Main heading" #15
+    landmark:article #16
+      heading "An article" level=2 #20
+        text "An article" #21
+      paragraph #22
+        text "Body." #23
+    landmark:region "Named section" #17
+      paragraph #28
+        text "Section text." #44
+    paragraph #29
+      text "An unnamed section is not a region." #45
+    landmark:form #1
+      text "Q " #46
+      textbox "Q" focusable #31
+    landmark:search #19
+      text "Find " #47
+      textbox:searchbox "Find" focusable #34
+  landmark:complementary #10
+    text "Sidebar" #11
+  landmark:contentinfo #12
+    text "Footer text" #13

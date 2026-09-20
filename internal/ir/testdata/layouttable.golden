@@ -1,0 +1,20 @@
+document "layouttable" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/layouttable.html focusable #1
+  group:LayoutTableRow #9
+    text "1." #29
+    link "▲" url=file:///vote focusable #12
+    link "Story title" url=https://example.com/story focusable #14
+    text " " #32
+    text "(" #33
+    link "example.com" url=file:///from?site=example.com focusable #16
+    text ")" #35
+  group:LayoutTableRow #17
+    text "42 points by " #36
+    link "me" url=file:///user?id=me focusable #20
+    text " " #38
+    link "3 hours ago" url=file:///item?id=1 focusable #21
+    text " | " #40
+    link "12 comments" url=file:///item?id=1 focusable #22
+  group:LayoutTableRow #23
+    text "2." #42
+    link "▲" url=file:///vote focusable #26
+    link "Second story" url=https://example.org/two focusable #28

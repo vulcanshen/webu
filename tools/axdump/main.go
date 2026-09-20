@@ -1,8 +1,18 @@
+// Command axdump prints the accessibility tree Chromium builds for a URL —
+// the input webu's translation layer works from (docs/function.md §3).
+//
+//	go run . <url>            outline: role "name", generic/text nodes skipped
+//	go run . -all <url>       outline with every node, ignored ones marked
+//	go run . -json <url>      the raw Accessibility.getFullAXTree result
+//
+// It uses whatever Chrome chromedp finds on this machine, not webu's pinned
+// one; for a fixture, use webu's own capture.
 package main
 
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -23,8 +33,15 @@ func val(v *accessibility.Value) string {
 }
 
 func main() {
-	url := os.Args[1]
-	limit := 60
+	all := flag.Bool("all", false, "print every node, including generic/text and ignored")
+	asJSON := flag.Bool("json", false, "print the raw node list as JSON")
+	limit := flag.Int("n", 60, "outline: max nodes to print")
+	flag.Parse()
+	if flag.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "usage: axdump [-all] [-json] [-n N] <url>")
+		os.Exit(2)
+	}
+	url := flag.Arg(0)
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
 	ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
@@ -44,6 +61,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
+	if *asJSON {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", " ")
+		enc.Encode(nodes)
+		return
+	}
 
 	byID := map[accessibility.NodeID]*accessibility.Node{}
 	for _, n := range nodes {
@@ -58,10 +81,25 @@ func main() {
 			return
 		}
 		d := depth
-		if !n.Ignored && !skip[val(n.Role)] {
+		role := val(n.Role)
+		show := *all || (!n.Ignored && !skip[role])
+		if !n.Ignored && !skip[role] {
 			semantic++
-			if printed < limit {
-				fmt.Printf("%*s%s %q\n", depth*2, "", val(n.Role), val(n.Name))
+		}
+		if show {
+			if printed < *limit || *all {
+				mark := ""
+				if n.Ignored {
+					mark = " (ignored)"
+				}
+				extra := ""
+				if v := val(n.Value); v != "" {
+					extra += fmt.Sprintf(" value=%q", v)
+				}
+				for _, p := range n.Properties {
+					extra += fmt.Sprintf(" %s=%s", p.Name, string(p.Value.Value))
+				}
+				fmt.Printf("%*s%s %q%s%s  #%d\n", depth*2, "", role, val(n.Name), extra, mark, n.BackendDOMNodeID)
 				printed++
 			}
 			d = depth + 1

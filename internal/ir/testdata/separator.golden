@@ -1,0 +1,9 @@
+document "separator" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/separator.html focusable #1
+  paragraph #7
+    text "Above" #12
+  separator #8
+  paragraph #9
+    text "Below" #13
+  separator #10
+  paragraph #11
+    text "After ARIA rule" #14

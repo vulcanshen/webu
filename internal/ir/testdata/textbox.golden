@@ -1,0 +1,26 @@
+document "textbox" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/textbox.html focusable #6
+  text "Empty " #54
+  textbox "Empty" focusable #13
+  text "Filled " #55
+  textbox "Filled" value="some text" focusable #16
+  text "Search " #57
+  textbox:searchbox "Search" value="query" focusable #19
+  text "Password " #59
+  textbox "Password" value="••••••" protected focusable #25
+  text "Email " #61
+  textbox "Email" value="a@b.c" focusable #28
+  text "Number " #63
+  textbox:spinbutton "Number" value="42" focusable #31
+  text "Read only " #65
+  textbox "Read only" value="fixed" focusable #1
+  text "Required " #67
+  textbox "Required" focusable #2
+  text "Disabled " #68
+  textbox "Disabled" value="nope" disabled #3
+  textbox "Placeholder only" focusable #4
+  textbox "Labelled by aria" focusable #5
+  text "Area " #70
+  textbox "Area" value="line one\nline two" multiline focusable #46
+  text "Empty area " #73
+  textbox "Empty area" multiline focusable #50
+  textbox "Editable div" value="typed here" multiline focusable block #53

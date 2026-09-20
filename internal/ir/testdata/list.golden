@@ -1,0 +1,33 @@
+document "list" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/list.html focusable #1
+  list #7
+    listitem marker="• " #8
+      text "Bullet one" #28
+    listitem marker="• " #9
+      text "Bullet two with " #30
+      link "a link" url=file:///l focusable #10
+  list #11
+    listitem marker="1. " #12
+      text "First" #33
+    listitem marker="2. " #13
+      text "Second" #35
+    listitem marker="3. " #14
+      text "Third" #37
+  list #15
+    listitem marker="• " #16
+      text "Outer" #39
+      list #17
+        listitem marker="◦ " #18
+          text "Inner one" #41
+        listitem marker="◦ " #19
+          text "Inner two" #43
+  list #20
+    listitem #21
+      text "No marker" #44
+  list #22
+    group:term "Term" #23
+      text "Term" #45
+    quote #24
+      text "Definition" #46
+  list #25
+    listitem #26
+      text "ARIA item" #47
