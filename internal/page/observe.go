@@ -3,6 +3,7 @@ package page
 import (
 	"context"
 
+	"github.com/chromedp/cdproto/fetch"
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
@@ -35,6 +36,16 @@ func Prepare(ctx context.Context) error {
 	return chromedp.Run(ctx,
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			if err := enableDevDomains(ctx); err != nil {
+				return err
+			}
+			// HTTP auth challenges and file choosers are webu's to answer
+			// (function.md §5). Fetch with auth handling pauses every
+			// request until it is continued — the tab's listener does that
+			// (ContinueRequest); only a challenge reaches the UI.
+			if err := fetch.Enable().WithHandleAuthRequests(true).Do(ctx); err != nil {
+				return err
+			}
+			if err := cdppage.SetInterceptFileChooserDialog(true).Do(ctx); err != nil {
 				return err
 			}
 			if err := runtime.AddBinding(MutationBinding).Do(ctx); err != nil {

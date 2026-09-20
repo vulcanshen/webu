@@ -86,6 +86,16 @@ type AppModel struct {
 	// dialog is the page's question being asked (function.md §5); the page
 	// is stalled until it is answered, and settle captures wait too.
 	dialog *dialogMsg
+	// auth is the HTTP challenge being answered, and authUser the name
+	// typed so far (the password is asked second).
+	auth     *authMsg
+	authUser string
+	// upload is the file chooser waiting on a path.
+	upload *fileMsg
+	// closed is the tabs closed this session, for [U]ndo close in [2].
+	closed []store.SessionTab
+	// downloads is how many are in flight: q asks first while any is.
+	downloads int
 	// pendingG holds the first half of the gg chord.
 	pendingG bool
 }
@@ -247,11 +257,35 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case downloadMsg:
 		switch {
 		case msg.failed:
+			m.downloads = max(0, m.downloads-1)
 			return m, tea.Batch(waitEvent(m.events), m.toast.show("download cancelled", toastError))
 		case msg.done:
+			m.downloads = max(0, m.downloads-1)
 			return m, tea.Batch(waitEvent(m.events), m.toast.show("saved "+msg.path, toastInfo))
 		}
+		m.downloads++
 		return m, tea.Batch(waitEvent(m.events), m.toast.show("downloading "+msg.name, toastInfo))
+
+	case authMsg:
+		// The name first, the password second (masked); the request waits.
+		m.auth, m.authUser = &msg, ""
+		where := msg.origin
+		if msg.realm != "" {
+			where += " — " + msg.realm
+		}
+		return m, tea.Batch(waitEvent(m.events), m.input.ask(inputPopup{
+			title: "Sign in", glyph: glyphPencil, prompt: where + " asks for a name", accept: "next",
+			action: inputAuthUser}, m.layer()))
+
+	case fileMsg:
+		m.upload = &msg
+		prompt := "path of the file to upload"
+		if msg.multiple {
+			prompt = "paths of the files to upload, separated by spaces"
+		}
+		return m, tea.Batch(waitEvent(m.events), m.input.ask(inputPopup{
+			title: "Upload", glyph: glyphPencil, prompt: prompt, accept: "upload",
+			action: inputFile, placeholder: "~/…"}, m.layer()))
 
 	case toastExpireMsg:
 		return m, m.toast.expire(msg)
@@ -618,8 +652,13 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		return m, m.toast.close()
 	case m.input.anim.owns():
 		// Cancelling a page's prompt is an answer too: "no".
-		if m.input.action == inputPrompt {
+		switch m.input.action {
+		case inputPrompt:
 			return m, tea.Batch(m.input.close(), m.answerDialog(false, ""))
+		case inputAuthUser, inputAuthPass:
+			return m, tea.Batch(m.input.close(), m.cancelAuth())
+		case inputFile:
+			m.upload = nil // the chooser is simply left unanswered: nothing is chosen
 		}
 		return m, m.input.close()
 	case m.confirm.anim.owns():
@@ -694,6 +733,12 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.focus = panelID(k[0] - '1')
 		return m, nil
 	case "q":
+		// A download in flight would be cut off (ux.md §5): ask first.
+		if m.downloads > 0 {
+			return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Quit",
+				lines:  []string{plural(m.downloads, "download") + " still in progress.", "Quitting stops it."},
+				accept: "quit", warn: true, action: confirmQuit}, m.layer())
+		}
 		return m.quit()
 	case "B":
 		return m, m.openList(listBookmarks)
@@ -730,7 +775,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("show")
-		case "w", "c", "r", "y", "T", "X":
+		case "w", "c", "r", "y", "T", "X", "U":
 			return m.dispatch(k)
 		}
 	case panel3:
@@ -990,7 +1035,7 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 		items = append(items,
 			menuItem{label: "Tab", key: "T", hint: "a new one, at a URL"},
 			menuItem{label: "X close others", key: "X", hint: "every tab but this one", disabled: len(m.tabs) < 2},
-			menuItem{label: "Undo close", key: "U", hint: "not in this build yet", disabled: true})
+			menuItem{label: "Undo close", key: "U", hint: "reopen the last closed tab", disabled: len(m.closed) == 0})
 	case panel3:
 		title = "Page"
 		items = m.pageMenuItems()
@@ -1154,12 +1199,24 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	case "X":
 		for i := len(m.tabs) - 1; i >= 0; i-- {
 			if i != m.cur2 {
+				m.remember(m.tabs[i])
 				m.tabs[i].close()
 				m.tabs = append(m.tabs[:i], m.tabs[i+1:]...)
 			}
 		}
 		m.cur2, m.shown = 0, 0
 		return m, nil
+	case "U":
+		if m.focus == panel2 || m.spaceMenu.isActive() {
+			if n := len(m.closed); n > 0 {
+				last := m.closed[n-1]
+				m.closed = m.closed[:n-1]
+				return m, m.openTab(last.URL, true)
+			}
+			return m, m.toast.show("nothing closed yet", toastInfo)
+		}
+		return m, m.input.ask(inputPopup{title: "Go to", glyph: glyphSearch,
+			prompt: "URL, or words to search for", accept: "open", action: inputGoto}, m.layer())
 
 	// ---- panel [3], page
 	case "R":
@@ -1174,9 +1231,6 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		if t != nil {
 			return m, t.act(page.Forward)
 		}
-	case "U":
-		return m, m.input.ask(inputPopup{title: "Go to", glyph: glyphSearch,
-			prompt: "URL, or words to search for", accept: "open", action: inputGoto}, m.layer())
 	case "Y":
 		if t != nil {
 			return m, copyToClipboard(t.url)
@@ -1340,8 +1394,75 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.closeStack(), t.act(func(ctx context.Context) error { return page.Type(ctx, id, value) }))
 	case inputPrompt:
 		return m, tea.Batch(m.input.close(), m.answerDialog(true, value))
+	case inputAuthUser:
+		if m.auth == nil {
+			return m, m.input.close()
+		}
+		m.authUser = value
+		return m, m.input.ask(inputPopup{title: "Sign in", glyph: glyphPencil,
+			prompt: "password for " + value, accept: "sign in", action: inputAuthPass, masked: true}, m.layer())
+	case inputAuthPass:
+		a := m.auth
+		m.auth = nil
+		user := m.authUser
+		if a == nil {
+			return m, m.input.close()
+		}
+		_, at := m.tabByID(a.tabID)
+		if at == nil {
+			return m, m.input.close()
+		}
+		return m, tea.Batch(m.input.close(), at.act(func(ctx context.Context) error { return page.Auth(ctx, a.id, user, value) }))
+	case inputFile:
+		f := m.upload
+		m.upload = nil
+		if f == nil {
+			return m, m.input.close()
+		}
+		_, ft := m.tabByID(f.tabID)
+		if ft == nil {
+			return m, m.input.close()
+		}
+		var files []string
+		for _, p := range strings.Fields(value) {
+			files = append(files, expandHome(p))
+		}
+		if len(files) == 0 {
+			return m, m.input.close()
+		}
+		for _, p := range files {
+			if _, err := os.Stat(p); err != nil {
+				return m, m.toast.show("no such file: "+p, toastError)
+			}
+		}
+		node := f.node
+		return m, tea.Batch(m.input.close(), ft.act(func(ctx context.Context) error { return page.SetFiles(ctx, node, files) }))
 	}
 	return m, m.closeStack()
+}
+
+// expandHome turns a leading ~ into the home directory.
+func expandHome(p string) string {
+	if p == "~" || strings.HasPrefix(p, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, strings.TrimPrefix(p, "~"))
+		}
+	}
+	return p
+}
+
+// cancelAuth is Esc on a challenge: the page gets its 401.
+func (m *AppModel) cancelAuth() tea.Cmd {
+	a := m.auth
+	m.auth = nil
+	if a == nil {
+		return nil
+	}
+	_, t := m.tabByID(a.tabID)
+	if t == nil {
+		return nil
+	}
+	return t.act(func(ctx context.Context) error { return page.CancelAuth(ctx, a.id) })
 }
 
 // sourceMsg carries the page's HTML to the viewer.
@@ -1470,6 +1591,17 @@ func (m *AppModel) openTab(url string, show bool) tea.Cmd {
 	return t.load(url)
 }
 
+// remember keeps a closing tab's address for [U]ndo close.
+func (m *AppModel) remember(t *tab) {
+	if t.url == "" || t.url == "about:blank" {
+		return
+	}
+	m.closed = append(m.closed, store.SessionTab{URL: t.url, Title: t.title})
+	if len(m.closed) > 20 {
+		m.closed = m.closed[1:]
+	}
+}
+
 // showTab is Enter on panel [2]: panel [3] switches, and the keyboard goes
 // with it (ux.md §6). A pending tab loads now.
 func (m AppModel) showTab(i int) (tea.Model, tea.Cmd) {
@@ -1493,6 +1625,7 @@ func (m AppModel) closeTab(i int) (tea.Model, tea.Cmd) {
 	if i == m.shown {
 		m.sel.on = false
 	}
+	m.remember(m.tabs[i])
 	m.tabs[i].close()
 	m.tabs = append(m.tabs[:i], m.tabs[i+1:]...)
 	switch {

@@ -8,6 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	cdpbrowser "github.com/chromedp/cdproto/browser"
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/fetch"
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/cdproto/target"
@@ -94,6 +96,23 @@ type downloadMsg struct {
 	failed bool
 }
 
+// authMsg is an HTTP basic / digest challenge waiting on credentials
+// (function.md §5). The request is paused until it is answered.
+type authMsg struct {
+	tabID  int
+	id     fetch.RequestID
+	origin string
+	realm  string
+	scheme string
+}
+
+// fileMsg is a file chooser the page opened; webu's own picker answers it.
+type fileMsg struct {
+	tabID    int
+	node     cdp.BackendNodeID
+	multiple bool
+}
+
 // settleMsg fires the re-capture a pageEventMsg or an action asked for.
 type settleMsg struct {
 	tabID int
@@ -127,6 +146,25 @@ func (m *AppModel) newTabWith(ctx context.Context, cancel context.CancelFunc) *t
 		case *cdppage.EventJavascriptDialogOpening:
 			// Never dropped: the page is stalled until this is answered.
 			msg := dialogMsg{tabID: id, kind: e.Type, message: e.Message, defaultPrompt: e.DefaultPrompt}
+			go func() { ch <- msg }()
+			return
+		case *fetch.EventRequestPaused:
+			// Every request pauses once (auth handling is on); this is the
+			// answer for the ones that asked nothing. Off the listener's
+			// goroutine, or the answer would wait on the event loop that
+			// carries it.
+			reqID := e.RequestID
+			go func() { _ = page.ContinueRequest(ctx, reqID) }()
+			return
+		case *fetch.EventAuthRequired:
+			msg := authMsg{tabID: id, id: e.RequestID}
+			if e.AuthChallenge != nil {
+				msg.origin, msg.realm, msg.scheme = e.AuthChallenge.Origin, e.AuthChallenge.Realm, e.AuthChallenge.Scheme
+			}
+			go func() { ch <- msg }()
+			return
+		case *cdppage.EventFileChooserOpened:
+			msg := fileMsg{tabID: id, node: e.BackendNodeID, multiple: e.Mode == cdppage.FileChooserOpenedModeSelectMultiple}
 			go func() { ch <- msg }()
 			return
 		default:
