@@ -28,14 +28,18 @@ var (
 	// draw it, then decide"); teal is the anchor nothing else in the family
 	// has claimed. Unique to links across the whole app; underlined too, so
 	// a link is a link on a terminal with the colours flattened.
-	linkColor = lipgloss.Color("#94e2d5") // teal
-	// code, inline and block. Mauve rather than peach: peach is the
-	// override band for "worth catching" (console warnings, 4xx rows), and
-	// code is not a warning. A block sits on surface0 so it reads as a block.
-	codeColor = lipgloss.Color("#cba6f7") // mauve
+	linkColor = lipgloss.Color("#74c7ec") // sapphire (chosen 2026-09-20; was teal)
+	// code, inline and block. Not peach: peach is the override band for
+	// "worth catching" (console warnings, 4xx rows), and code is not a
+	// warning. A block sits on surface0 so it reads as a block.
+	codeColor = lipgloss.Color("#f5c2e7") // pink
 	codeBg    = lipgloss.Color("#313244") // surface0
-	// a table's header cells: sky, bold — a band nothing else wears.
-	headerColor = lipgloss.Color("#89dceb") // sky
+	// a table's header cells: mauve, bold.
+	headerColor = lipgloss.Color("#cba6f7") // mauve
+	// visual mode's swept text: lavender under it, the band the family
+	// gives to "the thing you are changing" (an input under edit) — and a
+	// selection is that.
+	selectionBg = lipgloss.Color("#b4befe") // lavender
 	// the cursor row in a list.
 	rowSelColor = focusColor
 	// the URL on panel [3]'s first row: "where you are", which is the
