@@ -6,12 +6,14 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/page"
+	"github.com/vulcanshen/webu/internal/store"
 )
 
 // The three panels, numbered left to right, top to bottom (ui.md §1.1).
@@ -32,8 +34,9 @@ const (
 	minAppH = 10
 )
 
-// searchEngine is where a goto that is not a URL goes (ux.md §7).
-const searchEngine = "https://duckduckgo.com/?q="
+// searchEngine is the default for a goto that is not a URL (ux.md §7);
+// config.yaml can change it.
+const searchEngine = store.DefaultSearch
 
 type AppModel struct {
 	w, h  int
@@ -48,11 +51,18 @@ type AppModel struct {
 	browser   *browser.Browser
 	events    chan pageEventMsg
 	startURL  string
+	session   store.Session // what to restore on the first frame
+
+	// webu's own files, loaded by main and written back as they change.
+	bookmarks []store.Bookmark
+	cfg       store.Config
+	history   []store.Visit
 
 	// Floats. The Space menu goes down first; a target opened from it stacks
 	// above (§6.4). The toast rides on top of everything.
 	spaceMenu spaceMenu
 	options   spaceMenu // a textbox's Submit/Edit/Clear/Yank, or a select's options
+	lists     listPopup // Bookmarks / Shortcuts / History
 	help      helpPopup
 	confirm   confirmPopup
 	input     inputPopup
@@ -65,7 +75,7 @@ type AppModel struct {
 }
 
 // New builds the app over a running browser. startURL, when given, opens as
-// the first tab (function.md §12).
+// a tab in front of whatever the session restores (function.md §12).
 func New(b *browser.Browser, startURL string) AppModel {
 	return AppModel{
 		focus:     panel3,
@@ -75,6 +85,7 @@ func New(b *browser.Browser, startURL string) AppModel {
 		startURL:  startURL,
 		spaceMenu: newSpaceMenu(),
 		options:   spaceMenu{anim: newPopupAnimator("options")},
+		lists:     newListPopup(),
 		help:      newHelpPopup(),
 		confirm:   newConfirmPopup(),
 		input:     newInputPopup(),
@@ -82,9 +93,37 @@ func New(b *browser.Browser, startURL string) AppModel {
 	}
 }
 
+// WithStore hands the app its files. The UI never reads them itself.
+func (m AppModel) WithStore(bookmarks []store.Bookmark, cfg store.Config, history []store.Visit) AppModel {
+	m.bookmarks, m.cfg, m.history = bookmarks, cfg, history
+	return m
+}
+
+// WithSession is what was open last time; restored on the first frame,
+// without loading (ux.md §6).
+func (m AppModel) WithSession(s store.Session) AppModel {
+	m.session = s
+	return m
+}
+
+// Session is what to write down on the way out: every tab's URL, and which
+// one panel [3] was on.
+func (m AppModel) Session() store.Session {
+	s := store.Session{Shown: max(0, m.shown)}
+	for _, t := range m.tabs {
+		if t.url == "" || t.url == "about:blank" {
+			continue
+		}
+		s.Tabs = append(s.Tabs, store.SessionTab{URL: t.url, Title: t.title})
+	}
+	if s.Shown >= len(s.Tabs) {
+		s.Shown = max(0, len(s.Tabs)-1)
+	}
+	return s
+}
+
 func (m AppModel) Init() tea.Cmd {
-	cmds := []tea.Cmd{waitEvent(m.events)}
-	return tea.Batch(cmds...)
+	return waitEvent(m.events)
 }
 
 // Close releases every tab. Chromium itself is the caller's to stop.
@@ -97,7 +136,7 @@ func (m AppModel) Close() {
 func (m AppModel) narrow() bool { return m.w < narrowW }
 func (m AppModel) panelH() int  { return m.h - 1 } // one footer row
 func (m AppModel) layer() int {
-	if m.spaceMenu.isActive() || m.options.isActive() {
+	if m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() {
 		return 2
 	}
 	return 1
@@ -127,7 +166,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		first := m.w == 0
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
-			&m.spaceMenu, &m.options, &m.help, &m.confirm, &m.input, &m.toast} {
+			&m.spaceMenu, &m.options, &m.lists, &m.help, &m.confirm, &m.input, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
 		for _, t := range m.tabs {
@@ -136,15 +175,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.scrollToCursor(m.pageVisible())
 			}
 		}
-		if first && m.startURL != "" {
-			return m, m.openTab(m.startURL, true)
+		if first {
+			return m, m.firstFrame()
 		}
 		return m, nil
 
 	case AnimTickMsg:
 		return m, tea.Batch(
-			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.help.anim.tick(msg),
-			m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.toast.anim.tick(msg))
+			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.lists.anim.tick(msg),
+			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.toast.anim.tick(msg))
 
 	case toastExpireMsg:
 		return m, m.toast.expire(msg)
@@ -159,13 +198,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.toast.show(msg.err.Error(), toastError)
 
 	case pageEventMsg:
-		// Chromium says the tab moved; look again shortly. Always re-arm
-		// the listener, or the next event has nowhere to go.
+		// Chromium says the tab moved or changed; look again shortly. Always
+		// re-arm the listener, or the next event has nowhere to go.
 		_, t := m.tabByID(msg.tabID)
 		if t == nil {
 			return m, waitEvent(m.events)
 		}
-		return m, tea.Batch(waitEvent(m.events), t.settle(250*1e6))
+		return m, tea.Batch(waitEvent(m.events), t.settle(250*time.Millisecond))
 
 	case settleMsg:
 		_, t := m.tabByID(msg.tabID)
@@ -181,8 +220,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		t.apply(msg, m.pageW())
 		t.scrollToCursor(m.pageVisible())
+		m.recordVisit(t)
 		if i == m.shown && msg.err == nil && t.cursor >= 0 {
-			return m, t.act(func(ctx context.Context) error { return page.Reveal(ctx, t.current().ID) })
+			id := t.current().ID
+			return m, t.act(func(ctx context.Context) error { return page.Reveal(ctx, id) })
 		}
 		return m, nil
 
@@ -192,16 +233,54 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// firstFrame opens what the app starts with: the session's tabs, unloaded
+// except the one that was showing; and the URL from the command line, in
+// front, when there is one.
+func (m *AppModel) firstFrame() tea.Cmd {
+	var cmds []tea.Cmd
+	for _, st := range m.session.Tabs {
+		t := m.newTab()
+		t.url, t.title, t.pending = st.URL, st.Title, true
+		m.tabs = append(m.tabs, t)
+	}
+	if len(m.tabs) > 0 {
+		m.shown = clamp(m.session.Shown, 0, len(m.tabs)-1)
+		m.cur2 = m.shown
+	}
+	if m.startURL != "" {
+		cmds = append(cmds, m.openTab(m.startURL, true))
+	} else if t := m.shownTab(); t != nil && t.pending {
+		cmds = append(cmds, t.load(t.url))
+	}
+	return tea.Batch(cmds...)
+}
+
+// recordVisit appends a loaded page to the history log (ux.md §6): the
+// final URL and title after the load, once per page, never about:blank or
+// an error page. Written synchronously — one line, a small file.
+func (m *AppModel) recordVisit(t *tab) {
+	if t.errText != "" || t.root == nil || t.url == "" || t.url == "about:blank" || t.url == t.lastVisit {
+		return
+	}
+	t.lastVisit = t.url
+	v := store.Visit{At: time.Now(), URL: t.url, Title: t.title}
+	if err := store.AppendVisit(v); err == nil {
+		m.history = append([]store.Visit{v}, m.history...)
+	}
+}
+
 // ------------------------------------------------------------------- keys
 
 func (m AppModel) popupOpen() bool {
-	return m.spaceMenu.isActive() || m.options.isActive() || m.help.isActive() ||
-		m.confirm.isActive() || m.input.isActive()
+	return m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() ||
+		m.help.isActive() || m.confirm.isActive() || m.input.isActive()
 }
 
 // typing reports whether a float is taking text: every printable key is a
 // character then (§4.5).
-func (m AppModel) typing() bool { return m.input.anim.owns() }
+func (m AppModel) typing() bool {
+	return m.input.anim.owns() || (m.lists.anim.owns() && m.lists.typing)
+}
 
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Esc is one role, resolved in one place: close the topmost float (§4.3).
@@ -231,6 +310,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.confirmKey(msg)
 	case m.options.anim.owns():
 		return m.optionsKey(msg)
+	case m.lists.anim.owns():
+		return m.listKey(msg)
 	case m.help.anim.owns():
 		m.help.update(msg)
 		return m, nil
@@ -242,19 +323,30 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // closeTop pops one level off the float stack; the source under a target
 // stays (§6.4).
+//
+// A float that is already closing is not "the top": its keyboard is gone
+// (§6.2), and an Esc that landed on it would do nothing while the float
+// underneath waited — which is exactly what happens when two keys arrive
+// inside one closing animation.
 func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 	switch {
-	case m.toast.isActive():
+	case m.toast.anim.owns():
 		return m, m.toast.close()
-	case m.input.isActive():
+	case m.input.anim.owns():
 		return m, m.input.close()
-	case m.confirm.isActive():
+	case m.confirm.anim.owns():
 		return m, m.confirm.close()
-	case m.options.isActive():
+	case m.options.anim.owns():
 		return m, m.options.close()
-	case m.help.isActive():
+	case m.lists.anim.owns():
+		// A filter being typed is the innermost thing Esc can drop.
+		if m.lists.escTyping() {
+			return m, nil
+		}
+		return m, m.lists.close()
+	case m.help.anim.owns():
 		return m, m.help.close()
-	case m.spaceMenu.isActive():
+	case m.spaceMenu.anim.owns():
 		return m, m.spaceMenu.close()
 	}
 	return m, nil
@@ -264,7 +356,7 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 // over, and the user is back on the panel (§7.1).
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.input.close(), m.confirm.close(), m.options.close(),
-		m.help.close(), m.spaceMenu.close())
+		m.lists.close(), m.help.close(), m.spaceMenu.close())
 }
 
 func (m AppModel) quit() (tea.Model, tea.Cmd) {
@@ -295,8 +387,12 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "q":
 		return m.quit()
-	case "B", "S", "H":
-		return m, m.toast.show(side1Items[strings.Index("BSH", k)].label+": not in this build yet", toastInfo)
+	case "B":
+		return m, m.openList(listBookmarks)
+	case "S":
+		return m, m.openList(listShortcuts)
+	case "H":
+		return m, m.openList(listHistory)
 	case "P":
 		return m.dispatch("back")
 	case "N":
@@ -312,7 +408,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if k == "enter" {
-			return m, m.toast.show(side1Items[m.cur1].label+": not in this build yet", toastInfo)
+			return m, m.openList(listKind(m.cur1))
 		}
 	case panel2:
 		if navKeys[k] {
@@ -330,20 +426,148 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if navKeys[k] && t != nil {
 			t.moveItem(k, m.pageVisible())
 			if n := t.current(); n != nil {
-				return m, t.act(func(ctx context.Context) error { return page.Reveal(ctx, n.ID) })
+				id := n.ID
+				return m, t.act(func(ctx context.Context) error { return page.Reveal(ctx, id) })
 			}
 			return m, nil
 		}
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "R", "U", "Y":
+		case "R", "U", "Y", "A":
 			return m.dispatch(k)
-		case "A", "O", "D", "Z", "V", "/":
+		case "O", "D", "Z", "V", "/":
 			return m, m.toast.show("not in this build yet", toastInfo)
 		}
 	}
 	return m, nil
+}
+
+// ------------------------------------------------------------------- lists
+
+// openList shows one of panel [1]'s popups with its current content.
+func (m *AppModel) openList(kind listKind) tea.Cmd {
+	return m.lists.open(kind, m.listEntries(kind), m.layer())
+}
+
+func (m AppModel) listEntries(kind listKind) []listEntry {
+	var out []listEntry
+	switch kind {
+	case listBookmarks:
+		for _, b := range m.bookmarks {
+			out = append(out, listEntry{title: b.Title, url: b.URL})
+		}
+	case listShortcuts:
+		for _, s := range m.cfg.Shortcuts {
+			out = append(out, listEntry{title: s.Title, url: s.URL})
+		}
+	case listHistory:
+		for _, v := range m.history {
+			out = append(out, listEntry{title: v.Title, url: v.URL, at: v.At})
+		}
+	}
+	return out
+}
+
+func (m AppModel) listKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	action := m.lists.update(msg)
+	if action == "" {
+		return m, nil
+	}
+	e, at, ok := m.lists.current()
+	switch action {
+	case "open":
+		if !ok {
+			return m, nil
+		}
+		if t := m.shownTab(); t != nil {
+			m.focus = panel3
+			return m, tea.Batch(m.closeStack(), t.load(e.url))
+		}
+		return m, tea.Batch(m.closeStack(), m.openTab(e.url, true))
+	case "newtab":
+		if !ok {
+			return m, nil
+		}
+		return m, tea.Batch(m.closeStack(), m.openTab(e.url, true))
+	case "add":
+		t := m.shownTab()
+		if t == nil || t.url == "" {
+			return m, m.toast.show("no page to add", toastInfo)
+		}
+		return m, m.addEntry(m.lists.kind, t.title, t.url)
+	case "delete":
+		if !ok {
+			return m, nil
+		}
+		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Delete",
+			lines: []string{nameOr(e.title, e.url), e.url}, accept: "delete", warn: true,
+			action: confirmDeleteEntry, at: at}, m.layer()+1)
+	case "clear":
+		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Clear history",
+			lines:  []string{"Every visit ever recorded goes.", "This is the only way the log shrinks."},
+			accept: "clear", warn: true, action: confirmClearHistory}, m.layer()+1)
+	}
+	return m, nil
+}
+
+// addEntry puts the current page in Bookmarks or Shortcuts and writes the
+// file; a page already there is not added twice.
+func (m *AppModel) addEntry(kind listKind, title, url string) tea.Cmd {
+	switch kind {
+	case listBookmarks:
+		for _, b := range m.bookmarks {
+			if b.URL == url {
+				return m.toast.show("already bookmarked", toastInfo)
+			}
+		}
+		m.bookmarks = append(m.bookmarks, store.Bookmark{Title: title, URL: url})
+		if err := store.SaveBookmarks(m.bookmarks); err != nil {
+			return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
+		}
+	case listShortcuts:
+		for _, s := range m.cfg.Shortcuts {
+			if s.URL == url {
+				return m.toast.show("already a shortcut", toastInfo)
+			}
+		}
+		m.cfg.Shortcuts = append(m.cfg.Shortcuts, store.Shortcut{Title: title, URL: url})
+		if err := store.SaveConfig(m.cfg); err != nil {
+			return m.toast.show("config.yaml: "+err.Error(), toastError)
+		}
+	default:
+		return nil
+	}
+	m.lists.setEntries(m.listEntries(kind))
+	return m.toast.show("added "+oneLine(nameOr(title, url)), toastInfo)
+}
+
+// deleteEntry removes entry at of the open list and writes the file.
+func (m *AppModel) deleteEntry(at int) tea.Cmd {
+	var err error
+	switch m.lists.kind {
+	case listBookmarks:
+		if at < len(m.bookmarks) {
+			m.bookmarks = append(m.bookmarks[:at], m.bookmarks[at+1:]...)
+			err = store.SaveBookmarks(m.bookmarks)
+		}
+	case listShortcuts:
+		if at < len(m.cfg.Shortcuts) {
+			m.cfg.Shortcuts = append(m.cfg.Shortcuts[:at], m.cfg.Shortcuts[at+1:]...)
+			err = store.SaveConfig(m.cfg)
+		}
+	case listHistory:
+		if at < len(m.history) {
+			v := m.history[at]
+			m.history = append(m.history[:at], m.history[at+1:]...)
+			err = store.DeleteVisit(v)
+		}
+	}
+	m.lists.setEntries(m.listEntries(m.lists.kind))
+	if err != nil {
+		return m.toast.show(err.Error(), toastError)
+	}
+	return nil
 }
 
 // ------------------------------------------------------------------- menus
@@ -355,7 +579,7 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 	title := ""
 	switch m.focus {
 	case panel1:
-		return m, m.toast.show(side1Items[m.cur1].label+": not in this build yet", toastInfo)
+		return m, m.openList(listKind(m.cur1))
 	case panel2:
 		title = "Tabs"
 		if len(m.tabs) > 0 {
@@ -428,7 +652,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Search", key: "/", hint: "not in this build yet", disabled: true},
 		menuItem{label: "Select mode", key: "alt+v", hint: "not in this build yet", disabled: true},
 		menuItem{label: "URL", key: "U", hint: "go to one"},
-		menuItem{label: "Add to…", key: "A", hint: "not in this build yet", disabled: true},
+		menuItem{label: "Add to…", key: "A", hint: "Bookmarks or Shortcuts", disabled: t == nil},
 		menuItem{label: "Outline", key: "O", hint: "not in this build yet", disabled: true},
 		menuItem{label: "DevTools", key: "D", hint: "not in this build yet", disabled: true},
 		menuItem{label: "Zoom", key: "Z", hint: "not in this build yet", disabled: true},
@@ -464,8 +688,8 @@ func (m AppModel) menuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return mm, tea.Batch(closeCmd, cmd)
 }
 
-// optionsKey drives the second-level menu: a filled textbox's actions, or a
-// select's options (whose keys are their index).
+// optionsKey drives the second-level menu: a filled textbox's actions, a
+// select's options (whose keys are their index), or the Add to… picker.
 func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var key string
 	m.options, key, _ = m.options.update(msg)
@@ -474,8 +698,19 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	n := m.optionsFor
 	t := m.shownTab()
-	if n == nil || t == nil {
+	if t == nil {
 		return m, m.options.close()
+	}
+	if n == nil {
+		// The Add to… picker: keys name the list.
+		closeCmd := m.options.close()
+		switch key {
+		case "b":
+			return m, tea.Batch(closeCmd, m.addEntry(listBookmarks, t.title, t.url))
+		case "s":
+			return m, tea.Batch(closeCmd, m.addEntry(listShortcuts, t.title, t.url))
+		}
+		return m, closeCmd
 	}
 	if n.Kind == ir.Combobox {
 		idx, err := strconv.Atoi(key)
@@ -552,6 +787,15 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		if t != nil {
 			return m, copyToClipboard(t.url)
 		}
+	case "A":
+		if t != nil {
+			m.optionsFor = nil
+			m.options.setItems([]menuItem{
+				{label: "Bookmarks", key: "b", hint: "the tree you keep"},
+				{label: "Shortcuts", key: "s", hint: "the few you reach for"},
+			}, "Add to…", m.layer())
+			return m, m.options.open()
+		}
 
 	// ---- panel [3], item
 	case "enter":
@@ -578,7 +822,8 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "submit":
 		if n := t.current(); n != nil {
-			return m, t.act(func(ctx context.Context) error { return page.Submit(ctx, n.ID) })
+			id := n.ID
+			return m, t.act(func(ctx context.Context) error { return page.Submit(ctx, id) })
 		}
 	case "edit":
 		if n := t.current(); n != nil {
@@ -586,7 +831,8 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "clear":
 		if n := t.current(); n != nil {
-			return m, t.act(func(ctx context.Context) error { return page.Type(ctx, n.ID, "") })
+			id := n.ID
+			return m, t.act(func(ctx context.Context) error { return page.Type(ctx, id, "") })
 		}
 	}
 	return m, nil
@@ -629,7 +875,8 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 		}
 		return m, m.options.open()
 	}
-	return m, t.act(func(ctx context.Context) error { return page.Click(ctx, n.ID) })
+	id := n.ID
+	return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
 }
 
 // editField opens the input popup on a textbox. A pointer receiver on
@@ -658,14 +905,15 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.input.close()
 		}
 		if t == nil {
-			return m, tea.Batch(m.closeStack(), m.openTab(resolveURL(value), true))
+			return m, tea.Batch(m.closeStack(), m.openTab(m.resolveURL(value), true))
 		}
-		return m, tea.Batch(m.closeStack(), t.load(resolveURL(value)))
+		m.focus = panel3
+		return m, tea.Batch(m.closeStack(), t.load(m.resolveURL(value)))
 	case inputGotoNewTab:
 		if strings.TrimSpace(value) == "" {
 			return m, m.input.close()
 		}
-		return m, tea.Batch(m.closeStack(), m.openTab(resolveURL(value), true))
+		return m, tea.Batch(m.closeStack(), m.openTab(m.resolveURL(value), true))
 	case inputField:
 		id := m.input.node
 		if t == nil {
@@ -680,20 +928,36 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if !m.confirm.commit(msg) {
 		return m, nil
 	}
+	closeCmd := m.confirm.close()
 	switch m.confirm.action {
 	case confirmQuit:
 		return m.quit()
 	case confirmCloseTab:
 		i, _ := m.tabByID(m.confirm.tabID)
 		mm, cmd := m.closeTab(i)
-		return mm, tea.Batch(m.confirm.close(), cmd)
+		return mm, tea.Batch(closeCmd, cmd)
+	case confirmDeleteEntry:
+		return m, tea.Batch(closeCmd, m.deleteEntry(m.confirm.at))
+	case confirmClearHistory:
+		m.history = nil
+		if err := store.ClearHistory(); err != nil {
+			return m, tea.Batch(closeCmd, m.toast.show(err.Error(), toastError))
+		}
+		m.lists.setEntries(nil)
+		return m, closeCmd
 	}
-	return m, m.confirm.close()
+	return m, closeCmd
 }
 
 // resolveURL turns what was typed into somewhere to go (ux.md §7): a URL
 // gets its scheme, anything else is a search.
-func resolveURL(s string) string {
+func (m AppModel) resolveURL(s string) string {
+	return resolveURLWith(s, m.cfg.Search())
+}
+
+func resolveURL(s string) string { return resolveURLWith(s, searchEngine) }
+
+func resolveURLWith(s, search string) string {
 	s = strings.TrimSpace(s)
 	if strings.Contains(s, "://") {
 		return s
@@ -708,7 +972,7 @@ func resolveURL(s string) string {
 	if !strings.ContainsAny(head, " ") && strings.Contains(head, ".") && !strings.HasSuffix(head, ".") {
 		return "https://" + s
 	}
-	return searchEngine + url.QueryEscape(s)
+	return search + url.QueryEscape(s)
 }
 
 // ------------------------------------------------------------------- tabs
@@ -756,6 +1020,9 @@ func (m AppModel) closeTab(i int) (tea.Model, tea.Cmd) {
 		m.shown--
 	}
 	m.cur2 = clamp(m.cur2, 0, max(0, len(m.tabs)-1))
+	if t := m.shownTab(); t != nil && t.pending {
+		return m, t.load(t.url)
+	}
 	return m, nil
 }
 
@@ -783,6 +1050,9 @@ func (m AppModel) View() string {
 	// Bottom to top: the menu first so what it opened lands above it.
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.lists.isActive() {
+		out = overlay.Composite(m.lists.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.options.isActive() {
 		out = overlay.Composite(m.options.view(), out, overlay.Center, overlay.Center, 0, 0)

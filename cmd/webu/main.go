@@ -14,6 +14,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/webu/internal/browser"
+	"github.com/vulcanshen/webu/internal/store"
 	"github.com/vulcanshen/webu/internal/ui"
 	"github.com/vulcanshen/webu/internal/version"
 )
@@ -60,7 +61,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	app := ui.New(b, startURL)
+	// webu's own files. None of them is fatal: a file that will not parse
+	// is news for the toast, not a reason to withhold the browser.
+	bookmarks, bmErr := store.LoadBookmarks()
+	cfg, cfgErr := store.LoadConfig()
+	history, histErr := store.LoadHistory()
+	session, sessErr := store.LoadSession()
+	for _, e := range []struct {
+		name string
+		err  error
+	}{{"bookmarks.yaml", bmErr}, {"config.yaml", cfgErr}, {"history", histErr}, {"session.yaml", sessErr}} {
+		if e.err != nil {
+			fmt.Fprintf(os.Stderr, "webu: %s: %v (running without it)\n", e.name, e.err)
+		}
+	}
+	app := ui.New(b, startURL).WithStore(bookmarks, cfg, history).WithSession(session)
 	p := tea.NewProgram(app, tea.WithAltScreen())
 
 	// Whatever door the program leaves through — q, an outside SIGINT or
@@ -75,6 +90,11 @@ func main() {
 
 	final, runErr := p.Run()
 	if a, ok := final.(ui.AppModel); ok {
+		// The session is written on every way out, q or a signal, so the
+		// tabs come back next time (ux.md §6).
+		if err := store.SaveSession(a.Session()); err != nil {
+			fmt.Fprintln(os.Stderr, "webu: session.yaml:", err)
+		}
 		a.Close()
 	}
 	b.Close()

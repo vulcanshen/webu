@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	cdppage "github.com/chromedp/cdproto/page"
+	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/page"
@@ -36,6 +37,12 @@ type tab struct {
 	// gen guards captures: a result from before the latest navigation is
 	// thrown away rather than drawn over the newer page.
 	gen int
+	// prepared: the mutation observer is armed (page.Prepare), which has to
+	// happen before the first navigation and only once.
+	prepared bool
+	// lastVisit is the URL last written to the history log for this tab,
+	// so a settle capture of the same page does not log it again.
+	lastVisit string
 }
 
 // pageMsg is a capture landing: the page as Chromium has it now.
@@ -66,12 +73,19 @@ func (m *AppModel) newTab() *tab {
 	ch := m.events
 	id := t.id
 	chromedp.ListenTarget(ctx, func(ev any) {
-		switch ev.(type) {
+		switch e := ev.(type) {
 		case *cdppage.EventLoadEventFired, *cdppage.EventNavigatedWithinDocument, *cdppage.EventFrameNavigated:
-			select {
-			case ch <- pageEventMsg{tabID: id}:
-			default: // a burst of events is one redraw; dropping the rest is the debounce
+		case *runtime.EventBindingCalled:
+			// The injected observer saying the DOM changed (function.md §6).
+			if e.Name != page.MutationBinding {
+				return
 			}
+		default:
+			return
+		}
+		select {
+		case ch <- pageEventMsg{tabID: id}:
+		default: // a burst of events is one redraw; dropping the rest is the debounce
 		}
 	})
 	return t
@@ -96,7 +110,14 @@ func (t *tab) load(url string) tea.Cmd {
 	t.loading, t.pending, t.errText = true, false, ""
 	t.url = url
 	gen, id, ctx := t.gen, t.id, t.ctx
+	prepare := !t.prepared
+	t.prepared = true
 	return func() tea.Msg {
+		if prepare {
+			if err := page.Prepare(ctx); err != nil {
+				return pageMsg{tabID: id, gen: gen, url: url, err: fmt.Errorf("prepare: %w", err)}
+			}
+		}
 		if err := page.Navigate(ctx, url); err != nil {
 			return pageMsg{tabID: id, gen: gen, url: url, err: fmt.Errorf("navigate: %w", err)}
 		}

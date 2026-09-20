@@ -21,6 +21,7 @@ func smokeBrowser(t *testing.T) *browser.Browser {
 	if os.Getenv("WEBU_SMOKE") == "" {
 		t.Skip("set WEBU_SMOKE=1 to run the site smoke tests (they use the network)")
 	}
+	t.Setenv("WEBU_CONFIG", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")

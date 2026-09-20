@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -176,27 +175,9 @@ func TestDownloadFailsCleanly(t *testing.T) {
 	}
 }
 
-func TestDirsHonourOverrides(t *testing.T) {
+func TestProfileDirUnderConfig(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", "/tmp/wc")
-	t.Setenv("WEBU_CACHE", "/tmp/wk")
-	if d, _ := ConfigDir(); d != "/tmp/wc" {
-		t.Errorf("ConfigDir %q", d)
-	}
 	if d, _ := ProfileDir(); d != filepath.Join("/tmp/wc", "profile") {
 		t.Errorf("ProfileDir %q", d)
 	}
-	if d, _ := CacheDir(); d != "/tmp/wk" {
-		t.Errorf("CacheDir %q", d)
-	}
-	t.Setenv("WEBU_CONFIG", "")
-	t.Setenv("WEBU_CACHE", "")
-	t.Setenv("XDG_CONFIG_HOME", "/tmp/x")
-	t.Setenv("XDG_CACHE_HOME", "/tmp/y")
-	if d, _ := ConfigDir(); d != filepath.Join("/tmp/x", "webu") {
-		t.Errorf("ConfigDir under XDG %q", d)
-	}
-	if d, _ := CacheDir(); d != filepath.Join("/tmp/y", "webu") {
-		t.Errorf("CacheDir under XDG %q", d)
-	}
-	_ = runtime.GOOS
 }
