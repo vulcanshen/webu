@@ -183,17 +183,17 @@ func TestVEntersSelectionFromAnyPanel(t *testing.T) {
 	tb := selectFixture()
 	m.tabs = append(m.tabs, tb)
 	m.shown = 0
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("V")})
 	mm := model.(AppModel)
 	if !mm.sel.on || mm.sel.typing || mm.focus != panel3 {
-		t.Errorf("v: on=%v typing=%v focus=%d", mm.sel.on, mm.sel.typing, mm.focus)
+		t.Errorf("V: on=%v typing=%v focus=%d", mm.sel.on, mm.sel.typing, mm.focus)
 	}
 	mm.focus = panel2
 	mm.sel.on = false
-	model, _ = mm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	model, _ = mm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("V")})
 	mm = model.(AppModel)
 	if !mm.sel.on || mm.focus != panel3 {
-		t.Errorf("v from [2] moves to [3] first: on=%v focus=%d", mm.sel.on, mm.focus)
+		t.Errorf("V from [2] moves to [3] first: on=%v focus=%d", mm.sel.on, mm.focus)
 	}
 }
 
