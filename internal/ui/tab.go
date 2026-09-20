@@ -56,6 +56,10 @@ type tab struct {
 	frozen *pageMsg
 	// dev is the tab's network and console record for DevTools (ui.md §3.2).
 	dev *page.DevLog
+	// fold is the user's word on which landmarks are open or shut, by node
+	// id, which survives a recapture; measure is the text width cap.
+	fold    map[cdp.BackendNodeID]bool
+	measure int
 }
 
 // pageMsg is a capture landing: the page as Chromium has it now.
@@ -130,7 +134,8 @@ func (m *AppModel) newTabFor(id target.ID) *tab {
 }
 
 func (m *AppModel) newTabWith(ctx context.Context, cancel context.CancelFunc) *tab {
-	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1, dev: &page.DevLog{}}
+	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1, dev: &page.DevLog{},
+		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth()}
 	m.nextTabID++
 	page.Observe(ctx, t.dev)
 	ch := m.events
@@ -384,8 +389,67 @@ func (t *tab) relayout(width int) {
 	if t.root == nil {
 		return
 	}
-	t.lay = render(t.root, max(1, width))
+	t.lay = renderWith(t.root, renderOpts{width: max(1, width), measure: t.measure, fold: t.fold})
 	t.layW = width
+}
+
+// toggleFold opens or shuts the landmark under the cursor and keeps the
+// cursor on it through the re-layout.
+func (t *tab) toggleFold(width int) {
+	n := t.current()
+	if n == nil || n.Kind != ir.Landmark {
+		return
+	}
+	if t.fold == nil {
+		t.fold = map[cdp.BackendNodeID]bool{}
+	}
+	t.fold[n.ID] = !t.lay.items[t.cursor].folded
+	t.relayout(width)
+	for i, it := range t.lay.items {
+		if it.node == n {
+			t.cursor = i
+			break
+		}
+	}
+}
+
+// reveal opens every landmark shut around n, so a jump to it (the
+// Outline) has somewhere to land. Nothing happens when it is already drawn.
+func (t *tab) reveal(n *ir.Node, width int) {
+	if _, ok := t.lay.marks[n]; ok || t.root == nil {
+		return
+	}
+	var path []*ir.Node
+	var find func(x *ir.Node) bool
+	find = func(x *ir.Node) bool {
+		path = append(path, x)
+		if x == n {
+			return true
+		}
+		for _, c := range x.Children {
+			if find(c) {
+				return true
+			}
+		}
+		path = path[:len(path)-1]
+		return false
+	}
+	if !find(t.root) {
+		return
+	}
+	if t.fold == nil {
+		t.fold = map[cdp.BackendNodeID]bool{}
+	}
+	changed := false
+	for _, a := range path[:len(path)-1] {
+		if a.Kind == ir.Landmark {
+			t.fold[a.ID] = false
+			changed = true
+		}
+	}
+	if changed {
+		t.relayout(width)
+	}
 }
 
 // scrollToCursor keeps the cursor's rows on screen; visible is how many page
@@ -413,8 +477,10 @@ func (t *tab) current() *ir.Node {
 	return t.lay.items[t.cursor].node
 }
 
-// moveItem walks the cursor by navigation key. The page has a top and a
-// bottom, so j/k do not wrap here (ux.md §3).
+// moveItem walks the cursor by navigation key. The page is a grid of rows
+// with items on them: j/k step to the nearest row that has one, landing on
+// the item closest to the column the cursor was in; h/l walk the items of
+// the row. Nothing wraps — the page has a top and a bottom (ux.md §3).
 func (t *tab) moveItem(k string, visible int) {
 	n := len(t.lay.items)
 	if n == 0 {
@@ -425,9 +491,13 @@ func (t *tab) moveItem(k string, visible int) {
 	half := max(1, visible/2)
 	switch k {
 	case "j", "down":
-		t.cursor = min(n-1, t.cursor+1)
+		t.cursor = t.rowStep(1)
 	case "k", "up":
-		t.cursor = max(0, t.cursor-1)
+		t.cursor = t.rowStep(-1)
+	case "l", "right":
+		t.cursor = t.alongRow(1)
+	case "h", "left":
+		t.cursor = t.alongRow(-1)
 	case "d", "ctrl+d":
 		t.cursor = t.itemFromRow(t.lay.items[t.cursor].first+half, 1)
 	case "u", "ctrl+u":
@@ -438,6 +508,60 @@ func (t *tab) moveItem(k string, visible int) {
 		t.cursor = n - 1
 	}
 	t.scrollToCursor(visible)
+}
+
+// rowStep is the item on the nearest row of items in direction dir whose
+// column is closest to the cursor's; the cursor itself when there is none.
+func (t *tab) rowStep(dir int) int {
+	cur := t.lay.items[t.cursor]
+	target := -1
+	for _, it := range t.lay.items {
+		switch {
+		case dir > 0 && it.first > cur.first && (target < 0 || it.first < target):
+			target = it.first
+		case dir < 0 && it.first < cur.first && (target < 0 || it.first > target):
+			target = it.first
+		}
+	}
+	if target < 0 {
+		return t.cursor
+	}
+	best, bestD := -1, 0
+	for i, it := range t.lay.items {
+		if it.first != target {
+			continue
+		}
+		d := it.col - cur.col
+		if d < 0 {
+			d = -d
+		}
+		if best < 0 || d < bestD {
+			best, bestD = i, d
+		}
+	}
+	return best
+}
+
+// alongRow is the next (dir 1) or previous item on the cursor's row, or
+// the cursor itself at the row's end.
+func (t *tab) alongRow(dir int) int {
+	cur := t.lay.items[t.cursor]
+	best := -1
+	for i, it := range t.lay.items {
+		if i == t.cursor || it.first != cur.first {
+			continue
+		}
+		switch {
+		case dir > 0 && it.col > cur.col && (best < 0 || it.col < t.lay.items[best].col):
+			best = i
+		case dir < 0 && it.col < cur.col && (best < 0 || it.col > t.lay.items[best].col):
+			best = i
+		}
+	}
+	if best < 0 {
+		return t.cursor
+	}
+	return best
 }
 
 // itemFromRow is the first item at or after row (dir 1) or at or before it

@@ -83,7 +83,12 @@ letter hotkey；`[1]` 就是 kbu statusbar chip 那種 Layer 2 ambient 揭露，
 一個元素一個語意 §B）。
 
 - 第一列：URL（純文字、不可 focus、縮法見 §1.2）；第二列分隔線；之後是 IR 渲染的頁面
-- cursor 只停在 item（互動節點 + heading），文字段落是 item 之間的 flow
+- cursor 只停在 item（互動節點 + heading + landmark 的標題列），文字段落是 item 之間的 flow
+- **Landmark（修訂 2026-09-20）**：每個 landmark 以一列帶名字的細線開頭（`▾ navigation Repository ────`），
+  是 item，Enter → Collapse / Expand。頁面有 `main` 時，`main` 之外、也不在 `main` 裡的 landmark **預設摺疊**
+  （`▸ banner · 14 items`），main 裡的全開；沒有 main 的頁全開。Outline 跳進摺疊的 landmark 會先把它打開
+- **導覽清單一行流式**：navigation 裡、每項都短的 list 畫成 `Platform · Solutions · Resources` 一行折行
+- **文字欄寬上限**：段落折行寬度 = min(面板寬, `config.yaml` 的 `measure`，預設 100)；表格、code、分隔線仍用整個面板寬
 - 空狀態（沒有分頁）：置中事實「no page」+ 提示（該按什麼），sshu `empty.go` 的形狀
 - 載入中：邊框 hint 顯示 loading；即時更新重畫時 cursor 留位（function.md §4 / §6）
 

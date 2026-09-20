@@ -142,6 +142,7 @@ func segStyles() map[segKind]lipgloss.Style {
 		segMedia:       lipgloss.NewStyle().Foreground(dimColor),
 		segCode:        lipgloss.NewStyle().Foreground(peachColor),
 		segUnsupported: lipgloss.NewStyle().Foreground(dimColor),
+		segLandmark:    lipgloss.NewStyle().Foreground(dimColor).Bold(true),
 	}
 }
 

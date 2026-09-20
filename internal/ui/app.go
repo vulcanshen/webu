@@ -1098,9 +1098,16 @@ const (
 // itemMenuItems is an item's operations by role (menu-only, no letters —
 // ux.md §A.1). The first row is the item's main action, so Enter twice
 // does the obvious thing: open a link, press a button, edit a field.
-func itemMenuItems(n *ir.Node) []menuItem {
+// folded is a landmark's state, which decides which way its row reads.
+func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 	var items []menuItem
 	switch n.Kind {
+	case ir.Landmark:
+		if folded {
+			items = append(items, menuItem{label: "Expand", key: "fold", hint: "show what is inside"})
+		} else {
+			items = append(items, menuItem{label: "Collapse", key: "fold", hint: "one line, out of the way"})
+		}
 	case ir.Link:
 		items = append(items,
 			menuItem{label: "Open", key: "click", hint: "click it"},
@@ -1139,7 +1146,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 	t := m.shownTab()
 	if n := t.current(); t != nil && n != nil {
 		items = append(items, menuItem{header: true, label: "item operation"})
-		items = append(items, itemMenuItems(n)...)
+		items = append(items, itemMenuItems(n, t.lay.items[t.cursor].folded)...)
 		items = append(items,
 			menuItem{separator: true},
 			menuItem{header: true, label: "panel operation"})
@@ -1369,6 +1376,11 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "choose":
 		return m.chooseOptions()
+	case "fold":
+		if t != nil {
+			t.toggleFold(m.pageW())
+			t.scrollToCursor(m.pageVisible())
+		}
 	case "newtab":
 		if n := t.current(); n != nil && n.URL != "" {
 			return m, m.openTab(n.URL, true)
@@ -1422,7 +1434,7 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	if title == "" {
 		title = oneLine(nameOr(n.Name, n.Kind.String()))
 	}
-	m.options.setItems(itemMenuItems(n), truncate(title, 40), m.layer())
+	m.options.setItems(itemMenuItems(n, t.lay.items[t.cursor].folded), truncate(title, 40), m.layer())
 	return m, m.options.open()
 }
 

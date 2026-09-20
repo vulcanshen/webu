@@ -37,7 +37,20 @@ type Shortcut struct {
 type Config struct {
 	SearchEngine string     `yaml:"search_engine,omitempty"`
 	DownloadDir  string     `yaml:"download_dir,omitempty"`
+	Measure      int        `yaml:"measure,omitempty"` // text width cap in panel [3]; 0 is the default
 	Shortcuts    []Shortcut `yaml:"shortcuts,omitempty"`
+}
+
+// DefaultMeasure is how wide a paragraph flows before it wraps, whatever
+// the terminal: past a hundred cells the eye loses the line.
+const DefaultMeasure = 100
+
+// TextWidth is the measure in force.
+func (c Config) TextWidth() int {
+	if c.Measure <= 0 {
+		return DefaultMeasure
+	}
+	return c.Measure
 }
 
 // DefaultSearch is where a goto that is not a URL goes (ux.md §7).

@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
@@ -29,6 +30,7 @@ const (
 	segMedia
 	segCode
 	segUnsupported
+	segLandmark // a landmark's rule row: its role and name
 )
 
 type seg struct {
@@ -52,7 +54,9 @@ func (r row) plain() string {
 
 type item struct {
 	node        *ir.Node
-	first, last int // row span, inclusive
+	first, last int  // row span, inclusive
+	col         int  // cell column where it starts on its first row: h/l walk a row by it
+	folded      bool // a landmark drawn as one line, its content hidden
 }
 
 type layout struct {
@@ -117,14 +121,35 @@ type atom struct {
 	space bool // a breaking space: dropped at a line end
 }
 
+// renderOpts is what a layout depends on besides the tree.
+type renderOpts struct {
+	width int
+	// measure caps how wide text flows (ui.md revision 2026-09-20): a
+	// paragraph across 200 cells cannot be read back to its start. Tables,
+	// code and rules still take the width. 0 is no cap.
+	measure int
+	// fold overrides the default folding of landmarks: true folds, false
+	// opens. Absent means the default (renderer.folded).
+	fold map[cdp.BackendNodeID]bool
+}
+
 type renderer struct {
-	width  int
-	rows   []row
-	items  []item
-	flow   []atom
-	indent string // prefix every wrapped line of the current block gets
-	lead   string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
-	gap    bool   // a blank row is owed before the next content row
+	width int
+	textW int // where flow wraps: width, or the measure when narrower
+	rows  []row
+	items []item
+	flow  []atom
+	fold  map[cdp.BackendNodeID]bool
+	// hasMain: the page has a main landmark, so the others fold by default
+	// (function.md §3: "landmark 摺疊、預設只展開 main"). inMain counts the
+	// mains being entered — a landmark inside main is part of the content
+	// and stays open. inNav counts navigations: their lists flow inline.
+	hasMain bool
+	inMain  int
+	inNav   int
+	indent  string // prefix every wrapped line of the current block gets
+	lead    string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
+	gap     bool   // a blank row is owed before the next content row
 	// inCell: a table cell is being gathered. A cell is one line, so a block
 	// inside it (a <center>, a <div>) flattens into the flow instead of
 	// emitting rows of its own — which would land ABOVE the table, since the
@@ -137,10 +162,90 @@ type renderer struct {
 }
 
 func render(root *ir.Node, width int) layout {
-	r := &renderer{width: max(1, width), marks: map[*ir.Node]int{}}
+	return renderWith(root, renderOpts{width: width})
+}
+
+func renderWith(root *ir.Node, o renderOpts) layout {
+	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold, marks: map[*ir.Node]int{}}
+	if o.measure > 0 && o.measure < r.width {
+		r.textW = o.measure
+	}
+	root.Walk(func(n *ir.Node) bool {
+		if n.Kind == ir.Landmark && n.Role == "main" {
+			r.hasMain = true
+		}
+		return !r.hasMain
+	})
 	r.block(root, 0)
 	r.flush()
 	return layout{rows: r.rows, items: r.items, marks: r.marks}
+}
+
+// folded says whether a landmark is drawn shut: the user's word when there
+// is one, else shut when the page has a main and this is not it nor inside
+// it. A page with no main (Hacker News) folds nothing.
+func (r *renderer) folded(n *ir.Node) bool {
+	if v, ok := r.fold[n.ID]; ok {
+		return v
+	}
+	return r.hasMain && n.Role != "main" && r.inMain == 0
+}
+
+// landmarkRule is the row that names a landmark: a triangle for its
+// state, its role and name, and the count of what a folded one hides,
+// then a rule across the panel. It is an item, so Enter can open or shut
+// it and the Outline can land on it.
+func (r *renderer) landmarkRule(n *ir.Node, id int, folded bool) {
+	glyph := "▾"
+	if folded {
+		glyph = "▸"
+	}
+	label := " " + glyph + " " + n.Role
+	if n.Name != "" {
+		label += " " + oneLine(n.Name)
+	}
+	if c := countItems(n); folded && c > 0 {
+		label += " · " + plural(c, "item")
+	}
+	label = truncate(label, max(1, r.width-2))
+	rest := max(0, r.width-dispW(label)-1)
+	r.emit(row{segs: []seg{
+		{text: label, item: id, kind: segLandmark},
+		{text: " " + strings.Repeat("─", rest), item: -1, kind: segDim},
+	}})
+}
+
+func countItems(n *ir.Node) int {
+	count := 0
+	for _, c := range n.Children {
+		c.Walk(func(x *ir.Node) bool {
+			if x.IsItem() {
+				count++
+			}
+			return true
+		})
+	}
+	return count
+}
+
+// navList says whether a list is a row of short entries — the kind a
+// navigation is made of — that reads better as one line than as a column.
+func navList(n *ir.Node) bool {
+	for _, li := range n.Children {
+		if li.Kind != ir.ListItem {
+			return false
+		}
+		block := false
+		for _, c := range li.Children {
+			if c.IsBlock() {
+				block = true
+			}
+		}
+		if block || dispW(li.Text()) > 40 {
+			return false
+		}
+	}
+	return len(n.Children) > 0
 }
 
 // ------------------------------------------------------------------ blocks
@@ -152,8 +257,28 @@ func (r *renderer) block(n *ir.Node, depth int) {
 	case ir.Landmark:
 		r.flush()
 		r.markNext = append(r.markNext, n)
+		folded := r.folded(n)
+		id := r.newItem(n)
+		r.items[id].folded = folded
+		r.landmarkRule(n, id, folded)
+		if folded {
+			r.gap = true
+			return
+		}
+		if n.Role == "main" {
+			r.inMain++
+		}
+		if n.Role == "navigation" {
+			r.inNav++
+		}
 		r.children(n, depth)
 		r.flush()
+		if n.Role == "main" {
+			r.inMain--
+		}
+		if n.Role == "navigation" {
+			r.inNav--
+		}
 		r.gap = true
 	case ir.Heading:
 		r.flush()
@@ -174,6 +299,26 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.gap = true
 	case ir.List:
 		r.flush()
+		if r.inNav > 0 && navList(n) {
+			// A navigation's list of short entries is one line of flow —
+			// Platform · Solutions · Resources — not a column: the column
+			// was costing a screen before the page began.
+			first := true
+			for _, li := range n.Children {
+				if !first {
+					r.space()
+					r.add(atom{text: "·", item: -1, kind: segDim})
+					r.space()
+				}
+				first = false
+				r.inlineChildren(li, -1, segPlain)
+			}
+			r.flush()
+			if depth <= 1 {
+				r.gap = true
+			}
+			return
+		}
 		r.children(n, depth)
 		r.flush()
 		if depth <= 1 {
@@ -746,7 +891,7 @@ func (r *renderer) wrap() {
 	prefix := r.prefix()
 	used := dispW(prefix)
 	line = append(line, seg{text: prefix, item: -1, kind: segPlain})
-	avail := func() int { return r.width - used }
+	avail := func() int { return r.textW - used }
 	emitLine := func() {
 		r.emit(row{segs: line})
 		prefix = r.prefix()
@@ -773,7 +918,7 @@ func (r *renderer) wrap() {
 		if pending {
 			need++
 		}
-		if used+need > r.width && used > dispW(prefix) {
+		if used+need > r.textW && used > dispW(prefix) {
 			emitLine()
 			pending = false
 		}
@@ -824,8 +969,10 @@ func (r *renderer) emit(rw row) {
 	}
 	at := len(r.rows)
 	r.rows = append(r.rows, rw)
+	col := 0
 	for _, s := range rw.segs {
-		r.touch(s.item, at)
+		r.touch(s.item, at, col)
+		col += dispW(s.text)
 	}
 	for _, n := range r.markNext {
 		r.marks[n] = at
@@ -833,15 +980,16 @@ func (r *renderer) emit(rw row) {
 	r.markNext = r.markNext[:0]
 }
 
-// touch records that item is on row at. Only emit calls it: a row index
-// guessed before the row exists is wrong whenever a gap is owed.
-func (r *renderer) touch(item, at int) {
+// touch records that item is on row at, starting at col the first time.
+// Only emit calls it: a row index guessed before the row exists is wrong
+// whenever a gap is owed.
+func (r *renderer) touch(item, at, col int) {
 	if item < 0 || item >= len(r.items) {
 		return
 	}
 	it := &r.items[item]
 	if it.first < 0 {
-		it.first = at
+		it.first, it.col = at, col
 	}
 	it.last = at
 }
