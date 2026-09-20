@@ -63,29 +63,23 @@ func (m *devDetailPopup) setBody(body string, err error) {
 	m.lines = m.build(body)
 }
 
-// maxBodyLines caps what the viewer takes: a body of a hundred thousand
-// lines is still a body, but a scroll through it is not what anyone came
-// for.
-const maxBodyLines = 2000
-
 // textBody says whether a body is text a terminal can show, and returns
 // it cleaned: valid UTF-8, no control characters but newline and tab.
 // The mime type decides first; a body that claims to be text but is not
 // valid UTF-8 or carries a NUL is treated as binary all the same.
+//
+// Nothing is cut: the viewer draws only the rows on screen, so a body of
+// a hundred thousand lines scrolls at the cost of ten.
 func textBody(body, mime string) (string, bool) {
 	if !textMime(mime) || strings.ContainsRune(body, 0) || !utf8.ValidString(body) {
 		return "", false
 	}
-	clean := strings.Map(func(r rune) rune {
+	return strings.Map(func(r rune) rune {
 		if r == '\n' || r == '\t' || (r >= 0x20 && r != 0x7f) {
 			return r
 		}
 		return -1
-	}, body)
-	if lines := strings.Split(clean, "\n"); len(lines) > maxBodyLines {
-		clean = strings.Join(lines[:maxBodyLines], "\n") + "\n… " + itoa(len(lines)-maxBodyLines) + " more lines"
-	}
-	return clean, true
+	}, body), true
 }
 
 func textMime(mime string) bool {
