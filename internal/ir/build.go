@@ -1,6 +1,7 @@
 package ir
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 
@@ -15,6 +16,51 @@ import (
 type Capture struct {
 	Nodes   []*accessibility.Node        `json:"nodes"`
 	Display map[cdp.BackendNodeID]string `json:"display,omitempty"`
+	// ContentType is document.contentType: what the response was. Empty
+	// in the role fixtures, which are all HTML.
+	ContentType string `json:"contentType,omitempty"`
+}
+
+// textDocument says whether a content type is a document Chromium shows
+// as text in a <pre> (with, for JSON, a viewer of its own around it) —
+// which webu draws as one code block instead (revision 2026-09-20).
+func textDocument(ct string) bool {
+	ct = strings.ToLower(ct)
+	if i := strings.IndexByte(ct, ';'); i >= 0 {
+		ct = strings.TrimSpace(ct[:i])
+	}
+	switch {
+	case ct == "application/json", strings.HasSuffix(ct, "+json"),
+		ct == "text/plain", ct == "text/csv", ct == "text/markdown",
+		ct == "application/xml", ct == "text/xml", strings.HasSuffix(ct, "+xml"),
+		ct == "application/javascript", ct == "text/javascript", ct == "text/css":
+		return true
+	}
+	return false
+}
+
+// asText reduces a text document to Document{Code}: the longest text run
+// in the tree is the body (Chrome's JSON viewer adds a form and a few
+// labels around it), pretty-printed when it is JSON.
+func asText(root *Node, ct string) *Node {
+	var body string
+	root.Walk(func(n *Node) bool {
+		if n.Kind == Text && len(n.Name) > len(body) {
+			body = n.Name
+		}
+		return true
+	})
+	if strings.TrimSpace(body) == "" {
+		return root
+	}
+	if strings.Contains(strings.ToLower(ct), "json") {
+		var buf bytes.Buffer
+		if json.Indent(&buf, []byte(strings.TrimSpace(body)), "", "  ") == nil {
+			body = buf.String()
+		}
+	}
+	return &Node{Kind: Document, Role: "RootWebArea", Name: root.Name, URL: root.URL,
+		Children: []*Node{{Kind: Code, Role: "code", Children: []*Node{{Kind: Text, Role: "StaticText", Name: body}}}}}
 }
 
 // Build turns a capture into an IR tree.
@@ -36,10 +82,14 @@ func Build(c Capture) *Node {
 		b.byID[n.NodeID] = n
 	}
 	out := b.convert(c.Nodes[0])
+	root := &Node{Kind: Document, Role: "RootWebArea", Children: out}
 	if len(out) == 1 && out[0].Kind == Document {
-		return out[0]
+		root = out[0]
 	}
-	return &Node{Kind: Document, Role: "RootWebArea", Children: out}
+	if textDocument(c.ContentType) {
+		return asText(root, c.ContentType)
+	}
+	return root
 }
 
 type builder struct {

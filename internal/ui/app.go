@@ -363,8 +363,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.frozen = &msg
 			return m, nil
 		}
+		fresh := msg.url != "" && msg.url != t.lastVisit
 		t.apply(msg, m.pageW())
-		t.scrollToCursor(m.pageVisible())
+		if !fresh {
+			t.scrollToCursor(m.pageVisible())
+		}
 		m.recordVisit(t)
 		if i == m.shown && t.certErr && !t.certAsked {
 			t.certAsked = true

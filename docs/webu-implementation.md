@@ -55,6 +55,12 @@ tools/axdump/        看任何頁面的 AX tree（用本機 Chrome，不是釘�
 - **HN 的表**：Chromium 給的是 `table` / `row` / `cell`（不是 LayoutTable），renderer 以「有沒有 header cell」判斷：
   沒有就是排版表，一列一行流式；有就對齊欄位
 - **caption / rowgroup / Legend / Figcaption** 透明或跳過；`Canvas` / `Iframe` / `Video` / `Audio` 大寫開頭
+- **依 response media type 調整**（修訂 2026-09-20）：`page.Capture` 多取 `document.contentType`；JSON（含 `+json`）、
+  text/plain、CSV、XML、JS、CSS 這類文件，`ir.Build` 取樹裡最長的文字節點當內容（Chrome 的 JSON viewer 會在
+  `<pre>` 旁加 Pretty-print 表單，不要它），JSON 自己 `json.Indent`，整份變成 `Document{Code}` 一個 code block。
+  之前 jsonplaceholder 那頁只有一個 checkbox item、游標跳到頁尾，畫面看起來一片空
+- **新頁載入**：`tab.apply` 以 `msg.url != lastVisit` 判斷是新頁 → 游標回 main 裡第一個 item（`firstItem`）、視窗回頂端；
+  同頁重畫才留位與跟隨游標
 
 ### 2.3 fixture
 

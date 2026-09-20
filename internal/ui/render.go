@@ -510,6 +510,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		}
 		r.add(atom{text: fieldText(n), item: id, kind: segInput})
 	case ir.Check:
+		r.dropLabel(n.Name)
 		id := r.newItem(n)
 		r.add(atom{text: checkText(n) + " ", item: id, kind: segCheck})
 		r.words(n.Name, id, segCheck)
