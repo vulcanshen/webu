@@ -393,6 +393,15 @@ func (t *tab) relayout(width int) {
 	t.layW = width
 }
 
+// textWidth is how wide text flows in this tab's layout: the measure, or
+// the panel when narrower.
+func (t *tab) textWidth() int {
+	if t.measure > 0 && t.measure < t.layW {
+		return t.measure
+	}
+	return t.layW
+}
+
 // toggleFold opens or shuts the landmark under the cursor and keeps the
 // cursor on it through the re-layout.
 func (t *tab) toggleFold(width int) {

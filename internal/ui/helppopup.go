@@ -45,6 +45,7 @@ var helpContent = []helpEntry{
 	{"P · N", "previous / next page"},
 	{"U", "go to a URL (in [3]); in [2], reopen the last closed tab"},
 	{"/", "search the page (enters selection mode)"},
+	{"v", "selection mode: walk the text by character, v/V select, y copy"},
 	{"q", "quit"},
 	{"Ctrl+C", "force quit"},
 	{"", "Navigate"},

@@ -782,6 +782,11 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.openMenu()
 	case "/":
 		return m, m.enterSelect(true)
+	case "v":
+		// The way into the text itself: the item cursor stops only on
+		// items, and a paragraph is reached by character (ux.md §1). vim's
+		// letter, and it reads the same from any panel, like /.
+		return m, m.enterSelect(false)
 	}
 
 	switch m.focus {

@@ -30,7 +30,8 @@ const (
 	segMedia
 	segCode
 	segUnsupported
-	segLandmark // a landmark's rule row: its role and name
+	segLandmark    // a landmark's rule row: its role and name
+	segTableHeader // a table's header cells
 )
 
 type seg struct {
@@ -41,6 +42,9 @@ type seg struct {
 
 type row struct {
 	segs []seg
+	// code: a row of a code block, drawn on the code background across
+	// the row, padding included.
+	code bool
 }
 
 // plain is the row's text with no styling — what tests and the search read.
@@ -744,7 +748,7 @@ func oneLine(s string) string {
 func (r *renderer) codeBlock(n *ir.Node) {
 	for _, line := range strings.Split(n.Text(), "\n") {
 		line = strings.ReplaceAll(line, "\t", "    ")
-		r.emit(row{segs: []seg{{text: r.indent + truncate(line, r.width-dispW(r.indent)), item: -1, kind: segCode}}})
+		r.emit(row{segs: []seg{{text: r.indent + truncate(line, r.width-dispW(r.indent)), item: -1, kind: segCode}}, code: true})
 	}
 }
 
@@ -819,7 +823,7 @@ func (r *renderer) cellSegs(td *ir.Node) []seg {
 	defer func() { r.inCell = wasCell }()
 	kind := segPlain
 	if td.Header {
-		kind = segHeading
+		kind = segTableHeader
 	}
 	r.inlineChildren(td, -1, kind)
 	var out []seg

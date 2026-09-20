@@ -37,8 +37,9 @@ textbox 的 Submit、select 的 Choose），再按一次 Enter 執行；**Space 
 VTP §A.0.K 只要求同一 app 內跨 surface 不變。
 
 **不是 core-key 的**：`q` 離開、`Ctrl+C` 硬退、`P` / `N` 前後頁、`/` 搜尋、`[1]` 三個全域
-字母。它們是 §A.2 軌的動作，全部列在 `?` help。選取模式沒有自己的全域鍵（修訂 2026-09-20：
-`Alt+v` 拿掉，item 游標已經夠用；模式只為複製文字與搜尋，由 `/` 或 Space menu 的 Select text 進入）。
+字母、`v` 選取模式。它們是 §A.2 軌的動作，全部列在 `?` help。選取模式的鍵是 `v`（修訂 2026-09-20：
+`Alt+v` 先拿掉、再以裸 `v` 補回 —— item 游標只停在 item 上，要進到段落文字裡得有一個直接的鍵，
+vim 的 `v` 是現成的；`/` 搜尋與 Space menu 的 Select text 也都進得去）。
 
 ### §A.1 Contextual track — Space menu
 
@@ -106,7 +107,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 | History popup | `H` | `[1]` + help |
 | 上一頁 / 下一頁 | `P` / `N` | help |
 | 切面板 | `Tab`、`1`–`3` | footer + help |
-| 選取模式 | 無全域鍵（修訂 2026-09-20）：`/` 或 `[3]` Space menu 的 Select text | help |
+| 選取模式 | `v`（從 `[1]` `[2]` 按 → 先把焦點移到 `[3]` 再進模式）；`/` 與 `[3]` Space menu 的 Select text 亦可 | help |
 | 頁內搜尋 | `/`；同上 | help |
 | 離開 | `q`（有下載進行中先 confirm；**浮層內不作用**，浮層只認 Esc）、`Ctrl+C` 硬退 | footer + help |
 | 導覽詞彙 | §3 | help |
@@ -225,7 +226,7 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `B` `S` `H` `P` `N`、`q`、`?`、`/`、`Tab`、`1`–`3` |
+| 全域 | `B` `S` `H` `P` `N`、`q`、`?`、`/`、`v`、`Tab`、`1`–`3` |
 | `[2]` item | `w` `c` `r` `y` |
 | `[2]` panel | `T` `X` `U` |
 | `[3]` item | **無**（menu-only） |
@@ -309,7 +310,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 `Tab` 切面板 · `Enter` click · `Esc` 關浮層 / 離開選取模式 · `Space` menu · `?` help
 
 ### 全域
-`B` Bookmarks · `S` Shortcuts · `H` History · `P` 上一頁 · `N` 下一頁 · `q` quit · `/` 搜尋（進選取模式）
+`B` Bookmarks · `S` Shortcuts · `H` History · `P` 上一頁 · `N` 下一頁 · `q` quit · `/` 搜尋（進選取模式）· `v` 選取模式
 
 ### `[2]` Tabs
 `w` close · `c` clone · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
