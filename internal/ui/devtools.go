@@ -120,6 +120,7 @@ const (
 	devClearNet
 	devClearConsole
 	devDetail
+	devEval // Console: open the prompt
 )
 
 // update handles one key. The tab sub-models get the navigation keys and
@@ -203,8 +204,11 @@ func (m *devtoolsPopup) update(msg tea.KeyMsg) (devAction, string) {
 			return devClearNet, ""
 		}
 	case devConsole:
-		if k == "C" {
+		switch k {
+		case "C":
 			return devClearConsole, ""
+		case "enter":
+			return devEval, ""
 		}
 	}
 	return devNone, ""
@@ -276,7 +280,7 @@ func (m devtoolsPopup) view() string {
 	case m.tab == devNetwork:
 		pairs = [][2]string{{"Enter", "detail"}, {"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
 	default:
-		pairs = [][2]string{{"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
+		pairs = [][2]string{{"Enter", "eval"}, {"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
 	}
 	hint := clipANSI(hintLegend(pairs), innerW-1)
 	b.WriteString(bs.Render("╰─") + hint + bs.Render(strings.Repeat("─", max(0, innerW-1-dispW(hint)))+"╯"))

@@ -109,6 +109,78 @@ func (l *DevLog) addConsole(e ConsoleEntry) {
 	}
 }
 
+// Add appends a line from webu's side: what was typed at the console and
+// what came back (Eval). Levels "input" and "result" are webu's own.
+func (l *DevLog) Add(e ConsoleEntry) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if e.At.IsZero() {
+		e.At = time.Now()
+	}
+	l.addConsole(e)
+}
+
+// Eval runs an expression in the page the way Chrome's console does —
+// REPL mode, promises awaited, the value brought back — and returns the
+// line to show for it: the result, or the exception.
+func Eval(ctx context.Context, expr string) ConsoleEntry {
+	var out ConsoleEntry
+	err := run(ctx, func(ctx context.Context) error {
+		obj, exc, err := runtime.Evaluate(expr).WithReturnByValue(true).
+			WithAwaitPromise(true).WithReplMode(true).Do(ctx)
+		if err != nil {
+			return err
+		}
+		if exc != nil {
+			text := exc.Text
+			if exc.Exception != nil && exc.Exception.Description != "" {
+				text = exc.Exception.Description
+			}
+			out = ConsoleEntry{Level: "error", Text: text}
+			return nil
+		}
+		out = ConsoleEntry{Level: "result", Text: resultText(obj)}
+		return nil
+	})
+	if err != nil {
+		return ConsoleEntry{Level: "error", Text: err.Error()}
+	}
+	return out
+}
+
+// resultText is a value the way the console prints one: strings quoted,
+// numbers and booleans as written, objects as their JSON, the rest by
+// description.
+func resultText(o *runtime.RemoteObject) string {
+	if o == nil {
+		return "undefined"
+	}
+	switch o.Type {
+	case runtime.TypeUndefined:
+		return "undefined"
+	case runtime.TypeString:
+		var s string
+		if err := json.Unmarshal(o.Value, &s); err == nil {
+			return strconvQuote(s)
+		}
+	}
+	if len(o.Value) > 0 {
+		return string(o.Value)
+	}
+	if o.UnserializableValue != "" {
+		return string(o.UnserializableValue)
+	}
+	if o.Description != "" {
+		return o.Description
+	}
+	return string(o.Type)
+}
+
+// strconvQuote is the console's single-quoted string, escapes kept simple.
+func strconvQuote(s string) string {
+	return "'" + strings.NewReplacer("\\", "\\\\", "'", "\\'", "\n", "\\n").Replace(s) + "'"
+}
+
 // Observe records the tab's traffic and console into l. Registered on the
 // tab before it is attached, like the other listeners; the domains that
 // produce the events are enabled by Prepare.

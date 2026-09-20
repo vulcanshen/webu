@@ -92,7 +92,7 @@ Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡
 | History | Enter、`[o]`、`[x] Delete` 該筆 | `[C] Clear`（confirm；唯一清除入口，歷史無限保留） |
 | DevTools › Storage | `[x] Delete`、`[y] Yank value` | `[C] Clear site data`（confirm）、`[/]` 過濾 |
 | DevTools › Network | Enter detail | `[C] Clear`、`[/]` |
-| DevTools › Console | — | `[C] Clear`、`[/]` |
+| DevTools › Console | — | Enter：eval 輸入列（REPL：Enter 執行、輸入列留著、Esc 結束；`> 運算式` / `< 結果` 進清單）、`[C] Clear`、`[/]` |
 | Outline | Enter 跳轉 | — |
 
 delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。

@@ -134,7 +134,7 @@ u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬�
 |---|---|---|---|---|
 | **Storage** | cookies `Network.getCookies(url)`；local / session `DOMStorage.getDOMStorageItems` | 三個 section 各一張表；cookie 欄位 name、value 截斷、domain、path、expires、flags | Delete 該筆（`Network.deleteCookies` / `DOMStorage.removeDOMStorageItem`）、Yank value、Clear site data（`Storage.clearDataForOrigin`）、`/` 過濾 | **完整** |
 | **Network** | `Network.enable` 後 `requestWillBeSent` / `responseReceived` / `loadingFinished` / `loadingFailed`；WebSocket frame 事件 | 一列一 request：method、status、type、URL 縮短、size、耗時 | Enter → detail 子 popup（headers + body，`Network.getResponseBody`）、`/` 過濾、Clear | 清單 + detail |
-| **Console** | `Runtime.consoleAPICalled`、`Runtime.exceptionThrown`、`Log.entryAdded` | viewport，等級 glyph，warn / error 用 override 色 | `/` 過濾、Clear、Eval（`Runtime.evaluate`） | viewport 先做，**Eval v2** |
+| **Console** | `Runtime.consoleAPICalled`、`Runtime.exceptionThrown`、`Log.entryAdded` | viewport，等級 glyph，warn / error 用 override 色 | `/` 過濾、Clear、Eval（`Runtime.evaluate`） | **完整**（修訂 2026-09-20：Eval 提前到 v1，Enter 開輸入列、REPL、`>` / `<` 回到清單） |
 
 實作註記：
 - `Network.enable` 要在導航前開，否則抓不到第一波 request → 每個 target attach 時就開；

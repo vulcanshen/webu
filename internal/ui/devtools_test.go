@@ -134,8 +134,38 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 		t.Errorf("console: %s", joined)
 	}
 
+	// Enter is the prompt: an expression runs in the page, the input and
+	// its result join the list, and the prompt stays for the next one.
+	d.key("enter")
+	d.until("prompt", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputEval })
+	d.key("1 + 2")
+	d.key("enter")
+	d.until("3", func() bool { return strings.Contains(consoleText(d), "input:1 + 2|result:3|") })
+	if !d.m.input.isInteractive() || d.m.input.value != "" {
+		t.Errorf("the prompt should stay open and empty: active=%v value=%q", d.m.input.isActive(), d.m.input.value)
+	}
+	d.key("document.title")
+	d.key("enter")
+	d.until("the title", func() bool { return strings.Contains(consoleText(d), "result:'Dev'|") })
+	d.key("await Promise.resolve(40 + 2)")
+	d.key("enter")
+	d.until("awaited", func() bool { return strings.Contains(consoleText(d), "result:42|") })
+	d.key("nope()")
+	d.key("enter")
+	d.until("the error", func() bool { return strings.Contains(consoleText(d), "error:ReferenceError: nope is not defined") })
+	d.key("esc")
+	d.until("prompt gone", func() bool { return !d.m.input.isActive() && d.m.devtools.isInteractive() })
+
 	d.key("esc")
 	d.until("devtools closed", func() bool { return !d.m.devtools.isActive() })
+}
+
+func consoleText(d *driver) string {
+	out := ""
+	for _, e := range d.m.devtools.console.entries {
+		out += e.Level + ":" + e.Text + "|"
+	}
+	return out
 }
 
 func TestDevtoolsWithoutAPage(t *testing.T) {
