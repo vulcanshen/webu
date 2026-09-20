@@ -9,6 +9,7 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/input"
+	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 )
@@ -200,8 +201,36 @@ func Location(ctx context.Context) (url, title string, err error) {
 	return
 }
 
-// Back, Forward and Reload move through the tab's own navigation stack
-// (function.md §8).
-func Back(ctx context.Context) error    { return chromedp.Run(ctx, chromedp.NavigateBack()) }
-func Forward(ctx context.Context) error { return chromedp.Run(ctx, chromedp.NavigateForward()) }
-func Reload(ctx context.Context) error  { return chromedp.Run(ctx, chromedp.Reload()) }
+// ErrNoEntry is Back or Forward with nowhere to go.
+var ErrNoEntry = errors.New("no such history entry")
+
+// Back and Forward move through the tab's own navigation stack
+// (function.md §8) and wait for the page they land on to load.
+//
+// The stack's first entry is the about:blank every tab starts on. Going
+// back to it is not going back to a page, so it counts as nowhere to go:
+// P on the first page says so instead of blanking the panel.
+func Back(ctx context.Context) error    { return step(ctx, -1) }
+func Forward(ctx context.Context) error { return step(ctx, 1) }
+
+func step(ctx context.Context, dir int) error {
+	var id int64
+	err := run(ctx, func(ctx context.Context) error {
+		cur, entries, err := cdppage.GetNavigationHistory().Do(ctx)
+		if err != nil {
+			return err
+		}
+		i := int(cur) + dir
+		if i < 0 || i >= len(entries) || entries[i].URL == "about:blank" {
+			return ErrNoEntry
+		}
+		id = entries[i].ID
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return chromedp.Run(ctx, chromedp.NavigateToHistoryEntry(id))
+}
+
+func Reload(ctx context.Context) error { return chromedp.Run(ctx, chromedp.Reload()) }

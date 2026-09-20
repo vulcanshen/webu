@@ -266,6 +266,31 @@ func (t *tab) load(url string) tea.Cmd {
 	}
 }
 
+// navFailMsg is a history move that had nowhere to go, or failed: the tab
+// stops showing as loading and the page on screen stays.
+type navFailMsg struct {
+	tabID int
+	gen   int
+	what  string
+	err   error
+}
+
+// navigate runs a history move (back, forward) and captures what it lands
+// on. The tab shows as loading from the keystroke until the capture lands
+// — the same as load — which is what lets the app swallow the next P
+// pressed before the first has answered (ux.md §6).
+func (t *tab) navigate(what string, fn func(context.Context) error) tea.Cmd {
+	t.gen++
+	t.loading, t.errText = true, ""
+	gen, id, ctx := t.gen, t.id, t.ctx
+	return func() tea.Msg {
+		if err := fn(ctx); err != nil {
+			return navFailMsg{tabID: id, gen: gen, what: what, err: err}
+		}
+		return capture(ctx, id, gen)
+	}
+}
+
 // refresh captures the page as it is now, without navigating.
 func (t *tab) refresh() tea.Cmd {
 	t.gen++

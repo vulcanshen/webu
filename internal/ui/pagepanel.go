@@ -21,14 +21,20 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 			emptyHint("Press U to go to a URL, or T in [2] for a new tab", "U", "T"))
 	}
 	dim := lipgloss.NewStyle().Foreground(dimColor)
-	txt := lipgloss.NewStyle().Foreground(textColor)
 	out := make([]string, 0, innerH)
-	// The first row is the URL — or, while a search is being typed, the
-	// query and its count (ux.md §1.1): the page under it does not move.
+	// The first row is the URL, behind a glyph that says what state the
+	// page is in: at rest, or on its way (the family's live glyph) — or,
+	// while a search is being typed, the query and its count (ux.md
+	// §1.1): the page under it does not move.
 	if st := m.sel.status(); m.sel.on && st != "" {
 		out = append(out, lipgloss.NewStyle().Foreground(selectColor).Render(padRight(" "+st, innerW)))
 	} else {
-		out = append(out, txt.Render(padRight(" "+fitURL(t.url, innerW-1), innerW)))
+		icon := glyphWeb
+		if t.loading {
+			icon = glyphLive
+		}
+		url := lipgloss.NewStyle().Foreground(urlColor).Render(fitURL(t.url, innerW-3))
+		out = append(out, dim.Render(" "+icon+" ")+url+strings.Repeat(" ", max(0, innerW-3-dispW(fitURL(t.url, innerW-3)))))
 	}
 	out = append(out, dim.Render(strings.Repeat("─", innerW)))
 	rest := innerH - pageHeaderRows
@@ -81,6 +87,15 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	curOff := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim)
 	styles := segStyles()
+	if t.loading {
+		// The page on screen is the one being LEFT: it dims until the next
+		// one lands, so a key pressed now is visibly pressed on nothing —
+		// and the navigation keys are swallowed meanwhile (AppModel.busy).
+		for k := range styles {
+			styles[k] = lipgloss.NewStyle().Foreground(dimColor)
+		}
+		cur = curOff
+	}
 	out := make([]string, 0, innerH)
 	end := min(len(t.lay.rows), t.top+innerH)
 	for i := t.top; i < end; i++ {

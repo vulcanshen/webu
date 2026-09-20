@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -302,6 +303,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case actionErrMsg:
 		return m, m.toast.show(msg.err.Error(), toastError)
+
+	case navFailMsg:
+		_, t := m.tabByID(msg.tabID)
+		if t == nil || msg.gen != t.gen {
+			return m, nil
+		}
+		t.loading = false
+		if errors.Is(msg.err, page.ErrNoEntry) {
+			return m, m.toast.show("nothing to go "+msg.what+" to", toastInfo)
+		}
+		return m, m.toast.show(msg.what+": "+msg.err.Error(), toastError)
 
 	case sourceMsg:
 		return m, m.viewer.show(glyphInfo, "Source · "+oneLine(nameOr(msg.title, "page")), msg.html, msg.layer)
@@ -1196,10 +1208,27 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // ---------------------------------------------------------------- actions
 
+// busy reports whether the shown page is on its way somewhere: a
+// navigation or history move has been asked for and has not landed.
+func (m AppModel) busy() bool {
+	t := m.shownTab()
+	return t != nil && t.loading
+}
+
 // dispatch runs one action by its key — the same function whether the key
 // was pressed on the panel or chosen from the menu, so the two cannot drift.
 func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	t := m.shownTab()
+	// While the page is on its way, the keys that would act on it — or
+	// stack another move on the one in flight — are swallowed (ux.md §6):
+	// P pressed three times while the first back is still answering is
+	// one back, not three. The dimmed page says why nothing happened.
+	if m.busy() {
+		switch key {
+		case "back", "forward", "R", "click", "submit", "edit", "clear", "choose":
+			return m, nil
+		}
+	}
 	switch key {
 	// ---- panel [2]
 	case "show":
@@ -1252,11 +1281,11 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "back":
 		if t != nil {
-			return m, t.act(page.Back)
+			return m, t.navigate("back", page.Back)
 		}
 	case "forward":
 		if t != nil {
-			return m, t.act(page.Forward)
+			return m, t.navigate("forward", page.Forward)
 		}
 	case "Y":
 		if t != nil {

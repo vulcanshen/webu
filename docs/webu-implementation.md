@@ -91,6 +91,12 @@ executor，直接 `.Do(ctx)` 得到 `invalid context`。
 / `frameNavigated` 也觸發 250 ms 後 capture。`gen` 計數丟掉過期的 capture。游標留位：先比
 backendDOMNodeId，找不到落到同序位。
 
+**Loading 與 debounce（ux.md §6 修訂）**：`tab.load`（導航）與 `tab.navigate`（back / forward）
+都在按鍵當下設 `loading = true`、`gen++`；任何 capture 落地才清。`AppModel.busy()` 為真時
+`dispatch` 吞掉 `back` / `forward` / `R` / `click` / `submit` / `edit` / `clear` / `choose`。畫面：`pageRows`
+全部改 dim、游標用 curOff、URL 列圖示換 `glyphLive`、邊框 hint 寫 loading。chromedp 的 `NavigateBack`
+沒有上一頁時回 `invalid navigation entry` → `navFailMsg` → 清 loading、toast「nothing to go back to」。
+
 ## §5 非 DOM 事件（function.md §5、page/hooks.go）
 
 | 事件 | 落地 |
