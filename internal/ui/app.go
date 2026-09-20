@@ -299,8 +299,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			prompt = "paths of the files to upload, separated by spaces"
 		}
 		return m, tea.Batch(waitEvent(m.events), m.input.ask(inputPopup{
-			title: "Upload", glyph: glyphPencil, prompt: prompt, accept: "upload",
-			action: inputFile, placeholder: "~/…"}, m.layer()))
+			title: "Upload", glyph: glyphPencil, prompt: prompt + " (~ is home)",
+			accept: "upload", action: inputFile}, m.layer()))
 
 	case toastExpireMsg:
 		return m, m.toast.expire(msg)
@@ -773,6 +773,8 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.openList(listShortcuts)
 	case "H":
 		return m, m.openList(listHistory)
+	case "L":
+		return m.dispatch("L")
 	case "P":
 		return m.dispatch("back")
 	case "N":
@@ -822,7 +824,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "R", "U", "Y", "A", "O", "Z", "D", "W":
+		case "R", "Y", "A", "O", "Z", "D", "W":
 			return m.dispatch(k)
 		}
 	}
@@ -1187,7 +1189,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
 		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
 		menuItem{label: "Visual mode", key: "V", hint: "walk the text by character, copy some", disabled: t == nil},
-		menuItem{label: "URL", key: "U", hint: "go to one"},
+		menuItem{label: "URL", key: "L", hint: "go to one; this page's own is offered"},
 		menuItem{label: "Add to…", key: "A", hint: "Bookmarks or Shortcuts", disabled: t == nil},
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
 		menuItem{label: "DevTools", key: "D", hint: "storage, network, console, source", disabled: t == nil},
@@ -1327,16 +1329,22 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		m.cur2, m.shown = 0, 0
 		return m, nil
 	case "U":
-		if m.focus == panel2 || m.spaceMenu.isActive() {
-			if n := len(m.closed); n > 0 {
-				last := m.closed[n-1]
-				m.closed = m.closed[:n-1]
-				return m, m.openTab(last.URL, true)
-			}
-			return m, m.toast.show("nothing closed yet", toastInfo)
+		if n := len(m.closed); n > 0 {
+			last := m.closed[n-1]
+			m.closed = m.closed[:n-1]
+			return m, m.openTab(last.URL, true)
 		}
-		return m, m.input.ask(inputPopup{title: "Go to", glyph: glyphSearch,
-			prompt: "URL, or words to search for", accept: "open", action: inputGoto}, m.layer())
+		return m, m.toast.show("nothing closed yet", toastInfo)
+	case "L":
+		// Chrome's Cmd+L, from any panel: the box opens with the page's own
+		// URL on offer — Tab takes it into the line to edit, Backspace
+		// clears it, typing over it starts fresh (ux.md §7).
+		p := inputPopup{title: "Go to", glyph: glyphSearch,
+			prompt: "URL, or words to search for", accept: "open", action: inputGoto}
+		if t != nil && t.url != "" && t.url != "about:blank" {
+			p.placeholder = t.url
+		}
+		return m, m.input.ask(p, m.layer())
 
 	// ---- panel [3], page
 	case "R":

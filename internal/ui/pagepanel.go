@@ -18,7 +18,7 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 	t := m.shownTab()
 	if t == nil {
 		return emptyBody(innerW, innerH, "no page",
-			emptyHint("Press U to go to a URL, or T in [2] for a new tab", "U", "T"))
+			emptyHint("Press L to go to a URL, or T in [2] for a new tab", "L", "T"))
 	}
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	out := make([]string, 0, innerH)

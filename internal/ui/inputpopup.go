@@ -44,7 +44,8 @@ type inputPopup struct {
 	node cdp.BackendNodeID
 	// masked draws the value as dots: a password field's edit.
 	masked bool
-	// placeholder is shown in the empty box and vanishes at the first keystroke.
+	// placeholder is shown dim in the empty box: an offer Tab takes and
+	// Backspace declines (update).
 	placeholder string
 
 	layer   int
@@ -71,7 +72,13 @@ func (m *inputPopup) ask(p inputPopup, layer int) tea.Cmd {
 
 // update edits the line. It reports the committed value, or "" — Esc is not
 // handled here, because cancelling is resolved in one place for every float
-// (§4.3). Tab is a no-op on purpose (ux.md §2.1): there is one field.
+// (§4.3).
+//
+// The placeholder is an offer, not a value (ux.md §2.1, revised
+// 2026-09-20): the go-to box opens on the page's own URL the way Chrome's
+// Cmd+L does. Tab takes the offer into the line to edit; Backspace on an
+// empty line declines it outright; typing starts fresh over it. Enter
+// commits the line as typed — an offer nobody took is not sent anywhere.
 func (m *inputPopup) update(msg tea.KeyMsg) (committed string, done bool) {
 	if !m.anim.isInteractive() {
 		return "", false
@@ -79,9 +86,15 @@ func (m *inputPopup) update(msg tea.KeyMsg) (committed string, done bool) {
 	switch msg.Type {
 	case tea.KeyEnter:
 		return m.value, true
+	case tea.KeyTab:
+		if m.value == "" && m.placeholder != "" {
+			m.value, m.placeholder = m.placeholder, ""
+		}
 	case tea.KeyBackspace:
 		if r := []rune(m.value); len(r) > 0 {
 			m.value = string(r[:len(r)-1])
+		} else {
+			m.placeholder = ""
 		}
 	case tea.KeyCtrlU:
 		m.value = ""
@@ -122,7 +135,12 @@ func (m inputPopup) view() string {
 		spaces(innerW),
 		line,
 	}
-	hint := hintLegend([][2]string{{"Enter", m.accept}, {"Esc", "cancel"}})
+	pairs := [][2]string{{"Enter", m.accept}}
+	if m.value == "" && m.placeholder != "" {
+		pairs = append(pairs, [2]string{"Tab", "edit it"}, [2]string{"Bksp", "clear"})
+	}
+	pairs = append(pairs, [2]string{"Esc", "cancel"})
+	hint := hintLegend(pairs)
 	return drawPopupBox(popupLayerColor(m.layer), " "+m.glyph+" "+m.title+" ",
 		hint, animRows(m.anim, rows), innerW)
 }

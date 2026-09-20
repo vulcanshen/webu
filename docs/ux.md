@@ -74,7 +74,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 
 **`[3]` 一般模式，panel operation**：`[R] Reload`、`[P] Previous`、`[N] Next`、
 `[/] Search`（進 visual mode）、`[V] Visual mode`（修訂 2026-09-20：原 `[V] View source` 搬進 DevTools › Source，
-`V` 讓給 visual mode——panel operation 一律大寫，小寫 `v` 在這一區很突兀）、`[U] Go to URL`、`[A] Add to…`
+`V` 讓給 visual mode——panel operation 一律大寫，小寫 `v` 在這一區很突兀）、`UR[L]`（修訂 2026-09-20：原 `[U]`，改成對應 Chrome 的 Cmd+L；全域鍵，任何面板都能按，見 §7）、`[A] Add to…`
 （picker：Bookmarks / Shortcuts，多對象可選 → menu）、`[O] Outline`、`[D] DevTools`、
 `[Z] Zoom`、`[Y] Yank page url`、`[W] Close`（關掉 `[3]` 正在顯示的分頁；
 `[2]` 的小寫 `w` 關的是游標列，同字依 focus 面板不同義，修訂 2026-09-20）。
@@ -169,7 +169,7 @@ popup 一套解決，`[3]` 不用調整大小。
 | popup 內 | 語意 |
 |---|---|
 | `Enter` | 確認：值寫回頁面（`DOM.focus` + `Input.insertText`），popup 關閉，**不送 Enter 給頁面** |
-| `Tab` | no-op |
+| `Tab` | 有 placeholder（goto popup 帶出的目前 URL）→ 接進輸入列編輯；否則 no-op |
 | `Esc` | 取消，頁面不動 |
 
 打字中屏蔽所有 hotkey（通用 §4.5）：`Space` 是空白、`?` 是問號。
@@ -227,20 +227,20 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `B` `S` `H` `P` `N`、`q`、`?`、`/`、`V`、`Tab`、`1`–`3` |
+| 全域 | `B` `S` `H` `P` `N` `L`、`q`、`?`、`/`、`V`、`Tab`、`1`–`3` |
 | `[2]` item | `w` `c` `r` `y` |
 | `[2]` panel | `T` `X` `U` |
 | `[3]` item | **無**（menu-only） |
-| `[3]` panel | `R` `U` `A` `O` `D` `Z` `Y` `W`（`V` 是全域的 visual mode） |
+| `[3]` panel | `R` `A` `O` `D` `Z` `Y` `W`（`V` 是全域的 visual mode，`L` 是全域的 go to URL） |
 | Bookmarks popup | `o` `e` `x` `m` `y` / `A` `F` `/` |
 | Shortcuts popup | `o` `e` `x` `y` / `A` |
 | History popup | `o` `x` / `C` |
 | DevTools | `x` `y` / `C` `/`；`h/l` 切分頁 |
 | 選取模式 | `hjkl` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
 
-撞字檢查：全域 `B S H P N` 與各面板大寫 `R U A O D Z V Y W T X C F` 無重疊。`D` 與導覽 `d` 只差大小寫，
-sshu 的 `[D]isconnect` 同例。`U` 在 `[2]`
-是 undo close、在 `[3]` 是 go to URL，同字依 focus 面板不同義（決定 2026-09-20，kbu 的 `C` 同例）。Bookmarks 的新目錄用 `F`
+撞字檢查：全域 `B S H P N L` 與各面板大寫 `R U A O D Z V Y W T X C F` 無重疊。`D` 與導覽 `d` 只差大小寫，
+sshu 的 `[D]isconnect` 同例；`L` 與導覽 `l`（沿列右移）同例。`U` 只剩 `[2]` 的 undo close
+（修訂 2026-09-20：原本 `[3]` 也用 `U` 開 goto、同字依面板不同義；goto 改成全域 `L` 後不再同字）。Bookmarks 的新目錄用 `F`
 不用 `N`，避開全域 `N`。
 
 ---
@@ -278,19 +278,22 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 | 歷史記錄時機 | `Page.loadEventFired` 後的最終 URL + 標題；SPA 的 `Page.navigatedWithinDocument` 也記；`about:blank` 與錯誤頁不記 |
 | 離開 | 存 session（所有分頁 URL）→ 殺 Chromium（u-family 子行程慣例） |
 | 啟動 | 還原分頁但**不預先載入**，切到才載；未載入的分頁在 `[2]` 以 dim 顯示，切到時 `[3]` 先是 loading |
-| 空狀態 | `[2]` 無分頁：「no tabs」+ 提示 `T`；`[3]` 無頁面：「no page」+ 提示 `U`（sshu empty.go 形狀） |
+| 空狀態 | `[2]` 無分頁：「no tabs」+ 提示 `T`；`[3]` 無頁面：「no page」+ 提示 `L`（sshu empty.go 形狀） |
 
 ---
 
 ## §7 goto popup
 
-`U`（或 `[2]` 的 `T`）開 goto popup，filu goto picker 形式：
+`L`（全域，對應 Chrome 的 Cmd+L；或 `[2]` 的 `T`）開 goto popup，filu goto picker 形式：
 
+0. 開啟時輸入列是空的，以 dim 帶出目前分頁的 URL 當 placeholder（修訂 2026-09-20）：
+   `Tab` 把它接進輸入列編輯、`Backspace` 整個清掉、直接打字則從頭來。
+   placeholder 是提議不是值——Enter 送的是打出來的字，空的就什麼都不做。hint 列在有 placeholder 時多出 `Tab edit it` `Bksp clear`
 1. 輸入列：打字即從 Bookmarks / Shortcuts / History fuzzy 建議
 2. Enter 時判斷輸入：
    - 像 URL（有 scheme、或 `host.tld` 形）→ 無 scheme 補 `https://`
    - 不像 URL → **當搜尋**，預設 DuckDuckGo，`config.yaml` 的 `search_engine` 可換
-3. `U` 開在目前分頁，`T` 開新分頁
+3. `L` 開在目前分頁，`T` 開新分頁
 
 ---
 
@@ -299,7 +302,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 | # | 項目 | 狀態 |
 |---|---|---|
 | 1 | ~~History 的全域鍵~~ | **已決**：`H` |
-| 2 | ~~`U` 同字不同義~~ | **已決**：依 focus 面板不同義，不是全域鍵 |
+| 2 | ~~`U` 同字不同義~~ | **已決**（2026-09-20 再修）：goto 改全域 `L`，`U` 只剩 `[2]` 的 undo close，不再同字 |
 | 3 | `[3]` item operation 之後要不要補 letter hotkey | 先不做，用了再說 |
 | 4 | link 色帶 | ui.md §4，畫出來再挑 |
 
@@ -311,13 +314,13 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 `Tab` 切面板 · `Enter` click · `Esc` 關浮層 / 離開選取模式 · `Space` menu · `?` help
 
 ### 全域
-`B` Bookmarks · `S` Shortcuts · `H` History · `P` 上一頁 · `N` 下一頁 · `q` quit · `/` 搜尋（進 visual mode）· `V` visual mode
+`B` Bookmarks · `S` Shortcuts · `H` History · `P` 上一頁 · `N` 下一頁 · `L` go to URL · `q` quit · `/` 搜尋（進 visual mode）· `V` visual mode
 
 ### `[2]` Tabs
 `w` close · `c` clone · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
 
 ### `[3]` Page
-`R` reload · `U` go to URL · `A` add to · `O` outline · `D` devtools（storage / network / console / source）· `Z` zoom · `Y` yank page url · `W` close this tab
+`R` reload · `A` add to · `O` outline · `D` devtools（storage / network / console / source）· `Z` zoom · `Y` yank page url · `W` close this tab
 
 ### 導覽（跨 surface 同義）
 `j/k` · `u/d` · `gg/G` · `h/l`（DevTools 分頁）· `1-3`
