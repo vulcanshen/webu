@@ -178,6 +178,10 @@ func TestNavigationListFlowsOnOneLine(t *testing.T) {
 			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Resources", "/r", 4)}},
 		}}}},
 	}}
+	// GitHub styles its tab links display:block; the list is still a row.
+	for _, li := range root.Children[0].Children[0].Children {
+		li.Children[0].Block = true
+	}
 	l := render(root, 80)
 	if len(l.rows) < 2 {
 		t.Fatalf("rows:\n%s", dumpLayout(l))
