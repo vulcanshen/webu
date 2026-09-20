@@ -99,7 +99,9 @@ backendDOMNodeId，找不到落到同序位。
 | `target=_blank` / `window.open` | `ListenBrowser` 收 `Target.targetCreated`（`Type=="page"` 且有 `OpenerID`、未 attached）→ `newTargetMsg` → `NewContext(WithTargetID)` + `Run` attach → `Prepare`（observer 也直接跑進現有 document）→ capture；加到 `[2]` 尾端並自動切換。實測 `rel=noopener` 預設下 `OpenerID` 仍有值 |
 | 憑證錯誤 | **偏離 function.md §8**：`Security.certificateError` 事件已從協定移除，只剩 `Security.setIgnoreCertificateErrors`。做法：導航失敗字串含 `ERR_CERT` → confirm「這個分頁、開著期間都放行？」→ 對該 tab `setIgnoreCertificateErrors(true)` 後重載；同分頁後續導航不再問，新分頁會再問 |
 | 下載 | 第一個 frame 對 browser 執行 `Browser.setDownloadBehavior(allow, downloadPath, eventsEnabled)`；`ListenBrowser` 收 `downloadWillBegin` → toast「downloading <name>」、`downloadProgress completed` → toast「saved <path>」、canceled → error toast。目錄 = `config.yaml` 的 `download_dir`，預設 `~/Downloads` |
-| HTTP auth、檔案上傳 | 未做 |
+| HTTP basic / digest auth | `Prepare` 開 `Fetch.enable(handleAuthRequests)`；**這會讓每個 request 都 pause 一次**，tab 的 listener 收到 `requestPaused` 就在 goroutine 裡 `continueRequest`（Puppeteer 的 `page.authenticate` 同一做法；實測 GitHub repo 頁多花約 0.5 秒、HN 約 0.3 秒）；`authRequired` → `authMsg` → input popup 問帳號、再問密碼（遮罩）→ `continueWithAuth(ProvideCredentials)`；Esc → `CancelAuth`（頁面拿到 401） |
+| 檔案上傳 | `Prepare` 開 `Page.setInterceptFileChooserDialog(true)`；`fileChooserOpened` → `fileMsg` → input popup 問路徑（`~` 展開、多檔以空白分隔、先 stat）→ `DOM.setFileInputFiles(backendNodeId)`；Esc 就是沒選。ui.md §3.3 寫的 sshu filepicker 形式先以路徑輸入代替 |
+| Undo close、離開時下載中 | `[2]` 的 `U` 從 `m.closed`（最多 20 筆）重開；`q` 在 `m.downloads > 0` 時先 confirm。`w` 關分頁不問：下載是瀏覽器層事件、無法歸到某個分頁 |
 
 ## §A VTP in webu
 
@@ -172,7 +174,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - 即時更新（function.md §6）：`page.Prepare` 在第一次導航前 `Runtime.addBinding` + 注入 MutationObserver
   （childList / characterData / subtree，150 ms 合併），`Runtime.bindingCalled` 走與 load event 同一條 settle 路
 - 選取模式與 `/` 搜尋、Outline、Zoom、View source、Inspect popup、DevTools 三分頁與 Network detail（§A）
-- JS dialog、`target=_blank` 新分頁、憑證錯誤 confirm、下載 toast（§5）
+- JS dialog、`target=_blank` 新分頁、憑證錯誤 confirm、下載 toast、HTTP auth、檔案上傳、Undo close、離開時下載中的 confirm（§5）
 - 整合測試 `TestAppNavigatesAndFillsAForm`（本機頁：載入 → 點 → 回 → 打字 → Submit → 選 option）、
   `TestListPopupsAndSession`（無瀏覽器：B 開 / 過濾 / 刪 / 存檔）、`hooks_test.go` 五支（新視窗、三種
   dialog、自簽憑證 via `httptest.NewTLSServer`、下載、搜尋後 Enter 點連結）、`selectmode_test.go`
@@ -181,8 +183,8 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 
 ### 未做（v1 清單，ui.md §7）
 
-Bookmarks 的目錄樹與 Edit / Move、History fuzzy、Undo close、HTTP auth / 檔案上傳 hook、
-hover 同步（§4 的 mouseMoved 坑）、heading Fold、iframe 內容、`h/l` 在 table row 內移動、
-textarea 的 `$EDITOR` 鏈、關分頁 / 離開時「下載進行中」的 confirm、Console Eval（v2）、preserve log（v2）。
+Bookmarks 的目錄樹與 Edit / Move、History fuzzy、hover 同步（§4 的 mouseMoved 坑）、heading Fold、
+iframe 內容、`h/l` 在 table row 內移動、textarea 的 `$EDITOR` 鏈、檔案上傳的 filepicker popup、
+Console Eval（v2）、preserve log（v2）。
 
 ui.md §7 的 v1 表除了上面這些細項之外都已落地；README 的「下一步」與 CHANGELOG 尚未建立（尚未 tag）。

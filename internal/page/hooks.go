@@ -5,6 +5,8 @@ import (
 
 	"github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/dom"
+	"github.com/chromedp/cdproto/fetch"
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/security"
 	"github.com/chromedp/chromedp"
@@ -30,6 +32,43 @@ func HandleDialog(ctx context.Context, accept bool, text string) error {
 			p = p.WithPromptText(text)
 		}
 		return p.Do(ctx)
+	})
+}
+
+// ContinueRequest lets a request paused by the Fetch domain go on. With
+// auth handling on, EVERY request pauses once (function.md §5): the
+// listener answers each at once, in its own goroutine, so the page never
+// waits on the UI for a request that asked nothing.
+func ContinueRequest(ctx context.Context, id fetch.RequestID) error {
+	return run(ctx, func(ctx context.Context) error {
+		return fetch.ContinueRequest(id).Do(ctx)
+	})
+}
+
+// Auth answers an HTTP basic / digest challenge with credentials.
+func Auth(ctx context.Context, id fetch.RequestID, user, pass string) error {
+	return run(ctx, func(ctx context.Context) error {
+		return fetch.ContinueWithAuth(id, &fetch.AuthChallengeResponse{
+			Response: fetch.AuthChallengeResponseResponseProvideCredentials,
+			Username: user, Password: pass,
+		}).Do(ctx)
+	})
+}
+
+// CancelAuth declines a challenge: the page gets the 401 it would have.
+func CancelAuth(ctx context.Context, id fetch.RequestID) error {
+	return run(ctx, func(ctx context.Context) error {
+		return fetch.ContinueWithAuth(id, &fetch.AuthChallengeResponse{
+			Response: fetch.AuthChallengeResponseResponseCancelAuth,
+		}).Do(ctx)
+	})
+}
+
+// SetFiles answers an intercepted file chooser: the paths become the
+// input's files and the page sees its change event.
+func SetFiles(ctx context.Context, node cdp.BackendNodeID, files []string) error {
+	return run(ctx, func(ctx context.Context) error {
+		return dom.SetFileInputFiles(files).WithBackendNodeID(node).Do(ctx)
 	})
 }
 

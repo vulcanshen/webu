@@ -142,6 +142,82 @@ func TestDownloadToasts(t *testing.T) {
 	}
 }
 
+func TestHTTPAuthIsAsked(t *testing.T) {
+	b := hookBrowser(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u, p, ok := r.BasicAuth()
+		if !ok || u != "ann" || p != "secret" {
+			w.Header().Set("WWW-Authenticate", `Basic realm="the vault"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("<title>Denied</title>denied"))
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte("<title>Inside</title><h1>Welcome ann</h1>"))
+	}))
+	defer srv.Close()
+	d := startAt(t, b, srv.URL, store.Config{})
+	d.until("name asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputAuthUser })
+	if !strings.Contains(d.m.input.prompt, "the vault") {
+		t.Errorf("prompt names the realm: %q", d.m.input.prompt)
+	}
+	d.key("ann")
+	d.key("enter")
+	d.until("password asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputAuthPass })
+	if !d.m.input.masked {
+		t.Error("the password box is not masked")
+	}
+	d.key("secret")
+	d.key("enter")
+	d.until("inside", d.loaded("Inside"))
+	if !strings.Contains(d.m.View(), "Welcome ann") {
+		t.Errorf("page not drawn:\n%s", d.m.View())
+	}
+}
+
+func TestFileUploadIsAsked(t *testing.T) {
+	b := hookBrowser(t)
+	dir := t.TempDir()
+	file := filepath.Join(dir, "notes.txt")
+	os.WriteFile(file, []byte("hi"), 0o644)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<title>Upload</title><label>Attach <input type="file" onchange="document.querySelector('#out').textContent = 'chose:' + this.files[0].name"></label><p id="out"></p>`))
+	}))
+	defer srv.Close()
+	d := startAt(t, b, srv.URL, store.Config{})
+	d.until("upload page", d.loaded("Upload"))
+	d.cursorOn(ir.Button, "Attach")
+	d.key("enter")
+	d.until("path asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFile })
+	d.key(file)
+	d.key("enter")
+	d.until("file chosen", func() bool { return strings.Contains(dumpLayout(d.page().lay), "chose:notes.txt") })
+}
+
+func TestUndoCloseAndQuitConfirm(t *testing.T) {
+	b := hookBrowser(t)
+	abs, _ := filepath.Abs("testdata/nav2.html")
+	d := startAt(t, b, "file://"+abs, store.Config{})
+	d.until("page B", d.loaded("Page B"))
+	d.key("2")
+	d.key("w")
+	if len(d.m.tabs) != 0 || len(d.m.closed) != 1 {
+		t.Fatalf("after w: %d tabs, %d closed", len(d.m.tabs), len(d.m.closed))
+	}
+	d.key("U")
+	d.until("page B is back", d.loaded("Page B"))
+	if len(d.m.closed) != 0 {
+		t.Errorf("undo should pop the stack: %d left", len(d.m.closed))
+	}
+
+	d.m.downloads = 1
+	d.key("q")
+	if !d.m.confirm.isActive() || d.m.confirm.action != confirmQuit {
+		t.Error("q with a download in flight should ask first")
+	}
+}
+
 func TestSearchThenEnterClicks(t *testing.T) {
 	b := hookBrowser(t)
 	abs, _ := filepath.Abs("testdata/nav.html")
