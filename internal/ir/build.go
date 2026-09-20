@@ -32,11 +32,37 @@ func textDocument(ct string) bool {
 	switch {
 	case ct == "application/json", strings.HasSuffix(ct, "+json"),
 		ct == "text/plain", ct == "text/csv", ct == "text/markdown",
+		strings.Contains(ct, "yaml"), strings.Contains(ct, "toml"),
 		ct == "application/xml", ct == "text/xml", strings.HasSuffix(ct, "+xml"),
 		ct == "application/javascript", ct == "text/javascript", ct == "text/css":
 		return true
 	}
 	return false
+}
+
+// langOf is the name a lexer knows the content type by; "" for plain.
+func langOf(ct string) string {
+	ct = strings.ToLower(ct)
+	if i := strings.IndexByte(ct, ';'); i >= 0 {
+		ct = strings.TrimSpace(ct[:i])
+	}
+	switch {
+	case ct == "application/json", strings.HasSuffix(ct, "+json"):
+		return "json"
+	case strings.Contains(ct, "yaml"):
+		return "yaml"
+	case strings.Contains(ct, "toml"):
+		return "toml"
+	case ct == "text/markdown":
+		return "markdown"
+	case ct == "application/xml", ct == "text/xml", strings.HasSuffix(ct, "+xml"):
+		return "xml"
+	case strings.Contains(ct, "javascript"):
+		return "javascript"
+	case ct == "text/css":
+		return "css"
+	}
+	return ""
 }
 
 // asText reduces a text document to Document{Code}: the longest text run
@@ -60,7 +86,8 @@ func asText(root *Node, ct string) *Node {
 		}
 	}
 	return &Node{Kind: Document, Role: "RootWebArea", Name: root.Name, URL: root.URL,
-		Children: []*Node{{Kind: Code, Role: "code", Children: []*Node{{Kind: Text, Role: "StaticText", Name: body}}}}}
+		Children: []*Node{{Kind: Code, Role: "code", Lang: langOf(ct),
+			Children: []*Node{{Kind: Text, Role: "StaticText", Name: body}}}}}
 }
 
 // Build turns a capture into an IR tree.

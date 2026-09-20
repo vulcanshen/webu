@@ -99,10 +99,12 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	// A code block's rows sit on their own background, padding included,
 	// so the block reads as one thing; the text width is what the block
 	// spans, not the panel, so it does not run under the side of the page.
-	codeRow := lipgloss.NewStyle().Foreground(codeColor).Background(codeBg)
+	codeStyles := codeStyles()
 	codePad := lipgloss.NewStyle().Background(codeBg)
 	if t.loading {
-		codeRow = lipgloss.NewStyle().Foreground(dimColor).Background(codeBg)
+		for k := range codeStyles {
+			codeStyles[k] = lipgloss.NewStyle().Foreground(dimColor).Background(codeBg)
+		}
 	}
 	out := make([]string, 0, innerH)
 	end := min(len(t.lay.rows), t.top+innerH)
@@ -125,7 +127,11 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 			case s.item >= 0 && s.item == t.cursor:
 				b.WriteString(curOff.Render(text))
 			case row.code:
-				b.WriteString(codeRow.Render(text))
+				style, ok := codeStyles[s.kind]
+				if !ok {
+					style = codeStyles[segCode]
+				}
+				b.WriteString(style.Render(text))
 			default:
 				b.WriteString(styles[s.kind].Render(text))
 			}
@@ -161,6 +167,28 @@ func segStyles() map[segKind]lipgloss.Style {
 		segUnsupported: lipgloss.NewStyle().Foreground(dimColor),
 		segLandmark:    lipgloss.NewStyle().Foreground(dimColor).Bold(true),
 		segTableHeader: lipgloss.NewStyle().Foreground(headerColor).Bold(true),
+	}
+}
+
+// codeStyles is the syntax palette inside a code block, every entry on the
+// code ground. Keys share mauve with table headers — both are the name of
+// a value; strings are the code colour; the rest stay out of the bands the
+// app reserves (green for the shown tab, yellow for visual mode, red and
+// peach for the override).
+func codeStyles() map[segKind]lipgloss.Style {
+	on := func(c lipgloss.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c).Background(codeBg) }
+	return map[segKind]lipgloss.Style{
+		segCode:        on(textColor),
+		segCodeKey:     on(headerColor),
+		segCodeString:  on(codeColor),
+		segCodeNumber:  on(lipgloss.Color("#f2cdcd")), // flamingo
+		segCodeConst:   on(lipgloss.Color("#89dceb")), // sky: true / false / null
+		segCodeKeyword: on(lipgloss.Color("#89dceb")),
+		segCodeComment: on(dimColor).Italic(true),
+		segCodePunct:   on(lipgloss.Color("#9399b2")), // overlay2
+		segCodeHeading: on(textColor).Bold(true),
+		segCodeStrong:  on(textColor).Bold(true),
+		segCodeEmph:    on(textColor).Italic(true),
 	}
 }
 

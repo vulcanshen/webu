@@ -212,6 +212,50 @@ func TestWrapWords(t *testing.T) {
 	}
 }
 
+func TestHighlightJSONKeysAndValues(t *testing.T) {
+	lines := highlightLines("json", "{\n  \"a\": 1,\n  \"b\": \"x\",\n  \"c\": true\n}")
+	if len(lines) != 5 {
+		t.Fatalf("lines: %d", len(lines))
+	}
+	kinds := map[string]segKind{}
+	for _, l := range lines {
+		for _, s := range l {
+			kinds[strings.TrimSpace(s.text)] = s.kind
+		}
+	}
+	if kinds[`"a"`] != segCodeKey || kinds["1"] != segCodeNumber || kinds[`"x"`] != segCodeString || kinds["true"] != segCodeConst {
+		t.Errorf("kinds: %v", kinds)
+	}
+	if highlightLines("", "x") != nil || highlightLines("no-such-language", "x") != nil {
+		t.Error("no lexer means no highlight, not a crash")
+	}
+	// YAML and TOML keys are keys too.
+	y := highlightLines("yaml", "name: webu\nport: 8080\n")
+	found := false
+	for _, s := range y[0] {
+		if strings.TrimSpace(s.text) == "name" && s.kind == segCodeKey {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("yaml key not marked: %+v", y[0])
+	}
+	// A folded highlighted line keeps its segments' kinds.
+	folded := foldSegs([]seg{{text: `"key"`, kind: segCodeKey}, {text: `: "` + strings.Repeat("v", 30) + `"`, kind: segCodeString}}, 12)
+	if len(folded) < 3 || folded[0][0].kind != segCodeKey {
+		t.Errorf("fold: %+v", folded)
+	}
+	for i, l := range folded {
+		w := 0
+		for _, s := range l {
+			w += dispW(s.text)
+		}
+		if w > 12 {
+			t.Errorf("folded row %d is %d wide", i, w)
+		}
+	}
+}
+
 func TestCodeRowsAndTableHeaders(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		{Kind: ir.Code, Children: []*ir.Node{{Kind: ir.Text, Name: "one\ntwo"}}},

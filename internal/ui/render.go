@@ -32,6 +32,17 @@ const (
 	segUnsupported
 	segLandmark    // a landmark's rule row: its role and name
 	segTableHeader // a table's header cells
+	// Inside a code block with a language (highlight.go).
+	segCodeKey
+	segCodeString
+	segCodeNumber
+	segCodeConst
+	segCodeKeyword
+	segCodeComment
+	segCodePunct
+	segCodeHeading
+	segCodeStrong
+	segCodeEmph
 )
 
 type seg struct {
@@ -751,20 +762,45 @@ func (r *renderer) codeBlock(n *ir.Node) {
 	// width — the text measure, which is also where its ground stops —
 	// rather than being cut: a cut line of code or JSON is a line lost.
 	width := max(1, r.textW-dispW(r.indent))
-	for _, line := range strings.Split(n.Text(), "\n") {
-		line = strings.ReplaceAll(line, "\t", "    ")
-		for {
-			head := truncateNoEllipsis(line, width)
-			if head == "" && line != "" {
-				head = line // a single cell wider than the block: let it be
-			}
-			r.emit(row{segs: []seg{{text: r.indent + head, item: -1, kind: segCode}}, code: true})
-			line = strings.TrimPrefix(line, head)
-			if line == "" {
-				break
-			}
+	text := strings.ReplaceAll(n.Text(), "\t", "    ")
+	lines := highlightLines(n.Lang, text)
+	if lines == nil {
+		for _, line := range strings.Split(text, "\n") {
+			lines = append(lines, []seg{{text: line, item: -1, kind: segCode}})
 		}
 	}
+	for _, segs := range lines {
+		for _, fold := range foldSegs(segs, width) {
+			r.emit(row{segs: append([]seg{{text: r.indent, item: -1, kind: segCode}}, fold...), code: true})
+		}
+	}
+}
+
+// foldSegs breaks one line of segments into rows of at most width cells,
+// cutting a segment where it must. An empty line is one empty row.
+func foldSegs(segs []seg, width int) [][]seg {
+	var out [][]seg
+	var line []seg
+	used := 0
+	for _, s := range segs {
+		text := s.text
+		for text != "" {
+			room := width - used
+			if room <= 0 {
+				out = append(out, line)
+				line, used = nil, 0
+				room = width
+			}
+			head := truncateNoEllipsis(text, room)
+			if head == "" {
+				head = text // one cell wider than the row: let it be
+			}
+			line = append(line, seg{text: head, item: -1, kind: s.kind})
+			used += dispW(head)
+			text = strings.TrimPrefix(text, head)
+		}
+	}
+	return append(out, line)
 }
 
 // table draws one screen row per table row, cells padded to their column's

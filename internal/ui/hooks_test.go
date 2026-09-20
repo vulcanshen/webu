@@ -250,6 +250,15 @@ func TestJSONDocumentIsCode(t *testing.T) {
 	if d.page().top != 0 {
 		t.Errorf("a fresh page starts at the top, not at %d", d.page().top)
 	}
+	keyed := false
+	for _, s := range rows[2].segs {
+		if strings.TrimSpace(s.text) == `"id"` && s.kind == segCodeKey {
+			keyed = true
+		}
+	}
+	if !keyed {
+		t.Errorf("the JSON key is not coloured as a key: %+v", rows[2].segs)
+	}
 	for _, it := range d.page().lay.items {
 		if it.node.Kind == ir.Check {
 			t.Error("Chrome's Pretty-print checkbox leaked into the page")
