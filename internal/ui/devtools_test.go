@@ -21,7 +21,10 @@ console.log("hello", "console", 42);
 console.error("bad thing");
 fetch("/api/data").then(r => r.json()).then(d => { document.querySelector("#out").textContent = d.ok; });
 </script>
-<h1>Dev page</h1><p id="out"></p>`
+<h1>Dev page</h1><p id="out"></p><img src="/pic.png" alt="a picture">`
+
+// pngBytes is the start of a PNG: not text, not valid UTF-8, with a NUL.
+var pngBytes = []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89")
 
 func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 	b := hookBrowser(t)
@@ -29,6 +32,11 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 		if r.URL.Path == "/api/data" {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(`{"ok":"yes"}`))
+			return
+		}
+		if r.URL.Path == "/pic.png" {
+			w.Header().Set("Content-Type", "image/png")
+			w.Write(pngBytes)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html")
@@ -90,6 +98,30 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 	if d.m.devtools.filter[devNetwork] != "" {
 		t.Error("Esc should clear the filter first")
 	}
+
+	// An image's body is not shown as text.
+	d.until("the image request", func() bool {
+		for _, e := range d.m.devtools.network.entries {
+			if strings.HasSuffix(e.URL, "/pic.png") && e.Done {
+				return true
+			}
+		}
+		return false
+	})
+	d.key("/")
+	d.key("pic")
+	d.key("enter")
+	d.key("enter")
+	d.until("binary body", func() bool {
+		return d.m.devtools.detail.isActive() && strings.Contains(strings.Join(d.m.devtools.detail.lines, "\n"), "(binary:")
+	})
+	for i, l := range d.m.devtools.detail.lines {
+		if strings.Contains(l, "PNG") || strings.ContainsRune(l, 0) {
+			t.Errorf("line %d leaks the bytes: %q", i, l)
+		}
+	}
+	d.key("esc")
+	d.key("esc")
 
 	d.key("l")
 	d.until("console tab", func() bool { return d.m.devtools.tab == devConsole })

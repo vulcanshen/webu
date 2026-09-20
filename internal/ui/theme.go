@@ -30,6 +30,11 @@ var (
 	linkColor = lipgloss.Color("#94e2d5") // teal
 	// the cursor row in a list.
 	rowSelColor = focusColor
+	// the URL on panel [3]'s first row: "where you are", which is the
+	// structural band's question, so it shares the hex on purpose (as
+	// sshu's nestColor shares editColor). Named separately so the sharing
+	// is deliberate and greppable.
+	urlColor = focusColor
 )
 
 const (
@@ -67,9 +72,12 @@ var (
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 
-	// Panel [2]: a tab still loading. The same codepoint as kbu's Logs
-	// live glyph (ui.md §2): the family says "live" with one shape.
+	// Panel [2]: a tab still loading; also panel [3]'s URL row while the
+	// page is on its way. The same codepoint as kbu's Logs live glyph
+	// (ui.md §2): the family says "live" with one shape.
 	glyphLive = string(rune(0xf0753)) // kbu logsLiveGlyph, U+F0753
+	// Panel [3]'s URL row, at rest.
+	glyphWeb = string(rune(0xf059f)) // nf-md-web
 
 	// Page roles (ux.md §B: one role, one glyph).
 	glyphLink        = string(rune(0xf0337)) // nf-md-link

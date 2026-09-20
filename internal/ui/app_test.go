@@ -174,11 +174,37 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		t.Fatalf("page B not drawn:\n%s", d.m.View())
 	}
 
-	// P goes back; the URL row follows.
+	// P goes back. From the keystroke the page shows as on its way — the
+	// live glyph on the URL row — and a second P before it lands is
+	// swallowed rather than stacked (ux.md §6).
 	d.key("P")
+	if !d.page().loading {
+		t.Fatal("P should mark the tab loading at once")
+	}
+	if v := d.m.View(); !strings.Contains(v, glyphLive) {
+		t.Errorf("the URL row should show the live glyph while loading:\n%s", v)
+	}
+	gen := d.page().gen
+	d.key("P")
+	if d.page().gen != gen {
+		t.Error("a second P while the first is in flight was not swallowed")
+	}
 	d.until("page A again", d.loaded("Page A"))
 	if !strings.Contains(d.page().url, "nav.html") {
 		t.Errorf("url after back: %s", d.page().url)
+	}
+	if v := d.m.View(); !strings.Contains(v, glyphWeb) {
+		t.Errorf("the URL row should show the web glyph at rest:\n%s", v)
+	}
+	// Nowhere further back — the entry before this one is the about:blank
+	// every tab starts on, which does not count: says so, and the page
+	// stays.
+	d.key("P")
+	d.until("told there is nothing", func() bool {
+		return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "nothing to go back")
+	})
+	if d.page().loading || d.page().root == nil || !strings.Contains(d.page().url, "nav.html") {
+		t.Errorf("a failed back should leave the page as it was: loading=%v url=%s", d.page().loading, d.page().url)
 	}
 
 	// An empty textbox's menu leads with Edit: the input popup; Enter there

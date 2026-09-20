@@ -123,7 +123,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 | `[2]` 綠字 | `[3]` 正在顯示的分頁 |
 | 邊框 Yellow | 選取模式 |
 | role glyph | 一個 role 一個 glyph，一張表定死，查字型不憑記憶；填值後 input 的 glyph 不變 |
-| `[3]` 第一列 | 「你現在看的是什麼」：URL；搜尋中暫換成 `/query` |
+| `[3]` 第一列 | 「你現在看的是什麼」：圖示 + URL（藍字，與 focus 同色是刻意的：都是「你在哪」）；圖示平時是 web、載入中換 live glyph；搜尋中暫換成 `/query`（修訂 2026-09-20） |
 | footer | 五個 core-key；選取模式時只剩該模式有效的鍵（sshu 誠實規則） |
 | `y` 小寫 / `Y` 大寫 | 游標下的東西 / 整頁 |
 | `r` 小寫 / `R` 大寫 | 這個分頁 / 這一頁 |
@@ -269,7 +269,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 
 | 情境 | 行為 |
 |---|---|
-| 頁面載入中 | `[3]` 邊框 hint 顯示 loading；`[2]` 該列掛 live glyph |
+| 頁面載入中 | `[3]` 邊框 hint 顯示 loading；`[2]` 該列掛 live glyph。**修訂（2026-09-20，實機試用後）**：從按下鍵那一刻起 `[3]` 整頁變 dim、URL 列的圖示換成 live glyph，到新頁面落地為止；期間 `P` / `N` / `R` / item 的 click 一律吞掉（debounce）——終端機使用者按鍵很快，連按 `PPP` 只能算一次，不能一口氣退好幾頁。沒有上一頁時 toast 說「nothing to go back to」、頁面不動 |
 | 即時更新（SSE / WebSocket） | 重畫不退階（通用 §7.2）；cursor 靠 backendDOMNodeId 留位，失敗用指紋（function.md §4） |
 | `target=_blank` | 新分頁加到 `[2]` 尾端並**自動切換** |
 | 任何會換頁的動作（點 link、goto 確認、Bookmarks / Shortcuts / History 開啟、`[2]` Enter 切分頁） | context shift：Space menu 清掉；`[3]` 第一列 URL 更新；item 游標回到 main 第一個 item；**焦點一律回 `[3]`** |
