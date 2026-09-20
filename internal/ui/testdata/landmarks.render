@@ -1,0 +1,29 @@
+Site header 󰌷 Home
+
+󰌷 A 󰌷 B
+
+# Main heading
+
+## An article
+
+Body.
+
+Section text.
+
+An unnamed section is not a region.
+
+󰛿 Q ____________
+
+󰛿 Find ____________
+
+Sidebar
+
+Footer text
+-- items --
+0 link "Home" rows 0-0
+1 link "A" rows 2-2
+2 link "B" rows 2-2
+3 heading "Main heading" rows 4-4
+4 heading "An article" rows 6-6
+5 textbox "Q" rows 14-14
+6 textbox "Find" rows 16-16

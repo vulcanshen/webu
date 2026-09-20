@@ -1,0 +1,23 @@
+󰌷 Absolute link
+
+󰌷 Relative link
+
+󰌷 Mail link
+
+󰌷 Picture link
+
+󰌷 file:///noalt
+
+Anchor without href
+
+󰌷 Rich content link
+
+󰌷 Opens new tab
+-- items --
+0 link "Absolute link" rows 0-0
+1 link "Relative link" rows 2-2
+2 link "Mail link" rows 4-4
+3 link "Picture link" rows 6-6
+4 link "" rows 8-8
+5 link "Rich content link" rows 12-12
+6 link "Opens new tab" rows 14-14

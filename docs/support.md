@@ -12,6 +12,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `Canvas` | media | click | placeholder; nothing inside can be read |
 | `DescriptionList` | list | — | <dl>: terms and definitions |
 | `Iframe` | media | click | placeholder; the frame's content is not entered (v1) |
+| `LayoutTableCell` | cell | — | a layout-table cell: its content, a space apart from the next |
 | `LayoutTableRow` | group | — | a layout-table row: one line of flow (the Hacker News shape) |
 | `LineBreak` | text | — | a line break inside text |
 | `RootWebArea` | document | — | the page; its name is the title |
@@ -67,7 +68,6 @@ These roles carry nothing a terminal can use; the node vanishes and its children
 | `InlineTextBox` | a text run's line boxes; the StaticText above it is what is read |
 | `LabelText` | a <label>: invisible, the input carries the name |
 | `LayoutTable` | a table used for layout: invisible |
-| `LayoutTableCell` | a layout-table cell: invisible |
 | `Legend` | a fieldset's title flows into the group |
 | `ListMarker` | the bullet or number; becomes the item's marker |
 | `MenuListPopup` | the option list under a <select>; its options are read, it is not drawn |

@@ -12,7 +12,9 @@ import (
 	"syscall"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/webu/internal/browser"
+	"github.com/vulcanshen/webu/internal/ui"
 	"github.com/vulcanshen/webu/internal/version"
 )
 
@@ -32,6 +34,10 @@ func main() {
 			os.Exit(1)
 		}
 		return
+	}
+	startURL := ""
+	if len(args) == 1 {
+		startURL = args[0]
 	}
 
 	exe, err := ensureChromium(false)
@@ -53,18 +59,32 @@ func main() {
 		fmt.Fprintln(os.Stderr, "webu:", err)
 		os.Exit(1)
 	}
-	// Whatever door the program leaves through — the app quitting, an outside
-	// SIGINT/SIGTERM, the terminal closing — Chromium goes too.
+
+	app := ui.New(b, startURL)
+	p := tea.NewProgram(app, tea.WithAltScreen())
+
+	// Whatever door the program leaves through — q, an outside SIGINT or
+	// SIGTERM, the terminal closing — Chromium goes too (u-family: leave
+	// with no child behind).
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sig
-		b.Close()
-		os.Exit(130)
+		p.Quit()
 	}()
-	defer b.Close()
 
-	fmt.Println("chromium is up; the TUI is not written yet")
+	final, runErr := p.Run()
+	if a, ok := final.(ui.AppModel); ok {
+		a.Close()
+	}
+	b.Close()
+	switch {
+	case errors.Is(runErr, tea.ErrInterrupted):
+		os.Exit(130)
+	case runErr != nil:
+		fmt.Fprintln(os.Stderr, "webu:", runErr)
+		os.Exit(1)
+	}
 }
 
 // ensureChromium returns the pinned Chromium's path, downloading it first

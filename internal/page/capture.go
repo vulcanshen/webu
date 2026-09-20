@@ -10,8 +10,17 @@ import (
 	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/domsnapshot"
+	"github.com/chromedp/chromedp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
+
+// run executes fn against the tab: chromedp.Run is what puts the target's
+// executor in the context, and a raw cdproto call without it answers
+// "invalid context". Every entry point in this package goes through here,
+// so a caller holding a plain tab context never has to know.
+func run(ctx context.Context, fn func(context.Context) error) error {
+	return chromedp.Run(ctx, chromedp.ActionFunc(fn))
+}
 
 // Capture reads everything the translator needs from a tab: the full AX
 // tree, and the computed `display` of every DOM node that has a layout box.
@@ -22,15 +31,20 @@ import (
 // together on one line (ir.Build). DOMSnapshot is one call for the whole
 // page, which is what makes it affordable on every redraw.
 func Capture(ctx context.Context) (ir.Capture, error) {
-	nodes, err := accessibility.GetFullAXTree().Do(ctx)
-	if err != nil {
-		return ir.Capture{}, err
-	}
-	docs, strs, err := domsnapshot.CaptureSnapshot([]string{"display"}).Do(ctx)
-	if err != nil {
-		return ir.Capture{}, err
-	}
-	return ir.Capture{Nodes: nodes, Display: displayMap(docs, strs)}, nil
+	var c ir.Capture
+	err := run(ctx, func(ctx context.Context) error {
+		nodes, err := accessibility.GetFullAXTree().Do(ctx)
+		if err != nil {
+			return err
+		}
+		docs, strs, err := domsnapshot.CaptureSnapshot([]string{"display"}).Do(ctx)
+		if err != nil {
+			return err
+		}
+		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs)}
+		return nil
+	})
+	return c, err
 }
 
 // displayMap joins the snapshot's node table to its layout table: layout row

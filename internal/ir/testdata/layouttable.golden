@@ -1,20 +1,28 @@
 document "layouttable" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/layouttable.html focusable #1
   group:LayoutTableRow #9
-    text "1." #29
-    link "▲" url=file:///vote focusable #12
-    link "Story title" url=https://example.com/story focusable #14
-    text " " #32
-    text "(" #33
-    link "example.com" url=file:///from?site=example.com focusable #16
-    text ")" #35
+    cell:LayoutTableCell "1." #10
+      text "1." #29
+    cell:LayoutTableCell "▲" #11
+      link "▲" url=file:///vote focusable #12
+    cell:LayoutTableCell "Story title (example.com)" #13
+      link "Story title" url=https://example.com/story focusable #14
+      text " " #32
+      text "(" #33
+      link "example.com" url=file:///from?site=example.com focusable #16
+      text ")" #35
   group:LayoutTableRow #17
-    text "42 points by " #36
-    link "me" url=file:///user?id=me focusable #20
-    text " " #38
-    link "3 hours ago" url=file:///item?id=1 focusable #21
-    text " | " #40
-    link "12 comments" url=file:///item?id=1 focusable #22
+    cell:LayoutTableCell #18
+    cell:LayoutTableCell "42 points by me 3 hours ago | 12 comments" #19
+      text "42 points by " #36
+      link "me" url=file:///user?id=me focusable #20
+      text " " #38
+      link "3 hours ago" url=file:///item?id=1 focusable #21
+      text " | " #40
+      link "12 comments" url=file:///item?id=1 focusable #22
   group:LayoutTableRow #23
-    text "2." #42
-    link "▲" url=file:///vote focusable #26
-    link "Second story" url=https://example.org/two focusable #28
+    cell:LayoutTableCell "2." #24
+      text "2." #42
+    cell:LayoutTableCell "▲" #25
+      link "▲" url=file:///vote focusable #26
+    cell:LayoutTableCell "Second story" #27
+      link "Second story" url=https://example.org/two focusable #28

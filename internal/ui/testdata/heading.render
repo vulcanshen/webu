@@ -1,0 +1,24 @@
+# Level one
+
+## Level two
+
+### Level three
+
+#### Level four
+
+##### Level five
+
+###### Level six
+
+## 󰌷 A heading that is a link
+
+## ARIA heading
+-- items --
+0 heading "Level one" rows 0-0
+1 heading "Level two" rows 2-2
+2 heading "Level three" rows 4-4
+3 heading "Level four" rows 6-6
+4 heading "Level five" rows 8-8
+5 heading "Level six" rows 10-10
+6 link "A heading that is a link" rows 12-12
+7 heading "ARIA heading" rows 14-14

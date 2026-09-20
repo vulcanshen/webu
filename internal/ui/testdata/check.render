@@ -1,0 +1,15 @@
+[x] Checked [ ] Unchecked [-] Mixed [ ] Disabled
+Radios
+(•) One ( ) Two
+[x] Switch on [ ] Switch off
+[x] ARIA checkbox
+-- items --
+0 check "Checked" rows 0-0
+1 check "Unchecked" rows 0-0
+2 check "Mixed" rows 0-0
+3 check "Disabled" rows 0-0
+4 check "One" rows 2-2
+5 check "Two" rows 2-2
+6 check "Switch on" rows 3-3
+7 check "Switch off" rows 3-3
+8 check "ARIA checkbox" rows 4-4
