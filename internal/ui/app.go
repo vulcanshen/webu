@@ -1112,13 +1112,15 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 		items = append(items,
 			menuItem{label: "Open", key: "click", hint: "click it"},
 			menuItem{label: "Open in new tab", key: "newtab", hint: "and switch to it"},
-			menuItem{label: "Yank url", key: "yankurl", hint: oneLine(n.URL)})
+			// "link url", not "url": with the cursor on a link, a bare "Yank
+			// url" reads as the page's, which is [Y] in the panel region.
+			menuItem{label: "Yank link url", key: "yankurl", hint: oneLine(n.URL)})
 	case ir.Button, ir.Check:
 		items = append(items, menuItem{label: "Click", key: "click", hint: "press it"})
 	case ir.Media:
 		items = append(items,
 			menuItem{label: "Click", key: "click", hint: "the page decides"},
-			menuItem{label: "Yank url", key: "yankurl", hint: oneLine(n.URL), disabled: n.URL == ""})
+			menuItem{label: "Yank media url", key: "yankurl", hint: oneLine(n.URL), disabled: n.URL == ""})
 	case ir.Textbox:
 		if n.Value == "" {
 			items = append(items, menuItem{label: "Edit", key: "edit", hint: "type a value"})
