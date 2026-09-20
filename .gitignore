@@ -1,0 +1,11 @@
+/webu
+/dist/
+.DS_Store
+.local/
+.idea/
+.vscode/
+*.test
+*.out
+go.work
+go.work.sum
+.claude/settings.local.json
