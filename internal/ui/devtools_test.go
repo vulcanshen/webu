@@ -134,9 +134,25 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 		t.Errorf("console: %s", joined)
 	}
 
-	// Enter is the prompt: an expression runs in the page, the input and
-	// its result join the list, and the prompt stays for the next one.
+	// Enter is the entry, whole: the list cuts long messages at the width.
+	for i, e := range d.m.devtools.console.entries {
+		if e.Text == "bad thing" {
+			d.m.devtools.console.cursor = i
+		}
+	}
 	d.key("enter")
+	d.until("console detail", func() bool {
+		return d.m.devtools.detail.isActive() && strings.Contains(strings.Join(d.m.devtools.detail.lines, "\n"), "bad thing")
+	})
+	if !strings.Contains(strings.Join(d.m.devtools.detail.lines, "\n"), "level    error") {
+		t.Errorf("detail head: %v", d.m.devtools.detail.lines)
+	}
+	d.key("esc")
+	d.until("detail closed", func() bool { return !d.m.devtools.detail.isActive() })
+
+	// i is the prompt: an expression runs in the page, the input and its
+	// result join the list, and the prompt stays for the next one.
+	d.key("i")
 	d.until("prompt", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputEval })
 	d.key("1 + 2")
 	d.key("enter")

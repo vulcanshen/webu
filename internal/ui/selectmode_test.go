@@ -197,6 +197,21 @@ func TestVEntersSelectionFromAnyPanel(t *testing.T) {
 	}
 }
 
+func TestWrapWords(t *testing.T) {
+	got := wrapWords("An iframe which has both allow-scripts and allow-same-origin", 20)
+	for i, l := range got {
+		if dispW(l) > 20 {
+			t.Errorf("line %d too wide: %q", i, l)
+		}
+	}
+	if strings.Join(got, " ") != "An iframe which has both allow-scripts and allow-same-origin" {
+		t.Errorf("words lost or reordered: %q", got)
+	}
+	if long := wrapWords(strings.Repeat("x", 25), 10); len(long) != 3 {
+		t.Errorf("a long word is cut: %q", long)
+	}
+}
+
 func TestCodeRowsAndTableHeaders(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		{Kind: ir.Code, Children: []*ir.Node{{Kind: ir.Text, Name: "one\ntwo"}}},

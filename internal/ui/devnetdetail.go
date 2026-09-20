@@ -26,11 +26,70 @@ type bodyMsg struct {
 type devDetailPopup struct {
 	anim    popupAnimator
 	entry   page.NetEntry
+	title   string
 	lines   []string
 	top     int
 	layer   int
 	screenW int
 	screenH int
+}
+
+// innerW is the box's inside; what showText wraps to.
+func (m devDetailPopup) innerW() int { return popupInnerW(m.screenW, m.screenW-8) }
+
+// showText opens on lines of plain text — a console entry's whole message
+// — wrapped to the box, since a line the list had to cut is the reason
+// the popup exists.
+func (m *devDetailPopup) showText(title string, head []string, text string, layer int) tea.Cmd {
+	m.title, m.layer, m.top = title, layer, 0
+	m.entry = page.NetEntry{}
+	m.lines = append([]string(nil), head...)
+	width := max(10, m.innerW()-3)
+	for _, para := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		if para == "" {
+			m.lines = append(m.lines, "")
+			continue
+		}
+		for _, line := range wrapWords(para, width) {
+			m.lines = append(m.lines, "  "+line)
+		}
+	}
+	return m.anim.open()
+}
+
+// wrapWords breaks text at spaces to at most width cells per line; a word
+// longer than the line is cut where it must be.
+func wrapWords(text string, width int) []string {
+	var out []string
+	line, used := "", 0
+	for _, w := range strings.Fields(text) {
+		for dispW(w) > width {
+			if used > 0 {
+				out = append(out, line)
+				line, used = "", 0
+			}
+			head := truncateNoEllipsis(w, width)
+			out = append(out, head)
+			w = strings.TrimPrefix(w, head)
+		}
+		if w == "" {
+			continue
+		}
+		if used > 0 && used+1+dispW(w) > width {
+			out = append(out, line)
+			line, used = "", 0
+		}
+		if used > 0 {
+			line += " "
+			used++
+		}
+		line += w
+		used += dispW(w)
+	}
+	if used > 0 || len(out) == 0 {
+		out = append(out, line)
+	}
+	return out
 }
 
 func newDevDetailPopup() devDetailPopup {
@@ -44,6 +103,7 @@ func (m *devDetailPopup) setSize(w, h int) { m.screenW, m.screenH = w, h }
 // show opens on the headers at once; the body arrives by bodyMsg.
 func (m *devDetailPopup) show(e page.NetEntry, layer int) tea.Cmd {
 	m.entry, m.layer, m.top = e, layer, 0
+	m.title = oneLine(fitURL(e.URL, m.innerW()-12))
 	m.lines = m.build("(loading body…)")
 	return m.anim.open()
 }
@@ -155,7 +215,7 @@ func (m *devDetailPopup) update(msg tea.KeyMsg) {
 }
 
 func (m devDetailPopup) view() string {
-	innerW := popupInnerW(m.screenW, m.screenW-8)
+	innerW := m.innerW()
 	txt := lipgloss.NewStyle().Foreground(textColor)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	vis := m.visible()
@@ -169,7 +229,7 @@ func (m devDetailPopup) view() string {
 		rows = append(rows, style.Render(padRight(" "+l, innerW)))
 	}
 	pairs := [][2]string{{"j/k", "scroll"}, {"u/d", "half page"}, {"Esc", "close"}}
-	return drawPopupBoxPad(popupLayerColor(m.layer), " "+glyphDevTools+" "+oneLine(fitURL(m.entry.URL, innerW-12))+" ",
+	return drawPopupBoxPad(popupLayerColor(m.layer), " "+glyphDevTools+" "+m.title+" ",
 		hintLegend(pairs), animRows(m.anim, rows), innerW, false)
 }
 

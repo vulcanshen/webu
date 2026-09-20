@@ -139,7 +139,7 @@ u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬�
 |---|---|---|---|---|
 | **Storage** | cookies `Network.getCookies(url)`；local / session `DOMStorage.getDOMStorageItems` | 三個 section 各一張表；cookie 欄位 name、value 截斷、domain、path、expires、flags | Delete 該筆（`Network.deleteCookies` / `DOMStorage.removeDOMStorageItem`）、Yank value、Clear site data（`Storage.clearDataForOrigin`）、`/` 過濾 | **完整** |
 | **Network** | `Network.enable` 後 `requestWillBeSent` / `responseReceived` / `loadingFinished` / `loadingFailed`；WebSocket frame 事件 | 一列一 request：method、status、type、URL 縮短、size、耗時 | Enter → detail 子 popup（headers + body，`Network.getResponseBody`）、`/` 過濾、Clear | 清單 + detail |
-| **Console** | `Runtime.consoleAPICalled`、`Runtime.exceptionThrown`、`Log.entryAdded` | viewport，等級 glyph，warn / error 用 override 色 | `/` 過濾、Clear、Eval（`Runtime.evaluate`） | **完整**（修訂 2026-09-20：Eval 提前到 v1，Enter 開輸入列、REPL、`>` / `<` 回到清單） |
+| **Console** | `Runtime.consoleAPICalled`、`Runtime.exceptionThrown`、`Log.entryAdded` | viewport，等級 glyph，warn / error 用 override 色 | Enter → 該筆完整內容（detail 子 popup，訊息折行）、`[i]nsert` → Eval 輸入列（`Runtime.evaluate`，REPL）、`/` 過濾、Clear | **完整**（修訂 2026-09-20：Eval 提前到 v1；Enter 給 detail，因為清單裡長訊息被截斷看不到） |
 | **Source** | `DOM.getOuterHTML` | viewport，行號 | `/` grep（只留含關鍵字的行） | **完整**（修訂 2026-09-20：原本是 `[3]` 的 `[V] View source`，搬進來把 `V` 讓給 visual mode） |
 
 實作註記：

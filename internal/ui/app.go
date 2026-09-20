@@ -928,6 +928,9 @@ func (m AppModel) devtoolsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.devtools.detail.show(e, m.layer()+1), fetch)
 	case devEval:
 		return m, m.openEvalPrompt()
+	case devConsoleDetail:
+		e, _ := m.devtools.console.current(filter)
+		return m, m.devtools.detail.showText("console · "+e.Level, detailHead(e), e.Text, m.layer()+1)
 	}
 	return m, nil
 }
