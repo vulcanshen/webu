@@ -147,9 +147,12 @@ type renderer struct {
 	hasMain bool
 	inMain  int
 	inNav   int
-	indent  string // prefix every wrapped line of the current block gets
-	lead    string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
-	gap     bool   // a blank row is owed before the next content row
+	// inNavList: a navigation list is flowing on one line, so an entry the
+	// page styled as a block flows too.
+	inNavList bool
+	indent    string // prefix every wrapped line of the current block gets
+	lead      string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
+	gap       bool   // a blank row is owed before the next content row
 	// inCell: a table cell is being gathered. A cell is one line, so a block
 	// inside it (a <center>, a <div>) flattens into the flow instead of
 	// emitting rows of its own — which would land ABOVE the table, since the
@@ -230,22 +233,32 @@ func countItems(n *ir.Node) int {
 
 // navList says whether a list is a row of short entries — the kind a
 // navigation is made of — that reads better as one line than as a column.
+// A link the page styled display:block is still a short entry: the
+// column was the page's CSS, not its structure.
 func navList(n *ir.Node) bool {
 	for _, li := range n.Children {
 		if li.Kind != ir.ListItem {
 			return false
 		}
-		block := false
 		for _, c := range li.Children {
-			if c.IsBlock() {
-				block = true
+			if c.IsBlock() && !inlineKind(c) {
+				return false
 			}
 		}
-		if block || dispW(li.Text()) > 40 {
+		if dispW(li.Text()) > 40 {
 			return false
 		}
 	}
 	return len(n.Children) > 0
+}
+
+// inlineKind is a node that flows by nature, whatever the page's CSS said.
+func inlineKind(n *ir.Node) bool {
+	switch n.Kind {
+	case ir.Text, ir.Link, ir.Button, ir.Textbox, ir.Check, ir.Combobox, ir.Media, ir.Code:
+		return true
+	}
+	return false
 }
 
 // ------------------------------------------------------------------ blocks
@@ -304,6 +317,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			// Platform · Solutions · Resources — not a column: the column
 			// was costing a screen before the page began.
 			first := true
+			r.inNavList = true
 			for _, li := range n.Children {
 				if !first {
 					r.space()
@@ -313,6 +327,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 				first = false
 				r.inlineChildren(li, -1, segPlain)
 			}
+			r.inNavList = false
 			r.flush()
 			if depth <= 1 {
 				r.gap = true
@@ -419,7 +434,7 @@ func (r *renderer) children(n *ir.Node, depth int) {
 // — except inside a table cell, where it flattens (see inCell).
 func (r *renderer) inlineChildren(n *ir.Node, item int, kind segKind) {
 	for _, c := range n.Children {
-		if c.IsBlock() {
+		if c.IsBlock() && !(r.inNavList && inlineKind(c)) {
 			if r.inCell {
 				r.space()
 				r.inlineChildren(c, item, kind)
