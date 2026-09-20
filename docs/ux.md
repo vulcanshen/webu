@@ -58,13 +58,13 @@ VTP §A.0.K 只要求同一 app 內跨 surface 不變。
 
 | role | item operation |
 |---|---|
-| link | Open（= Enter）、Open in new tab、Yank url |
+| link | Open（= Enter）、Open in new tab、Yank link url（寫明「link」：游標在連結上時，光寫 url 會被讀成整頁的，那是 panel operation 的 `[Y]`；修訂 2026-09-20） |
 | button / checkbox / radio / switch | Click（= Enter） |
 | textbox（空） | Edit（= Enter，開 input popup） |
 | textbox（有值） | **Submit**（送 Enter 給頁面）、Edit、Clear、Yank；cursor 預設停 Submit（sshu §6.6.1 主要意圖優先） |
 | textarea | Edit（多行 popup）、Edit in editor（§2 editor 鏈）、Clear、Yank；無 Submit（瀏覽器裡 textarea 的 Enter 是換行） |
 | select | Choose（= Enter，option 清單 menu） |
-| image / media 佔位框 | Click（= Enter）、Yank url |
+| image / media 佔位框 | Click（= Enter）、Yank media url |
 | heading | Fold section：摺到下一個同級或更高級 heading 為止，換頁即忘 |
 | 所有 item 共有 | Yank text、Inspect（message 類 popup：role、name、states、backendDOMNodeId、href 或 src） |
 | 未支援 role | 第一列 disabled：「role: slider，尚未支援，只能 click」（function.md §3 fallback） |
