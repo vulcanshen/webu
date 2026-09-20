@@ -86,6 +86,11 @@ type renderer struct {
 	indent string // prefix every wrapped line of the current block gets
 	lead   string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
 	gap    bool   // a blank row is owed before the next content row
+	// inCell: a table cell is being gathered. A cell is one line, so a block
+	// inside it (a <center>, a <div>) flattens into the flow instead of
+	// emitting rows of its own — which would land ABOVE the table, since the
+	// table's rows are emitted after every cell has been measured.
+	inCell bool
 }
 
 func render(root *ir.Node, width int) layout {
@@ -143,8 +148,24 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.indent = saved
 	case ir.Table:
 		r.flush()
-		r.table(n)
-		r.gap = true
+		if hasHeader(n) {
+			r.table(n)
+			r.gap = true
+		} else {
+			// No header cell anywhere: a table used for layout that Chromium
+			// still called a table (Hacker News). Columns would squeeze the
+			// one column that matters; each row is one line of flow instead
+			// (function.md §3 heuristics).
+			for _, tr := range n.Children {
+				r.flush()
+				// One line per row, wrapped: the cells and whatever blocks
+				// they hold flatten into it, the same as inside a data cell.
+				r.inCell = true
+				r.inlineChildren(tr, -1, segPlain)
+				r.inCell = false
+				r.flush()
+			}
+		}
 	case ir.Row:
 		// A row outside a table (a grid we did not recognise as one): one
 		// line, cells run together.
@@ -204,15 +225,34 @@ func (r *renderer) children(n *ir.Node, depth int) {
 	}
 }
 
-// inlineChildren flows n's children; a block child inside a flow breaks it.
+// inlineChildren flows n's children; a block child inside a flow breaks it
+// — except inside a table cell, where it flattens (see inCell).
 func (r *renderer) inlineChildren(n *ir.Node, item int, kind segKind) {
 	for _, c := range n.Children {
 		if c.IsBlock() {
+			if r.inCell {
+				r.space()
+				r.inlineChildren(c, item, kind)
+				r.space()
+				continue
+			}
 			r.block(c, 2)
 			continue
 		}
 		r.inline(c, item, kind)
 	}
+}
+
+// hasHeader reports whether any cell of the table is a header cell.
+func hasHeader(t *ir.Node) bool {
+	found := false
+	t.Walk(func(n *ir.Node) bool {
+		if n.Kind == ir.Cell && n.Header {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 func hasItem(n *ir.Node) bool {
@@ -240,7 +280,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		id := r.newItem(n)
 		name := n.Name
 		if name == "" {
-			name = nameOr(n.URL, "link")
+			name = linkFallback(n.URL)
 		}
 		r.add(atom{text: glyphLink + " ", item: id, kind: segLink})
 		r.words(name, id, segLink)
@@ -276,7 +316,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		id := r.newItem(n)
 		r.add(atom{text: mediaText(n), item: id, kind: segMedia})
 	case ir.Code:
-		if strings.Contains(n.Text(), "\n") {
+		if strings.Contains(n.Text(), "\n") && !r.inCell {
 			r.flush()
 			r.codeBlock(n)
 			r.flush()
@@ -300,7 +340,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Option:
 		// Only ever drawn by the options popup.
 	default:
-		if n.IsBlock() {
+		if n.IsBlock() && !r.inCell {
 			r.block(n, 2)
 			return
 		}
@@ -314,7 +354,11 @@ func (r *renderer) words(text string, item int, kind segKind) {
 	lines := strings.Split(text, "\n")
 	for li, line := range lines {
 		if li > 0 {
-			r.flushKeepIndent()
+			if r.inCell {
+				r.space()
+			} else {
+				r.flushKeepIndent()
+			}
 		}
 		fields := strings.Fields(line)
 		if len(fields) == 0 {
@@ -386,6 +430,30 @@ func (r *renderer) dropLabel(name string) {
 		return
 	}
 	r.flow = r.flow[:start]
+}
+
+// linkFallback names a link that has no name (an image with no alt, an
+// empty div with a click handler): the host for a root URL, else the last
+// path segment. The whole URL is what the Inspect popup is for.
+func linkFallback(u string) string {
+	if u == "" {
+		return "link"
+	}
+	rest := u
+	if i := strings.Index(rest, "://"); i >= 0 {
+		rest = rest[i+3:]
+	}
+	if i := strings.IndexAny(rest, "?#"); i >= 0 {
+		rest = rest[:i]
+	}
+	rest = strings.TrimRight(rest, "/")
+	if i := strings.LastIndexByte(rest, '/'); i >= 0 {
+		rest = rest[i+1:]
+	}
+	if rest == "" {
+		return "link"
+	}
+	return rest
 }
 
 func startsWord(s string) bool {
@@ -541,8 +609,9 @@ func (r *renderer) table(n *ir.Node) {
 // cellSegs is a cell's inline content as segments (no wrapping inside a
 // cell: a table row is one screen row).
 func (r *renderer) cellSegs(td *ir.Node) []seg {
-	saved := r.flow
-	r.flow = nil
+	saved, wasCell := r.flow, r.inCell
+	r.flow, r.inCell = nil, true
+	defer func() { r.inCell = wasCell }()
 	kind := segPlain
 	if td.Header {
 		kind = segHeading
@@ -639,22 +708,34 @@ func (r *renderer) wrap() {
 		used = dispW(prefix)
 		line = []seg{{text: prefix, item: -1, kind: segPlain}}
 	}
+	// A space is not placed until the word after it is: if the two do not
+	// fit together the line breaks BEFORE the word, and the space is what
+	// the break consumes. Placing it eagerly and dropping it when it did not
+	// fit let the next word land flush against the previous one.
+	pending := false
+	var pendingItem int
+	var pendingKind segKind
 	for i := 0; i < len(flow); i++ {
 		a := flow[i]
 		if a.space {
-			if used+1 < r.width {
-				line = append(line, seg{text: " ", item: a.item, kind: a.kind})
-				used++
+			if used > dispW(prefix) {
+				pending, pendingItem, pendingKind = true, a.item, a.kind
 			}
 			continue
 		}
 		w := dispW(a.text)
-		if used+w > r.width && used > dispW(prefix) {
-			// Drop a trailing space before breaking.
-			if last := line[len(line)-1]; last.text == " " {
-				line = line[:len(line)-1]
-			}
+		need := w
+		if pending {
+			need++
+		}
+		if used+need > r.width && used > dispW(prefix) {
 			emitLine()
+			pending = false
+		}
+		if pending {
+			line = append(line, seg{text: " ", item: pendingItem, kind: pendingKind})
+			used++
+			pending = false
 		}
 		text := a.text
 		for dispW(text) > avail() && avail() > 0 {

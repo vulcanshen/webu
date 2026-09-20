@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/webu/internal/browser"
@@ -44,7 +45,28 @@ func smokeLoad(t *testing.T, b *browser.Browser, url string) *driver {
 	if p := d.page(); p.errText != "" {
 		t.Fatalf("%s: %s", url, p.errText)
 	}
+	// A page keeps arriving after its load event; let the settle captures
+	// land before looking.
+	d.pumpFor(2 * time.Second)
+	p := d.page()
+	t.Logf("%s — %q", p.url, p.title)
+	lines := strings.Split(ir.Dump(p.root), "\n")
+	t.Logf("IR head:\n%s", strings.Join(lines[:min(40, len(lines))], "\n"))
 	return d
+}
+
+// pumpFor keeps the model updated for a while, for pages that arrive in
+// pieces.
+func (d *driver) pumpFor(dur time.Duration) {
+	deadline := time.After(dur)
+	for {
+		select {
+		case msg := <-d.msgs:
+			d.send(msg)
+		case <-deadline:
+			return
+		}
+	}
 }
 
 func countKind(l layout, k ir.Kind) int {
@@ -93,12 +115,12 @@ func TestSmokeGitHub(t *testing.T) {
 	}
 	found := false
 	d.page().root.Walk(func(n *ir.Node) bool {
-		if n.Kind == ir.Heading && strings.Contains(n.Text(), "chromedp") {
+		if n.Kind == ir.Link && n.Name == "chromedp" && strings.HasSuffix(n.URL, "/chromedp/chromedp") {
 			found = true
 		}
 		return !found
 	})
 	if !found {
-		t.Errorf("no heading naming the repository")
+		t.Errorf("no link naming the repository")
 	}
 }

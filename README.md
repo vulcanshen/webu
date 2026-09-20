@@ -38,17 +38,32 @@ u-family 成員（kbu / filu / sshu 之後），依 VTP（`thoughts/tui-design`�
 ## 目錄
 
 ```
-README.md            本檔
-docs/function.md     功能邊界
-docs/ui.md           版面與 surface
-docs/ux.md           互動語意
-tools/axdump/        AX tree 驗證程式（chromedp），docs/function.md §3 實測數據的來源
+README.md                    本檔
+docs/function.md             功能邊界
+docs/ui.md                   版面與 surface
+docs/ux.md                   互動語意
+docs/webu-implementation.md  實作怎麼落地、實測出來的決定、做到哪
+docs/support.md              支援的 AX role（由 internal/ir/roles.go 產生）
+cmd/webu/                    進入點
+internal/browser/            Chromium 下載、profile、啟動、關閉
+internal/ir/                 AX tree → IR，每個 role 一份 fixture
+internal/page/               CDP 端：擷取與動作
+internal/ui/                 TUI
+tools/axdump/                看任何頁面的 AX tree（用本機 Chrome）
 ```
 
-## 下一步：開發
+## 開發
 
-- 技術棧：Go + Bubble Tea + Lipgloss + bubbletea-overlay + chromedp，同 u-family；尚未 `git init`、尚未 `go mod init`
-- 之後對照 kbu / filu / sshu 的慣例補 `docs/webu-implementation.md`
-- 第一個 milestone：`docs/function.md` §11 —— v1 role 白名單每個 role 一份 fixture 通過，Hacker News smoke 能登入、能點、能填表
-- Chromium 下載器與 profile 目錄先於任何 UI；`[3]` 頁面渲染先於側欄與 popup
-- `tools/axdump`：`cd tools/axdump && go run . <url>` 看任何頁面的 AX tree
+技術棧：Go + Bubble Tea + Lipgloss + bubbletea-overlay + chromedp，同 u-family。
+
+```
+make build              → ./webu；首次啟動會下載釘死版本的 Chromium（約 175–250 MB）到 cache 目錄
+make test               所有測試；有下載過 Chromium 才會跑整合測試，否則 skip
+make fixtures           用釘死的 Chromium 重抓 internal/ir 的 role fixture 與 docs/support.md
+WEBU_SMOKE=1 go test ./internal/ui -run TestSmoke -v     真站 smoke（Hacker News、GitHub）
+make axdump URL=https://…                                任何頁面的 AX tree
+```
+
+第一個 milestone（`docs/function.md` §11）已達：v1 role 白名單每個 role 一份 fixture 通過，
+本機頁面能點、能填表、能選 option，Hacker News 與 GitHub 畫得出來。做到哪、沒做哪，見
+`docs/webu-implementation.md` §9。
