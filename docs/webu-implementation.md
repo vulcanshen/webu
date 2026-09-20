@@ -71,6 +71,13 @@ item，item 記自己跨哪幾列，游標才能把整個 run 反白。決定：
 - 沒名字的 link 顯示 URL 最後一段（`vote`、`news.ycombinator.com`），整條 URL 在 Inspect
 - 表格 cell 內的 block 攤平成一行（`inCell`）；資料表欄寬從最寬的欄開始縮（同 sshu）
 - 空格延後放：字與空格一起塞不下就換行，不會出現 `right(`
+- **Landmark 摺疊**（ui.md §2 修訂）：`renderOpts.fold` 是 user 的決定（by backendDOMNodeId，重抓後仍在）、
+  沒決定時 `renderer.folded` 依「有 main 且不是 main 也不在 main 裡」預設摺疊；每個 landmark 的標題列是 item
+  （`item.folded`）；`tab.toggleFold` 重排並把游標留在原節點；`tab.reveal` 供 Outline 打開路徑上的 landmark
+- **navigation 內的短清單一行流式**：`renderer.inNav > 0 && navList(n)`，項目以 dim 的 `·` 隔開
+- **measure**：`renderOpts.measure` 只管 `wrap()` 的 `textW`；`store.Config.Measure` 預設 100
+- **item 的 col**：`emit` 時記每個 item 在第一列的起始欄位；`tab.rowStep`（j/k 換列、找最近欄位）與
+  `tab.alongRow`（h/l 同列）靠它
 - textbox 畫成 `󰛿 name ____value____`，底床至少 12 格；checkbox `[x]`、radio `(•)`、combobox `name [value ▾]`、
   media `[󰋩 alt]` 一行 chip（ui.md 的「佔位框 + 尺寸」先做成一行，尺寸要另打 CDP，v1 不做）
 

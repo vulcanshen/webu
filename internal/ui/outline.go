@@ -92,6 +92,8 @@ func (m AppModel) outlineKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if err != nil || i < 0 || i >= len(m.outlineFor) || t == nil {
 		return m, closeCmd
 	}
+	// A heading inside a folded landmark has no row yet: open the way to it.
+	t.reveal(m.outlineFor[i].node, m.pageW())
 	t.jumpTo(m.outlineFor[i].node, m.pageVisible())
 	m.focus = panel3
 	return m, closeCmd

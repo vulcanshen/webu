@@ -210,9 +210,9 @@ func TestOutlineEntriesAndJump(t *testing.T) {
 	if n := tb.current(); n == nil || n.Kind != ir.Heading || n.Text() != "Sub" {
 		t.Errorf("jump to a heading lands on it: %+v", n)
 	}
-	tb.jumpTo(entries[3].node, 10) // region Sec: first item inside is the Sub heading
-	if n := tb.current(); n == nil || n.Text() != "Sub" {
-		t.Errorf("jump to a landmark lands on its first item: %+v", n)
+	tb.jumpTo(entries[3].node, 10) // region Sec: its own rule row is the item
+	if n := tb.current(); n == nil || n.Kind != ir.Landmark || n.Name != "Sec" {
+		t.Errorf("jump to a landmark lands on its rule: %+v", n)
 	}
 	if tb.top != tb.lay.marks[entries[3].node] {
 		t.Errorf("top %d, want the landmark's row %d", tb.top, tb.lay.marks[entries[3].node])

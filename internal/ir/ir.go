@@ -170,6 +170,11 @@ func (n *Node) Text() string {
 		if c.Kind == Option {
 			continue
 		}
+		// A block child starts a line of its own, so a landmark's text
+		// reads as its paragraphs rather than as one run-together string.
+		if c.IsBlock() && b.Len() > 0 && !strings.HasSuffix(b.String(), "\n") {
+			b.WriteString("\n")
+		}
 		b.WriteString(c.Text())
 	}
 	return b.String()

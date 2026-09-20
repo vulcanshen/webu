@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
@@ -98,6 +99,155 @@ func TestWrapKeepsItemSpans(t *testing.T) {
 		}
 	}
 }
+
+func link(name, url string, id int) *ir.Node {
+	return &ir.Node{Kind: ir.Link, Name: name, URL: url, ID: cdpID(id)}
+}
+
+func para(children ...*ir.Node) *ir.Node { return &ir.Node{Kind: ir.Paragraph, Children: children} }
+func text(s string) *ir.Node             { return &ir.Node{Kind: ir.Text, Name: s} }
+
+func TestLandmarksFoldAroundMain(t *testing.T) {
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "banner", ID: 1, Children: []*ir.Node{link("Home", "/", 2), link("About", "/a", 3)}},
+		{Kind: ir.Landmark, Role: "main", ID: 4, Children: []*ir.Node{
+			para(text("body text")),
+			{Kind: ir.Landmark, Role: "navigation", Name: "Repository", ID: 6, Children: []*ir.Node{link("Code", "/c", 7)}},
+		}},
+		{Kind: ir.Landmark, Role: "contentinfo", ID: 5, Children: []*ir.Node{text("footer")}},
+	}}
+	tb := &tab{cursor: -1, root: root}
+	tb.relayout(60)
+	// The rows alone: the item list names a landmark by its whole text,
+	// folded or not, which is not what is on screen.
+	rows := func() string {
+		var b strings.Builder
+		for _, r := range tb.lay.rows {
+			b.WriteString(r.plain() + "\n")
+		}
+		return b.String()
+	}
+	out := rows()
+	for _, want := range []string{"▸ banner · 2 items", "▾ main", "body text", "▾ navigation Repository", "Code", "▸ contentinfo"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "Home") || strings.Contains(out, "footer") {
+		t.Errorf("a folded landmark's content is drawn:\n%s", out)
+	}
+	// Items: three rules on the top level, the nav rule, and Code.
+	if len(tb.lay.items) != 5 || tb.lay.items[0].node.Role != "banner" || !tb.lay.items[0].folded {
+		t.Fatalf("items: %s", out)
+	}
+	tb.cursor = 0
+	tb.toggleFold(60)
+	out = rows()
+	if !strings.Contains(out, "▾ banner") || !strings.Contains(out, "Home") {
+		t.Errorf("Enter on a folded landmark opens it:\n%s", out)
+	}
+	if tb.cursor != 0 || tb.lay.items[0].node.Role != "banner" {
+		t.Errorf("the cursor should stay on the landmark: %d", tb.cursor)
+	}
+	// The Outline reaching into a folded landmark opens the way.
+	tb.toggleFold(60)
+	if strings.Contains(rows(), "About") {
+		t.Fatal("the banner should be shut again")
+	}
+	tb.reveal(root.Children[0].Children[1], 60)
+	if !strings.Contains(rows(), "About") {
+		t.Error("reveal should open the banner")
+	}
+
+	// A page with no main folds nothing.
+	root2 := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "banner", ID: 1, Children: []*ir.Node{link("Home", "/", 2)}},
+	}}
+	tb2 := &tab{cursor: -1, root: root2}
+	tb2.relayout(60)
+	if out := dumpLayout(tb2.lay); !strings.Contains(out, "Home") || strings.Contains(out, "▸") {
+		t.Errorf("no main, nothing folded:\n%s", out)
+	}
+}
+
+func TestNavigationListFlowsOnOneLine(t *testing.T) {
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "navigation", ID: 1, Children: []*ir.Node{{Kind: ir.List, Children: []*ir.Node{
+			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Platform", "/p", 2)}},
+			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Solutions", "/s", 3)}},
+			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Resources", "/r", 4)}},
+		}}}},
+	}}
+	l := render(root, 80)
+	if len(l.rows) < 2 {
+		t.Fatalf("rows:\n%s", dumpLayout(l))
+	}
+	if got := l.rows[1].plain(); !strings.Contains(got, "Platform · ") || !strings.Contains(got, "Solutions · ") || !strings.Contains(got, "Resources") {
+		t.Errorf("nav list should be one line: %q", got)
+	}
+}
+
+func TestMeasureCapsTextNotTables(t *testing.T) {
+	long := strings.Repeat("word ", 60)
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		para(text(long)),
+		{Kind: ir.Table, Children: []*ir.Node{{Kind: ir.Row, Children: []*ir.Node{
+			{Kind: ir.Cell, Header: true, Children: []*ir.Node{text(strings.Repeat("h", 30))}},
+			{Kind: ir.Cell, Header: true, Children: []*ir.Node{text(strings.Repeat("i", 30))}},
+		}}}},
+	}}
+	l := renderWith(root, renderOpts{width: 200, measure: 40})
+	wideTable := false
+	for i, r := range l.rows {
+		w := dispW(r.plain())
+		if strings.HasPrefix(r.plain(), "word") && w > 40 {
+			t.Errorf("row %d of text is %d wide, measure is 40", i, w)
+		}
+		if strings.HasPrefix(r.plain(), "hhh") && w > 40 {
+			wideTable = true
+		}
+	}
+	if !wideTable {
+		t.Error("the table should still take the width")
+	}
+}
+
+func TestRowNavigation(t *testing.T) {
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		para(link("A", "/a", 1), text(" "), link("B", "/b", 2), text(" "), link("C", "/c", 3)),
+		para(link("D", "/d", 4)),
+	}}
+	tb := &tab{cursor: 0, root: root}
+	tb.relayout(60)
+	if len(tb.lay.items) != 4 {
+		t.Fatalf("items:\n%s", dumpLayout(tb.lay))
+	}
+	name := func() string { return tb.current().Name }
+	tb.moveItem("l", 10)
+	tb.moveItem("l", 10)
+	if name() != "C" {
+		t.Errorf("l l → %s", name())
+	}
+	tb.moveItem("l", 10)
+	if name() != "C" {
+		t.Errorf("l at the row's end stays: %s", name())
+	}
+	tb.moveItem("j", 10)
+	if name() != "D" {
+		t.Errorf("j → %s", name())
+	}
+	tb.moveItem("k", 10)
+	if name() != "A" {
+		t.Errorf("k lands nearest the column (D starts at 0): %s", name())
+	}
+	tb.moveItem("h", 10)
+	tb.moveItem("k", 10)
+	if name() != "A" {
+		t.Errorf("h and k at the top stay: %s", name())
+	}
+}
+
+func cdpID(n int) cdp.BackendNodeID { return cdp.BackendNodeID(n) }
 
 func TestLongWordIsSplit(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{{
