@@ -71,6 +71,7 @@ type AppModel struct {
 	options   spaceMenu // a textbox's Submit/Edit/Clear/Yank, or a select's options
 	outline   spaceMenu // the page's landmarks and headings
 	lists     listPopup // Bookmarks / Shortcuts / History
+	devtools  devtoolsPopup
 	viewer    viewerPopup
 	message   messagePopup
 	help      helpPopup
@@ -102,6 +103,7 @@ func New(b *browser.Browser, startURL string) AppModel {
 		options:   spaceMenu{anim: newPopupAnimator("options")},
 		outline:   newOutlineMenu(),
 		lists:     newListPopup(),
+		devtools:  newDevtoolsPopup(),
 		viewer:    newViewerPopup(),
 		message:   newMessagePopup(),
 		help:      newHelpPopup(),
@@ -156,7 +158,8 @@ func (m AppModel) Close() {
 func (m AppModel) narrow() bool { return m.w < narrowW }
 func (m AppModel) panelH() int  { return m.h - 1 } // one footer row
 func (m AppModel) layer() int {
-	if m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() || m.outline.isActive() {
+	if m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() ||
+		m.outline.isActive() || m.devtools.isActive() {
 		return 2
 	}
 	return 1
@@ -186,7 +189,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		first := m.w == 0
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
-			&m.spaceMenu, &m.options, &m.outline, &m.lists, &m.viewer, &m.message,
+			&m.spaceMenu, &m.options, &m.outline, &m.lists, &m.devtools, &m.viewer, &m.message,
 			&m.help, &m.confirm, &m.input, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
@@ -199,8 +202,32 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AnimTickMsg:
 		return m, tea.Batch(
 			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.outline.anim.tick(msg),
-			m.lists.anim.tick(msg), m.viewer.anim.tick(msg), m.message.anim.tick(msg),
+			m.lists.anim.tick(msg), m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
+			m.viewer.anim.tick(msg), m.message.anim.tick(msg),
 			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.toast.anim.tick(msg))
+
+	case devTickMsg:
+		// The popup redraws from the tab's log while it is open, and the
+		// tick re-arms itself only for as long as that is.
+		if msg.gen != m.devtools.tickGen || !m.devtools.isActive() {
+			return m, nil
+		}
+		if _, t := m.tabByID(m.devtools.tabID); t != nil {
+			m.devtools.refresh(t.dev)
+		}
+		return m, m.devtools.tick()
+
+	case storageMsg:
+		if m.devtools.isActive() && msg.tabID == m.devtools.tabID {
+			m.devtools.storage.set(msg.data, msg.err)
+		}
+		return m, nil
+
+	case bodyMsg:
+		if m.devtools.detail.isActive() && msg.tabID == m.devtools.tabID && string(m.devtools.detail.entry.ID) == msg.id {
+			m.devtools.detail.setBody(msg.body, msg.err)
+		}
+		return m, nil
 
 	case dialogMsg:
 		return m.askDialog(msg)
@@ -499,7 +526,7 @@ func (m *AppModel) recordVisit(t *tab) {
 
 func (m AppModel) popupOpen() bool {
 	return m.spaceMenu.isActive() || m.options.isActive() || m.outline.isActive() ||
-		m.lists.isActive() || m.viewer.isActive() || m.message.isActive() ||
+		m.lists.isActive() || m.devtools.isActive() || m.viewer.isActive() || m.message.isActive() ||
 		m.help.isActive() || m.confirm.isActive() || m.input.isActive()
 }
 
@@ -507,6 +534,7 @@ func (m AppModel) popupOpen() bool {
 // character then (§4.5). A search being typed in selection mode counts.
 func (m AppModel) typing() bool {
 	return m.input.anim.owns() || (m.lists.anim.owns() && m.lists.typing) ||
+		(m.devtools.anim.owns() && m.devtools.typing) ||
 		(m.sel.on && m.sel.typing && !m.popupOpen())
 }
 
@@ -546,6 +574,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.outlineKey(msg)
 	case m.lists.anim.owns():
 		return m.listKey(msg)
+	case m.devtools.anim.owns():
+		return m.devtoolsKey(msg)
 	case m.viewer.anim.owns():
 		m.viewer.update(msg)
 		return m, nil
@@ -607,6 +637,16 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.lists.close()
+	case m.devtools.anim.owns():
+		// Innermost first: the detail, then a filter being typed, then the
+		// popup.
+		if m.devtools.detail.anim.owns() {
+			return m, m.devtools.detail.close()
+		}
+		if m.devtools.escTyping() {
+			return m, nil
+		}
+		return m, m.devtools.close()
 	case m.viewer.anim.owns():
 		return m, m.viewer.close()
 	case m.message.anim.owns():
@@ -623,7 +663,7 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 // over, and the user is back on the panel (§7.1).
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.input.close(), m.confirm.close(), m.options.close(),
-		m.outline.close(), m.lists.close(), m.viewer.close(), m.message.close(),
+		m.outline.close(), m.lists.close(), m.devtools.close(), m.viewer.close(), m.message.close(),
 		m.help.close(), m.spaceMenu.close())
 }
 
@@ -706,11 +746,93 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "R", "U", "Y", "A", "O", "Z", "V":
+		case "R", "U", "Y", "A", "O", "Z", "V", "D":
 			return m.dispatch(k)
-		case "D":
-			return m, m.toast.show("not in this build yet", toastInfo)
 		}
+	}
+	return m, nil
+}
+
+// ---------------------------------------------------------------- devtools
+
+// openDevtools shows the popup for the shown tab, on the Storage tab, and
+// fetches the storage.
+func (m *AppModel) openDevtools() tea.Cmd {
+	t := m.shownTab()
+	if t == nil {
+		return m.toast.show("no page for DevTools", toastInfo)
+	}
+	m.devtools.refresh(t.dev)
+	return tea.Batch(m.devtools.open(t.id, m.layer()), m.fetchStorage())
+}
+
+func (m AppModel) fetchStorage() tea.Cmd {
+	t := m.shownTab()
+	if t == nil {
+		return nil
+	}
+	return m.storageThen(t, nil)
+}
+
+// storageThen runs fn on the tab and then re-reads the storage, in ONE
+// command. Not tea.Sequence(act, fetch): a nested Sequence is not waited
+// for by the outer one — Bubble Tea hands the inner list back as a message
+// and moves on — so the fetch would race the change it is meant to show.
+func (m AppModel) storageThen(t *tab, fn func(context.Context) error) tea.Cmd {
+	ctx, url, id := t.ctx, t.url, t.id
+	return func() tea.Msg {
+		if fn != nil {
+			if err := fn(ctx); err != nil {
+				return actionErrMsg{err: err}
+			}
+		}
+		d, err := page.StorageFor(ctx, url)
+		return storageMsg{tabID: id, data: d, err: err}
+	}
+}
+
+func (m AppModel) devtoolsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	action, text := m.devtools.update(msg)
+	t := m.shownTab()
+	if action == devNone || t == nil {
+		return m, nil
+	}
+	filter := m.devtools.filter[m.devtools.tab]
+	switch action {
+	case devFetchStorage:
+		return m, m.fetchStorage()
+	case devYank:
+		return m, copyToClipboard(text)
+	case devDeleteCookie:
+		r, _ := m.devtools.storage.current(filter)
+		c := r.cookie
+		return m, m.storageThen(t, func(ctx context.Context) error { return page.DeleteCookie(ctx, c) })
+	case devDeleteItem:
+		r, _ := m.devtools.storage.current(filter)
+		origin, local, key := m.devtools.storage.data.Origin, r.local, r.key
+		return m, m.storageThen(t, func(ctx context.Context) error { return page.RemoveStorageItem(ctx, origin, local, key) })
+	case devClearSite:
+		origin := m.devtools.storage.data.Origin
+		if origin == "" {
+			return m, m.toast.show("no origin to clear", toastInfo)
+		}
+		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Clear site data",
+			lines:  []string{origin, "Cookies, storage, caches — everything Chromium keeps for it.", "Logins there will be gone."},
+			accept: "clear", warn: true, action: confirmClearSite}, m.layer()+1)
+	case devClearNet:
+		t.dev.ClearNet()
+		m.devtools.refresh(t.dev)
+	case devClearConsole:
+		t.dev.ClearConsole()
+		m.devtools.refresh(t.dev)
+	case devDetail:
+		e, _ := m.devtools.network.current(filter)
+		ctx, id, reqID := t.ctx, t.id, e.ID
+		fetch := func() tea.Msg {
+			body, err := page.ResponseBody(ctx, reqID)
+			return bodyMsg{tabID: id, id: string(reqID), body: body, err: err}
+		}
+		return m, tea.Batch(m.devtools.detail.show(e, m.layer()+1), fetch)
 	}
 	return m, nil
 }
@@ -926,7 +1048,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "URL", key: "U", hint: "go to one"},
 		menuItem{label: "Add to…", key: "A", hint: "Bookmarks or Shortcuts", disabled: t == nil},
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
-		menuItem{label: "DevTools", key: "D", hint: "not in this build yet", disabled: true},
+		menuItem{label: "DevTools", key: "D", hint: "storage, network, console", disabled: t == nil},
 		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
 		menuItem{label: "View source", key: "V", hint: "the HTML as it is now", disabled: t == nil},
 		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil})
@@ -1061,6 +1183,8 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "O":
 		return m, m.openOutline()
+	case "D":
+		return m, m.openDevtools()
 	case "Z":
 		m.zoom = !m.zoom
 		m.relayoutTabs()
@@ -1294,6 +1418,13 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.lists.setEntries(nil)
 		return m, closeCmd
+	case confirmClearSite:
+		t := m.shownTab()
+		origin := m.devtools.storage.data.Origin
+		if t == nil || origin == "" {
+			return m, closeCmd
+		}
+		return m, tea.Batch(closeCmd, m.storageThen(t, func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) }))
 	}
 	return m, closeCmd
 }
@@ -1409,6 +1540,9 @@ func (m AppModel) View() string {
 	}
 	if m.outline.isActive() {
 		out = overlay.Composite(m.outline.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.devtools.isActive() {
+		out = overlay.Composite(m.devtools.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.options.isActive() {
 		out = overlay.Composite(m.options.view(), out, overlay.Center, overlay.Center, 0, 0)

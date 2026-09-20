@@ -117,6 +117,23 @@ pageMsg 存到 `tab.frozen`，離開時套用；item 游標落到最近的 item�
 Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 popup 並執行）。URL 列搜尋中
 換成 `/query  n/m`（Yellow）、邊框 `toneSelect`、footer 只列模式內的鍵。
 
+### DevTools（ui.md §3.2、ui/devtools.go + devstorage / devnetwork / devconsole / devnetdetail）
+
+- 外殼一檔一 animator：title 列放 `tabChain`（kbu 的 starship chip chain），`h/l` 切分頁，`/` 過濾（每分頁一份），
+  `C` 清；開著時每 500 ms 一個 `devTickMsg` 從 tab 的 log 重讀（log 在 chromedp 的 goroutine 填、UI 讀，帶 mutex）
+- 資料：`page.DevLog`（`internal/page/devlog.go`）每 tab 一份、`page.Observe` 在 attach 前註冊 listener，
+  `Prepare` 開 `Network.enable` / `Runtime.enable` / `Log.enable`；ring 各 500 筆；主 frame `frameNavigated` 清空
+  （同 Chrome 預設；preserve log v2）
+- Storage：`Network.getCookies(url)` + `DOMStorage.getDOMStorageItems(origin, local/session)`，開啟與切到時重抓；
+  `x` = `Network.deleteCookies(name, domain, path)` / `DOMStorage.removeDOMStorageItem`、`y` yank value、
+  `C` = confirm 後 `Storage.clearDataForOrigin(origin, "all")`。`file://` 頁沒有 origin，cookie 列得到、storage 空
+- Network：method / status / type / URL / size / ms；Enter → detail 子 popup（自己的 animator、在外殼 view 內 composite），
+  headers 立刻、body 由 `Network.getResponseBody` 非同步補上（cdproto 已解 base64）
+- Console：`consoleAPICalled`（args 轉文字：string 去引號、其餘 description）、`exceptionThrown`、`Log.entryAdded`；
+  warn / error 用 override 色；Eval v2
+- **坑**：`tea.Sequence(t.act(...), fetch)` 不會等內層 Sequence 跑完（Bubble Tea 把巢狀 Sequence 當 message 交回去就往下走），
+  刪 cookie 後的重抓會搶先。要先後執行就寫成一個 cmd（`storageThen`）
+
 ### Outline / Zoom / View source / Inspect
 
 - Outline：`layout.marks` 記每個 landmark / heading 的第一列；popup 是 spaceMenu 實例（同 sshu picker 的重用），
@@ -154,7 +171,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - 歷史：每個分頁 load 完的最終 URL + 標題記一筆，同 URL 的 settle 重抓不重複記
 - 即時更新（function.md §6）：`page.Prepare` 在第一次導航前 `Runtime.addBinding` + 注入 MutationObserver
   （childList / characterData / subtree，150 ms 合併），`Runtime.bindingCalled` 走與 load event 同一條 settle 路
-- 選取模式與 `/` 搜尋、Outline、Zoom、View source、Inspect popup（§A）
+- 選取模式與 `/` 搜尋、Outline、Zoom、View source、Inspect popup、DevTools 三分頁與 Network detail（§A）
 - JS dialog、`target=_blank` 新分頁、憑證錯誤 confirm、下載 toast（§5）
 - 整合測試 `TestAppNavigatesAndFillsAForm`（本機頁：載入 → 點 → 回 → 打字 → Submit → 選 option）、
   `TestListPopupsAndSession`（無瀏覽器：B 開 / 過濾 / 刪 / 存檔）、`hooks_test.go` 五支（新視窗、三種
@@ -164,6 +181,8 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 
 ### 未做（v1 清單，ui.md §7）
 
-DevTools（Storage / Network / Console）、Bookmarks 的目錄樹與 Edit / Move、History fuzzy、Undo close、
-HTTP auth / 檔案上傳 hook、hover 同步（§4 的 mouseMoved 坑）、heading Fold、iframe 內容、
-`h/l` 在 table row 內移動、textarea 的 `$EDITOR` 鏈、關分頁 / 離開時「下載進行中」的 confirm。
+Bookmarks 的目錄樹與 Edit / Move、History fuzzy、Undo close、HTTP auth / 檔案上傳 hook、
+hover 同步（§4 的 mouseMoved 坑）、heading Fold、iframe 內容、`h/l` 在 table row 內移動、
+textarea 的 `$EDITOR` 鏈、關分頁 / 離開時「下載進行中」的 confirm、Console Eval（v2）、preserve log（v2）。
+
+ui.md §7 的 v1 表除了上面這些細項之外都已落地；README 的「下一步」與 CHANGELOG 尚未建立（尚未 tag）。

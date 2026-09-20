@@ -52,6 +52,8 @@ type tab struct {
 	// frozen is a capture that arrived while selection mode held the page
 	// still (ux.md §1); applied when the mode ends.
 	frozen *pageMsg
+	// dev is the tab's network and console record for DevTools (ui.md §3.2).
+	dev *page.DevLog
 }
 
 // pageMsg is a capture landing: the page as Chromium has it now.
@@ -109,8 +111,9 @@ func (m *AppModel) newTabFor(id target.ID) *tab {
 }
 
 func (m *AppModel) newTabWith(ctx context.Context, cancel context.CancelFunc) *tab {
-	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1}
+	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1, dev: &page.DevLog{}}
 	m.nextTabID++
+	page.Observe(ctx, t.dev)
 	ch := m.events
 	id := t.id
 	chromedp.ListenTarget(ctx, func(ev any) {

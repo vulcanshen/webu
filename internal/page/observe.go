@@ -34,6 +34,9 @@ const observerScript = `(() => {
 func Prepare(ctx context.Context) error {
 	return chromedp.Run(ctx,
 		chromedp.ActionFunc(func(ctx context.Context) error {
+			if err := enableDevDomains(ctx); err != nil {
+				return err
+			}
 			if err := runtime.AddBinding(MutationBinding).Do(ctx); err != nil {
 				return err
 			}
