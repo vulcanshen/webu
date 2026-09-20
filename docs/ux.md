@@ -73,7 +73,7 @@ vim 的 `v` 是現成的；`/` 搜尋與 Space menu 的 Select text 也都進得
 頁面**沒有任何 item**（純文字頁）：Space menu 只剩 panel operation，扁平不分 region。
 
 **`[3]` 一般模式，panel operation**：`[R] Reload`、`[P] Previous`、`[N] Next`、
-`[/] Search`（進選取模式）、`Select text`（無 hotkey，進選取模式）、`[U] Go to URL`、`[A] Add to…`
+`[/] Search`（進選取模式）、`[v] Select text`（進選取模式）、`[U] Go to URL`、`[A] Add to…`
 （picker：Bookmarks / Shortcuts，多對象可選 → menu）、`[O] Outline`、`[D] DevTools`、
 `[Z] Zoom`、`[V] View source`、`[Y] Yank page url`、`[W] Close`（關掉 `[3]` 正在顯示的分頁；
 `[2]` 的小寫 `w` 關的是游標列，同字依 focus 面板不同義，修訂 2026-09-20）。

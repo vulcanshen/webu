@@ -1163,7 +1163,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
 		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
-		menuItem{label: "Select text", key: "select", hint: "walk by character, copy some", disabled: t == nil},
+		menuItem{label: "v select text", key: "v", hint: "walk by character, copy some", disabled: t == nil},
 		menuItem{label: "URL", key: "U", hint: "go to one"},
 		menuItem{label: "Add to…", key: "A", hint: "Bookmarks or Shortcuts", disabled: t == nil},
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
@@ -1361,7 +1361,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "/":
 		return m, m.enterSelect(true)
-	case "select":
+	case "v", "select":
 		return m, m.enterSelect(false)
 	case "A":
 		if t != nil {
