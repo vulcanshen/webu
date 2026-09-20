@@ -127,7 +127,7 @@ backendDOMNodeId，找不到落到同序位。
 
 依 ux.md §A 落地。已實作的入口：footer `space menu   ? help   tab/1-2 panels   q quit`；
 `[2]` 的 **Enter 開 item operation 選單**（`itemMenuItems`，第一列主要動作；修訂 2026-09-20），
-Space 開完整選單（同一份 item 列 + panel region `[R] [P] [N] [/] [V] UR[L] [A] [O] [I] [Z] [Y] [W]`）；
+Space 開完整選單（同一份 item 列 + panel region `[R] [T] [P] [N] [/] [V] UR[L] [A] [O] [I] [Z] [Y] [W]`）；
 `[1]` 的 `[w] [c] [r] [y]` / `[T] [X] [U]`；header 三個 chip 沒有 Space menu，各自一個全域鍵（`B` `H` `D`）。help popup 列全域鍵。
 options popup（`m.options`）以 `optionsKind` 區分兩種內容：item 選單、select 的 option 清單（Choose
 在原浮層內換內容）；Add to… picker 隨 Shortcuts 拿掉，`[A]` 直接加進 Bookmarks。
@@ -187,7 +187,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - `[2]` 頁面：URL 列、分隔線、排版、游標、`j/k/u/d/gg/G`、捲動指示與 loading hint
 - Enter = click；textbox 空 → input popup、有值 → Submit / Edit / Clear / Yank；select → option 清單
 - `[1]` 分頁：新開 / 切換（綠字）/ 關閉 / clone / reload / yank / close others；`target=_blank` 尚未接 `Target.targetCreated`
-- goto popup（全域 `L` / `[1]` 的 `T`）：非 URL 當 DuckDuckGo 搜尋；`L` 帶目前 URL 當 placeholder，Tab 接手編輯、Backspace 清掉（`inputPopup.update`）；`bracketHotkey` 會把 label 中間的鍵原地加括號（`UR[L]`）
+- goto popup（全域 `L` / `[1]` `[2]` 的 `T`）：非 URL 當 DuckDuckGo 搜尋；`L` 帶目前 URL 當 placeholder，Tab 接手編輯、Backspace 清掉（`inputPopup.update`）；`bracketHotkey` 會把 label 中間的鍵原地加括號（`UR[L]`）
 - `P` / `N` / `R`、Yank url / text / value、Inspect（暫以 toast 呈現）
 - 窄寬只畫焦點側；`TestViewFitsTheTerminal` 檢查四種尺寸每列寬度
 - header 三個 popup（`listpopup.go` 一個 model 三種內容：Bookmarks / History / Downloads）：Enter 開啟、`o` 新分頁、`x` 刪（confirm）、`y` yank、`A` 加目前頁、
