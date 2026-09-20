@@ -164,7 +164,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - Outline：`layout.marks` 記每個 landmark / heading 的第一列；popup 是 spaceMenu 實例（同 sshu picker 的重用），
   開啟時游標停在「目前位置之前最後一個」項目；Enter → `tab.jumpTo`
 - Zoom：`m.zoom` 讓 `[2]` 獨佔整個畫面（narrow 模式同一條路），寬度改變會重排
-- 版面（修訂 2026-09-20）：header 一列（`header()`，借 sshu 的 `tabRow` / `tabChain`：開著的 list popup 對應 chip 點亮，右端 `downloading()`）+ `[1] Tabs`（`sideW` 24）與 `[2] Page` 並列 + footer；`panelH = h - 2`。Places 面板連同 `side1Items` / `cur1` / Shortcuts 全部刪除
+- 版面（修訂 2026-09-20）：header 一列（`header()`，借 sshu 的 `tabRow` / `tabChain`：開著的 list popup 對應 chip 點亮，右端 `downloading()`）+ 分隔線（`headerRule()` = sshu `tabRule`，`downloadProgress()` 混合進行中下載的百分比當進度條）+ `[1] Tabs`（`sideW` 24）與 `[2] Page` 並列 + footer；`panelH = h - 3`。Places 面板連同 `side1Items` / `cur1` / Shortcuts 全部刪除
 - View source 已搬進 DevTools › Source（`devsource.go`：`chromedp.OuterHTML("html")`、行號、`/` grep；
   修訂 2026-09-20，`V` 讓給 visual mode）；獨立的 viewer popup 一併移除
 - Inspect：message popup 列 role / name / value / url / state / node id

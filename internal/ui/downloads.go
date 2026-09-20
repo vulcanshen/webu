@@ -93,6 +93,26 @@ func (m AppModel) downloading() int {
 	return n
 }
 
+// downloadProgress blends the running downloads into one percent for the
+// header's rule: bytes so far over bytes expected, counting only the ones
+// whose size the server told us. moving is whether anything runs at all.
+func (m AppModel) downloadProgress() (pct int, moving bool) {
+	var got, want int64
+	for _, d := range m.dls {
+		if d.state != dlRunning {
+			continue
+		}
+		moving = true
+		if d.total > 0 {
+			got, want = got+d.received, want+d.total
+		}
+	}
+	if want > 0 {
+		pct = int(got * 100 / want)
+	}
+	return pct, moving
+}
+
 // downloadAt maps a row of the popup — newest first — back to the list.
 func (m AppModel) downloadAt(row int) (download, int) {
 	i := len(m.dls) - 1 - row
