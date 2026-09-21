@@ -72,8 +72,8 @@ type AppModel struct {
 	shown     int // index into tabs panel [2] displays; -1 for none
 	nextTabID int
 	browser   *browser.Browser
-	events    chan tea.Msg // page and browser events, read by waitEvent
-	startURL  string
+	events    chan tea.Msg  // page and browser events, read by waitEvent
+	startURLs []string      // what the command line asked for, a tab each (function.md §12)
 	session   store.Session // what to restore on the first frame
 	// zoom: panel [2] alone fills the screen (ux.md §A.1 [Z]).
 	zoom bool
@@ -132,15 +132,23 @@ type AppModel struct {
 	pendingG bool
 }
 
-// New builds the app over a running browser. startURL, when given, opens as
-// a tab in front of whatever the session restores (function.md §12).
-func New(b *browser.Browser, startURL string) AppModel {
+// New builds the app over a running browser. Every start argument — a
+// URL, or words to search for, the same reading as the Location box —
+// opens as a new tab after whatever the session restores, the first of
+// them shown (function.md §12). Empty strings are ignored.
+func New(b *browser.Browser, start ...string) AppModel {
+	var urls []string
+	for _, s := range start {
+		if strings.TrimSpace(s) != "" {
+			urls = append(urls, strings.TrimSpace(s))
+		}
+	}
 	m := AppModel{
 		focus:     panelPage,
 		shown:     -1,
 		browser:   b,
 		events:    make(chan tea.Msg, 16),
-		startURL:  startURL,
+		startURLs: urls,
 		spaceMenu: newSpaceMenu(),
 		options:   spaceMenu{anim: newPopupAnimator("options")},
 		outline:   newOutlineMenu(),
@@ -408,8 +416,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // firstFrame opens what the app starts with: the session's tabs, unloaded
-// except the one that was showing; and the URL from the command line, in
-// front, when there is one.
+// except the one that was showing; and the command line's URLs, a new tab
+// each, the first of them in front, when there are any.
 func (m *AppModel) firstFrame() tea.Cmd {
 	var cmds []tea.Cmd
 	for _, st := range m.session.Tabs {
@@ -421,8 +429,10 @@ func (m *AppModel) firstFrame() tea.Cmd {
 		m.shown = clamp(m.session.Shown, 0, len(m.tabs)-1)
 		m.cur2 = m.shown
 	}
-	if m.startURL != "" {
-		cmds = append(cmds, m.openTab(m.startURL, true))
+	if len(m.startURLs) > 0 {
+		for i, u := range m.startURLs {
+			cmds = append(cmds, m.openTab(m.resolveURL(u), i == 0))
+		}
 	} else if t := m.shownTab(); t != nil && t.pending {
 		cmds = append(cmds, t.load(t.url))
 	}

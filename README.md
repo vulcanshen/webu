@@ -92,7 +92,12 @@ Removes the binary, then asks — never assumes — about each of the three dire
 ```bash
 webu                              # the last session's tabs, or an empty page
 webu https://news.ycombinator.com # straight to a page
+webu go.dev lobste.rs             # one tab each, the first in front; the scheme is filled in
+webu "terminal browser"           # words that are not a URL are searched
+webu help                         # the whole command line; webu version prints the versions
 ```
+
+The command line is the Location box: every argument opens a new tab after whatever the last session restores — something the rest of the family has no need of, and a browser cannot do without.
 
 `L` opens the Location box; type a URL, or words to search for. `j`/`k` walk the items, `Enter` shows what the one under the cursor can do. Press `Space` on any panel and read the menu — it lists exactly what that panel can do.
 
