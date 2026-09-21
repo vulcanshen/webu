@@ -130,7 +130,7 @@ hint 嵌下邊框、`Esc` 只在一處解析。
 
 | Popup | 類型 | 內容 | item operation | panel operation | 子 popup |
 |---|---|---|---|---|---|
-| **Bookmarks**（screen） | 單一面板 | 根層 + 每目錄一組（目錄列可停游標；樹狀摺疊 v2） | Enter 開**新分頁**（2026-09-21）、Edit（待做）、Delete、Move（picker）、Yank url | Add 目前頁、New folder、`/` 搜尋 | Edit → form；Delete → confirm；Move → 目錄 picker |
+| **Bookmarks**（screen） | 單一面板 | 根層 + 每目錄一組（目錄列可停游標；樹狀摺疊 v2） | Enter 開**新分頁**（2026-09-21）、Edit（待做）、Delete、Move（picker）、Yank url | Add 目前頁、New folder、Import、`/` 搜尋 | Edit → form；Delete → confirm；Move → 目錄 picker；Import → file picker → input（根目錄名） |
 | **Downloads**（screen） | 單一面板 | 本次 session 的下載，新的在上：檔名 + 右欄是進度（`42%  1.2 MB of 3.0 MB`）、落地路徑、或 cancelled | Enter 用系統開啟器開檔、Open source in new tab、Remove（進行中先 `Browser.cancelDownload`；檔案不動）、Yank path | Clear 已完成 / 取消的 | — |
 | **History**（screen） | 單一面板，filu 原生 finder 形式 | 時間倒序、打字即 fuzzy、串流載入 | Enter 開**新分頁**、Delete 該筆、Yank url | Clear | Clear → confirm |
 | **Settings**（screen） | 單一面板 | 一列一個 key，目前 `download_dir`（空 = 預設） | Enter → input popup 改值 | — | input |
@@ -181,6 +181,7 @@ u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬�
 | Space menu | menu | item / panel 兩 region，內容在 `ux.md` |
 | `?` help | viewport | 全域動作表 |
 | goto | menu（filu goto picker 形式） | 輸入 URL / 從 Bookmarks / History 挑 |
+| file picker | menu（filu finder 形式，sshu 的 identity picker） | Bookmarks 的 Import 選瀏覽器匯出檔（2026-09-21） |
 | confirm | message | 憑證錯誤「要繼續嗎」、`beforeunload`、JS `confirm`、Delete / Clear、link 的 Enter「Open link」（連結文字 + URL，2026-09-21） |
 | input | input | 單行 textbox 編輯、JS `prompt`、HTTP auth（遮罩，同 sshu askpass：從所有浮層拿走鍵盤） |
 | form | form | `<form>` 整張填寫、Bookmark edit |

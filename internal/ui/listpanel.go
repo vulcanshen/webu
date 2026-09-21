@@ -210,7 +210,7 @@ func (m *listPanel) update(msg tea.KeyMsg) string {
 		if m.kind == listDownloads {
 			return k
 		}
-	case "m", "a", "A":
+	case "m", "a", "A", "I":
 		if m.kind == listBookmarks {
 			return k
 		}
@@ -291,6 +291,7 @@ func (m listPanel) menuItems() []menuItem {
 		menuItem{separator: true},
 		menuItem{header: true, label: "panel operation"},
 		menuItem{label: "Add folder", key: "A", hint: "here; a path like a/b/c makes each level"},
+		menuItem{label: "Import", key: "I", hint: "a browser's bookmarks export (HTML), into a folder of its own"},
 		menuItem{label: "Filter", key: "/", hint: "type to narrow the list"})
 }
 
@@ -317,7 +318,7 @@ func (m listPanel) hintPairs() [][2]string {
 			open = "expand / collapse"
 		}
 		pairs = [][2]string{{"Enter", open}, {"a", "add"}, {"m", "move"}, {"x", "delete"}, {"y", "yank url"},
-			{"A", "add folder"}, {"/", "filter"}}
+			{"A", "add folder"}, {"I", "import"}, {"/", "filter"}}
 	}
 	return append(pairs, [2]string{"Esc", "web"})
 }

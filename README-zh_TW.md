@@ -25,7 +25,7 @@ Hacker News 畫成 item 與文字流，`j`/`k`/`l` 走；`Enter` 在一則新聞
 | 鍵 | 行為 |
 |---|---|
 | **`Tab`** | 在 web screen 的兩個面板 `[1] Tabs`、`[2] Page` 之間切換焦點 |
-| **`Enter`** | 該項目最直觀的操作：頁面 item 上是「它能做什麼」的選單、主要動作排第一；landmark、heading、書籤目錄列上是收合 / 展開；書籤或歷史紀錄上是開新分頁 |
+| **`Enter`** | 該項目最直觀的操作 —— 就是滑鼠左鍵：輸入框開框打字、下拉選單拉開清單、按鈕直接按、連結先問再開；landmark、heading、書籤目錄列上是收合 / 展開；書籤或歷史紀錄上是開新分頁 |
 | **`Space`** | *這裡能做什麼？* —— 目前焦點的 contextual 選單，分 `item operation` 與 `panel operation` 兩區。也能關掉任何 popup |
 | **`Esc`** | 退回去 —— 關最上層 popup、離開 visual mode、清掉過濾、從 screen 回到 web |
 | **`?`** | 全域 help —— 整套按鍵一張表 |
@@ -40,7 +40,7 @@ header 的 screen 用一個大寫字母切換 —— **`W` / `B` / `H` / `D` / `
 
 **`[W]eb`** —— `[1] Tabs` 與 `[2] Page` 並列。分頁清單一列一個 Chromium target：游標說你在哪、綠字說頁面面板正在顯示哪一個，同一個 URL 開兩個分頁會依開啟順序編號。頁面面板永遠是頁面：第一列是 URL，之後是頁面本身，畫成 **item** —— 連結、按鈕、輸入框、核取方塊、下拉選單、媒體、heading、landmark —— 段落文字在 item 之間以固定欄寬流動。`j`/`k` 一列一列走、`h`/`l` 在同一列裡左右移，所以一排連結是橫著走過去，不會被跳過。landmark 以一列帶名字的細線開頭（`▾ navigation Repository ────`），`Enter` 收合；heading 也一樣，收到下一個同級 heading 為止。導覽清單畫成一行。JSON、YAML、TOML、Markdown、純文字的回應畫成一個帶語法色的 code block，不用 Chrome 自己的 viewer。
 
-**`[B]ookmarks`** —— 一棵樹：根層在前，之後每個目錄一列、其下是裡面的書籤。書籤上 `Enter` 開新分頁，目錄列上 `Enter` 收合 / 展開。`a` 在游標所在處加書籤 —— 先 URL、再 title，`[W]eb` 正在顯示的頁面當預設值，所以加目前頁就是 `a`、`Enter`、`Enter`。`A` 在同一處加目錄，路徑 `a/b/c` 一次開三層。`m` 透過目錄樹的 picker 搬書籤。
+**`[B]ookmarks`** —— 一棵樹：根層在前，之後每個目錄一列、其下是裡面的書籤。書籤上 `Enter` 開新分頁，目錄列上 `Enter` 收合 / 展開。`a` 在游標所在處加書籤 —— 先 URL、再 title，`[W]eb` 正在顯示的頁面當預設值，所以加目前頁就是 `a`、`Enter`、`Enter`。`A` 在同一處加目錄，路徑 `a/b/c` 一次開三層。`m` 透過目錄樹的 picker 搬書籤。`I` 匯入瀏覽器匯出的書籤檔（每個瀏覽器寫的都是同一種 HTML）：file picker 選檔、再輸入一個目錄名，整棵樹倒進去。
 
 **`[H]istory`** —— 每個看過的頁面，新的在上，永久保留；`C` 是唯一的清除入口。**`[D]ownloads`** —— 本次 session 的下載與進度，下載中時 header 下面的分隔線兼進度條。**`[S]ettings`** —— 就地編輯 `config.yaml`，一列一個 key，帶著它的值與用途：`Enter` 開一個輸入框（目前生效的值當預設值），或切換開關。
 
@@ -157,7 +157,7 @@ item 上 `Enter` 就是滑鼠左鍵：輸入框直接開框打字（密碼框遮
 
 ### 四個 screen
 
-- **Bookmarks** —— `Enter` 開新分頁、或收合 / 展開目錄 · `a` 在這裡加書籤 · `m` 搬移 · `x` 刪除（空目錄也行） · `y` yank url · `A` 在這裡加目錄（`a/b/c` 一次開三層） · `/` 過濾
+- **Bookmarks** —— `Enter` 開新分頁、或收合 / 展開目錄 · `a` 在這裡加書籤 · `m` 搬移 · `x` 刪除（空目錄也行） · `y` yank url · `A` 在這裡加目錄（`a/b/c` 一次開三層） · `I` 匯入瀏覽器的匯出檔到自己的目錄 · `/` 過濾
 - **History** —— `Enter` 開新分頁 · `x` 刪除 · `y` yank url · `C` 清空 · `/` 過濾
 - **Downloads** —— `Enter` 開檔 · `o` 來源開新分頁 · `x` 移除（進行中的會先停掉） · `y` yank path · `C` 清掉已完成的 · `/` 過濾
 - **Settings** —— `Enter` 編輯文字設定（目前生效的值當預設值：`Tab` 接手、`Backspace` 清掉、清空後 Enter 就是回預設）或切換開關

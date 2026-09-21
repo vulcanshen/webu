@@ -25,7 +25,7 @@ Hacker News as items and flow, `j`/`k`/`l` walking them; `Enter` on a story list
 | Key | Behavior |
 |---|---|
 | **`Tab`** | Move focus between the two panels of the web screen: `[1] Tabs` and `[2] Page` |
-| **`Enter`** | The item's most intuitive operation: on a page item, the menu of what it can do with the obvious thing first; on a landmark, heading or bookmark folder, collapse or expand; on a bookmark or a history entry, open it in a new tab |
+| **`Enter`** | The item's most intuitive operation — a click, as a mouse would: a text box opens to type, a select drops its list, a button is pressed, a link asks first; on a landmark, heading or bookmark folder, collapse or expand; on a bookmark or a history entry, open it in a new tab |
 | **`Space`** | *What can I do here?* — the contextual menu for whatever has focus: `item operation` and `panel operation`. Also closes any popup |
 | **`Esc`** | Back out — close the top popup, leave visual mode, clear a filter, return from a screen to the web |
 | **`?`** | Global help — the whole key vocabulary in one list |
@@ -40,7 +40,7 @@ The header's screens are switched with a single shifted letter — **`W` / `B` /
 
 **`[W]eb`** — `[1] Tabs` beside `[2] Page`. The tabs list is one row per Chromium target; the cursor says where you are, green says which one the page panel is showing, and two tabs on the same URL are numbered in the order they were opened. The page panel is always the page: its first row is the URL, then the page as **items** — links, buttons, text boxes, checks, selects, media, headings, landmarks — with paragraphs flowing between them at a measured width. `j`/`k` step by row and `h`/`l` along one, so a row of links is walked sideways rather than skipped. Landmarks open as a named rule (`▾ navigation Repository ────`) and collapse on `Enter`; so do headings, down to the next heading of their level. Navigation lists flow on one line. A JSON, YAML, TOML, Markdown or plain-text response is drawn as one code block with syntax colour instead of Chrome's own viewer.
 
-**`[B]ookmarks`** — a tree: the top level first, then each folder as a row of its own with what it holds beneath it. `Enter` on a bookmark opens it in a new tab; on a folder it collapses or expands. `a` adds a bookmark where the cursor is — its URL, then its title, with the page the web is showing on offer, so the current page is `a`, `Enter`, `Enter`. `A` adds a folder there, and a path like `a/b/c` makes every level. `m` moves a bookmark through a picker of the tree.
+**`[B]ookmarks`** — a tree: the top level first, then each folder as a row of its own with what it holds beneath it. `Enter` on a bookmark opens it in a new tab; on a folder it collapses or expands. `a` adds a bookmark where the cursor is — its URL, then its title, with the page the web is showing on offer, so the current page is `a`, `Enter`, `Enter`. `A` adds a folder there, and a path like `a/b/c` makes every level. `m` moves a bookmark through a picker of the tree. `I` imports a browser's bookmarks export — the HTML every browser writes — through a file picker, into a folder you name.
 
 **`[H]istory`** — every page visited, newest first, kept for good; `C` is the one way it shrinks. **`[D]ownloads`** — this session's downloads with their progress, and the rule under the header doubles as the progress bar while one runs. **`[S]ettings`** — `config.yaml` edited in place, each row a key with its value and what it does: `Enter` opens a box with the value in force on offer, or flips a switch.
 
@@ -158,7 +158,7 @@ A text box's Enter opens a one-line box: `Enter` writes the value back, `Esc` le
 
 ### The screens
 
-- **Bookmarks** — `Enter` open in a new tab, or collapse / expand a folder · `a` add a bookmark here · `m` move · `x` delete (an empty folder too) · `y` yank url · `A` add a folder here (`a/b/c` makes each level) · `/` filter
+- **Bookmarks** — `Enter` open in a new tab, or collapse / expand a folder · `a` add a bookmark here · `m` move · `x` delete (an empty folder too) · `y` yank url · `A` add a folder here (`a/b/c` makes each level) · `I` import a browser's export into a folder of its own · `/` filter
 - **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `C` clear · `/` filter
 - **Downloads** — `Enter` open the file · `o` source in a new tab · `x` remove (a running download is stopped) · `y` yank path · `C` clear the finished ones · `/` filter
 - **Settings** — `Enter` edit a text setting (the value in force is on offer: `Tab` takes it, `Backspace` clears it, an emptied line means the default) or flip a switch
