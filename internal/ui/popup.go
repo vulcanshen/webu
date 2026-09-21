@@ -274,9 +274,11 @@ func bracketHotkey(label, key string) string {
 	if label != "" && strings.EqualFold(label[:1], key) {
 		return "[" + key + "]" + label[1:]
 	}
-	// The letter elsewhere in the label, exactly as declared, is bracketed
-	// there: UR[L] (ux.md §A.1.2's in-place form, as [go]to).
-	if i := strings.Index(label, key); i > 0 {
+	// A letter elsewhere in the label, exactly as declared, is bracketed
+	// there: UR[L] (ux.md §A.1.2's in-place form, as [go]to). Only a
+	// letter: an index key like "1" inside "dir1" printed dir[1] until
+	// 2026-09-21, and a digit in a label is never the key.
+	if i := strings.Index(label, key); i > 0 && strings.ContainsAny(strings.ToLower(key), "abcdefghijklmnopqrstuvwxyz") {
 		return label[:i] + "[" + key + "]" + label[i+len(key):]
 	}
 	return "[" + key + "] " + label

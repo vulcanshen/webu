@@ -36,10 +36,12 @@ type listEntry struct {
 	// m.dls, the settings table — so a delete or a move lands on the right
 	// one whatever order the screen shows them in.
 	ref int
-	// folder is the bookmark's folder; isFolder marks a folder's own row,
-	// which the cursor can land on the way filu's stops on a directory.
+	// folder is the bookmark's folder (a path, "dev/go"); isFolder marks a
+	// folder's own row, which the cursor can land on the way filu's stops
+	// on a directory; depth is how far the row is indented.
 	folder   string
 	isFolder bool
+	depth    int
 }
 
 type listPanel struct {
@@ -75,6 +77,17 @@ func (m *listPanel) setEntries(entries []listEntry) {
 func (m *listPanel) cursorTo(ref int) {
 	for p, i := range m.visible() {
 		if e := m.entries[i]; !e.isFolder && e.ref == ref {
+			m.cursor = p
+			m.top = scrollTo(m.top, m.cursor, m.rows())
+			return
+		}
+	}
+}
+
+// cursorToFolder puts the cursor on a folder's own row.
+func (m *listPanel) cursorToFolder(path string) {
+	for p, i := range m.visible() {
+		if e := m.entries[i]; e.isFolder && e.folder == path {
 			m.cursor = p
 			m.top = scrollTo(m.top, m.cursor, m.rows())
 			return
@@ -192,7 +205,7 @@ func (m *listPanel) update(msg tea.KeyMsg) string {
 		if m.kind == listDownloads {
 			return k
 		}
-	case "m", "F", "A":
+	case "m", "f", "F", "A":
 		if m.kind == listBookmarks {
 			return k
 		}
@@ -245,18 +258,27 @@ func (m listPanel) menuItems() []menuItem {
 			{label: "Filter", key: "/", hint: "type to narrow the list"},
 		}
 	}
-	return []menuItem{
-		{header: true, label: "item operation"},
-		{label: "Open in new tab", key: "enter", hint: "and switch to it"},
-		{label: "Move", key: "m", hint: "into a folder, or out to the top"},
-		{label: "Delete", key: "x", hint: "this bookmark; on a folder row, the empty folder"},
-		{label: "Yank url", key: "y", hint: "to the clipboard"},
-		{separator: true},
-		{header: true, label: "panel operation"},
-		{label: "Add this page", key: "A", hint: "the one [W]eb is showing"},
-		{label: "Folder", key: "F", hint: "a new one; move bookmarks into it with m"},
-		{label: "Filter", key: "/", hint: "type to narrow the list"},
+	// Bookmarks: what the cursor is on decides the item half — a folder
+	// row has its own two operations (revised 2026-09-21).
+	items := []menuItem{{header: true, label: "item operation"}}
+	if e, _, ok := m.current(); ok && e.isFolder {
+		items = append(items,
+			menuItem{label: "Subfolder", key: "f", hint: "a new folder inside this one"},
+			menuItem{label: "Delete", key: "x", hint: "this folder, once it is empty"})
+	} else {
+		items = append(items,
+			menuItem{label: "Open in new tab", key: "enter", hint: "and switch to it"},
+			menuItem{label: "Move", key: "m", hint: "into a folder, or out to the top"},
+			menuItem{label: "Delete", key: "x", hint: "this bookmark"},
+			menuItem{label: "Yank url", key: "y", hint: "to the clipboard"},
+			menuItem{label: "Folder here", key: "f", hint: "a new folder where this bookmark is"})
 	}
+	return append(items,
+		menuItem{separator: true},
+		menuItem{header: true, label: "panel operation"},
+		menuItem{label: "Add this page", key: "A", hint: "the one [W]eb is showing"},
+		menuItem{label: "Folder", key: "F", hint: "a new one at the top level"},
+		menuItem{label: "Filter", key: "/", hint: "type to narrow the list"})
 }
 
 // hintPairs is the border legend: bright the key, dim what it does (§4.4).
@@ -275,7 +297,7 @@ func (m listPanel) hintPairs() [][2]string {
 		pairs = [][2]string{{"Enter", "open in new tab"}, {"x", "delete"}, {"y", "yank url"}, {"C", "clear"}, {"/", "filter"}}
 	default:
 		pairs = [][2]string{{"Enter", "open in new tab"}, {"m", "move"}, {"x", "delete"}, {"y", "yank url"},
-			{"A", "add this page"}, {"F", "folder"}, {"/", "filter"}}
+			{"f/F", "folder"}, {"A", "add this page"}, {"/", "filter"}}
 	}
 	return append(pairs, [2]string{"Esc", "web"})
 }
@@ -319,11 +341,10 @@ func (m listPanel) panel(outerW, outerH int) string {
 	titleW := dispW(h1)
 	for _, i := range vis {
 		e := m.entries[i]
-		w := dispW(oneLine(nameOr(e.title, e.url)))
-		if e.folder != "" && !e.isFolder {
-			w += 2 // indented under its folder
+		if e.isFolder {
+			continue // a folder row spans; it does not set the column
 		}
-		titleW = max(titleW, w)
+		titleW = max(titleW, dispW(oneLine(nameOr(e.title, e.url)))+2*e.depth)
 	}
 	titleW = min(titleW, innerW/2)
 	rows = append(rows, dim.Render(padRight(" "+padRight(h1, titleW)+"  "+h2, innerW)))
@@ -339,7 +360,7 @@ func (m listPanel) panel(outerW, outerH int) string {
 	for r := m.top; r < end; r++ {
 		e := m.entries[vis[r]]
 		if e.isFolder {
-			line := padRight(" "+glyphFolder+" "+oneLine(e.title), innerW)
+			line := padRight(" "+strings.Repeat("  ", e.depth)+glyphFolder+" "+oneLine(e.title), innerW)
 			if r == m.cursor {
 				rows = append(rows, cur.Render(line))
 			} else {
@@ -347,10 +368,7 @@ func (m listPanel) panel(outerW, outerH int) string {
 			}
 			continue
 		}
-		name := oneLine(nameOr(e.title, e.url))
-		if e.folder != "" {
-			name = "  " + name
-		}
+		name := strings.Repeat("  ", e.depth) + oneLine(nameOr(e.title, e.url))
 		title := padRight(name, titleW)
 		meta := e.url
 		if e.meta != "" {
