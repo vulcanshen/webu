@@ -180,6 +180,14 @@ func objectText(ctx context.Context, o *runtime.RemoteObject) string {
 // previewText is the preview Chromium attaches to an object: its
 // description and the first properties, an ellipsis where it cut them.
 func previewText(o *runtime.RemoteObject) string {
+	switch o.Subtype {
+	case runtime.SubtypeError, runtime.SubtypeDate, runtime.SubtypeRegexp:
+		// The description IS the value: an error's stack, a date, a
+		// pattern. Listing their properties after it says nothing more.
+		if o.Description != "" {
+			return o.Description
+		}
+	}
 	p := o.Preview
 	if p == nil {
 		if o.Description != "" {
@@ -404,6 +412,11 @@ func remoteText(o *runtime.RemoteObject) string {
 		if err := json.Unmarshal(o.Value, &s); err == nil {
 			return s
 		}
+	}
+	// console.log({a: 1}) arrives with a preview; "Object" alone, which is
+	// what the description says, is what it printed until 2026-09-21.
+	if o.Type == runtime.TypeObject && o.Subtype != runtime.SubtypeNull && o.Preview != nil {
+		return previewText(o)
 	}
 	if len(o.Value) > 0 {
 		return string(o.Value)

@@ -165,6 +165,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
   開啟時游標停在「目前位置之前最後一個」項目；Enter → `tab.jumpTo`
 - Zoom：`m.zoom` 讓 `[2]` 獨佔整個畫面（narrow 模式同一條路），寬度改變會重排
 - 版面（修訂 2026-09-20）：header 一列（`header()`，借 sshu 的 `tabRow` / `tabChain`：目前 screen 的 chip 點亮，右端 `downloading()`）+ 分隔線（`headerRule()` = sshu `tabRule`，`downloadProgress()` 混合進行中下載的百分比當進度條）+ `[1] Tabs`（`sideW` 24）與 `[2] Page` 並列 + footer；`panelH = h - 3`。Places 面板連同 `side1Items` / `cur1` / Shortcuts 全部刪除
+- Console 清單（2026-09-21）：`devConsoleTab.view` 每筆折行成多列（`wrapWords`，續行對齊文字欄），視窗以游標那筆為底往上填；`remoteText` 對帶 preview 的物件用 `previewText`
 - Console eval（2026-09-21）：`Runtime.evaluate` 不用 `returnByValue`（`window` 會回 Object reference chain is too long），改 `generatePreview`；
   plain object / array 用 `callFunctionOn(JSON.stringify)` 印 JSON，其餘印 `Description {preview}`（`objectText` / `previewText`）
 - View source 已搬進 DevTools › Source（`devsource.go`：`chromedp.OuterHTML("html")`、行號、`/` grep；

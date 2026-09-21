@@ -1,12 +1,17 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vulcanshen/webu/internal/page"
 )
 
-// The Console tab (ui.md §3.2): a viewport of lines, a glyph per level,
-// warnings and errors in the override colours (§2.4). Eval is v2.
+// The Console tab (ui.md §3.2): a viewport of entries, a glyph per level,
+// warnings and errors in the override colours (§2.4). An entry is shown
+// whole, wrapped onto as many rows as it needs (revised 2026-09-21: it
+// was one row, cut with an ellipsis, and a stack trace or a multi-line
+// log was unreadable without opening its detail).
 
 type devConsoleTab struct {
 	entries []page.ConsoleEntry
@@ -60,10 +65,10 @@ func (t devConsoleTab) view(innerW, n int, filter string) []string {
 		return []string{dim.Render(padRight("  nothing logged since this page loaded", innerW))}
 	}
 	cursor := clamp(t.cursor, 0, len(v)-1)
-	top := clamp(scrollTo(t.top, cursor, n), 0, max(0, len(v)-1))
-	out := make([]string, 0, n)
-	for i := top; i < len(v) && len(out) < n; i++ {
-		e := v[i]
+
+	// An entry's rows: the time, the level's glyph and the source on the
+	// first, the text wrapped under itself on the rest.
+	rows := func(e page.ConsoleEntry) ([]string, lipgloss.Style) {
 		glyph, style := " ", txt
 		switch e.Level {
 		case "error":
@@ -84,13 +89,54 @@ func (t devConsoleTab) view(innerW, n int, filter string) []string {
 			where = "  " + e.Where
 		}
 		at := e.At.Local().Format("15:04:05")
-		text := oneLine(e.Text)
-		room := innerW - 1 - dispW(at) - 2 - 2 - dispW(where)
-		line := " " + at + "  " + glyph + " " + padRight(text, max(4, room)) + where
-		if i == cursor {
-			out = append(out, cur.Render(padRight(line, innerW)))
-		} else {
-			out = append(out, style.Render(padRight(line, innerW)))
+		prefixW := 1 + dispW(at) + 2 + 2
+		room := max(4, innerW-prefixW-dispW(where))
+		var text []string
+		for _, para := range strings.Split(strings.ReplaceAll(e.Text, "\r\n", "\n"), "\n") {
+			if para == "" {
+				text = append(text, "")
+				continue
+			}
+			text = append(text, wrapWords(para, room)...)
+		}
+		if len(text) == 0 {
+			text = []string{""}
+		}
+		out := make([]string, len(text))
+		for j, l := range text {
+			if j == 0 {
+				out[j] = padRight(" "+at+"  "+glyph+" "+padRight(l, room)+where, innerW)
+			} else {
+				out[j] = padRight(strings.Repeat(" ", prefixW)+l, innerW)
+			}
+		}
+		return out, style
+	}
+
+	// The cursor's entry is always whole and on screen: the window ends at
+	// it and reaches up as far as n rows allow (the same reading as a log
+	// that fills from the bottom).
+	lines := make([][]string, len(v))
+	styles := make([]lipgloss.Style, len(v))
+	for i, e := range v {
+		lines[i], styles[i] = rows(e)
+	}
+	top, used := cursor, len(lines[cursor])
+	for top > 0 && used+len(lines[top-1]) <= n {
+		top--
+		used += len(lines[top])
+	}
+	out := make([]string, 0, n)
+	for i := top; i < len(v) && len(out) < n; i++ {
+		for _, l := range lines[i] {
+			if len(out) >= n {
+				break
+			}
+			if i == cursor {
+				out = append(out, cur.Render(l))
+			} else {
+				out = append(out, styles[i].Render(l))
+			}
 		}
 	}
 	return out
