@@ -21,7 +21,7 @@
 | Core-key | 一般模式 | 選取模式（§1） | 對應通用 |
 |---|---|---|---|
 | `Tab` | `[1]` ↔ `[2]`；`1`–`2` 直達（修訂 2026-09-20：只剩兩個面板，header 不是面板、Tab 不停） | 同 | §4.1 |
-| `Enter` | **開游標所在 item 的 item operation 選單**，第一列是主要動作，再按 Enter 執行（修訂 2026-09-20，見下）；landmark 的標題列例外：Enter 直接展開 / 收合（修訂 2026-09-21，一個動作不開選單） | 離開模式、對字元游標所屬的節點開同一個選單 | §4.1 |
+| `Enter` | VTP 2026-09-21 改寫為「**啟動該項目最直觀的操作、具體是什麼依 app context 而定**」（原「確認 / 進入」）。webu 的解讀：頁面 item → **開它的 item operation 選單**，第一列是主要動作，再按 Enter 執行（修訂 2026-09-20，見下）；landmark 標題列、heading、Bookmarks 目錄列 → 直接展開 / 收合（一個動作不開選單）；Bookmarks / History 列 → 開新分頁；Downloads 列 → 開檔；Settings 列 → 編輯框 | 離開模式、對字元游標所屬的節點開同一個選單 | §A.0.K |
 | `Esc` | 關最上層浮層；沒有浮層時**無作用**（上一頁是 `P`，Esc 不兼職） | 打字中：取消搜尋輸入；否則離開選取模式 | §4.3 |
 | `Space` | **滑鼠右鍵 context menu**；再按關閉；在浮層上按 = 關掉它 | 熱鍵 cheatsheet，按列出的鍵即執行並關閉 | §A.1 |
 | `?` | help；再按關閉；可疊在任何浮層上 | 同 | §A.2 |
@@ -34,7 +34,9 @@ textbox 的 Submit、select 的 Choose），再按一次 Enter 執行；**Space 
 的規則因此不再是例外，而是通則。
 
 **與 filu 一致了**：filu 的 Enter 只進目錄不開檔；webu 的 Enter 也只開清單，不直接交給頁面。
-VTP §A.0.K 只要求同一 app 內跨 surface 不變。
+VTP §A.0.K 原本寫「確認 / 進入」，2026-09-21 改寫成「啟動該項目最直觀的操作、具體是什麼依 app context 而定」——
+這正是 webu 在做的事：頁面 item 最直觀的操作是「看看能對它做什麼、主要的那個排第一」（點下去會換頁、看不見發生什麼），
+而目錄列、landmark、heading 最直觀的操作只有一個（開合），就直接做。同一種列在所有 surface 的 Enter 都一樣，這條沒變。
 
 **不是 core-key 的**：`q` 離開、`Ctrl+C` 硬退、`P` / `N` 前後頁、`/` 搜尋、header 的三個全域
 字母 `B` `H` `D`、`V` visual mode。它們是 §A.2 軌的動作，全部列在 `?` help。Visual mode（本文件其他地方的
