@@ -7,6 +7,7 @@ package page
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/cdproto/cdp"
@@ -43,7 +44,7 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 		if err != nil {
 			return err
 		}
-		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs)}
+		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs), Protected: passwordFields(docs, strs)}
 		// What the response was: a JSON or plain-text document is drawn as
 		// its text, not as Chrome's viewer for it (ir.Build).
 		if obj, _, err := runtime.Evaluate("document.contentType").WithReturnByValue(true).Do(ctx); err == nil && obj != nil {
@@ -55,6 +56,36 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 		return nil
 	})
 	return c, err
+}
+
+// passwordFields reads which inputs are type=password off the snapshot's
+// node table. The AX tree does not say: Chromium masks the value itself,
+// so a filled password box shows as dots, and an empty one looks like any
+// other textbox (ir.Build).
+func passwordFields(docs []*domsnapshot.DocumentSnapshot, strs []string) map[cdp.BackendNodeID]bool {
+	out := map[cdp.BackendNodeID]bool{}
+	if len(docs) == 0 || docs[0].Nodes == nil {
+		return out
+	}
+	nodes := docs[0].Nodes
+	str := func(i int64) string {
+		if i < 0 || int(i) >= len(strs) {
+			return ""
+		}
+		return strs[i]
+	}
+	for i, name := range nodes.NodeName {
+		if !strings.EqualFold(str(int64(name)), "input") || i >= len(nodes.Attributes) || i >= len(nodes.BackendNodeID) {
+			continue
+		}
+		attrs := nodes.Attributes[i]
+		for j := 0; j+1 < len(attrs); j += 2 {
+			if strings.EqualFold(str(attrs[j]), "type") && strings.EqualFold(str(attrs[j+1]), "password") {
+				out[nodes.BackendNodeID[i]] = true
+			}
+		}
+	}
+	return out
 }
 
 // displayMap joins the snapshot's node table to its layout table: layout row

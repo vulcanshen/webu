@@ -21,26 +21,25 @@
 | Core-key | 一般模式 | 選取模式（§1） | 對應通用 |
 |---|---|---|---|
 | `Tab` | `[1]` ↔ `[2]`；`1`–`2` 直達（修訂 2026-09-20：只剩兩個面板，header 不是面板、Tab 不停） | 同 | §4.1 |
-| `Enter` | VTP 2026-09-21 改寫為「**啟動該項目最直觀的操作、具體是什麼依 app context 而定**」（原「確認 / 進入」）。webu 的解讀：頁面 item → **開它的 item operation 選單**，第一列是主要動作，再按 Enter 執行（修訂 2026-09-20，見下）；textbox → 直接開 input popup（空或有值都是；修訂 2026-09-21，見下）；landmark 標題列、heading、Bookmarks 目錄列 → 直接展開 / 收合（一個動作不開選單）；Bookmarks / History 列 → 開新分頁；Downloads 列 → 開檔；Settings 列 → 編輯框 | 離開模式、對字元游標所屬的節點開同一個選單 | §A.0.K |
+| `Enter` | VTP 2026-09-21 改寫為「**啟動該項目最直觀的操作、具體是什麼依 app context 而定**」（原「確認 / 進入」）。webu 的定義（定案 2026-09-21，見下）：**Enter = 滑鼠左鍵在 terminal 的對應，Space = 右鍵選單，兩者分開**。頁面 item：textbox / textarea / password → 直接開 input popup（password 遮罩）；select → 直接開 option 清單；button / checkbox / radio / switch / media / unsupported → 直接 click；link → **先 confirm popup**（連結文字 + URL），Enter 才開；自定義（左鍵沒有對應）：landmark 標題列、heading、Bookmarks 目錄列 → 展開 / 收合；沒定義到的 → notice popup「尚未定義」。Bookmarks / History 列 → 開新分頁；Downloads 列 → 開檔；Settings 列 → 編輯框 | 離開模式、對字元游標所屬的節點做同一件事 | §A.0.K |
 | `Esc` | 關最上層浮層；沒有浮層時**無作用**（上一頁是 `P`，Esc 不兼職） | 打字中：取消搜尋輸入；否則離開選取模式 | §4.3 |
 | `Space` | **滑鼠右鍵 context menu**；再按關閉；在浮層上按 = 關掉它 | 熱鍵 cheatsheet，按列出的鍵即執行並關閉 | §A.1 |
 | `?` | help；再按關閉；可疊在任何浮層上 | 同 | §A.2 |
 
-**修訂（2026-09-20，實機試用後）**：Enter 不再直接 click。**Enter = 開該 item 的 item
-operation 選單**，第一列是主要動作（link 的 Open、button 的 Click、空 textbox 的 Edit、有值
-textbox 的 Submit、select 的 Choose），再按一次 Enter 執行；**Space = 完整選單**（item operation
-+ panel operation）。理由：Enter 底下原本只有一個看不見的動作，使用者按下去不知道發生了什麼；
-開選單讓「對這個東西能做什麼」被揭露，主要動作只多一次 Enter。原本「有值 textbox 是唯一例外」
-的規則因此不再是例外，而是通則。
+**修訂史**：2026-09-20 實機試用後，Enter 曾改成「開該 item 的 item operation 選單、第一列主要動作」（Space = 完整選單），
+理由是 Enter 底下的動作看不見、先揭露再做。2026-09-21 再試，**定案改回並收緊：Enter = 滑鼠左鍵在 terminal 的對應，
+Space = 右鍵選單，兩者分開**，選單不再由 Enter 開——之前那樣是圖方便，現在 Enter 鎖定在「左鍵點下去會發生的事」的 terminal 版本，
+左鍵沒有對應的才自定義：
 
-**再修訂（2026-09-21，實機再試）**：**textbox 的 Enter 直接開 input popup**，空的、有值的都一樣——滑鼠左鍵點欄位就是聚焦打字，
-沒有看不見的動作要揭露，中間多一層選單只是多按一次；Submit / Edit / Clear / Yank 留在 Space 選單（cursor 停 Submit）。
-link、button、select 不變：點下去會換頁或觸發，先揭露再做。
+- textbox / textarea / password：左鍵是聚焦打字 → 直接開 input popup（password 遮罩、不帶舊值）；Submit / Edit / Clear / Yank 在 Space 選單
+- select：左鍵是拉下清單 → 直接開 option 清單
+- button / checkbox / radio / switch：直接 click；media 佔位框、unsupported 也是（就是一個 click，頁面決定）
+- link：左鍵會換頁、看不見要去哪 → **先 confirm popup**（連結文字 + URL），Enter 才開、Esc 不動；Open in new tab 在 Space 選單
+- 自定義：landmark 標題列、heading、Bookmarks 目錄列 → 展開 / 收合
+- 沒定義到的 → notice popup「Enter 尚未定義」，Space 仍列得出能做什麼
 
-**與 filu 一致了**：filu 的 Enter 只進目錄不開檔；webu 的 Enter 也只開清單，不直接交給頁面。
-VTP §A.0.K 原本寫「確認 / 進入」，2026-09-21 改寫成「啟動該項目最直觀的操作、具體是什麼依 app context 而定」——
-這正是 webu 在做的事：頁面 item 最直觀的操作是「看看能對它做什麼、主要的那個排第一」（點下去會換頁、看不見發生什麼），
-而目錄列、landmark、heading 最直觀的操作只有一個（開合），就直接做。同一種列在所有 surface 的 Enter 都一樣，這條沒變。
+**與 filu 的關係**：filu 的 Enter 只進目錄不開檔，webu 的 Enter 是左鍵——VTP §A.0.K（2026-09-21）「啟動該項目最直觀的操作、依 app context 而定」
+容許各 app 自己定義，兩者都合規。同一種列在所有 surface 的 Enter 都一樣，這條沒變。
 
 **不是 core-key 的**：`q` 離開、`Ctrl+C` 硬退、`P` / `N` 前後頁、`/` 搜尋、header 的三個全域
 字母 `B` `H` `D`、`v` visual mode。它們是 §A.2 軌的動作，全部列在 `?` help。Visual mode（本文件其他地方的
@@ -65,12 +64,12 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 
 | role | item operation |
 |---|---|
-| link | Open（= Enter）、Open in new tab、Yank link url（寫明「link」：游標在連結上時，光寫 url 會被讀成整頁的，那是 panel operation 的 `[Y]`；修訂 2026-09-20） |
+| link | Open（= Enter，先 confirm；2026-09-21）、Open in new tab、Yank link url（寫明「link」：游標在連結上時，光寫 url 會被讀成整頁的，那是 panel operation 的 `[Y]`；修訂 2026-09-20） |
 | button / checkbox / radio / switch | Click（= Enter） |
-| textbox（空） | Edit（= Enter，直接開 input popup） |
+| textbox（空） | Edit（= Enter，直接開 input popup；password 欄位遮罩、prompt 寫 password） |
 | textbox（有值） | Enter 直接 Edit（開 input popup、帶目前值；修訂 2026-09-21）。Space 選單：**Submit**（送 Enter 給頁面）、Edit、Clear、Yank；cursor 預設停 Submit（sshu §6.6.1 主要意圖優先） |
 | textarea | Enter 直接 Edit（多行 popup）。Space 選單：Edit、Edit in editor（§2 editor 鏈）、Clear、Yank；無 Submit（瀏覽器裡 textarea 的 Enter 是換行） |
-| select | Choose（= Enter，option 清單 menu） |
+| select | Choose（= Enter，直接開 option 清單 menu） |
 | image / media 佔位框 | Click（= Enter）、Yank media url |
 | heading | Collapse / Expand（Enter 直接切換；2026-09-21 落地）：收合到下一個同級或更高級 heading、或所在 landmark 結束為止，收合列畫成 `▸ # 標題 · N items`；重抓後仍記得，換頁即忘 |
 | 所有 item 共有 | Yank text、Inspect（message 類 popup：role、name、states、backendDOMNodeId、href 或 src） |
@@ -163,7 +162,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 1. 輸入放在 **`[2]` 第一列**（URL 列暫換成 `/query`），頁面不被遮，版面不動
 2. 打字即高亮所有 match，`/query` 右側顯示命中計數 `3/17`；**smart case**（全小寫不分大小寫，含大寫就區分，同 vim / rg）
 3. `Enter` 確認 → 字元游標跳第一個 match；`n` / `N` 下一個 / 上一個
-4. 游標停在 match 上 Enter = click 它所屬的節點（搜到連結直接開）
+4. 游標停在 match 上 Enter = 對它所屬的節點做 Enter 的事（§A.0.K：搜到連結 → confirm 後開）
 5. `Esc` 分層：打字中 → 取消輸入、清高亮、留在選取模式；沒在打字 → 離開選取模式
 
 ---
@@ -189,6 +188,9 @@ popup 一套解決，`[2]` 不用調整大小。
 |---|---|---|
 | 空 | 直接開 input popup | `󰛿 label ______________` |
 | 有值 | 同樣直接開 input popup，帶目前值（修訂 2026-09-21；原本開選單、cursor 在 Submit）。Submit / Edit / Clear / Yank 在 Space 選單，cursor 在 Submit | `󰛿 label ____value_____`，glyph 不變 |
+
+**password**：popup 遮罩、prompt 寫 password、不帶舊值（Chromium 交出來的是 `•`，不是密碼）。欄位是不是 password 從
+`page.Capture` 已經打的 DOMSnapshot 讀 `type=password`（`ir.Capture.Protected`），空的欄位也認得；AX tree 不說，原本只靠 value 的 `•` 猜、空的就漏了（修 2026-09-21）。
 
 **Submit** = 送一個 Enter keydown 給頁面（`Input.dispatchKeyEvent`）：沒有送出按鈕的搜尋框
 靠這個送出，等同瀏覽器的 implicit submission。密碼欄顯示 `••••`。

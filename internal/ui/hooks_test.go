@@ -284,10 +284,10 @@ func TestSearchThenEnterClicks(t *testing.T) {
 	if v := d.m.View(); !strings.Contains(v, "/link to b") {
 		t.Errorf("the query is not on the URL row:\n%s", v)
 	}
-	// Enter on the match leaves the mode and opens the link's menu; Enter
-	// again opens the link.
+	// Enter on the match leaves the mode and asks to open the link; Enter
+	// again opens it.
 	d.key("enter")
-	d.until("item menu", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
 	if d.m.sel.on {
 		t.Error("Enter out of selection mode should leave it")
 	}

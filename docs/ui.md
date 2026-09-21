@@ -181,7 +181,7 @@ u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬�
 | Space menu | menu | item / panel 兩 region，內容在 `ux.md` |
 | `?` help | viewport | 全域動作表 |
 | goto | menu（filu goto picker 形式） | 輸入 URL / 從 Bookmarks / History 挑 |
-| confirm | message | 憑證錯誤「要繼續嗎」、`beforeunload`、JS `confirm`、Delete / Clear |
+| confirm | message | 憑證錯誤「要繼續嗎」、`beforeunload`、JS `confirm`、Delete / Clear、link 的 Enter「Open link」（連結文字 + URL，2026-09-21） |
 | input | input | 單行 textbox 編輯、JS `prompt`、HTTP auth（遮罩，同 sshu askpass：從所有浮層拿走鍵盤） |
 | form | form | `<form>` 整張填寫、Bookmark edit |
 | select options | menu | `<select>` 的 option 清單 |

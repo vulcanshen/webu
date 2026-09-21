@@ -110,13 +110,17 @@ func (d *driver) until(what string, cond func() bool) {
 
 func (d *driver) page() *tab { return d.m.shownTab() }
 
-// act is Enter on an item and Enter again on the first row of its menu —
-// the obvious thing, done the way a user does it (ux.md §A.0.K).
+// act is Enter on an item, the way a user does it (ux.md §A.0.K): the
+// click itself, and for a link — which asks first — Enter again on the
+// confirm.
 func (d *driver) act() {
 	d.t.Helper()
+	n := d.page().current()
 	d.key("enter")
-	d.until("item menu", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
-	d.key("enter")
+	if n != nil && n.Kind == ir.Link {
+		d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
+		d.key("enter")
+	}
 }
 
 func (d *driver) loaded(title string) func() bool {
@@ -162,13 +166,22 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		t.Fatalf("page not drawn:\n%s", v)
 	}
 
-	// Enter on a link opens its menu; Open is the first row, and it navigates.
+	// Enter on a link asks first — its text and URL — and Esc leaves the
+	// page where it is.
 	d.cursorOn(ir.Link, "a link to B")
 	d.key("enter")
-	d.until("item menu", func() bool { return d.m.options.isInteractive() })
-	if got := d.m.options.items[d.m.options.cursor].label; got != "Open" {
-		t.Errorf("first row of a link's menu is %q", got)
+	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
+	if l := d.m.confirm.lines; len(l) != 2 || l[0] != "a link to B" || !strings.HasSuffix(l[1], "nav2.html") {
+		t.Errorf("the confirm should show the link's text and URL, shows %q", l)
 	}
+	d.key("esc")
+	d.until("confirm gone", func() bool { return !d.m.confirm.isActive() })
+	if !strings.Contains(d.page().url, "nav.html") {
+		t.Errorf("Esc should stay on page A, is on %s", d.page().url)
+	}
+	// Enter on the confirm follows it.
+	d.key("enter")
+	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
 	d.key("enter")
 	d.until("page B", d.loaded("Page B"))
 	if !strings.Contains(d.m.View(), "You made it.") {
@@ -233,8 +246,27 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	d.key("esc")
 	d.until("box gone", func() bool { return !d.m.input.isActive() })
 
+	// A password box is known as one while still empty — the DOM says so,
+	// not the dots — and its box is masked from the first keystroke.
+	d.cursorOn(ir.Textbox, "Secret")
+	d.key("enter")
+	d.until("password box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
+	if !d.m.input.masked || d.m.input.prompt != "password" {
+		t.Errorf("an empty password field's box should be masked and say so: masked=%v prompt=%q", d.m.input.masked, d.m.input.prompt)
+	}
+	d.key("s3cret")
+	d.key("enter")
+	d.until("secret written", func() bool {
+		n := d.page().current()
+		return n != nil && n.Kind == ir.Textbox && n.Protected && n.Value != ""
+	})
+	if v := d.page().current().Value; strings.Contains(v, "s3cret") {
+		t.Errorf("the page should hand back dots, not the secret: %q", v)
+	}
+
 	// Submit is in the Space menu, first row: it presses Enter in the
 	// field, and the form's handler sees the value.
+	d.cursorOn(ir.Textbox, "Name")
 	d.key(" ")
 	d.until("space menu", func() bool { return d.m.spaceMenu.isInteractive() })
 	if got := d.m.spaceMenu.items[d.m.spaceMenu.cursor].label; got != "Submit" {

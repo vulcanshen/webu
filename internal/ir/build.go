@@ -16,6 +16,10 @@ import (
 type Capture struct {
 	Nodes   []*accessibility.Node        `json:"nodes"`
 	Display map[cdp.BackendNodeID]string `json:"display,omitempty"`
+	// Protected marks the inputs that are type=password (page.Capture
+	// reads it off the same snapshot). The AX tree does not say, and an
+	// empty password box is not told apart any other way (2026-09-21).
+	Protected map[cdp.BackendNodeID]bool `json:"protected,omitempty"`
 	// ContentType is document.contentType: what the response was. Empty
 	// in the role fixtures, which are all HTML.
 	ContentType string `json:"contentType,omitempty"`
@@ -102,8 +106,9 @@ func Build(c Capture) *Node {
 		return &Node{Kind: Document, Role: "RootWebArea"}
 	}
 	b := builder{
-		byID:    make(map[accessibility.NodeID]*accessibility.Node, len(c.Nodes)),
-		display: c.Display,
+		byID:      make(map[accessibility.NodeID]*accessibility.Node, len(c.Nodes)),
+		display:   c.Display,
+		protected: c.Protected,
 	}
 	for _, n := range c.Nodes {
 		b.byID[n.NodeID] = n
@@ -120,8 +125,9 @@ func Build(c Capture) *Node {
 }
 
 type builder struct {
-	byID    map[accessibility.NodeID]*accessibility.Node
-	display map[cdp.BackendNodeID]string
+	byID      map[accessibility.NodeID]*accessibility.Node
+	display   map[cdp.BackendNodeID]string
+	protected map[cdp.BackendNodeID]bool
 }
 
 func (b *builder) blockBox(id cdp.BackendNodeID) bool {
@@ -247,9 +253,11 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 				n.Value = strings.TrimSpace(textOf(b.children(ax)))
 			}
 			n.Value = strings.ReplaceAll(n.Value, "\r\n", "\n")
-			// Chromium masks a password's value itself; the dots are how
-			// webu knows the field is one, since the AX node does not say.
-			n.Protected = n.Value != "" && strings.Trim(n.Value, "•") == ""
+			// A password field: the DOM says so (Capture.Protected). The
+			// dots Chromium masks the value with are the fallback, for a
+			// capture that did not look at the DOM — the AX node itself
+			// does not say.
+			n.Protected = b.protected[n.ID] || (n.Value != "" && strings.Trim(n.Value, "•") == "")
 		}
 		return []*Node{n}
 	case Combobox:
