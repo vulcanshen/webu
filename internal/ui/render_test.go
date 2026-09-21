@@ -412,3 +412,42 @@ func TestLongWordIsSplit(t *testing.T) {
 		}
 	}
 }
+
+// TestTableCellsAreItems: in a data table every cell is a stop — the
+// header's too — and what a cell holds is behind it, not a stop of its
+// own; the rows carry the table's ground, the header row the deeper
+// one; l walks the row; the column's header names a cell's popup.
+func TestTableCellsAreItems(t *testing.T) {
+	cell := func(header bool, kids ...*ir.Node) *ir.Node {
+		return &ir.Node{Kind: ir.Cell, Role: "cell", Header: header, Children: kids}
+	}
+	rowOf := func(cells ...*ir.Node) *ir.Node { return &ir.Node{Kind: ir.Row, Role: "row", Children: cells} }
+	table := &ir.Node{Kind: ir.Table, Role: "table", Children: []*ir.Node{
+		rowOf(cell(true, text("Name")), cell(true, text("Site"))),
+		rowOf(cell(false, text("Ann Example, whose description runs on")), cell(false, link("home", "https://x.test/", 7))),
+		rowOf(cell(false, text("Bob")), cell(false, text("none"))),
+	}}
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{table}}
+	tb := &tab{cursor: 0, root: root}
+	tb.relayout(30)
+	l := tb.lay
+	if len(l.items) != 6 {
+		t.Fatalf("six cells, six items:\n%s", dumpLayout(l))
+	}
+	for _, it := range l.items {
+		if it.node.Kind != ir.Cell {
+			t.Errorf("a %s is a stop; only cells should be:\n%s", it.node.Kind, dumpLayout(l))
+		}
+	}
+	if len(l.rows) < 3 || !l.rows[0].table || !l.rows[0].header || !l.rows[1].table || l.rows[1].header {
+		t.Errorf("the rows should carry the table's grounds, the header row its own:\n%s", dumpLayout(l))
+	}
+	// The cell is cut to its column; l moves along the row.
+	tb.cursor = 2
+	if tb.moveItem("l", 20); tb.lay.items[tb.cursor].node.Text() != "home" {
+		t.Errorf("l should walk to the next cell, is on %q", tb.lay.items[tb.cursor].node.Text())
+	}
+	if got := columnHeader(root, tb.lay.items[tb.cursor].node); got != "Site" {
+		t.Errorf("the column's header names the cell: %q", got)
+	}
+}

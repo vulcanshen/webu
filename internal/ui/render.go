@@ -58,6 +58,9 @@ type row struct {
 	// code: a row of a code block, drawn on the code background across
 	// the row, padding included.
 	code bool
+	// table: a row of a data table, on the table's ground; header marks
+	// the header row, on the deeper one (2026-09-21).
+	table, header bool
 }
 
 // plain is the row's text with no styling — what tests and the search read.
@@ -167,9 +170,13 @@ type renderer struct {
 	foldLevel int
 	foldLm    int
 	lmDepth   int
-	indent    string // prefix every wrapped line of the current block gets
-	lead      string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
-	gap       bool   // a blank row is owed before the next content row
+	// cellItem is the item every atom inside a data table's cell belongs
+	// to while the cell is drawn: the cell is the one stop, the links in
+	// it are behind it (table, 2026-09-21). -1 outside a cell.
+	cellItem int
+	indent   string // prefix every wrapped line of the current block gets
+	lead     string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
+	gap      bool   // a blank row is owed before the next content row
 	// inCell: a table cell is being gathered. A cell is one line, so a block
 	// inside it (a <center>, a <div>) flattens into the flow instead of
 	// emitting rows of its own — which would land ABOVE the table, since the
@@ -186,7 +193,7 @@ func render(root *ir.Node, width int) layout {
 }
 
 func renderWith(root *ir.Node, o renderOpts) layout {
-	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold, root: root, marks: map[*ir.Node]int{}}
+	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold, root: root, marks: map[*ir.Node]int{}, cellItem: -1}
 	if o.measure > 0 && o.measure < r.width {
 		r.textW = o.measure
 	}
@@ -765,6 +772,16 @@ func hasItem(n *ir.Node) bool {
 
 // ------------------------------------------------------------------ inline
 
+// itemOf is the item an interactive node draws as: its own, or the cell
+// it sits in — inside a data table's cell everything is one stop, the
+// cell (table); what the cell holds is behind it (app enterCell).
+func (r *renderer) itemOf(n *ir.Node) int {
+	if r.cellItem >= 0 {
+		return r.cellItem
+	}
+	return r.newItem(n)
+}
+
 // inline adds one inline node to the flow. item/kind are inherited from an
 // enclosing item (a heading's text) and overridden by the node's own.
 func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
@@ -772,7 +789,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Text:
 		r.words(n.Name, item, kind)
 	case ir.Link:
-		id := r.newItem(n)
+		id := r.itemOf(n)
 		name := n.Name
 		if name == "" {
 			name = linkFallback(n.URL)
@@ -780,7 +797,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		r.add(atom{text: glyphLink + " ", item: id, kind: segLink})
 		r.words(name, id, segLink)
 	case ir.Button:
-		id := r.newItem(n)
+		id := r.itemOf(n)
 		k := segButton
 		if n.Disabled {
 			k = segDim
@@ -788,7 +805,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		r.add(atom{text: "[ " + oneLine(nameOr(n.Name, n.Value)) + " ]", item: id, kind: k})
 	case ir.Textbox:
 		r.dropLabel(n.Name)
-		id := r.newItem(n)
+		id := r.itemOf(n)
 		r.add(atom{text: glyphInput + " ", item: id, kind: segInput})
 		if n.Name != "" {
 			r.words(n.Name, id, segInput)
@@ -797,19 +814,19 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		r.add(atom{text: fieldText(n), item: id, kind: segInput})
 	case ir.Check:
 		r.dropLabel(n.Name)
-		id := r.newItem(n)
+		id := r.itemOf(n)
 		r.add(atom{text: checkText(n) + " ", item: id, kind: segCheck})
 		r.words(n.Name, id, segCheck)
 	case ir.Combobox:
 		r.dropLabel(n.Name)
-		id := r.newItem(n)
+		id := r.itemOf(n)
 		if n.Name != "" {
 			r.words(n.Name, id, segInput)
 			r.add(atom{text: " ", item: id, kind: segInput, space: true})
 		}
 		r.add(atom{text: "[" + oneLine(n.Value) + " ▾]", item: id, kind: segInput})
 	case ir.Media:
-		id := r.newItem(n)
+		id := r.itemOf(n)
 		r.add(atom{text: mediaText(n), item: id, kind: segMedia})
 	case ir.Code:
 		if strings.Contains(n.Text(), "\n") && !r.inCell {
@@ -825,7 +842,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Unsupported:
 		id := item
 		if n.Focusable {
-			id = r.newItem(n)
+			id = r.itemOf(n)
 		}
 		r.add(atom{text: glyphUnsupported + " " + n.Role, item: id, kind: segUnsupported})
 		if n.Name != "" {
@@ -1081,6 +1098,10 @@ func foldSegs(segs []seg, width int) [][]seg {
 // table draws one screen row per table row, cells padded to their column's
 // width. Widths are the widest cell, shrunk together when the table is wider
 // than the panel: the widest column gives first, the way sshu's tables do.
+// A cell cut to its column is the normal case, so every cell is a stop —
+// the one place h/l and j/k all move — and Enter shows it in full
+// (2026-09-21). The rows sit on the table's ground, the header row on
+// the deeper one.
 func (r *renderer) table(n *ir.Node) {
 	if n.Name != "" {
 		r.emit(row{segs: []seg{{text: r.indent + n.Name, item: -1, kind: segDim}}})
@@ -1088,30 +1109,36 @@ func (r *renderer) table(n *ir.Node) {
 	type cell struct {
 		segs []seg
 		w    int
+		id   int // the cell's item, on its padding too: an empty cell is a stop
 	}
 	var grid [][]cell
+	var header []bool
 	var widths []int
 	for _, tr := range n.Children {
 		if tr.Kind != ir.Row {
 			continue
 		}
 		var cells []cell
+		allHeader := true
 		for _, td := range tr.Children {
 			if td.Kind != ir.Cell {
 				continue
 			}
-			segs := r.cellSegs(td)
+			id := r.newItem(td)
+			segs := r.cellSegs(td, id)
 			w := 0
 			for _, s := range segs {
 				w += dispW(s.text)
 			}
-			cells = append(cells, cell{segs, w})
+			cells = append(cells, cell{segs, w, id})
+			allHeader = allHeader && td.Header
 			if len(widths) < len(cells) {
 				widths = append(widths, 0)
 			}
 			widths[len(cells)-1] = max(widths[len(cells)-1], w)
 		}
 		grid = append(grid, cells)
+		header = append(header, allHeader && len(cells) > 0)
 	}
 	if len(widths) == 0 {
 		return
@@ -1129,38 +1156,90 @@ func (r *renderer) table(n *ir.Node) {
 		}
 		widths[widest]--
 	}
-	for _, cells := range grid {
+	for ri, cells := range grid {
 		out := []seg{{text: r.indent, item: -1, kind: segPlain}}
 		for i, c := range cells {
 			if i > 0 {
 				out = append(out, seg{text: "  ", item: -1, kind: segPlain})
 			}
-			out = append(out, fitSegs(c.segs, widths[i])...)
+			for _, s := range fitSegs(c.segs, widths[i]) {
+				s.item = c.id
+				out = append(out, s)
+			}
 		}
-		r.emit(row{segs: out})
+		r.emit(row{segs: out, table: true, header: header[ri]})
 	}
 }
 
 // cellSegs is a cell's inline content as segments (no wrapping inside a
-// cell: a table row is one screen row).
-func (r *renderer) cellSegs(td *ir.Node) []seg {
-	saved, wasCell := r.flow, r.inCell
-	r.flow, r.inCell = nil, true
-	defer func() { r.inCell = wasCell }()
+// cell: a table row is one screen row), every one of them the cell's
+// item id: the cell is the stop, whatever it holds.
+func (r *renderer) cellSegs(td *ir.Node, id int) []seg {
+	saved, wasCell, wasItem := r.flow, r.inCell, r.cellItem
+	r.flow, r.inCell, r.cellItem = nil, true, id
+	defer func() { r.inCell, r.cellItem = wasCell, wasItem }()
 	kind := segPlain
 	if td.Header {
 		kind = segTableHeader
 	}
-	r.inlineChildren(td, -1, kind)
+	r.inlineChildren(td, id, kind)
 	var out []seg
 	for i, a := range r.flow {
 		if a.space && (i == 0 || i == len(r.flow)-1) {
 			continue
 		}
-		out = append(out, seg{text: a.text, item: a.item, kind: a.kind})
+		out = append(out, seg{text: a.text, item: id, kind: a.kind})
 	}
 	r.flow = saved
 	return out
+}
+
+// columnHeader is the header cell above a cell, by column, for the
+// title of the cell's popup; "" when the column has none.
+func columnHeader(root, cell *ir.Node) string {
+	var table *ir.Node
+	col := -1
+	root.Walk(func(x *ir.Node) bool {
+		if table != nil || x.Kind != ir.Table {
+			return table == nil
+		}
+		for _, tr := range x.Children {
+			if tr.Kind != ir.Row {
+				continue
+			}
+			i := 0
+			for _, td := range tr.Children {
+				if td.Kind != ir.Cell {
+					continue
+				}
+				if td == cell {
+					table, col = x, i
+					return false
+				}
+				i++
+			}
+		}
+		return true
+	})
+	if table == nil {
+		return ""
+	}
+	for _, tr := range table.Children {
+		if tr.Kind != ir.Row {
+			continue
+		}
+		i := 0
+		for _, td := range tr.Children {
+			if td.Kind != ir.Cell {
+				continue
+			}
+			if i == col && td.Header {
+				return oneLine(td.Text())
+			}
+			i++
+		}
+	}
+	return ""
 }
 
 // fitSegs pads or clips segments to exactly w cells.

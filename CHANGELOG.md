@@ -48,6 +48,12 @@
   a search landmark.
 - **Menus scroll.** A menu taller than the terminal keeps the cursor's
   row in view; `j`/`k` wrap at the ends, as everywhere in the family.
+- **Every cell of a table is a stop.** A cell cut to its column is the
+  normal case, so `h`/`l` walk the row and `Enter` shows the cell in
+  full, under its column's header, scrolling when long; a cell that is
+  one link asks to open it, as the link would. The table sits on a
+  ground of its own, its header row on a deeper one — the header is
+  told by ground now, not by mauve text.
 
 ### Fixed
 

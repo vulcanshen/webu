@@ -205,7 +205,7 @@ u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬�
 | override | warn / error（console 等級、憑證錯誤） | 同 kbu §2.4 | 不參與 z-axis |
 | link 色 | `[2]` 內 link | Sapphire `#74c7ec` + 底線 | 定案 2026-09-20（先 Teal、看過後改 Sapphire）；底線讓色彩被壓平的終端機仍看得出是連結 |
 | code | inline code 與 code block | Pink `#f5c2e7`；block 另鋪 Surface0 `#313244` 底、寬到 measure | 不用 Peach：Peach 是 override 的「值得注意」（console warn、4xx），code 不是警告 |
-| table header | 表頭 cell | Mauve `#cba6f7` 粗體 | 定案 2026-09-20 |
+| table | 資料表整列 | 底 surface0 `#313244`；表頭列底 surface1 `#45475a`、文字 Text `#cdd6f4` 粗體——表頭靠底色分、不靠前景色（原 Mauve 文字，2026-09-20 定、2026-09-21 改） | 修訂 2026-09-21 |
 | visual mode 選取 | 掃過的字元 | Lavender `#b4befe` 底、Base 字 | 與「正在改的欄位」同一條帶：選取中的文字就是正在動的東西 |
 | code 內的語法色 | JSON / YAML / TOML / Markdown / XML / JS / CSS 文件（依 content type，chroma 切 token） | key Mauve（與表頭同義：值的名字）、string Pink、number Flamingo `#f2cdcd`、常數與關鍵字 Sky、註解 dim 斜體、標點 Overlay2 `#9399b2`；Markdown 標題 / 粗體 / 斜體用字重 | 修訂 2026-09-20；只分「不同種類的東西」，避開 app 保留的 Green / Yellow / Red / Peach |
 

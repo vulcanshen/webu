@@ -34,6 +34,11 @@ var (
 	// warning. A block sits on surface0 so it reads as a block.
 	codeColor = lipgloss.Color("#f5c2e7") // pink
 	codeBg    = lipgloss.Color("#313244") // surface0
+	// A data table sits on a ground of its own, its header row on a
+	// deeper one: the header is told by ground, not by foreground
+	// (revised 2026-09-21; it was mauve text).
+	tableBg       = lipgloss.Color("#313244") // surface0
+	tableHeaderBg = lipgloss.Color("#45475a") // surface1
 	// a table's header cells: mauve, bold.
 	headerColor = lipgloss.Color("#cba6f7") // mauve
 	// visual mode's swept text: lavender under it, the band the family
@@ -93,6 +98,7 @@ var (
 	glyphFooter   = string(rune(0xf06fb)) // nf-md-page_layout_footer — a contentinfo's
 	glyphSidebar  = string(rune(0xf0836)) // nf-md-table_of_contents — a complementary's
 	glyphDialog   = string(rune(0xf10ac)) // nf-md-dock_window — a dialog's (a cookie banner, a modal)
+	glyphTable    = string(rune(0xf04eb)) // nf-md-table — a cell's content popup
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 

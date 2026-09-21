@@ -174,7 +174,7 @@ item 上 `Enter` 就是滑鼠左鍵：輸入框直接開框打字（密碼框遮
 
 - **文字後面是一個真的瀏覽器** —— 一個釘死版本的 Chromium，headless，用 webu 自己的持久 profile：登入狀態重開還在、JavaScript 會跑、cookie 留得住，而且完全不碰你自己的 Chrome。頁面的問題全交給 Chromium 解，webu 只負責把答案畫出來。
 - **讀的是 accessibility tree，不是 HTML** —— screen reader 會唸的，就是你看到的：role、name、state。webu 不認得的 role 畫成它的文字加一個標記，不藏起來、還能點。每個支援的 role 都有一份對著釘死版本抓下來的 fixture，所以升引擎是一個決定，不是慢慢漂掉。
-- **item 與文字流** —— 連結、按鈕、欄位、heading、landmark 是游標的落點；段落在它們之間以固定欄寬流動，表格留著欄、code 留著行與語法色、外框每個一行、`Enter` 才列出裡面的東西。`h`/`l` 走一排連結，`j`/`k` 走列。
+- **item 與文字流** —— 連結、按鈕、欄位、heading、landmark 是游標的落點；段落在它們之間以固定欄寬流動，表格留著欄、每格都是落點、`Enter` 看全文，code 留著行與語法色、外框每個一行、`Enter` 才列出裡面的東西。`h`/`l` 走一排連結，`j`/`k` 走列。
 - **擋路的收起來** —— landmark 的細線與 heading 那一列可以把底下的東西收成一列、寫著藏了多少；Outline（`O`）跳進收合的區段時會先展開。
 - **兩份選單、一張表** —— `Enter` 是 item 的操作、`Space` 是 item 加 panel，每個括號裡的字母都從按鍵處理讀的同一張表產生，所以選單裡沒有的熱鍵不可能存在。
 - **一列 screen 的 header** —— Web、Bookmarks、History、Downloads、Settings 在同一列 chip 上，亮的那格就是你在的地方；每個清單 screen 是一個面板，按鍵在下邊框，有自己的 `Space` 選單。
