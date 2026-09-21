@@ -39,3 +39,4 @@ runs its JavaScript, it keeps its cookies.
 - **What a page asks for, answered in place**: alert / confirm / prompt,
   HTTP auth, file uploads, `target=_blank`, certificate errors, downloads.
 - **Session restore** on the next launch, tabs unloaded until switched to.
+- **The u-family easter egg** — the icon, revealed pixel by pixel, on `V` wherever there is no page to walk.

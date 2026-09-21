@@ -222,6 +222,13 @@ focus 二態同 kbu §8.4：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─�
 
 footer 一列：`space menu   ? help   tab/1-2 panels   q quit`，五個 core-key 全在此揭露；list screen 上是 `space menu   ? help   esc web   q quit`。
 
+### 5.1 icon 與 splash 彩蛋
+
+`docs/icon.svg` 是 u-family mark 的 webu 版：藍 U 框住拼出 **WEB** 的金色字。`V` 在沒有頁面可走的地方（`[W]eb` 無頁面、四個 list screen）
+觸發 splash 彩蛋，kbu / filu / sshu 同款：底片掃入 → W 散點浮現 → E → B → 藍 U 框自底升起——**揭示順序唸出 w-e-b**——然後名稱 /
+版本 / tagline / 落款 / Esc 提示分兩拍淡入，任意鍵放回原畫面。像素畫由 icon.svg 逐格生成（中心點取樣 25×25，裁到圖案上下各留一列）；
+splash 期間鍵盤完全歸它（2026-09-21）。`docs/social-preview.png` 用同一張 icon，由 `.claude/commands/social-preview.md` 生成。
+
 **Nerd Font 是設計、必裝**（filu / sshu §3.1）：role glyph、live glyph、powerline chip 都靠它；README 要講。
 
 ---
