@@ -103,6 +103,7 @@ footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
 
 - 第一列：URL（純文字、不可 focus、縮法見 §1.2）；第二列分隔線；之後是 IR 渲染的頁面
 - cursor 只停在 item（互動節點 + heading + landmark 的標題列），文字段落是 item 之間的 flow
+- **Heading 收合（2026-09-21）**：是 item 的 heading（裡面沒有 link 等 item 的）Enter 直接 Collapse / Expand，範圍到下一個同級或更高級 heading、或所在 landmark 結束為止；收合列 `▸ # 標題 · N items`；Outline 跳進被收合的區段會先展開。用詞與 landmark 列、Bookmarks 目錄列一致：Collapse / Expand
 - **Landmark（修訂 2026-09-20）**：每個 landmark 以一列帶名字的細線開頭（`▾ navigation Repository ────`），
   是 item，**Enter 直接開合**（修訂 2026-09-21：原本開 item menu 選 Collapse / Expand；Space menu 仍列這兩項）。
   **全部預設展開**（修訂 2026-09-21：原本有 `main` 時 main 之外的預設摺疊，實機看了像頁面壞掉）；收合的畫成

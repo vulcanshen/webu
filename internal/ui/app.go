@@ -1283,7 +1283,12 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 	case ir.Combobox:
 		items = append(items, menuItem{label: "Choose", key: "choose", hint: "pick an option"})
 	case ir.Heading:
-		items = append(items, menuItem{label: "Fold section", key: "fold", hint: "not in this build yet", disabled: true})
+		// The same two words as a landmark's row and a bookmark folder's.
+		if folded {
+			items = append(items, menuItem{label: "Expand", key: "fold", hint: "show the section again"})
+		} else {
+			items = append(items, menuItem{label: "Collapse", key: "fold", hint: "the section, up to the next heading of its level"})
+		}
 	case ir.Unsupported:
 		items = append(items,
 			menuItem{label: "role: " + n.Role + ", not supported yet — only click", key: "unsupported", disabled: true},
@@ -1581,10 +1586,10 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	if t == nil || n == nil {
 		return m, nil
 	}
-	// A landmark's row has one action worth a keystroke — open or shut —
-	// so Enter does it outright; the menu (Space) still lists it with the
-	// yank and inspect rows (revised 2026-09-21).
-	if n.Kind == ir.Landmark {
+	// A landmark's row, or a heading's, has one action worth a keystroke
+	// — collapse or expand — so Enter does it outright; the menu (Space)
+	// still lists it with the yank and inspect rows (revised 2026-09-21).
+	if n.Kind == ir.Landmark || n.Kind == ir.Heading {
 		return m.dispatch("fold")
 	}
 	m.optionsFor, m.optionsKind = n, optItemMenu

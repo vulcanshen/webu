@@ -78,6 +78,7 @@ item，item 記自己跨哪幾列，游標才能把整個 run 反白。決定：
 - 沒名字的 link 顯示 URL 最後一段（`vote`、`news.ycombinator.com`），整條 URL 在 Inspect
 - 表格 cell 內的 block 攤平成一行（`inCell`）；資料表欄寬從最寬的欄開始縮（同 sshu）
 - 空格延後放：字與空格一起塞不下就換行，不會出現 `right(`
+- **Heading 收合**（2026-09-21）：`renderer.suppress` 在收合的 heading 之後跳過節點，到 `foldLevel` 以上的 heading 或離開 `foldLm` 那層 landmark（`leaveLandmark`）為止；含終止 heading 的 wrapper 只走進去不畫自己（`hasHeadingUpTo`）；`walkSection` / `sectionItems` / `sectionHolds` 用同一套邊界算 `· N items` 與 Outline 的 reveal
 - **Landmark 摺疊**（ui.md §2 修訂）：`renderOpts.fold` 是 user 的決定（by backendDOMNodeId，重抓後仍在）、
   沒決定時**全開**（修訂 2026-09-21，原本有 main 時 main 外預設摺疊）；`enterItem` 對 landmark 直接 dispatch `fold`，不開選單；每個 landmark 的標題列是 item
   （`item.folded`）；`tab.toggleFold` 重排並把游標留在原節點；`tab.reveal` 供 Outline 打開路徑上的 landmark
@@ -215,7 +216,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 
 ### 未做（v1 清單，ui.md §7）
 
-Bookmarks 的目錄樹與 Edit / Move、History fuzzy、hover 同步（§4 的 mouseMoved 坑）、heading Fold、
+Bookmarks 的 Edit、History fuzzy、hover 同步（§4 的 mouseMoved 坑）、
 iframe 內容、`h/l` 在 table row 內移動、textarea 的 `$EDITOR` 鏈、檔案上傳的 filepicker popup、
 Console Eval（v2）、preserve log（v2）。
 
