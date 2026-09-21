@@ -30,7 +30,7 @@
 ```
 
 兩個面板並列，編號左到右（kbu / filu 慣例）。頂部**一列 header**（修訂 2026-09-20，sshu 最上列
-`[M]anage / [F]ile transfer / [S]SH` 的 chip chain）：`[W]eb` `[B]ookmarks` `[H]istory` `[D]ownloads` `[S]ettings` 五個 screen 的 chip，
+`[M]anage / [F]ile transfer / [S]SH` 的 chip chain，chip 之間的分隔改成右上左下的斜線 `U+E0BB`，不用 sshu 的實心三角，修訂 2026-09-21）：`[W]eb` `[B]ookmarks` `[H]istory` `[D]ownloads` `[S]ettings` 五個 screen 的 chip，
 目前的那個點亮（修訂 2026-09-21：list 從 popup 改成 screen——`[W]eb` 是下圖左右並列的 Tabs / Page，其他四個各佔滿整個 body）；右端是狀態槽，有下載進行中時寫 `N download(s) in flight`（live 綠）。原本的 `[1]` Places 面板
 內容永遠是三項、做成面板是浪費，併進 header 之後 Tabs 與 Page 並列。URL 收進 `[2]` 內部第一列（filu breadcrumb / sshu cwd 的做法）。
 

@@ -58,10 +58,13 @@ const (
 // the codepoint stays greppable and the file stays editor-safe (family
 // rule). One role, one glyph, one table (ux.md §B).
 var (
-	capLeft     = string(rune(0xe0b6)) // powerline round-left  — chip start
-	capRight    = string(rune(0xe0b4)) // powerline round-right — chip end
-	dividerHard = string(rune(0xe0b0)) // pl-left_hard_divider
-	dividerSoft = string(rune(0xe0b1)) // pl-left_soft_divider
+	capLeft  = string(rune(0xe0b6)) // powerline round-left  — chip start
+	capRight = string(rune(0xe0b4)) // powerline round-right — chip end
+	// One slash for both seams (revised 2026-09-21: the filled triangle
+	// inherited from sshu read as an arrowhead here); hard and soft differ
+	// by ink, not by shape (chrome.go divider).
+	dividerHard = string(rune(0xe0bb)) // ple-forwardslash_separator
+	dividerSoft = string(rune(0xe0bb)) // ple-forwardslash_separator
 
 	// Popup titles — the type signal half of a surface label. Every
 	// codepoint below was read out of the Nerd Font glyph table
