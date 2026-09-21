@@ -21,14 +21,16 @@ import (
 
 type devTab int
 
+// Network first, the tab a page problem starts from (revised 2026-09-21;
+// it opened on Storage).
 const (
-	devStorage devTab = iota
-	devNetwork
+	devNetwork devTab = iota
+	devStorage
 	devConsole
 	devSource // the page's HTML (was [V]iew source on the page; moved 2026-09-20)
 )
 
-var devTabLabels = []string{"Storage", "Network", "Console", "Source"}
+var devTabLabels = []string{"Network", "Storage", "Console", "Source"}
 
 // devTickMsg refreshes the popup while it is open: the log fills on
 // another goroutine and nothing else would redraw it.

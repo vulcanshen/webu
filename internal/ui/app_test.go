@@ -142,6 +142,7 @@ func (d *driver) cursorOn(kind ir.Kind, want string) {
 
 func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir()) // the history log goes to a scratch dir, not the user's
+	t.Setenv("WEBU_DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -248,6 +249,7 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 // session written on the way out is what was open.
 func TestListPopupsAndSession(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
 	m := New(nil, "").WithStore(
 		[]store.Bookmark{{Title: "Hacker News", URL: "https://news.ycombinator.com/"}, {Title: "Go", URL: "https://go.dev"}},
 		store.Config{},
@@ -360,6 +362,7 @@ func TestViewFitsTheTerminal(t *testing.T) {
 // L is Chrome's Cmd+L: the box opens with the page's own URL on offer.
 func TestGotoOffersThePageURL(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
 	d := newDriver(t, New(nil, ""))
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.m.tabs = []*tab{{id: 1, url: "https://example.com/a"}}

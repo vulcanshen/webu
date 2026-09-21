@@ -12,8 +12,9 @@ import (
 
 // ProfileDir is Chromium's user-data-dir: webu's own, persistent, so a login
 // survives a restart. It is never the user's Chrome profile (function.md §9).
+// It is data, not settings, so it lives under paths.Data (2026-09-21).
 func ProfileDir() (string, error) {
-	dir, err := paths.Config()
+	dir, err := paths.Data()
 	if err != nil {
 		return "", err
 	}

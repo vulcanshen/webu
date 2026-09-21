@@ -175,9 +175,9 @@ func TestDownloadFailsCleanly(t *testing.T) {
 	}
 }
 
-func TestProfileDirUnderConfig(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", "/tmp/wc")
-	if d, _ := ProfileDir(); d != filepath.Join("/tmp/wc", "profile") {
+func TestProfileDirUnderData(t *testing.T) {
+	t.Setenv("WEBU_DATA", "/tmp/wd")
+	if d, _ := ProfileDir(); d != filepath.Join("/tmp/wd", "profile") {
 		t.Errorf("ProfileDir %q", d)
 	}
 }

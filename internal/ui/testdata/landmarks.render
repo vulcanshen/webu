@@ -1,6 +1,8 @@
- ▸ banner · 1 item ─────────────────────────────────────────
+ ▾ banner ──────────────────────────────────────────────────
+Site header 󰌷 Home
 
- ▸ navigation Primary · 2 items ────────────────────────────
+ ▾ navigation Primary ──────────────────────────────────────
+󰌷 A 󰌷 B
 
  ▾ main ────────────────────────────────────────────────────
 # Main heading
@@ -21,20 +23,25 @@ An unnamed section is not a region.
  ▾ search ──────────────────────────────────────────────────
 󰘎 Find ____________
 
- ▸ complementary ───────────────────────────────────────────
+ ▾ complementary ───────────────────────────────────────────
+Sidebar
 
- ▸ contentinfo ─────────────────────────────────────────────
+ ▾ contentinfo ─────────────────────────────────────────────
+Footer text
 -- items --
 0 landmark "Site header Home" rows 0-0
-1 landmark "A B" rows 2-2
-2 landmark "Main heading…" rows 4-4
-3 heading "Main heading" rows 5-5
-4 landmark "An article…" rows 7-7
-5 heading "An article" rows 8-8
-6 landmark "Section text." rows 12-12
-7 landmark "Q Q" rows 17-17
-8 textbox "Q" rows 18-18
-9 landmark "Find Find" rows 20-20
-10 textbox "Find" rows 21-21
-11 landmark "Sidebar" rows 23-23
-12 landmark "Footer text" rows 25-25
+1 link "Home" rows 1-1
+2 landmark "A B" rows 3-3
+3 link "A" rows 4-4
+4 link "B" rows 4-4
+5 landmark "Main heading…" rows 6-6
+6 heading "Main heading" rows 7-7
+7 landmark "An article…" rows 9-9
+8 heading "An article" rows 10-10
+9 landmark "Section text." rows 14-14
+10 landmark "Q Q" rows 19-19
+11 textbox "Q" rows 20-20
+12 landmark "Find Find" rows 22-22
+13 textbox "Find" rows 23-23
+14 landmark "Sidebar" rows 25-25
+15 landmark "Footer text" rows 28-28

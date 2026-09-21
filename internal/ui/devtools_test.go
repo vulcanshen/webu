@@ -49,6 +49,10 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 
 	d.key("I")
 	d.until("devtools open", func() bool { return d.m.devtools.isInteractive() })
+	if d.m.devtools.tab != devNetwork {
+		t.Fatalf("DevTools should open on Network, not %v", d.m.devtools.tab)
+	}
+	d.key("l") // Storage is the second tab (revised 2026-09-21)
 	d.until("storage fetched", func() bool { return len(d.m.devtools.storage.data.Cookies) > 0 })
 	st := d.m.devtools.storage.data
 	if st.Cookies[0].Name != "tasty" || st.Cookies[0].Value != "yes" {
@@ -68,7 +72,7 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 	d.key("x")
 	d.until("cookie gone", func() bool { return len(d.m.devtools.storage.data.Cookies) == 0 })
 
-	d.key("l")
+	d.key("h")
 	d.until("network tab", func() bool { return d.m.devtools.tab == devNetwork })
 	d.until("requests listed", func() bool {
 		for _, e := range d.m.devtools.network.entries {
@@ -123,6 +127,7 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 	d.key("esc")
 	d.key("esc")
 
+	d.key("l")
 	d.key("l")
 	d.until("console tab", func() bool { return d.m.devtools.tab == devConsole })
 	d.until("console lines", func() bool { return len(d.m.devtools.console.entries) >= 2 })

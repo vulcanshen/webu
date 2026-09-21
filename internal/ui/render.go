@@ -155,13 +155,8 @@ type renderer struct {
 	items []item
 	flow  []atom
 	fold  map[cdp.BackendNodeID]bool
-	// hasMain: the page has a main landmark, so the others fold by default
-	// (function.md §3: "landmark 摺疊、預設只展開 main"). inMain counts the
-	// mains being entered — a landmark inside main is part of the content
-	// and stays open. inNav counts navigations: their lists flow inline.
-	hasMain bool
-	inMain  int
-	inNav   int
+	// inNav counts navigations being entered: their lists flow inline.
+	inNav int
 	// inNavList: a navigation list is flowing on one line, so an entry the
 	// page styled as a block flows too.
 	inNavList bool
@@ -188,25 +183,17 @@ func renderWith(root *ir.Node, o renderOpts) layout {
 	if o.measure > 0 && o.measure < r.width {
 		r.textW = o.measure
 	}
-	root.Walk(func(n *ir.Node) bool {
-		if n.Kind == ir.Landmark && n.Role == "main" {
-			r.hasMain = true
-		}
-		return !r.hasMain
-	})
 	r.block(root, 0)
 	r.flush()
 	return layout{rows: r.rows, items: r.items, marks: r.marks}
 }
 
-// folded says whether a landmark is drawn shut: the user's word when there
-// is one, else shut when the page has a main and this is not it nor inside
-// it. A page with no main (Hacker News) folds nothing.
+// folded says whether a landmark is drawn shut: only when the user shut it.
+// Everything opens by default (revised 2026-09-21 — the landmarks outside
+// main used to start folded when the page had one, and a page that hides
+// its own header on arrival reads as broken, not tidy).
 func (r *renderer) folded(n *ir.Node) bool {
-	if v, ok := r.fold[n.ID]; ok {
-		return v
-	}
-	return r.hasMain && n.Role != "main" && r.inMain == 0
+	return r.fold[n.ID]
 }
 
 // landmarkRule is the row that names a landmark: a triangle for its
@@ -293,17 +280,11 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			r.gap = true
 			return
 		}
-		if n.Role == "main" {
-			r.inMain++
-		}
 		if n.Role == "navigation" {
 			r.inNav++
 		}
 		r.children(n, depth)
 		r.flush()
-		if n.Role == "main" {
-			r.inMain--
-		}
 		if n.Role == "navigation" {
 			r.inNav--
 		}
