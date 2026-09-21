@@ -109,7 +109,7 @@ footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
   是 item，**Enter 直接開合**（修訂 2026-09-21：原本開 item menu 選 Collapse / Expand；Space menu 仍列這兩項）。
   **全部預設展開**（修訂 2026-09-21：原本有 `main` 時 main 之外的預設摺疊，實機看了像頁面壞掉）；收合的畫成
   `▸ banner · 14 items`，Outline 跳進摺疊的 landmark 會先把它打開
-- **導覽清單一行流式**：navigation 裡、每項都短的 list 畫成 `Platform · Solutions · Resources` 一行折行
+- **navigation 是一行入口**（2026-09-21，取代原本的「導覽清單一行流式」）：`▎ 󰍜 名字 +N`，左邊直槓（Blue）、文字帶底色（同 code block 的 surface0）；連結不畫，Enter 開 item operation 選單列出來
 - **文字欄寬上限**：段落折行寬度 = min(面板寬, `config.yaml` 的 `measure`，預設 100)；表格、code、分隔線仍用整個面板寬
 - **非 HTML 的回應**（修訂 2026-09-20）：JSON / 純文字 / XML / CSV 等依 `document.contentType` 整份畫成一個 code block，
   JSON 自動縮排；不畫 Chrome 自己的 JSON viewer（Pretty-print 表單）

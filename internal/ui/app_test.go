@@ -904,3 +904,61 @@ func TestRenameBookmarks(t *testing.T) {
 		t.Errorf("saved folders: %q, %v", folders, err)
 	}
 }
+
+// TestNavigationEntry: a navigation is one row — an entry with a count,
+// its links not items — and Enter on it lists them, Enter on one opens
+// it; the Space menu lists the same rows as its item operations.
+func TestNavigationEntry(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	exe, ok := browser.Installed()
+	if !ok {
+		t.Skip("pinned Chromium not installed; run webu once")
+	}
+	b, err := browser.Launch(exe, t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	abs, _ := filepath.Abs("testdata/nav.html")
+	d := newDriver(t, New(b, "file://"+abs))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("page A", d.loaded("Page A"))
+	if v := d.m.View(); !strings.Contains(v, "Main +2") {
+		t.Fatalf("the navigation should be one row with its count:\n%s", v)
+	}
+	for _, it := range d.page().lay.items {
+		if it.node.Kind == ir.Link && strings.Contains(it.node.Text(), "B via nav") {
+			t.Error("a navigation's links should not be items of the page")
+		}
+	}
+
+	d.cursorOn(ir.Landmark, "Main")
+	d.key("enter")
+	d.until("its links", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	if got := d.m.options.items[d.m.options.cursor].label; got != "B via nav" {
+		t.Errorf("the first row should be the first link, is %q", got)
+	}
+	d.key("esc")
+	d.until("list gone", func() bool { return !d.m.options.isActive() })
+
+	d.key(" ")
+	d.until("space menu", func() bool { return d.m.spaceMenu.isInteractive() })
+	found := false
+	for _, it := range d.m.spaceMenu.items {
+		if it.label == "Anchor" && it.key == "nav:1" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("the Space menu should list the navigation's links as its item operations")
+	}
+	d.key("esc")
+	d.until("space menu gone", func() bool { return !d.m.spaceMenu.isActive() })
+
+	d.key("enter")
+	d.until("its links again", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	d.key("enter")
+	d.until("page B", d.loaded("Page B"))
+}

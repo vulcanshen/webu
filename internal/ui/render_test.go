@@ -136,16 +136,18 @@ func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 		return b.String()
 	}
 	out := rows()
-	for _, want := range []string{"▸ banner · 2 items", "▾ main", "body text", "▾ navigation Repository", "Code", "▸ contentinfo"} {
+	for _, want := range []string{"▸ banner · 2 items", "▾ main", "body text", "Repository +1", "▸ contentinfo"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in\n%s", want, out)
 		}
 	}
-	if strings.Contains(out, "Home") || strings.Contains(out, "footer") {
-		t.Errorf("a folded landmark's content is drawn:\n%s", out)
+	// A folded landmark's content stays off; so does a navigation's,
+	// folded or not — it is an entry, its links behind Enter.
+	if strings.Contains(out, "Home") || strings.Contains(out, "footer") || strings.Contains(out, "Code") {
+		t.Errorf("hidden content is drawn:\n%s", out)
 	}
-	// Items: three rules on the top level, the nav rule, and Code.
-	if len(tb.lay.items) != 5 || tb.lay.items[0].node.Role != "banner" || !tb.lay.items[0].folded {
+	// Items: three rules on the top level and the navigation's entry row.
+	if len(tb.lay.items) != 4 || tb.lay.items[0].node.Role != "banner" || !tb.lay.items[0].folded {
 		t.Fatalf("items: %s", out)
 	}
 	tb.cursor = 0
@@ -243,24 +245,29 @@ func TestHeadingCollapsesItsSection(t *testing.T) {
 	}
 }
 
-func TestNavigationListFlowsOnOneLine(t *testing.T) {
+// TestNavigationIsOneRow: a navigation landmark is an entry — one row
+// with its name and how many links are behind it, none of them items —
+// and navTargets is what Enter lists, the nesting of its lists as depth.
+func TestNavigationIsOneRow(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		{Kind: ir.Landmark, Role: "navigation", ID: 1, Children: []*ir.Node{{Kind: ir.List, Children: []*ir.Node{
 			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Platform", "/p", 2)}},
-			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Solutions", "/s", 3)}},
+			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Solutions", "/s", 3), {Kind: ir.List, Children: []*ir.Node{
+				{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Enterprise", "/e", 5)}},
+			}}}},
 			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Resources", "/r", 4)}},
 		}}}},
 	}}
-	// GitHub styles its tab links display:block; the list is still a row.
-	for _, li := range root.Children[0].Children[0].Children {
-		li.Children[0].Block = true
-	}
 	l := render(root, 80)
-	if len(l.rows) < 2 {
-		t.Fatalf("rows:\n%s", dumpLayout(l))
+	if len(l.rows) != 1 || !strings.Contains(l.rows[0].plain(), "navigation +4") {
+		t.Errorf("a navigation should be one row with its count:\n%s", dumpLayout(l))
 	}
-	if got := l.rows[1].plain(); !strings.Contains(got, "Platform · ") || !strings.Contains(got, "Solutions · ") || !strings.Contains(got, "Resources") {
-		t.Errorf("nav list should be one line: %q", got)
+	if len(l.items) != 1 || l.items[0].node.Role != "navigation" {
+		t.Errorf("only the entry row should be an item:\n%s", dumpLayout(l))
+	}
+	ts := navTargets(root.Children[0])
+	if len(ts) != 4 || ts[0].node.Text() != "Platform" || ts[2].node.Text() != "Enterprise" || ts[2].depth != 1 || ts[3].depth != 0 {
+		t.Errorf("targets: %+v", ts)
 	}
 }
 

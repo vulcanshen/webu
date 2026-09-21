@@ -38,7 +38,7 @@ header 的 screen 用一個大寫字母切換 —— **`W` / `B` / `H` / `D` / `
  [W]eb ╱ [B]ookmarks ╱ [H]istory ╱ [D]ownloads ╱ [S]ettings
 ```
 
-**`[W]eb`** —— `[1] Tabs` 與 `[2] Page` 並列。分頁清單一列一個 Chromium target：游標說你在哪、綠字說頁面面板正在顯示哪一個，同一個 URL 開兩個分頁會依開啟順序編號。頁面面板永遠是頁面：第一列是 URL，之後是頁面本身，畫成 **item** —— 連結、按鈕、輸入框、核取方塊、下拉選單、媒體、heading、landmark —— 段落文字在 item 之間以固定欄寬流動。`j`/`k` 一列一列走、`h`/`l` 在同一列裡左右移，所以一排連結是橫著走過去，不會被跳過。landmark 以一列帶名字的細線開頭（`▾ navigation Repository ────`），`Enter` 收合；heading 也一樣，收到下一個同級 heading 為止。導覽清單畫成一行。JSON、YAML、TOML、Markdown、純文字的回應畫成一個帶語法色的 code block，不用 Chrome 自己的 viewer。
+**`[W]eb`** —— `[1] Tabs` 與 `[2] Page` 並列。分頁清單一列一個 Chromium target：游標說你在哪、綠字說頁面面板正在顯示哪一個，同一個 URL 開兩個分頁會依開啟順序編號。頁面面板永遠是頁面：第一列是 URL，之後是頁面本身，畫成 **item** —— 連結、按鈕、輸入框、核取方塊、下拉選單、媒體、heading、landmark —— 段落文字在 item 之間以固定欄寬流動。`j`/`k` 一列一列走、`h`/`l` 在同一列裡左右移，所以一排連結是橫著走過去，不會被跳過。landmark 以一列帶名字的細線開頭（`▾ banner ────`），`Enter` 收合；heading 也一樣，收到下一個同級 heading 為止。navigation 是一行入口 —— `▎ 󰍜 Main +12` —— `Enter` 列出裡面的連結、再按 `Enter` 就開。JSON、YAML、TOML、Markdown、純文字的回應畫成一個帶語法色的 code block，不用 Chrome 自己的 viewer。
 
 **`[B]ookmarks`** —— 一棵樹：根層在前，之後每個目錄一列、其下是裡面的書籤。書籤上 `Enter` 開新分頁，目錄列上 `Enter` 收合 / 展開。`a` 在游標所在處加書籤 —— 先 URL、再 title，`[W]eb` 正在顯示的頁面當預設值，所以加目前頁就是 `a`、`Enter`、`Enter`。`A` 在同一處加目錄，路徑 `a/b/c` 一次開三層。`m` 透過目錄樹的 picker 搬書籤。`I` 匯入瀏覽器匯出的書籤檔（每個瀏覽器寫的都是同一種 HTML）：file picker 選檔、再輸入一個目錄名，整棵樹倒進去。
 
@@ -174,7 +174,7 @@ item 上 `Enter` 就是滑鼠左鍵：輸入框直接開框打字（密碼框遮
 
 - **文字後面是一個真的瀏覽器** —— 一個釘死版本的 Chromium，headless，用 webu 自己的持久 profile：登入狀態重開還在、JavaScript 會跑、cookie 留得住，而且完全不碰你自己的 Chrome。頁面的問題全交給 Chromium 解，webu 只負責把答案畫出來。
 - **讀的是 accessibility tree，不是 HTML** —— screen reader 會唸的，就是你看到的：role、name、state。webu 不認得的 role 畫成它的文字加一個標記，不藏起來、還能點。每個支援的 role 都有一份對著釘死版本抓下來的 fixture，所以升引擎是一個決定，不是慢慢漂掉。
-- **item 與文字流** —— 連結、按鈕、欄位、heading、landmark 是游標的落點；段落在它們之間以固定欄寬流動，表格留著欄、code 留著行與語法色、導覽清單畫成一行。`h`/`l` 走一排連結，`j`/`k` 走列。
+- **item 與文字流** —— 連結、按鈕、欄位、heading、landmark 是游標的落點；段落在它們之間以固定欄寬流動，表格留著欄、code 留著行與語法色、navigation 是一行、`Enter` 才列出連結。`h`/`l` 走一排連結，`j`/`k` 走列。
 - **擋路的收起來** —— landmark 的細線與 heading 那一列可以把底下的東西收成一列、寫著藏了多少；Outline（`O`）跳進收合的區段時會先展開。
 - **兩份選單、一張表** —— `Enter` 是 item 的操作、`Space` 是 item 加 panel，每個括號裡的字母都從按鍵處理讀的同一張表產生，所以選單裡沒有的熱鍵不可能存在。
 - **一列 screen 的 header** —— Web、Bookmarks、History、Downloads、Settings 在同一列 chip 上，亮的那格就是你在的地方；每個清單 screen 是一個面板，按鍵在下邊框，有自己的 `Space` 選單。
