@@ -228,12 +228,25 @@ func (r *renderer) landmarkRule(n *ir.Node, id int, folded bool) {
 }
 
 // navRow is a navigation's one row: an entry, not a region (ux.md
-// §A.0.K, 2026-09-21). A bar at the left and the name on a ground of its
-// own, the way a quote is set; what it holds is its item operations, not
-// items — a row of links invites walking sideways, and a terminal has no
-// width to spare for one. +N says how much is behind the row.
+// §A.0.K, 2026-09-21). A bar at the left and, on a ground of its own the
+// way a quote is set, where the user is in it — the tab they are on, or
+// a breadcrumb's last crumb — not the landmark's name. What it holds is
+// its item operations, not items: a row of links invites walking
+// sideways, and a terminal has no width to spare for one. +N says how
+// much is behind the row.
 func (r *renderer) navRow(n *ir.Node, id int) {
-	label := " " + glyphMenu + " " + oneLine(nameOr(n.Name, "navigation"))
+	icon := glyphMenu
+	if n.Breadcrumb {
+		icon = glyphCrumb
+	}
+	label := " " + icon
+	pageURL := ""
+	if r.root != nil {
+		pageURL = r.root.URL
+	}
+	if cur := entryCurrent(n, pageURL); cur != "" {
+		label += " " + cur
+	}
 	if c := len(navTargets(n)); c > 0 {
 		label += " +" + itoa(c)
 	}
@@ -269,6 +282,74 @@ func navTargets(n *ir.Node) []navTarget {
 	}
 	walk(n, 0)
 	return out
+}
+
+// entryCurrent is where the user is in a navigation or a breadcrumb, for
+// its row. The page's own word first — aria-current, on a link or its
+// list item — then, in a breadcrumb, the last crumb; in a navigation,
+// the link whose URL is the page's, or the longest that is a prefix of
+// it (the section tab); failing all, the landmark's own name.
+func entryCurrent(n *ir.Node, pageURL string) string {
+	var cur *ir.Node
+	n.Walk(func(x *ir.Node) bool {
+		if cur == nil && x != n && x.Current {
+			cur = x
+		}
+		return cur == nil
+	})
+	if cur != nil {
+		return oneLine(cur.Text())
+	}
+	if n.Breadcrumb {
+		var last *ir.Node
+		n.Walk(func(x *ir.Node) bool {
+			if x.Kind == ir.ListItem || x.Kind == ir.Link {
+				last = x
+			}
+			return true
+		})
+		if last != nil {
+			return oneLine(last.Text())
+		}
+	} else if best := urlMatch(navTargets(n), pageURL); best != nil {
+		return oneLine(best.Text())
+	}
+	return oneLine(n.Name)
+}
+
+// urlMatch is the target whose URL is the page's, else the longest whose
+// URL is a path prefix of it — /docs for a page at /docs/api — else nil.
+func urlMatch(ts []navTarget, pageURL string) *ir.Node {
+	norm := func(u string) string {
+		if i := strings.Index(u, "#"); i >= 0 {
+			u = u[:i]
+		}
+		return strings.TrimSuffix(u, "/")
+	}
+	page := norm(pageURL)
+	if page == "" {
+		return nil
+	}
+	var best *ir.Node
+	bestLen := 0
+	for _, t := range ts {
+		u := norm(t.node.URL)
+		if u == "" {
+			continue
+		}
+		if u == page {
+			return t.node
+		}
+		// A prefix has to reach past the origin: every link on the site
+		// is under https://host/.
+		if i := strings.Index(u, "://"); i >= 0 && !strings.Contains(u[i+3:], "/") {
+			continue
+		}
+		if strings.HasPrefix(page, u+"/") && len(u) > bestLen {
+			best, bestLen = t.node, len(u)
+		}
+	}
+	return best
 }
 
 func countItems(n *ir.Node) int {

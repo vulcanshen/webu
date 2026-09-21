@@ -246,21 +246,40 @@ func TestHeadingCollapsesItsSection(t *testing.T) {
 }
 
 // TestNavigationIsOneRow: a navigation landmark is an entry — one row
-// with its name and how many links are behind it, none of them items —
-// and navTargets is what Enter lists, the nesting of its lists as depth.
+// naming where the user is in it and how many links are behind it, none
+// of them items — and navTargets is what Enter lists, the nesting of its
+// lists as depth. Where the user is: aria-current first, else the link
+// whose URL is the page's or its longest prefix; a breadcrumb's last
+// crumb.
 func TestNavigationIsOneRow(t *testing.T) {
-	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
-		{Kind: ir.Landmark, Role: "navigation", ID: 1, Children: []*ir.Node{{Kind: ir.List, Children: []*ir.Node{
-			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Platform", "/p", 2)}},
-			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Solutions", "/s", 3), {Kind: ir.List, Children: []*ir.Node{
-				{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Enterprise", "/e", 5)}},
+	root := &ir.Node{Kind: ir.Document, URL: "https://x.test/docs/api", Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "navigation", Name: "Main", ID: 1, Children: []*ir.Node{{Kind: ir.List, Children: []*ir.Node{
+			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Platform", "https://x.test/platform", 2)}},
+			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Solutions", "https://x.test/docs", 3), {Kind: ir.List, Children: []*ir.Node{
+				{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Enterprise", "https://x.test/docs/enterprise", 5)}},
 			}}}},
-			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Resources", "/r", 4)}},
+			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Resources", "https://x.test/resources", 4)}},
 		}}}},
 	}}
 	l := render(root, 80)
-	if len(l.rows) != 1 || !strings.Contains(l.rows[0].plain(), "navigation +4") {
-		t.Errorf("a navigation should be one row with its count:\n%s", dumpLayout(l))
+	if len(l.rows) != 1 || !strings.Contains(l.rows[0].plain(), "Solutions +4") {
+		t.Errorf("the row should name the section the page is under, with the count:\n%s", dumpLayout(l))
+	}
+	// The page's own word wins over the URL.
+	root.Children[0].Children[0].Children[2].Children[0].Current = true
+	if l := render(root, 80); !strings.Contains(l.rows[0].plain(), "Resources +4") {
+		t.Errorf("aria-current should name the row:\n%s", dumpLayout(l))
+	}
+	// A breadcrumb's row is its last crumb, link or not.
+	trail := &ir.Node{Kind: ir.Document, URL: "https://x.test/lib/a", Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "navigation", Name: "Breadcrumb", Breadcrumb: true, ID: 9, Children: []*ir.Node{{Kind: ir.List, Children: []*ir.Node{
+			{Kind: ir.ListItem, Children: []*ir.Node{link("Home", "https://x.test/", 10)}},
+			{Kind: ir.ListItem, Children: []*ir.Node{link("Library", "https://x.test/lib", 11)}},
+			{Kind: ir.ListItem, Children: []*ir.Node{text("Article A")}},
+		}}}},
+	}}
+	if l := render(trail, 80); len(l.rows) != 1 || !strings.Contains(l.rows[0].plain(), "Article A +2") {
+		t.Errorf("a breadcrumb's row should be its last crumb:\n%s", dumpLayout(l))
 	}
 	if len(l.items) != 1 || l.items[0].node.Role != "navigation" {
 		t.Errorf("only the entry row should be an item:\n%s", dumpLayout(l))

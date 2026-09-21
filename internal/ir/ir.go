@@ -102,11 +102,19 @@ type Node struct {
 	Checked   Tri
 	Multiline bool // Textbox: a textarea or a contenteditable
 	Protected bool // Textbox: a password field — the value is shown masked
-	Disabled  bool
-	Focusable bool
-	Expanded  bool // a combobox or disclosure that is open
-	Selected  bool // an Option
-	Header    bool // a Cell that is a column or row header
+	// Current is aria-current: where the user is, in a navigation or a
+	// breadcrumb (on the link, or on its list item). From the DOM, not
+	// the AX tree (Capture.Current).
+	Current bool
+	// Breadcrumb marks a navigation landmark that is a breadcrumb trail:
+	// named so, or so marked in the DOM (Capture.Breadcrumb). A trail
+	// outside any navigation is wrapped in one at build time.
+	Breadcrumb bool
+	Disabled   bool
+	Focusable  bool
+	Expanded   bool // a combobox or disclosure that is open
+	Selected   bool // an Option
+	Header     bool // a Cell that is a column or row header
 	// Block marks an inline kind that the page laid out as a block — a link
 	// styled display:block, a button on a line of its own. Set from the
 	// captured layout, never from the role.
@@ -236,7 +244,7 @@ func dump(b *strings.Builder, n *Node, depth int) {
 		on   bool
 		name string
 	}{
-		{n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Disabled, "disabled"},
+		{n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}, {n.Disabled, "disabled"},
 		{n.Focusable, "focusable"}, {n.Expanded, "expanded"}, {n.Selected, "selected"},
 		{n.Header, "header"}, {n.Block, "block"},
 	} {

@@ -88,6 +88,7 @@ var (
 	glyphDownload = string(rune(0xf01da)) // nf-md-download
 	glyphSettings = string(rune(0xf0493)) // nf-md-cog
 	glyphFolder   = string(rune(0xf024b)) // nf-md-folder — a bookmark folder's row
+	glyphCrumb    = string(rune(0xf0d20)) // nf-md-map_marker_path — a breadcrumb's entry row
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 
