@@ -60,10 +60,14 @@ const (
 var (
 	capLeft  = string(rune(0xe0b6)) // powerline round-left  — chip start
 	capRight = string(rune(0xe0b4)) // powerline round-right — chip end
-	// One slash for both seams (revised 2026-09-21: the filled triangle
-	// inherited from sshu read as an arrowhead here); hard and soft differ
-	// by ink, not by shape (chrome.go divider).
-	dividerHard = string(rune(0xe0bb)) // ple-forwardslash_separator
+	// The seams slant like a / (revised 2026-09-21: the filled right
+	// triangle inherited from sshu read as an arrowhead here). A hard seam
+	// is the lit block's own edge, so it is a FILLED shape: the upper-left
+	// triangle in the block's colour over the next fill, which cuts the
+	// block on a / line — a thin slash beside a square-ended block was
+	// tried first and left the block square. A soft seam, between two
+	// unlit chips, is the thin slash (chrome.go divider).
+	dividerHard = string(rune(0xe0bc)) // ple-upper_left_triangle
 	dividerSoft = string(rune(0xe0bb)) // ple-forwardslash_separator
 
 	// Popup titles — the type signal half of a surface label. Every

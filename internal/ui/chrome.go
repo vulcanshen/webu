@@ -40,8 +40,10 @@ const statusMinRoom = 6
 // three co-existing surfaces of ONE app is exactly what the strip draws, and the
 // separation that matters (chrome above, surface below) is the rule's job.
 //
-// The dividers are slashes — top right to bottom left — since 2026-09-21;
-// sshu's filled triangles read as arrowheads on this row. The unlit segments are filled with the CANVAS colour: crust and
+// The dividers slant like a / — top right to bottom left — since
+// 2026-09-21; sshu's filled right triangles read as arrowheads on this row.
+// A lit block ends on that slant (its colour fills the upper-left triangle
+// of the seam cell), and two unlit chips are parted by a thin slash. The unlit segments are filled with the CANVAS colour: crust and
 // surface0 were both tried as a visible trough behind them, and both were worse
 // — surface0 too light to be recessed, crust a muddy band that added weight
 // without adding information. With the arrows doing the structural work, the
