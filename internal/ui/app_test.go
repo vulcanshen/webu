@@ -292,9 +292,12 @@ func TestScreensAndSession(t *testing.T) {
 	d.key("dev")
 	d.key("enter")
 	d.until("folder made", func() bool { return len(d.m.folders) == 1 })
-	if e, _, ok := d.m.lists.current(); !ok || e.isFolder || e.title != "Hacker News" {
-		t.Fatalf("the cursor should still be on the bookmark: %+v", e)
+	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "dev" {
+		t.Fatalf("the cursor should land on the new folder: %+v", e)
 	}
+	d.key("esc") // the toast
+	d.until("folder toast gone", func() bool { return !d.m.toast.anim.owns() })
+	d.m.lists.cursorTo(0) // Hacker News, at the top level
 	d.key("m")
 	d.until("move picker", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optMoveTo })
 	d.key("1")
@@ -318,6 +321,33 @@ func TestScreensAndSession(t *testing.T) {
 	}
 	d.key("esc") // the toast that said so
 	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
+
+	// f on the folder row makes a folder inside it; the tree shows the
+	// nesting, and so does the Move picker.
+	d.key("f")
+	d.until("subfolder box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFolder })
+	if !strings.Contains(d.m.input.prompt, "inside dev") {
+		t.Errorf("the box should say where the folder goes: %q", d.m.input.prompt)
+	}
+	d.key("sub")
+	d.key("enter")
+	d.until("subfolder made", func() bool { return len(d.m.folders) == 2 && d.m.folders[1] == "dev/sub" })
+	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "dev/sub" || e.depth != 1 {
+		t.Fatalf("the cursor should be on the new subfolder, one level in: %+v", e)
+	}
+	d.key("esc") // the toast
+	d.until("toast gone again", func() bool { return !d.m.toast.anim.owns() })
+	d.m.lists.cursorTo(0) // Hacker News, in dev
+	d.key("m")
+	d.until("move picker again", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optMoveTo })
+	if got := d.m.options.items[2].label; got != "  sub" {
+		t.Errorf("the picker should indent the subfolder: %q", got)
+	}
+	d.key("2")
+	d.until("moved into the subfolder", func() bool { return d.m.bookmarks[0].Folder == "dev/sub" })
+	if e, _, ok := d.m.lists.current(); !ok || e.isFolder || e.depth != 2 {
+		t.Errorf("the bookmark should sit two levels in: %+v", e)
+	}
 	d.key("esc") // back to the web
 	if d.m.screen != screenWeb {
 		t.Fatalf("Esc should go back to the web: %v", d.m.screen)
@@ -487,6 +517,9 @@ func TestGotoOffersThePageURL(t *testing.T) {
 
 	if got := bracketHotkey("URL", "L"); got != "UR[L]" {
 		t.Errorf("bracketHotkey(URL, L) = %q", got)
+	}
+	if got := bracketHotkey("dir1", "1"); got != "[1] dir1" {
+		t.Errorf("a digit key is never bracketed inside the label: %q", got)
 	}
 
 	// T on the page is the same new tab as T on the tabs list.

@@ -121,8 +121,9 @@ type AppModel struct {
 	// lists them, the header counts the ones still running.
 	dls []download
 	// moveRef is the bookmark a Move picker is about; settingRef the row a
-	// Settings box is editing.
+	// Settings box is editing; folderParent where a folder being named goes.
 	moveRef, settingRef int
+	folderParent        string
 	// pendingG holds the first half of the gg chord.
 	pendingG bool
 }
@@ -1087,9 +1088,17 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 			return m, m.toast.show("m moves a bookmark; put the cursor on one", toastInfo)
 		}
 		return m, m.movePicker(e.ref)
-	case "F":
+	case "f", "F":
+		// F is a folder at the top level; f one where the cursor is — inside
+		// the folder under it, or beside the bookmark under it.
+		m.folderParent = ""
+		prompt := "name of the folder"
+		if key == "f" && ok && e.folder != "" {
+			m.folderParent = e.folder
+			prompt += " inside " + e.folder
+		}
 		return m, m.input.ask(inputPopup{title: "New folder", glyph: glyphFolder,
-			prompt: "name of the folder", accept: "create", action: inputFolder}, m.layer())
+			prompt: prompt, accept: "create", action: inputFolder}, m.layer())
 	case "A":
 		t := m.shownTab()
 		if t == nil || t.url == "" {
@@ -1654,7 +1663,7 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// An offer still standing means nothing was typed or declined.
 		return m, m.saveSetting(value, value == "" && m.input.placeholder != "")
 	case inputFolder:
-		return m, tea.Batch(m.input.close(), m.addFolder(strings.TrimSpace(value)))
+		return m, tea.Batch(m.input.close(), m.addFolder(m.folderParent, value))
 	case inputEval:
 		// The prompt stays; the expression and, when it comes, its result
 		// go to the console list behind it.

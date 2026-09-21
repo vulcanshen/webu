@@ -189,14 +189,14 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - `[2]` 頁面：URL 列、分隔線、排版、游標、`j/k/u/d/gg/G`、捲動指示與 loading hint
 - Enter = click；textbox 空 → input popup、有值 → Submit / Edit / Clear / Yank；select → option 清單
 - `[1]` 分頁：新開 / 切換（綠字）/ 關閉 / clone / reload / yank / close others；`target=_blank` 尚未接 `Target.targetCreated`
-- goto popup（全域 `L` / `[1]` `[2]` 的 `T`）：非 URL 當 DuckDuckGo 搜尋；`L` 帶目前 URL 當 placeholder，Tab 接手編輯、Backspace 清掉（`inputPopup.update`）；label 2026-09-21 改成 `[L]ocation`（popup title「Location」）；`bracketHotkey` 仍支援 label 中段加括號
+- goto popup（全域 `L` / `[1]` `[2]` 的 `T`）：非 URL 當 DuckDuckGo 搜尋；`L` 帶目前 URL 當 placeholder，Tab 接手編輯、Backspace 清掉（`inputPopup.update`）；label 2026-09-21 改成 `[L]ocation`（popup title「Location」）；`bracketHotkey` 仍支援 label 中段加括號（只對字母；數字鍵在 label 裡出現過曾印成 `dir[1]`，2026-09-21 修）
 - `P` / `N` / `R`、Yank url / text / value、Inspect（暫以 toast 呈現）
 - 窄寬只畫焦點側；`TestViewFitsTheTerminal` 檢查四種尺寸每列寬度
 - header 四個 list screen（`listpanel.go` 一個 model 四種內容：Bookmarks / History / Downloads / Settings，`panelFrameLegend` 畫成單一面板、hint 在下邊框）：Enter 一律開**新分頁**並回 `[W]eb`（2026-09-21）、`x` 刪（confirm）、`y` yank、`A` 加目前頁、
   History 的 `C` 清（confirm）、`/` 打字過濾（子字串，fuzzy 之後）；Esc 先清過濾再回 Web（`handleKey`，用 `floatOwned()` 而非 `popupOpen()` 判斷，否則 confirm 收合動畫期間 Esc 會被吞）；
   Settings 的 Enter → `settingBox`（`settings.go` 的 `settings` 表；目前值當 placeholder，`saveSetting(value, untouched)`：沒動過不改）→ `store.SaveConfig` + `pointDownloads`；`[2]` 的 `[A]dd bookmark` 直接加
 - list screen 第一列是欄位 header（`listPanel.columns`，`rows()` 少算一列）；每列帶 `ref` 指回 backing slice（bookmarks / history / dls / settings），刪除、搬移、開檔都用 ref，不靠顯示順序
-- Bookmarks 目錄（`bookmarks.go`，2026-09-21）：`bookmarkEntries` 根層在前、每目錄一列 `isFolder` entry + 其下書籤；`folderNames` = `m.folders`（bookmarks.yaml 的 `folders:`）∪ 使用中的；`[F]` → `inputFolder` → `addFolder`；`[m]` → `movePicker`（`optMoveTo`，數字鍵）→ `moveBookmark` 存檔並 `cursorTo(ref)`；目錄列 `x` → `deleteFolder`（非空只 toast）；`store.LoadBookmarks` / `SaveBookmarks` 多了 folders 參數
+- Bookmarks 目錄（`bookmarks.go`，2026-09-21）：`bookmarkEntries` 根層在前、每目錄一列 `isFolder` entry + 其下書籤；`folderNames` = `m.folders`（bookmarks.yaml 的 `folders:`）∪ 使用中的 ∪ 兩者的祖先，依路徑分段排序（`folderLess`：`a` < `a/b` < `a-x`）；目錄是路徑 `dev/go`，`depth` 決定縮排；`[F]` / `[f]`（`m.folderParent`）→ `inputFolder` → `addFolder(parent, name)`（名字不收 `/`）；`[m]` → `movePicker`（`optMoveTo`，數字鍵）→ `moveBookmark` 存檔並 `cursorTo(ref)`；目錄列 `x` → `deleteFolder`（非空只 toast）；`store.LoadBookmarks` / `SaveBookmarks` 多了 folders 參數
 - `internal/store`：`bookmarks.yaml`（flat，`folder` 欄位 + 頂層 `folders:`）、`config.yaml`（`search_engine` / `download_dir` / `measure`；`shortcuts` 已拿掉）、
   `history.yaml`（YAML sequence、一次 append 一筆、無限保留）與 `session.yaml` 在 data dir（`store.dataFiles`，2026-09-21）；目錄解析在 `internal/paths`
   （`Config` = `~/.config/webu`、`Data` = `~/.webu/datas`、`Downloads`、`Cache`；`WEBU_CONFIG` / `WEBU_DATA` / `WEBU_CACHE` 覆寫），browser（profile、log 在 data）/ store 共用
