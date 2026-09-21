@@ -18,6 +18,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `RootWebArea` | document | — | the page; its name is the title |
 | `StaticText` | text | — | a run of text |
 | `Video` | media | click | placeholder; menu: yank url |
+| `alertdialog` | landmark | — | page chrome: a dialog, one row; its buttons behind Enter |
 | `article` | landmark | — | landmark region, enters the outline |
 | `banner` | landmark | — | page chrome: one row, an entry; what it holds is behind Enter |
 | `blockquote` | quote | — | indented quotation |
@@ -30,6 +31,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `complementary` | landmark | — | page chrome: one row, an entry; what it holds is behind Enter |
 | `contentinfo` | landmark | — | page chrome: one row, an entry; what it holds is behind Enter |
 | `definition` | quote | — | <dd>: indented under its term |
+| `dialog` | landmark | — | page chrome: a dialog, one row; its buttons behind Enter |
 | `figure` | group | — | a figure: its image and caption, on their own lines |
 | `form` | landmark | — | landmark region, enters the outline |
 | `grid` | table | — | columns aligned, widths shrunk to fit |

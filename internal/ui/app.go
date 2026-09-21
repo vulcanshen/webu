@@ -1515,7 +1515,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		if n := t.current(); t != nil && n != nil && !m.busy() {
 			i, err := strconv.Atoi(strings.TrimPrefix(key, "entry:"))
 			if ts := entryTargets(n); err == nil && i >= 0 && i < len(ts) {
-				return m.actOn(t, ts[i].node)
+				return m.actOn(t, ts[i].node, n.Role == "search")
 			}
 		}
 		return m, nil
@@ -1713,7 +1713,7 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 					}
 				}
 				if len(boxes) == 1 {
-					return m, m.editField(boxes[0])
+					return m, m.editFieldAs(boxes[0], true)
 				}
 			}
 			return m.openItemMenu(n)
@@ -1741,10 +1741,11 @@ func (m AppModel) openItemMenu(n *ir.Node) (tea.Model, tea.Cmd) {
 // actOn does to a node inside an entry what Enter does to it as an item
 // (enterItem): a field opens to type, a select drops its list, the rest
 // is a click — no confirm for a link, the list having been the look.
-func (m AppModel) actOn(t *tab, x *ir.Node) (tea.Model, tea.Cmd) {
+// search says the entry is a search landmark, whose every box is one.
+func (m AppModel) actOn(t *tab, x *ir.Node, search bool) (tea.Model, tea.Cmd) {
 	switch x.Kind {
 	case ir.Textbox:
-		return m, m.editField(x)
+		return m, m.editFieldAs(x, search || x.Role == "searchbox")
 	case ir.Combobox:
 		return m.chooseOptionsFor(x)
 	}
@@ -1809,6 +1810,14 @@ func (m AppModel) chooseOptionsFor(n *ir.Node) (tea.Model, tea.Cmd) {
 // which is the model that gets returned — a value receiver here would open
 // the popup on a copy nobody keeps.
 func (m *AppModel) editField(n *ir.Node) tea.Cmd {
+	return m.editFieldAs(n, n.Role == "searchbox")
+}
+
+// editFieldAs is editField told whether the box is a search: one by its
+// role (type=search), or any box inside a search landmark. What is
+// written into a search box is then offered to the page's Enter
+// (inputKey) — that being what typing into one is for.
+func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 	value, prompt := n.Value, "value"
 	if n.Protected {
 		// Never the old value: Chromium hands over dots, not the secret.
@@ -1816,7 +1825,7 @@ func (m *AppModel) editField(n *ir.Node) tea.Cmd {
 	}
 	return m.input.ask(inputPopup{title: oneLine(nameOr(n.Name, "field")), glyph: glyphPencil,
 		prompt: prompt, accept: "set", action: inputField, node: n.ID, value: value,
-		masked: n.Protected}, m.layer())
+		masked: n.Protected, search: search}, m.layer())
 }
 
 func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -1845,7 +1854,18 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if t == nil {
 			return m, m.closeStack()
 		}
-		return m, tea.Batch(m.closeStack(), t.act(func(ctx context.Context) error { return page.Type(ctx, id, value) }))
+		write := t.act(func(ctx context.Context) error { return page.Type(ctx, id, value) })
+		if m.input.search && strings.TrimSpace(value) != "" {
+			// A search box: what was typed is what the user came to
+			// submit, so the box's Enter offers that at once — a
+			// confirm, then the page's own Enter in the field
+			// (2026-09-21). Esc keeps the value, unsent.
+			ask := m.confirm.ask(confirmPopup{glyph: glyphSearch, title: "Search",
+				lines:  []string{oneLine(value), "Enter in the field: the page searches"},
+				accept: "search", action: confirmSubmitField, node: id}, m.layer())
+			return m, tea.Batch(m.input.close(), write, ask)
+		}
+		return m, tea.Batch(m.closeStack(), write)
 	case inputPrompt:
 		return m, tea.Batch(m.input.close(), m.answerDialog(true, value))
 	case inputSetting:
@@ -2021,6 +2041,13 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, closeCmd
 		}
 		return m, tea.Batch(closeCmd, m.storageThen(t, func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) }))
+	case confirmSubmitField:
+		t := m.shownTab()
+		if t == nil {
+			return m, closeCmd
+		}
+		id := m.confirm.node
+		return m, tea.Batch(closeCmd, t.act(func(ctx context.Context) error { return page.Submit(ctx, id) }))
 	case confirmDeleteFolder:
 		return m, tea.Batch(closeCmd, m.deleteFolderTree(m.confirm.folder))
 	case confirmOpenLink:

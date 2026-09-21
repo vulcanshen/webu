@@ -92,6 +92,7 @@ var (
 	glyphHeader   = string(rune(0xf06fc)) // nf-md-page_layout_header — a banner's
 	glyphFooter   = string(rune(0xf06fb)) // nf-md-page_layout_footer — a contentinfo's
 	glyphSidebar  = string(rune(0xf0836)) // nf-md-table_of_contents — a complementary's
+	glyphDialog   = string(rune(0xf10ac)) // nf-md-dock_window — a dialog's (a cookie banner, a modal)
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 

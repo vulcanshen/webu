@@ -20,6 +20,7 @@ const (
 	confirmClearSite                  // DevTools: clear everything for the origin
 	confirmOpenLink                   // Enter on a link: open it in this tab
 	confirmDeleteFolder               // a bookmark folder with everything in it
+	confirmSubmitField                // a search box's value written: press Enter in the field
 )
 
 // confirmPopup is the message class (§6.1): a short question with one yes and

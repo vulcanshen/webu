@@ -63,6 +63,8 @@ var Roles = map[string]Spec{
 	"form":          {Kind: Landmark, Display: "landmark region, enters the outline"},
 	"search":        {Kind: Landmark, Display: "page chrome: one row, an entry; what it holds is behind Enter"},
 	"article":       {Kind: Landmark, Display: "landmark region, enters the outline"},
+	"dialog":        {Kind: Landmark, Display: "page chrome: a dialog, one row; its buttons behind Enter"},
+	"alertdialog":   {Kind: Landmark, Display: "page chrome: a dialog, one row; its buttons behind Enter"},
 
 	"heading":    {Kind: Heading, Action: Click, Display: "title with its level; cursor stops here"},
 	"paragraph":  {Kind: Paragraph, Display: "a block of text, wrapped to width"},

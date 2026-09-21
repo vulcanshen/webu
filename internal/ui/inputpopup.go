@@ -50,6 +50,9 @@ type inputPopup struct {
 	node cdp.BackendNodeID
 	// masked draws the value as dots: a password field's edit.
 	masked bool
+	// search: the box is a search box, so the value written is then
+	// offered to the page's Enter (inputKey).
+	search bool
 	// placeholder is shown dim in the empty box: an offer Tab takes and
 	// Backspace declines (update).
 	placeholder string

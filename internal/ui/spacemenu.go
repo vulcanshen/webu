@@ -31,6 +31,7 @@ type spaceMenu struct {
 	anim    popupAnimator
 	items   []menuItem
 	cursor  int
+	top     int // first row shown: the window follows the cursor (scroll)
 	title   string
 	layer   int
 	screenW int
@@ -55,7 +56,7 @@ func newCredPicker() spaceMenu {
 
 func (m *spaceMenu) setItems(items []menuItem, title string, layer int) {
 	m.items, m.title, m.layer = items, title, layer
-	m.cursor = m.firstSelectable()
+	m.cursor, m.top = m.firstSelectable(), 0
 }
 
 func (m spaceMenu) isActive() bool      { return m.anim.isActive() }
@@ -86,9 +87,27 @@ func (m *spaceMenu) step(d int) {
 		at = (at + d + n) % n
 		if !m.items[at].header && !m.items[at].separator {
 			m.cursor = at
+			m.scroll()
 			return
 		}
 	}
+}
+
+// visible is how many rows the box shows: capRows' budget.
+func (m spaceMenu) visible() int { return max(1, m.screenH-6) }
+
+// scroll keeps the cursor's row in the window, so a menu taller than the
+// terminal — a navigation's fifty links — shows the row the cursor is
+// on rather than its first screenful (2026-09-21).
+func (m *spaceMenu) scroll() {
+	vis := m.visible()
+	if m.cursor < m.top {
+		m.top = m.cursor
+	}
+	if m.cursor >= m.top+vis {
+		m.top = m.cursor - vis + 1
+	}
+	m.top = max(0, min(m.top, max(0, len(m.items)-vis)))
 }
 
 // update handles one keystroke. The returned string is the committed hotkey
@@ -189,6 +208,18 @@ func (m spaceMenu) view() string {
 			}
 		}
 	}
+
+	// The window: the rows around the cursor, when more were built than
+	// fit. A row is a row, header or action, so the window is over rows.
+	vis := m.visible()
+	top := min(max(m.top, 0), max(0, len(rows)-vis))
+	if m.cursor < top {
+		top = m.cursor
+	}
+	if m.cursor >= top+vis {
+		top = m.cursor - vis + 1
+	}
+	rows = rows[top:min(len(rows), top+vis)]
 
 	return drawPopupBox(popupLayerColor(m.layer), " "+glyphMenu+" "+m.title+" ",
 		legend, animRows(m.anim, capRows(rows, m.screenH)), innerW)
