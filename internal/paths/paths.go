@@ -9,13 +9,15 @@ import (
 )
 
 // Config is where webu keeps what the user writes: config.yaml and
-// bookmarks.yaml (ui.md §6). What webu produces as it runs is under Data.
+// bookmarks.yaml (ui.md §6) — ~/.config/webu on every platform. What webu
+// produces as it runs is under Data.
 //
-// WEBU_CONFIG overrides everything — it names the directory outright, for demo
-// recordings and isolated tests. Otherwise XDG_CONFIG_HOME wins on every
-// platform when set, so a macOS user can opt into ~/.config/webu instead of
-// ~/Library/Application Support; without it os.UserConfigDir decides. The same
-// rule as kbu, filu and sshu, so the family's files sit side by side.
+// WEBU_CONFIG overrides everything — it names the directory outright, for
+// demo recordings and isolated tests. Otherwise XDG_CONFIG_HOME wins when
+// set. The rest of the family lets os.UserConfigDir decide, which on macOS
+// is ~/Library/Application Support; webu departs from that (2026-09-21):
+// its settings and bookmarks are meant to be found, edited and synced by
+// hand, and ~/.config is where a terminal user looks for them.
 func Config() (string, error) {
 	if p := os.Getenv("WEBU_CONFIG"); p != "" {
 		return p, nil
@@ -23,11 +25,11 @@ func Config() (string, error) {
 	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
 		return filepath.Join(x, "webu"), nil
 	}
-	dir, err := os.UserConfigDir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "webu"), nil
+	return filepath.Join(home, ".config", "webu"), nil
 }
 
 // Data is where webu keeps what it produces as it runs: the history, the

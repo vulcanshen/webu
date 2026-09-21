@@ -34,6 +34,16 @@ uninstall: ## 移除已安裝的 webu（從 $$GOBIN，否則 $$GOPATH/bin）
 tidy: ## go mod tidy
 	go mod tidy
 
+##@ 發布（release）
+
+.PHONY: release-check
+release-check: ## goreleaser check：驗證 .goreleaser.yaml
+	goreleaser check
+
+.PHONY: snapshot
+snapshot: ## goreleaser 本機 snapshot 打包（不發布、不推 tap）→ dist/
+	goreleaser release --snapshot --clean
+
 ##@ 執行（run）
 
 .PHONY: run

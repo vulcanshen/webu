@@ -45,12 +45,45 @@ docs/ux.md                   互動語意
 docs/webu-implementation.md  實作怎麼落地、實測出來的決定、做到哪
 docs/support.md              支援的 AX role（由 internal/ir/roles.go 產生）
 cmd/webu/                    進入點
+CHANGELOG.md                 每版的變更，release notes 從這裡取
+.goreleaser.yaml             goreleaser：build / archive / brew tap
+.github/workflows/release.yml  推 v* tag 就發布
+install.sh / uninstall.sh    不走 Homebrew 的安裝 / 移除
 internal/browser/            Chromium 下載、profile、啟動、關閉
 internal/ir/                 AX tree → IR，每個 role 一份 fixture
 internal/page/               CDP 端：擷取與動作
 internal/ui/                 TUI
 tools/axdump/                看任何頁面的 AX tree（用本機 Chrome）
 ```
+
+## 安裝
+
+macOS / Linux（amd64、arm64；Linux arm64 除外——Chromium snapshot 沒有那個 build）。
+
+```bash
+brew install vulcanshen/tap/webu                                     # Homebrew
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/install.sh | sh   # 或：最新 release 進 ~/.local/bin
+go install github.com/vulcanshen/webu/cmd/webu@latest               # 或：從原始碼
+```
+
+**Chromium 怎麼來**：release 只有 Go 執行檔。webu 只跑釘死 revision 的 Chromium（版本編在執行檔裡），
+第一次啟動會把它下載到 cache 目錄（macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`，約 175–250 MB），
+畫面上會說大小與進度；之後不再下載。升級後若釘的版本變了，`webu browser update` 重抓。
+不碰使用者自己的 Chrome，也不接受別的 Chromium 路徑（`docs/function.md` §9）。
+
+**檔案在哪**：使用者寫的（`config.yaml`、`bookmarks.yaml`）在 `~/.config/webu`；webu 自己產生的
+（`history.yaml`、`session.yaml`、`downloads/`、Chromium `profile/`、`webu.log`）在 `~/.webu/datas`。
+`WEBU_CONFIG` / `WEBU_DATA` / `WEBU_CACHE` 可各自覆寫。
+
+**需要 Nerd Font**：連結、媒體、面板與 header 的圖示都是 Nerd Font glyph，且排版量的是它們的寬度。
+
+移除：`curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/uninstall.sh | sh`（會逐一問要不要刪設定、資料、下載的 Chromium）。
+
+## 發布
+
+與 kbu / filu / sshu 同一套：推 `v*` tag → GitHub Actions 跑測試（runner 沒有 Chromium，瀏覽器測試自動 skip）→
+goreleaser 出 darwin / linux 的 tar.gz + checksums → 更新 `vulcanshen/homebrew-tap` 的 formula（需要 repo secret `ACTION_TOKEN`）。
+Release notes 取自 `CHANGELOG.md` 對應版本那一節。本機先 `make release-check`、`make snapshot` 看 `dist/`。
 
 ## 開發
 
