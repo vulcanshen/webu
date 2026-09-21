@@ -110,6 +110,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 | History screen | `H` | header chip + help |
 | Downloads screen | `D` | header chip + help（修訂 2026-09-20：Shortcuts 與 `S` 拿掉、Downloads 補上） |
 | Settings screen | `S` | header chip + help（修訂 2026-09-21：目前只有 `download_dir`） |
+| splash 彩蛋 | `V`——在沒有頁面可走的地方：`[W]eb` 沒有頁面時、四個 list screen 上（家族的鍵是 `V`；webu 有頁面時 `V` 是 visual mode，所以彩蛋住在 `V` 不會是 visual mode 的地方；2026-09-21） | 不揭露，是彩蛋 |
 | 上一頁 / 下一頁 | `P` / `N` | help |
 | 切面板 | `Tab`、`1`–`2` | footer + help |
 | Visual mode（選取模式） | `V`（從 `[1]` 按 → 先把焦點移到 `[2]` 再進模式）；`/` 亦可 | help |

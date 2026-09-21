@@ -89,9 +89,10 @@ type AppModel struct {
 	// Floats. The Space menu goes down first; a target opened from it stacks
 	// above (§6.4). The toast rides on top of everything.
 	spaceMenu spaceMenu
-	options   spaceMenu // a textbox's Submit/Edit/Clear/Yank, or a select's options
-	outline   spaceMenu // the page's landmarks and headings
-	lists     listPanel // the screen behind a header chip after [W]eb
+	options   spaceMenu   // a textbox's Submit/Edit/Clear/Yank, or a select's options
+	outline   spaceMenu   // the page's landmarks and headings
+	lists     listPanel   // the screen behind a header chip after [W]eb
+	splash    splashModel // the easter egg (splash.go)
 	devtools  devtoolsPopup
 	message   messagePopup
 	help      helpPopup
@@ -150,6 +151,7 @@ func New(b *browser.Browser, start ...string) AppModel {
 		events:    make(chan tea.Msg, 16),
 		startURLs: urls,
 		spaceMenu: newSpaceMenu(),
+		splash:    newSplashModel(),
 		options:   spaceMenu{anim: newPopupAnimator("options")},
 		outline:   newOutlineMenu(),
 		lists:     newListPanel(),
@@ -247,6 +249,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.firstFrame()
 		}
 		return m, nil
+
+	case splashTickMsg, splashIdentityMsg, splashHintMsg:
+		var cmd tea.Cmd
+		m.splash, cmd = m.splash.update(msg)
+		return m, cmd
 
 	case AnimTickMsg:
 		return m, tea.Batch(
@@ -661,6 +668,13 @@ func (m AppModel) typing() bool {
 }
 
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// The easter-egg splash owns the keyboard until dismissed — any key
+	// closes it, and nothing underneath sees the press.
+	if m.splash.isActive() {
+		var cmd tea.Cmd
+		m.splash, cmd = m.splash.update(msg)
+		return m, cmd
+	}
 	// Esc is one role, resolved in one place: close the topmost float (§4.3).
 	// With nothing up it belongs to selection mode when that is on, and
 	// otherwise does nothing — the previous page is P (ux.md §A.0.K).
@@ -838,7 +852,11 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Visual mode, the way into the text itself: the item cursor stops
 		// only on items, and a paragraph is reached by character (ux.md
 		// §1). Upper case like every other panel operation, and it reads
-		// the same from any panel, like /.
+		// the same from any panel, like /. With no page to walk, V is the
+		// family's easter egg instead (splash.go).
+		if t := m.shownTab(); t == nil || t.root == nil {
+			return m, m.splash.show()
+		}
 		return m, m.enterSelect(false)
 	}
 
@@ -1046,6 +1064,9 @@ func (m AppModel) screenKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.switchScreen(k)
 		case " ":
 			return m.openMenu()
+		case "V":
+			// No page here to walk: the family's easter egg (splash.go).
+			return m, m.splash.show()
 		}
 	}
 	return m.listAction(m.lists.update(msg))
@@ -1960,6 +1981,10 @@ func (m AppModel) View() string {
 	}
 	if m.w < 40 || m.h < minAppH {
 		return "terminal too small"
+	}
+	// The easter-egg splash replaces the whole frame while it plays.
+	if m.splash.isActive() {
+		return m.splash.render(m.w, m.h)
 	}
 	ph := m.panelH()
 	var out string
