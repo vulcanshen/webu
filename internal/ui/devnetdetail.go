@@ -46,12 +46,16 @@ func (m *devDetailPopup) showText(title string, head []string, text string, laye
 	m.lines = append([]string(nil), head...)
 	width := max(10, m.innerW()-3)
 	for _, para := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
-		if para == "" {
+		if strings.TrimSpace(para) == "" {
 			m.lines = append(m.lines, "")
 			continue
 		}
-		for _, line := range wrapWords(para, width) {
-			m.lines = append(m.lines, "  "+line)
+		// A line's indent is kept on every row it wraps to: a property
+		// listing stays a listing.
+		body := strings.TrimLeft(para, " ")
+		indent := para[:len(para)-len(body)]
+		for _, line := range wrapWords(body, max(4, width-dispW(indent))) {
+			m.lines = append(m.lines, "  "+indent+line)
 		}
 	}
 	return m.anim.open()

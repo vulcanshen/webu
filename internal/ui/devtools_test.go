@@ -174,6 +174,19 @@ func TestDevtoolsShowsStorageNetworkConsole(t *testing.T) {
 	d.key("nope()")
 	d.key("enter")
 	d.until("the error", func() bool { return strings.Contains(consoleText(d), "error:ReferenceError: nope is not defined") })
+	// An object comes back as its preview on the line, and whole — every
+	// own property — in its detail (revised 2026-09-21).
+	d.key("({a: 1, b: \"x\", c: document})")
+	d.key("enter")
+	d.until("the object", func() bool {
+		for _, e := range d.m.devtools.console.entries {
+			if e.Level == "result" && strings.HasPrefix(e.Text, "{") && strings.Contains(e.Detail, "  a: 1") &&
+				strings.Contains(e.Detail, "  b: \"x\"") && strings.Contains(e.Detail, "  c: #document") {
+				return true
+			}
+		}
+		return false
+	})
 	d.key("esc")
 	d.until("prompt gone", func() bool { return !d.m.input.isActive() && d.m.devtools.isInteractive() })
 

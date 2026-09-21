@@ -971,7 +971,11 @@ func (m AppModel) devtoolsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.openEvalPrompt()
 	case devConsoleDetail:
 		e, _ := m.devtools.console.current(filter)
-		return m, m.devtools.detail.showText("console · "+e.Level, detailHead(e), e.Text, m.layer()+1)
+		text := e.Text
+		if e.Detail != "" {
+			text = e.Detail // the whole object, not its one-line preview
+		}
+		return m, m.devtools.detail.showText("console · "+e.Level, detailHead(e), text, m.layer()+1)
 	}
 	return m, nil
 }
