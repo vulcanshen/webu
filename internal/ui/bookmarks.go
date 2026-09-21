@@ -442,3 +442,86 @@ func cleanFolderPath(path string) string {
 	}
 	return strings.Join(parts, "/")
 }
+
+// ---- Rename (2026-09-21): r on a bookmark's row, or a folder's
+
+// startRename is r on the Bookmarks screen: a bookmark's title, or a
+// folder's own name, in a box holding the current one to edit — most
+// renames change part of a name (inputPopup.ask).
+func (m *AppModel) startRename(e listEntry) tea.Cmd {
+	if e.isFolder {
+		m.renameFolder, m.renameRef = e.folder, -1
+		return m.input.ask(inputPopup{title: "Rename folder", glyph: glyphFolder, prompt: "name",
+			value: folderBase(e.folder), accept: "rename", action: inputRename}, m.layer())
+	}
+	if e.ref < 0 || e.ref >= len(m.bookmarks) {
+		return nil
+	}
+	m.renameFolder, m.renameRef = "", e.ref
+	return m.input.ask(inputPopup{title: "Rename bookmark", glyph: glyphBookmark, prompt: "title",
+		value: m.bookmarks[e.ref].Title, accept: "rename", action: inputRename}, m.layer())
+}
+
+// renameGiven is the box answered. A bookmark takes the title. A folder
+// takes the name — one level, no slash, not one already there — and
+// every bookmark and folder under it follows to the new path, folded or
+// not. An empty, taken or slashed name keeps the box open.
+func (m *AppModel) renameGiven(value string) tea.Cmd {
+	name := strings.TrimSpace(value)
+	if name == "" {
+		return m.toast.show("a name is needed", toastInfo)
+	}
+	if m.renameFolder == "" {
+		if m.renameRef < 0 || m.renameRef >= len(m.bookmarks) {
+			return m.input.close()
+		}
+		m.bookmarks[m.renameRef].Title = name
+		if err := m.saveBookmarks(); err != nil {
+			return tea.Batch(m.input.close(), m.toast.show("bookmarks.yaml: "+err.Error(), toastError))
+		}
+		m.lists.setEntries(m.bookmarkEntries())
+		m.lists.cursorTo(m.renameRef)
+		return tea.Batch(m.input.close(), m.toast.show("renamed to "+oneLine(name), toastInfo))
+	}
+	if strings.Contains(name, "/") {
+		return m.toast.show("a name, not a path: the folder stays where it is", toastInfo)
+	}
+	old := m.renameFolder
+	to := name
+	if i := strings.LastIndex(old, "/"); i >= 0 {
+		to = old[:i+1] + name
+	}
+	if to == old {
+		return m.input.close()
+	}
+	for _, f := range m.folderNames() {
+		if f == to {
+			return m.toast.show("folder "+to+" exists; pick another name", toastInfo)
+		}
+	}
+	move := func(p string) string { return to + strings.TrimPrefix(p, old) }
+	for i, b := range m.bookmarks {
+		if inFolder(b.Folder, old) {
+			m.bookmarks[i].Folder = move(b.Folder)
+		}
+	}
+	for i, f := range m.folders {
+		if inFolder(f, old) {
+			m.folders[i] = move(f)
+		}
+	}
+	folded := map[string]bool{}
+	for f, v := range m.foldedFolders {
+		if inFolder(f, old) {
+			f = move(f)
+		}
+		folded[f] = v
+	}
+	m.foldedFolders = folded
+	if err := m.saveBookmarks(); err != nil {
+		return tea.Batch(m.input.close(), m.toast.show("bookmarks.yaml: "+err.Error(), toastError))
+	}
+	m.lists.setEntries(m.bookmarkEntries())
+	m.lists.cursorToFolder(to)
+	return tea.Batch(m.input.close(), m.toast.show("folder "+old+" is now "+to, toastInfo))
+}

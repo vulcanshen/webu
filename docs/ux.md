@@ -93,7 +93,7 @@ Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡
 
 | screen / popup | item operation | panel operation |
 |---|---|---|
-| Bookmarks（screen） | 書籤列：Enter 開**新分頁**（修訂 2026-09-21：一律新分頁、不佔原分頁，`[o]` 因此拿掉）、`[a] Add`（兩個 input popup：URL、再 title，加在游標所在的目錄；`[W]eb` 正在顯示的頁面當 placeholder，Enter 直接收下——加目前頁就是 `a` Enter Enter）、`[m] Move`（options popup 當目錄 picker：`(no folder)` + 目錄樹（縮排表階層），數字鍵選）、`[x] Delete`（confirm）、`[y] Yank`、`[e] Edit`（待做）。目錄列：Enter = Expand / Collapse（收起來一列 `▸ 󰉋 dev · 3 bookmarks`）、`[a] Add`（加在它裡面）、`[x] Delete`（空目錄直接刪、不問；有東西的先 confirm、列出裡面的書籤數與目錄數，確認就整棵樹刪掉——修訂 2026-09-21：import 進來的是一整棵樹，一列一列刪不是復原的辦法；上層目錄不受影響） | `[A] Add folder`（加在游標所在目錄下；路徑 `a/b/c` 一次開三層；空目錄也列出）、`[I] Import`（2026-09-21：file picker——filu finder 形式、同 sshu 的 identity picker，改成一次一個目錄：目錄在前、打字過濾、Enter 進目錄或選檔、空過濾時 Backspace 回上層、從 `~/Downloads` 開始——選瀏覽器匯出的 Netscape Bookmark HTML（Chrome / Firefox / Safari / Edge 同一格式；不是 XML）→ 選到就先解析、不是匯出檔立刻 toast → input popup **強制**輸入根目錄名（空的不收、已存在的不收、框留著）→ 整棵樹倒進 `名稱/…`，空目錄也保留、原有書籤不動）、`[/]` 搜尋。修訂 2026-09-21：原 `[A] Add this page` / `[F] Folder` / `[f] Subfolder` 拿掉 |
+| Bookmarks（screen） | 書籤列：Enter 開**新分頁**（修訂 2026-09-21：一律新分頁、不佔原分頁，`[o]` 因此拿掉）、`[a] Add`（兩個 input popup：URL、再 title，加在游標所在的目錄；`[W]eb` 正在顯示的頁面當 placeholder，Enter 直接收下——加目前頁就是 `a` Enter Enter）、`[m] Move`（options popup 當目錄 picker：`(no folder)` + 目錄樹（縮排表階層），數字鍵選）、`[x] Delete`（confirm）、`[y] Yank`、`[r] Rename`（改 title，框裡帶目前的值直接改；2026-09-21，原本規劃的 `[e] Edit` 就是這個；URL 要改就刪掉重加）。目錄列：Enter = Expand / Collapse（收起來一列 `▸ 󰉋 dev · 3 bookmarks`）、`[a] Add`（加在它裡面）、`[r] Rename`（只改這一層的名字：不能含 `/`、不能撞名、空的不收、框留著；底下的書籤與目錄路徑跟著換，摺疊狀態也跟著）、`[x] Delete`（空目錄直接刪、不問；有東西的先 confirm、列出裡面的書籤數與目錄數，確認就整棵樹刪掉——修訂 2026-09-21：import 進來的是一整棵樹，一列一列刪不是復原的辦法；上層目錄不受影響） | `[A] Add folder`（加在游標所在目錄下；路徑 `a/b/c` 一次開三層；空目錄也列出）、`[I] Import`（2026-09-21：file picker——filu finder 形式、同 sshu 的 identity picker，改成一次一個目錄：目錄在前、打字過濾、Enter 進目錄或選檔、空過濾時 Backspace 回上層、從 `~/Downloads` 開始——選瀏覽器匯出的 Netscape Bookmark HTML（Chrome / Firefox / Safari / Edge 同一格式；不是 XML）→ 選到就先解析、不是匯出檔立刻 toast → input popup **強制**輸入根目錄名（空的不收、已存在的不收、框留著）→ 整棵樹倒進 `名稱/…`，空目錄也保留、原有書籤不動）、`[/]` 搜尋。修訂 2026-09-21：原 `[A] Add this page` / `[F] Folder` / `[f] Subfolder` 拿掉 |
 | Downloads（screen） | Enter 開檔（系統開啟器；進行中 → toast）、`[o]` 來源 URL 開新分頁、`[x] Remove`（進行中先取消；檔案不動）、`[y] Yank path`（未落地時 yank 來源 URL） | `[C] Clear` 已完成 / 取消的 |
 | History（screen） | Enter 開**新分頁**（修訂 2026-09-21）、`[x] Delete` 該筆、`[y] Yank` | `[C] Clear`（confirm；唯一清除入口，歷史無限保留） |
 | Settings（screen） | Enter → input popup 改值 → 寫回 `config.yaml`、立即生效；目前只有 `download_dir`（2026-09-21）。**所有文字設定的 popup 同 `[L]ocation`**：目前生效的值當 placeholder，Tab 接手編輯、Backspace 整個清掉；沒動過就 Enter = 不改，清空後 Enter = 回預設 | — |
@@ -243,14 +243,14 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 | `[1]` panel | `T` `X` `U` |
 | `[2]` item | **無**（menu-only） |
 | `[2]` panel | `R` `T` `A` `O` `I` `Z` `Y` `C`（`v` 是全域的 visual mode，`L` 是全域的 location；`T` 與 `[1]` 同義；`C` 原是 `W`，修訂 2026-09-21） |
-| Bookmarks screen | `a` `m` `x` `y` / `A` `/`（`e` 待做；`a` 小寫 = 加書籤、`A` 大寫 = 加目錄，都在游標所在目錄下） |
+| Bookmarks screen | `a` `m` `r` `x` `y` / `A` `I` `/`（`a` 小寫 = 加書籤、`A` 大寫 = 加目錄，都在游標所在目錄下；`r` 改名（書籤 title 或目錄名）、`I` 匯入；2026-09-21） |
 | Downloads screen | `o` `x` `y` / `C` `/` |
 | History screen | `x` `y` / `C` `/` |
 | Settings screen | Enter |
 | DevTools | `x` `y` / `C` `/`；`h/l` 切分頁 |
 | 選取模式 | `hjkl` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
 
-撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊；小寫 `v`（visual mode）與 `[1]` 的 `c o r y`、Bookmarks 的 `a m x y`、Downloads 的 `o x y` 無重疊，visual mode 內的 `v`（開始選取）在模式裡、不同時可按；`V`（彩蛋）與各面板大寫無重疊（Bookmarks screen 的 `F` 是該 screen 的，與全域不撞）（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
+撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊；小寫 `v`（visual mode）與 `[1]` 的 `c o r y`、Bookmarks 的 `a m r x y`、Downloads 的 `o x y` 無重疊，visual mode 內的 `v`（開始選取）在模式裡、不同時可按；`V`（彩蛋）與各面板大寫無重疊（Bookmarks screen 的 `F` 是該 screen 的，與全域不撞）（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
 sshu 的 `[D]isconnect` 同例；`L` 與導覽 `l`（沿列右移）同例；`I` 與 DevTools Console 的 `i`（insert）在不同 surface。
 DevTools 原本的 `D` 讓給 header 的 Downloads（修訂 2026-09-20），改成 `[I]nspect`。`U` 只剩 `[1]` 的 undo close
 （修訂 2026-09-20：原本 `[2]` 也用 `U` 開 goto、同字依面板不同義；goto 改成全域 `L` 後不再同字）。Bookmarks 的新目錄用 `F`

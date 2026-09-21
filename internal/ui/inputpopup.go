@@ -26,6 +26,7 @@ const (
 	inputBookmarkURL               // a bookmark typed in: the URL first…
 	inputBookmarkTitle             // …then its title (bookmarks.go)
 	inputImportName                // the folder a browser's export goes under (bookmarks.go)
+	inputRename                    // a bookmark's title, or a folder's name (bookmarks.go)
 )
 
 // inputPopup is one line of text with a question above it — the message

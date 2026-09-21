@@ -158,7 +158,7 @@ A text box's Enter opens a one-line box: `Enter` writes the value back, `Esc` le
 
 ### The screens
 
-- **Bookmarks** — `Enter` open in a new tab, or collapse / expand a folder · `a` add a bookmark here · `m` move · `x` delete (a folder too: one with anything in it asks first, then goes with its whole tree) · `y` yank url · `A` add a folder here (`a/b/c` makes each level) · `I` import a browser's export into a folder of its own · `/` filter
+- **Bookmarks** — `Enter` open in a new tab, or collapse / expand a folder · `a` add a bookmark here · `m` move · `r` rename (a folder too: what is in it follows) · `x` delete (a folder too: one with anything in it asks first, then goes with its whole tree) · `y` yank url · `A` add a folder here (`a/b/c` makes each level) · `I` import a browser's export into a folder of its own · `/` filter
 - **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `C` clear · `/` filter
 - **Downloads** — `Enter` open the file · `o` source in a new tab · `x` remove (a running download is stopped) · `y` yank path · `C` clear the finished ones · `/` filter
 - **Settings** — `Enter` edit a text setting (the value in force is on offer: `Tab` takes it, `Backspace` clears it, an emptied line means the default) or flip a switch
@@ -195,7 +195,7 @@ The page holds still and the frame turns yellow. `h j k l` move by character, `w
 **v0.1.0.** The first release: the pinned Chromium, the page as items and flow, the two menus, the header of screens with bookmarks in folders, history, downloads and settings, the Location box, visual mode, DevTools, and everything a page can ask for. See [CHANGELOG.md](CHANGELOG.md).
 
 Not there yet:
-- **editing a bookmark** in place (delete and add it again for now) and fuzzy search on the History screen (it is a substring filter)
+- **editing a bookmark's URL** in place (`r` renames; for the URL, delete and add it again for now) and fuzzy search on the History screen (it is a substring filter)
 - **hover** — pages that reveal on mouse-over stay closed; the cursor is a keyboard cursor
 - **iframes** — drawn as a placeholder; their content is not walked
 - a `<textarea>` in your own `$EDITOR`, and a file picker for uploads (a path is typed for now)

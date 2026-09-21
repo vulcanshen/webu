@@ -210,7 +210,7 @@ func (m *listPanel) update(msg tea.KeyMsg) string {
 		if m.kind == listDownloads {
 			return k
 		}
-	case "m", "a", "A", "I":
+	case "m", "r", "a", "A", "I":
 		if m.kind == listBookmarks {
 			return k
 		}
@@ -280,10 +280,13 @@ func (m listPanel) menuItems() []menuItem {
 	}
 	items = append(items, menuItem{label: "Add", key: "a", hint: "a bookmark here: its URL, then its title"})
 	if ok && e.isFolder {
-		items = append(items, menuItem{label: "Delete", key: "x", hint: "this folder; with anything in it, asks first, then the whole tree"})
+		items = append(items,
+			menuItem{label: "Rename", key: "r", hint: "this folder; what is in it follows"},
+			menuItem{label: "Delete", key: "x", hint: "this folder; with anything in it, asks first, then the whole tree"})
 	} else {
 		items = append(items,
 			menuItem{label: "Move", key: "m", hint: "into a folder, or out to the top"},
+			menuItem{label: "Rename", key: "r", hint: "its title"},
 			menuItem{label: "Delete", key: "x", hint: "this bookmark"},
 			menuItem{label: "Yank url", key: "y", hint: "to the clipboard"})
 	}
@@ -317,7 +320,7 @@ func (m listPanel) hintPairs() [][2]string {
 		if e, _, ok := m.current(); ok && e.isFolder {
 			open = "expand / collapse"
 		}
-		pairs = [][2]string{{"Enter", open}, {"a", "add"}, {"m", "move"}, {"x", "delete"}, {"y", "yank url"},
+		pairs = [][2]string{{"Enter", open}, {"a", "add"}, {"m", "move"}, {"r", "rename"}, {"x", "delete"}, {"y", "yank url"},
 			{"A", "add folder"}, {"I", "import"}, {"/", "filter"}}
 	}
 	return append(pairs, [2]string{"Esc", "web"})

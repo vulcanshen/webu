@@ -10,6 +10,8 @@
   exports (Chrome, Firefox, Safari, Edge: the Netscape bookmark format).
   The file is read at once, a folder name is asked for and required, and
   the whole tree lands under it, empty folders included.
+- **Rename.** `r` on a bookmark edits its title in a box holding the
+  current one; on a folder, its name, and everything under it follows.
 
 ### Changed
 

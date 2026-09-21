@@ -128,8 +128,12 @@ type AppModel struct {
 	// foldedFolders the folder rows shut with Enter (bookmarks.go).
 	moveRef, settingRef int
 	folderParent        string
-	newBookmark         store.Bookmark
-	foldedFolders       map[string]bool
+	// renameRef is the bookmark a Rename box is about, renameFolder the
+	// folder — one or the other (bookmarks.go).
+	renameRef     int
+	renameFolder  string
+	newBookmark   store.Bookmark
+	foldedFolders map[string]bool
 	// pendingImport is a browser's export the picker read, waiting for the
 	// folder name it goes under (bookmarks.go).
 	pendingImport *store.Import
@@ -1134,6 +1138,11 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 		}
 		m.screen = screenWeb
 		return m, m.openTab(e.url, true)
+	case "r":
+		if !ok {
+			return m, nil
+		}
+		return m, m.startRename(e)
 	case "m":
 		if !ok || e.isFolder {
 			return m, m.toast.show("m moves a bookmark; put the cursor on one", toastInfo)
@@ -1745,6 +1754,8 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.bookmarkURLGiven(value)
 	case inputBookmarkTitle:
 		return m, m.bookmarkTitleGiven(value)
+	case inputRename:
+		return m, m.renameGiven(value)
 	case inputEval:
 		// The prompt stays; the expression and, when it comes, its result
 		// go to the console list behind it.
