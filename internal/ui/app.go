@@ -1918,7 +1918,7 @@ func inspectLines(n *ir.Node) []string {
 		on   bool
 		name string
 	}{{n.Focusable, "focusable"}, {n.Disabled, "disabled"}, {n.Expanded, "expanded"},
-		{n.Selected, "selected"}, {n.Multiline, "multiline"}, {n.Protected, "protected"}} {
+		{n.Selected, "selected"}, {n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}} {
 		if f.on {
 			states = append(states, f.name)
 		}

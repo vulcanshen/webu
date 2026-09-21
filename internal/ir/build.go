@@ -3,6 +3,7 @@ package ir
 import (
 	"bytes"
 	"encoding/json"
+	"maps"
 	"strings"
 
 	"github.com/chromedp/cdproto/accessibility"
@@ -20,6 +21,12 @@ type Capture struct {
 	// reads it off the same snapshot). The AX tree does not say, and an
 	// empty password box is not told apart any other way (2026-09-21).
 	Protected map[cdp.BackendNodeID]bool `json:"protected,omitempty"`
+	// Current marks the elements with aria-current (a link, or its list
+	// item): where the user is in a navigation or a breadcrumb.
+	Current map[cdp.BackendNodeID]bool `json:"current,omitempty"`
+	// Breadcrumb marks the elements the page calls a breadcrumb — by
+	// class, aria-label or schema.org itemtype — nav, list or div.
+	Breadcrumb map[cdp.BackendNodeID]bool `json:"breadcrumb,omitempty"`
 	// ContentType is document.contentType: what the response was. Empty
 	// in the role fixtures, which are all HTML.
 	ContentType string `json:"contentType,omitempty"`
@@ -106,9 +113,11 @@ func Build(c Capture) *Node {
 		return &Node{Kind: Document, Role: "RootWebArea"}
 	}
 	b := builder{
-		byID:      make(map[accessibility.NodeID]*accessibility.Node, len(c.Nodes)),
-		display:   c.Display,
-		protected: c.Protected,
+		byID:       make(map[accessibility.NodeID]*accessibility.Node, len(c.Nodes)),
+		display:    c.Display,
+		protected:  c.Protected,
+		current:    c.Current,
+		breadcrumb: maps.Clone(c.Breadcrumb),
 	}
 	for _, n := range c.Nodes {
 		b.byID[n.NodeID] = n
@@ -125,9 +134,12 @@ func Build(c Capture) *Node {
 }
 
 type builder struct {
-	byID      map[accessibility.NodeID]*accessibility.Node
-	display   map[cdp.BackendNodeID]string
-	protected map[cdp.BackendNodeID]bool
+	byID       map[accessibility.NodeID]*accessibility.Node
+	display    map[cdp.BackendNodeID]string
+	protected  map[cdp.BackendNodeID]bool
+	current    map[cdp.BackendNodeID]bool
+	breadcrumb map[cdp.BackendNodeID]bool // consumed as trails are wrapped
+	navDepth   int                        // navigation landmarks being entered
 }
 
 func (b *builder) blockBox(id cdp.BackendNodeID) bool {
@@ -189,16 +201,27 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 	switch {
 	case spec.Skip:
 		return nil
+	case b.breadcrumb[ax.BackendDOMNodeID] && b.navDepth == 0 && role != "navigation":
+		// A breadcrumb the page marked on a list or a div outside any
+		// navigation becomes one, so the UI has one shape for a trail
+		// (2026-09-21). The mark is spent, or this would recurse.
+		delete(b.breadcrumb, ax.BackendDOMNodeID)
+		b.navDepth++
+		kids := b.convert(ax)
+		b.navDepth--
+		return []*Node{{Kind: Landmark, Role: "navigation", Name: "breadcrumb", Breadcrumb: true,
+			ID: ax.BackendDOMNodeID, Children: kids}}
 	case spec.Transparent:
 		return b.container(ax, role)
 	}
 
 	n := &Node{
-		Kind:  spec.Kind,
-		Role:  role,
-		Name:  str(ax.Name),
-		Value: str(ax.Value),
-		ID:    ax.BackendDOMNodeID,
+		Kind:    spec.Kind,
+		Role:    role,
+		Name:    str(ax.Name),
+		Value:   str(ax.Value),
+		ID:      ax.BackendDOMNodeID,
+		Current: b.current[ax.BackendDOMNodeID],
 	}
 	for _, p := range ax.Properties {
 		switch p.Name {
@@ -274,7 +297,16 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 		n.Value = ""
 	}
 
+	nav := n.Kind == Landmark && role == "navigation"
+	if nav {
+		// A trail, by its name or by the DOM's word for it.
+		n.Breadcrumb = b.breadcrumb[n.ID] || strings.Contains(strings.ToLower(n.Name), "breadcrumb")
+		b.navDepth++
+	}
 	n.Children = b.children(ax)
+	if nav {
+		b.navDepth--
+	}
 	if n.Kind == ListItem {
 		n.Marker = marker(ax, b)
 	}

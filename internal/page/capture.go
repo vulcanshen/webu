@@ -44,7 +44,24 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 		if err != nil {
 			return err
 		}
-		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs), Protected: passwordFields(docs, strs)}
+		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs),
+			// What the AX tree does not say, the DOM does (ir.Build).
+			Protected: attrMarks(docs, strs, func(tag, name, value string) bool {
+				return tag == "input" && name == "type" && value == "password"
+			}),
+			Current: attrMarks(docs, strs, func(_, name, value string) bool {
+				return name == "aria-current" && value != "" && value != "false"
+			}),
+			Breadcrumb: attrMarks(docs, strs, func(_, name, value string) bool {
+				switch name {
+				case "class", "aria-label":
+					return strings.Contains(value, "breadcrumb")
+				case "itemtype":
+					return strings.Contains(value, "breadcrumblist")
+				}
+				return false
+			}),
+		}
 		// What the response was: a JSON or plain-text document is drawn as
 		// its text, not as Chrome's viewer for it (ir.Build).
 		if obj, _, err := runtime.Evaluate("document.contentType").WithReturnByValue(true).Do(ctx); err == nil && obj != nil {
@@ -58,11 +75,12 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 	return c, err
 }
 
-// passwordFields reads which inputs are type=password off the snapshot's
-// node table. The AX tree does not say: Chromium masks the value itself,
-// so a filled password box shows as dots, and an empty one looks like any
-// other textbox (ir.Build).
-func passwordFields(docs []*domsnapshot.DocumentSnapshot, strs []string) map[cdp.BackendNodeID]bool {
+// attrMarks reads the snapshot's node table for the elements pick says
+// yes to — by tag and one attribute, all lower-cased — as a set of
+// backend node ids. The AX tree carries no attributes: which input is a
+// password, which link is aria-current, which list is a breadcrumb, all
+// come from here (ir.Build).
+func attrMarks(docs []*domsnapshot.DocumentSnapshot, strs []string, pick func(tag, name, value string) bool) map[cdp.BackendNodeID]bool {
 	out := map[cdp.BackendNodeID]bool{}
 	if len(docs) == 0 || docs[0].Nodes == nil {
 		return out
@@ -72,16 +90,18 @@ func passwordFields(docs []*domsnapshot.DocumentSnapshot, strs []string) map[cdp
 		if i < 0 || int(i) >= len(strs) {
 			return ""
 		}
-		return strs[i]
+		return strings.ToLower(strs[i])
 	}
 	for i, name := range nodes.NodeName {
-		if !strings.EqualFold(str(int64(name)), "input") || i >= len(nodes.Attributes) || i >= len(nodes.BackendNodeID) {
+		if i >= len(nodes.Attributes) || i >= len(nodes.BackendNodeID) {
 			continue
 		}
+		tag := str(int64(name))
 		attrs := nodes.Attributes[i]
 		for j := 0; j+1 < len(attrs); j += 2 {
-			if strings.EqualFold(str(attrs[j]), "type") && strings.EqualFold(str(attrs[j+1]), "password") {
+			if pick(tag, str(attrs[j]), str(attrs[j+1])) {
 				out[nodes.BackendNodeID[i]] = true
+				break
 			}
 		}
 	}

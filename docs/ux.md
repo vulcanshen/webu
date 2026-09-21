@@ -35,7 +35,7 @@ Space = 右鍵選單，兩者分開**，選單不再由 Enter 開——之前那
 - select：左鍵是拉下清單 → 直接開 option 清單
 - button / checkbox / radio / switch：直接 click；media 佔位框、unsupported 也是（就是一個 click，頁面決定）
 - link：左鍵會換頁、看不見要去哪 → **先 confirm popup**（連結文字 + URL），Enter 才開、Esc 不動；Open in new tab 在 Space 選單
-- navigation（landmark）：一行入口 `▎ 󰍜 名字 +N`，連結不進畫面；Enter = 它的 item operation 選單（裡面每個 link / button 一列、巢狀清單縮排、Enter 就 click）——「Enter = 該物件的期望操作」在入口型物件上的樣子；Space 照舊 item operation + panel operation（2026-09-21）
+- navigation / breadcrumb（landmark）：一行入口 `▎ 󰍜 目前所在 +N`（icon 依種類；寫目前所在的 tab 或最後一節，不寫 landmark 名字），連結不進畫面；Enter = 它的 item operation 選單（裡面每個 link / button 一列、巢狀清單縮排、Enter 就 click）——「Enter = 該物件的期望操作」在入口型物件上的樣子；Space 照舊 item operation + panel operation（2026-09-21）
 - 自定義：其他 landmark 標題列、heading、Bookmarks 目錄列 → 展開 / 收合
 - 沒定義到的 → notice popup「Enter 尚未定義」，Space 仍列得出能做什麼
 
@@ -73,7 +73,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 | select | Choose（= Enter，直接開 option 清單 menu） |
 | image / media 佔位框 | Click（= Enter）、Yank media url |
 | heading | Collapse / Expand（Enter 直接切換；2026-09-21 落地）：收合到下一個同級或更高級 heading、或所在 landmark 結束為止，收合列畫成 `▸ # 標題 · N items`；重抓後仍記得，換頁即忘 |
-| navigation（landmark） | 一行入口 `▎ 󰍜 名字 +N`（2026-09-21：連結不進畫面、不佔橫向空間——橫向不定長的東西會誘導 `h/l`，terminal 最忌諱；`j/k` 一步跳過）；Enter = item operation 選單：裡面每個 link / button 一列（巢狀清單縮排、button 標 button）、Enter 就 click；Space = 同一份 item operation + panel operation；Yank text、Inspect 照舊；不收合（沒東西可收）。取代原本的「導覽清單一行流式」 |
+| navigation / breadcrumb（landmark） | 一行入口：navigation 是 `▎ 󰍜 目前所在 +N`、breadcrumb 是 `▎ 󰴠 目前所在 +N`（2026-09-21：**不寫 landmark 的名字**，寫「你在裡面的哪一格」——navigation 是目前的 tab、breadcrumb 是最後一節；連結不進畫面、不佔橫向空間——橫向不定長的東西會誘導 `h/l`，terminal 最忌諱；`j/k` 一步跳過）。「目前所在」的判法：`aria-current`（在連結或它的 li 上；AX tree 沒有這個屬性，從 DOM snapshot 讀）→ breadcrumb 沒標就取最後一節 → navigation 沒標就 URL 比對（連結 URL 等於頁面 URL、或是它最長的路徑前綴，`/docs` 之於 `/docs/api`）→ 都沒有才退回 landmark 名字。breadcrumb 的認法：nav 的名字含 breadcrumb、或 DOM 的 class / itemtype / aria-label 含 breadcrumb；沒包在 nav 裡的 `ol.breadcrumb` 在 ir 包成一個 navigation landmark，UI 只有一種形狀。Enter = item operation 選單：裡面每個 link / button 一列（巢狀清單縮排、button 標 button）、Enter 就 click；Space = 同一份 item operation + panel operation；Yank text、Inspect 照舊；不收合（沒東西可收）。取代原本的「導覽清單一行流式」 |
 | 所有 item 共有 | Yank text、Inspect（message 類 popup：role、name、states、backendDOMNodeId、href 或 src） |
 | 未支援 role | 第一列 disabled：「role: slider，尚未支援，只能 click」（function.md §3 fallback） |
 

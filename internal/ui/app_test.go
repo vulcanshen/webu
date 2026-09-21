@@ -925,8 +925,14 @@ func TestNavigationEntry(t *testing.T) {
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
-	if v := d.m.View(); !strings.Contains(v, "Main +2") {
-		t.Fatalf("the navigation should be one row with its count:\n%s", v)
+	// The row names where the user is in it — aria-current — not the
+	// landmark: the tab in the navigation, the last crumb in a breadcrumb
+	// (a trail named so, and one only the DOM's class says is one).
+	v := d.m.View()
+	for _, want := range []string{"Anchor +2", "Page A +1", "Here +1"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("missing the entry row %q in:\n%s", want, v)
+		}
 	}
 	for _, it := range d.page().lay.items {
 		if it.node.Kind == ir.Link && strings.Contains(it.node.Text(), "B via nav") {
@@ -957,6 +963,17 @@ func TestNavigationEntry(t *testing.T) {
 	d.key("esc")
 	d.until("space menu gone", func() bool { return !d.m.spaceMenu.isActive() })
 
+	// The class-marked trail is a navigation of its own, with its link.
+	d.cursorOn(ir.Landmark, "Root")
+	d.key("enter")
+	d.until("the trail's links", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	if got := d.m.options.items[d.m.options.cursor].label; got != "Root" {
+		t.Errorf("the trail's first row should be its link, is %q", got)
+	}
+	d.key("esc")
+	d.until("trail list gone", func() bool { return !d.m.options.isActive() })
+
+	d.cursorOn(ir.Landmark, "Main")
 	d.key("enter")
 	d.until("its links again", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
 	d.key("enter")
