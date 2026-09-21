@@ -18,7 +18,7 @@ webu is a member of the `u`-family and a browser-domain implementation of [this 
 
 ![demo](docs/demo.gif)
 
-Hacker News as items and flow, `j`/`k`/`l` walking them; `Enter` on a story lists what it can do, `Space` lists the whole menu; `L` is Chrome's Cmd+L with the page's URL on offer; `B` is the Bookmarks screen — folders as a tree, `Enter` opening one in a new tab; `I` is DevTools with Network, Storage and Console; `?` is the help.
+Hacker News as items and flow, `j`/`k`/`l` walking them; `Enter` on a story asks to open it, `Space` lists the whole menu; `L` is Chrome's Cmd+L with the page's URL on offer; `B` is the Bookmarks screen — folders as a tree, `Enter` opening one in a new tab; `I` is DevTools with Network, Storage and Console; `?` is the help.
 
 ## Five keys to drive webu
 
