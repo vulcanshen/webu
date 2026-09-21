@@ -208,11 +208,12 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		t.Errorf("a failed back should leave the page as it was: loading=%v url=%s", d.page().loading, d.page().url)
 	}
 
-	// An empty textbox's menu leads with Edit: the input popup; Enter there
+	// Enter on a textbox is the box itself — the input popup, no menu in
+	// between: a click on a field focuses it and nothing more. Enter there
 	// writes the value into the page, and the next capture shows it.
 	d.cursorOn(ir.Textbox, "Name")
-	d.act()
-	d.until("input popup", func() bool { return d.m.input.isInteractive() })
+	d.key("enter")
+	d.until("input popup", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
 	d.key("hi there")
 	d.key("enter")
 	d.until("value written", func() bool {
@@ -220,11 +221,23 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		return n != nil && n.Kind == ir.Textbox && n.Value == "hi there"
 	})
 
-	// A filled textbox's menu leads with Submit, which presses Enter in the
-	// field, and the form's handler sees the value.
+	// Filled, Enter is still the box, with the value in it to change.
 	d.key("enter")
-	d.until("item menu", func() bool { return d.m.options.isInteractive() })
-	if got := d.m.options.items[d.m.options.cursor].label; got != "Submit" {
+	d.until("input popup again", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
+	if d.m.input.value != "hi there" {
+		t.Errorf("the box should hold the value, holds %q", d.m.input.value)
+	}
+	// Esc closes the topmost float, and the toast from the failed back
+	// above may still be it: let it go first.
+	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
+	d.key("esc")
+	d.until("box gone", func() bool { return !d.m.input.isActive() })
+
+	// Submit is in the Space menu, first row: it presses Enter in the
+	// field, and the form's handler sees the value.
+	d.key(" ")
+	d.until("space menu", func() bool { return d.m.spaceMenu.isInteractive() })
+	if got := d.m.spaceMenu.items[d.m.spaceMenu.cursor].label; got != "Submit" {
 		t.Errorf("cursor should rest on Submit, is on %q", got)
 	}
 	d.key("enter")

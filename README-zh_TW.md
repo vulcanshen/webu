@@ -151,7 +151,7 @@ restore_session: true
 
 ### `[2]` Page
 
-item 上 `Enter` 開它的操作 —— 連結的 Open / Open in new tab / Yank link url、按鈕的 Click、輸入框的 Edit 或 Submit / Edit / Clear / Yank、下拉選單的 Choose、landmark 與 heading 的 Collapse / Expand —— 每一種都另有 Yank text 與 Inspect。panel operation：`R` 重載 · `T` 新分頁 · `P` / `N` 上一頁 / 下一頁 · `/` 搜尋 · `v` visual mode · `L` location · `A` 加書籤 · `O` outline · `I` inspect（DevTools）· `Z` zoom · `Y` yank page url · `C` 關掉這個分頁。
+item 上 `Enter` 開它的操作 —— 連結的 Open / Open in new tab / Yank link url、按鈕的 Click、下拉選單的 Choose —— 每一種都另有 Yank text 與 Inspect。三種不開選單：輸入框直接開輸入框打字，landmark 與 heading 直接 Collapse / Expand。輸入框的 Submit / Edit / Clear / Yank 在 `Space` 選單，Submit 排第一。panel operation：`R` 重載 · `T` 新分頁 · `P` / `N` 上一頁 / 下一頁 · `/` 搜尋 · `v` visual mode · `L` location · `A` 加書籤 · `O` outline · `I` inspect（DevTools）· `Z` zoom · `Y` yank page url · `C` 關掉這個分頁。
 
 輸入框的 Enter 開一行輸入框：`Enter` 把值寫回頁面、`Esc` 頁面不動。Location 框（`L`）開啟時帶著目前頁面的 URL 當預設值：`Tab` 接手編輯、`Backspace` 整個清掉，不像 URL 的字就送去搜尋引擎。
 

@@ -152,7 +152,7 @@ Every letter hotkey below is also a row in that surface's `Space` menu. The brac
 
 ### `[2]` Page
 
-`Enter` on an item opens its operations — a link's Open / Open in new tab / Yank link url, a button's Click, a text box's Edit or Submit / Edit / Clear / Yank, a select's Choose, a landmark's or heading's Collapse / Expand — plus Yank text and Inspect on every one. Panel operations: `R` reload · `T` new tab · `P` / `N` back / forward · `/` search · `v` visual mode · `L` location · `A` add bookmark · `O` outline · `I` inspect (DevTools) · `Z` zoom · `Y` yank page url · `C` close this tab.
+`Enter` on an item opens its operations — a link's Open / Open in new tab / Yank link url, a button's Click, a select's Choose — plus Yank text and Inspect on every one. Three kinds skip the menu: a text box opens to type, a landmark or heading collapses / expands. A text box's Submit / Edit / Clear / Yank are in the `Space` menu, Submit first. Panel operations: `R` reload · `T` new tab · `P` / `N` back / forward · `/` search · `v` visual mode · `L` location · `A` add bookmark · `O` outline · `I` inspect (DevTools) · `Z` zoom · `Y` yank page url · `C` close this tab.
 
 A text box's Enter opens a one-line box: `Enter` writes the value back, `Esc` leaves the page untouched. The Location box (`L`) opens with the page's own URL on offer: `Tab` takes it to edit, `Backspace` clears it, and words that are not a URL go to the search engine.
 

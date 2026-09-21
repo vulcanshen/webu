@@ -127,7 +127,7 @@ backendDOMNodeId，找不到落到同序位。
 ## §A VTP in webu
 
 依 ux.md §A 落地。已實作的入口：footer `space menu   ? help   tab/1-2 panels   q quit`；
-`[2]` 的 **Enter 開 item operation 選單**（`itemMenuItems`，第一列主要動作；修訂 2026-09-20。VTP §A.0.K 2026-09-21 把 Enter 改寫為「啟動該項目最直觀的操作、依 app context 而定」：webu 對頁面 item 是開選單、對 landmark / heading / 目錄列是直接開合、對 bookmark / history 列是開新分頁——每種列跨 surface 一致），
+`[2]` 的 **Enter 開 item operation 選單**（`itemMenuItems`，第一列主要動作；修訂 2026-09-20。VTP §A.0.K 2026-09-21 把 Enter 改寫為「啟動該項目最直觀的操作、依 app context 而定」：webu 對頁面 item 是開選單、對 textbox 是直接開 input popup（空或有值，2026-09-21）、對 landmark / heading / 目錄列是直接開合、對 bookmark / history 列是開新分頁——每種列跨 surface 一致），
 Space 開完整選單（同一份 item 列 + panel region `[R] [T] [P] [N] [/] [v] [L] [A] [O] [I] [Z] [Y] [C]`）；
 `[1]` 的 `[w] [c] [r] [y]` / `[T] [X] [U]`；header 五個 chip 是 screen（`screen` enum；`switchScreen` / `screenKey` / `listAction`，`W` `B` `H` `D` `S` 全域），list screen 的 Space menu = `listPanel.menuItems`，鍵與 `update` 同一組（2026-09-21）。help popup 列全域鍵。
 options popup（`m.options`）以 `optionsKind` 區分兩種內容：item 選單、select 的 option 清單（Choose
@@ -189,7 +189,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - Chromium 下載 / 啟動 / 關閉、`webu version`、`webu browser update`、`webu <url>`
 - role 白名單每 role 一份 fixture；`docs/support.md`
 - `[2]` 頁面：URL 列、分隔線、排版、游標、`j/k/u/d/gg/G`、捲動指示與 loading hint
-- Enter = 該 item 的 operation 選單（第一列主要動作：link Open、button Click、空 textbox Edit、有值 textbox Submit / Edit / Clear / Yank、select Choose；landmark / heading 直接開合）
+- Enter = 該 item 的 operation 選單（第一列主要動作：link Open、button Click、select Choose）；textbox 直接開 input popup（空或有值，2026-09-21；Submit / Edit / Clear / Yank 在 Space 選單）；landmark / heading 直接開合
 - `[1]` 分頁：新開 / 切換（綠字）/ 關閉 / clone / reload / yank / close others；`target=_blank` 尚未接 `Target.targetCreated`
 - goto popup（全域 `L` / `[1]` `[2]` 的 `T`）：非 URL 當搜尋（預設 Google，2026-09-21 起）；`L` 帶目前 URL 當 placeholder，Tab 接手編輯、Backspace 清掉（`inputPopup.update`）；label 2026-09-21 改成 `[L]ocation`（popup title「Location」）；`bracketHotkey` 仍支援 label 中段加括號（只對字母；數字鍵在 label 裡出現過曾印成 `dir[1]`，2026-09-21 修）
 - `P` / `N` / `R`、Yank url / text / value、Inspect（暫以 toast 呈現）

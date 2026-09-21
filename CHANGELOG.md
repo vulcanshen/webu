@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **Enter on a text box opens the box.** No menu in between, empty or
+  filled: a click on a field focuses it and nothing else happens, so
+  there is nothing to disclose first. Submit, Edit, Clear and Yank are in
+  the Space menu, Submit first.
+
 ## [0.1.0] — 2026-09-21
 
 The first release. webu is a terminal browser: a pinned Chromium runs
