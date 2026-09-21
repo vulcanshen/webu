@@ -1275,14 +1275,13 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 type optionsKind int
 
 const (
-	optItemMenu optionsKind = iota // an item's operations (Enter on [2])
-	optSelect                      // a <select>'s options, keyed by index
-	optMoveTo                      // a bookmark's folder, keyed by index (bookmarks.go)
+	optSelect optionsKind = iota // a <select>'s options, keyed by index
+	optMoveTo                    // a bookmark's folder, keyed by index (bookmarks.go)
 )
 
 // itemMenuItems is an item's operations by role (menu-only, no letters —
-// ux.md §A.1). The first row is the item's main action, so Enter twice
-// does the obvious thing: open a link, press a button, edit a field.
+// ux.md §A.1): what a right click would list. The first row is the item's
+// main action — the one Enter does outright, or after asking, for a link.
 // folded is a landmark's state, which decides which way its row reads.
 func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 	var items []menuItem
@@ -1389,8 +1388,8 @@ func (m AppModel) menuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return mm, tea.Batch(closeCmd, cmd)
 }
 
-// optionsKey drives the second-level menu: a filled textbox's actions, a
-// select's options (whose keys are their index), or the Add to… picker.
+// optionsKey drives the second-level menu: a select's options (whose keys
+// are their index), or the Move to… picker.
 func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var key string
 	m.options, key, _ = m.options.update(msg)
@@ -1414,25 +1413,12 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if i := m.options.cursor; i < len(m.options.items) && m.options.items[i].disabled && m.options.items[i].key == key {
 		return m, m.toast.show(m.options.items[i].hint, toastInfo)
 	}
-	switch m.optionsKind {
-	case optSelect:
-		idx, err := strconv.Atoi(key)
-		if n == nil || err != nil || idx < 0 || idx >= len(n.Children) {
-			return m, m.options.close()
-		}
-		opt := n.Children[idx]
-		return m, tea.Batch(m.closeStack(), t.act(func(ctx context.Context) error { return page.Choose(ctx, opt.ID) }))
+	idx, err := strconv.Atoi(key)
+	if n == nil || err != nil || idx < 0 || idx >= len(n.Children) {
+		return m, m.options.close()
 	}
-	// An item's operation. Close BEFORE dispatching: dispatch returns its
-	// own copy of the model, and a close applied to this one afterwards
-	// would be applied to a model nobody returns. Choose keeps the float
-	// open, swapping it for the option list.
-	if key == "choose" {
-		return m.chooseOptions()
-	}
-	closeCmd := m.options.close()
-	mm, cmd := m.dispatch(key)
-	return mm, tea.Batch(closeCmd, cmd)
+	opt := n.Children[idx]
+	return m, tea.Batch(m.closeStack(), t.act(func(ctx context.Context) error { return page.Choose(ctx, opt.ID) }))
 }
 
 // ---------------------------------------------------------------- actions
@@ -1608,38 +1594,53 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// enterItem is Enter on panel [2]: the item's operations, as a menu of
-// their own, first row the main one (ux.md §A.0.K as revised 2026-09-20).
-// Space is the whole menu — this region and the page's — so Enter is the
-// short way to "what can I do with THIS". Two kinds skip the menu, having
-// one obvious action: a landmark's or heading's row folds, a textbox
-// opens to type.
+// enterItem is Enter on panel [2]: what a left click on the item would
+// do, in terminal terms (ux.md §A.0.K, settled 2026-09-21). Space is the
+// right-click menu, and the two do not mix — Enter never opens a menu.
+//
+//   - a textbox is focused to type into: the input popup, a password's
+//     masked
+//   - a select drops its list: the option menu
+//   - a button, a check box, a media box, an unsupported node: the click
+//   - a link would leave the page for somewhere the screen does not show,
+//     so it asks first — text and URL in a confirm — and opens on Enter
+//   - a landmark's or heading's row has no click to map; its own action
+//     is to collapse or expand
+//   - anything else says that Enter has nothing defined for it yet; the
+//     Space menu still lists what it can do
 func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	n := t.current()
 	if t == nil || n == nil {
 		return m, nil
 	}
-	// A landmark's row, or a heading's, has one action worth a keystroke
-	// — collapse or expand — so Enter does it outright; the menu (Space)
-	// still lists it with the yank and inspect rows (revised 2026-09-21).
-	if n.Kind == ir.Landmark || n.Kind == ir.Heading {
+	switch n.Kind {
+	case ir.Textbox:
+		return m, m.editField(n)
+	case ir.Combobox:
+		return m.chooseOptions()
+	case ir.Button, ir.Check, ir.Media, ir.Unsupported:
+		return m.dispatch("click")
+	case ir.Link:
+		return m, m.askOpenLink(n)
+	case ir.Landmark, ir.Heading:
 		return m.dispatch("fold")
 	}
-	// A textbox's one obvious action is to type into it — a click on a
-	// field focuses it and nothing else happens — so Enter opens the box
-	// outright, empty or filled (revised 2026-09-21). Submit, Clear and
-	// Yank are in the Space menu.
-	if n.Kind == ir.Textbox {
-		return m, m.editField(n)
+	return m, m.message.show(glyphInfo, "Enter", []string{
+		"Nothing is defined for Enter on this item yet.",
+		"Space lists what can be done with it."}, false, m.layer())
+}
+
+// askOpenLink puts a link's text and URL up before following it: a click
+// would leave the page, and nothing on the screen says where to. Enter
+// opens it in this tab; Open in new tab is in the Space menu.
+func (m *AppModel) askOpenLink(n *ir.Node) tea.Cmd {
+	lines := []string{oneLine(n.URL)}
+	if text := oneLine(n.Text()); text != "" {
+		lines = append([]string{text}, lines...)
 	}
-	m.optionsFor, m.optionsKind = n, optItemMenu
-	title := oneLine(n.Text())
-	if title == "" {
-		title = oneLine(nameOr(n.Name, n.Kind.String()))
-	}
-	m.options.setItems(itemMenuItems(n, t.lay.items[t.cursor].folded), truncate(title, 40), m.layer())
-	return m, m.options.open()
+	return m.confirm.ask(confirmPopup{glyph: glyphLink, title: "Open link", lines: lines,
+		accept: "open", action: confirmOpenLink, node: n.ID}, m.layer())
 }
 
 // chooseOptions lists a select's options in the options menu, cursor on
@@ -1679,12 +1680,13 @@ func (m AppModel) chooseOptions() (tea.Model, tea.Cmd) {
 // which is the model that gets returned — a value receiver here would open
 // the popup on a copy nobody keeps.
 func (m *AppModel) editField(n *ir.Node) tea.Cmd {
-	value := n.Value
+	value, prompt := n.Value, "value"
 	if n.Protected {
-		value = ""
+		// Never the old value: Chromium hands over dots, not the secret.
+		value, prompt = "", "password"
 	}
 	return m.input.ask(inputPopup{title: oneLine(nameOr(n.Name, "field")), glyph: glyphPencil,
-		prompt: "value", accept: "set", action: inputField, node: n.ID, value: value,
+		prompt: prompt, accept: "set", action: inputField, node: n.ID, value: value,
 		masked: n.Protected}, m.layer())
 }
 
@@ -1886,6 +1888,13 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, closeCmd
 		}
 		return m, tea.Batch(closeCmd, m.storageThen(t, func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) }))
+	case confirmOpenLink:
+		t := m.shownTab()
+		if t == nil {
+			return m, closeCmd
+		}
+		id := m.confirm.node
+		return m, tea.Batch(closeCmd, t.act(func(ctx context.Context) error { return page.Click(ctx, id) }))
 	}
 	return m, closeCmd
 }

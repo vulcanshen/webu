@@ -45,7 +45,7 @@ tools/axdump/        看任何頁面的 AX tree（用本機 Chrome，不是釘�
 
 - **AX tree 沒有 block / inline**：`generic` 對 div 與 span 一視同仁，兩個相鄰 `<div>` 的字會黏成一行。
   `page.Capture` 多打一次 `DOMSnapshot.captureSnapshot(["display"])`，以 backendDOMNodeId 對回去；
-  `ir.Capture{Nodes, Display}` 是翻譯層的輸入。透明容器若 display 是 block 級且裡面有 inline 內容，
+  `ir.Capture{Nodes, Display, Protected}` 是翻譯層的輸入（`Protected`：同一份 snapshot 的 node 表裡 `type=password` 的 input，`page.passwordFields`；AX tree 不說、空的 password 欄位只有這裡認得出，2026-09-21）。透明容器若 display 是 block 級且裡面有 inline 內容，
   留一個 `Group` 保住斷行；inline kind（link / button …）若被排成 block，`Node.Block = true`
 - **`url` 就在 AX node 上**：link 的 href、image 的 src 都是 AX property，不用 `DOM.getAttributes`
 - **password**：Chromium 自己把 value 遮成 `•`；`Protected` 由此判定，輸入 popup 遮罩
@@ -127,7 +127,7 @@ backendDOMNodeId，找不到落到同序位。
 ## §A VTP in webu
 
 依 ux.md §A 落地。已實作的入口：footer `space menu   ? help   tab/1-2 panels   q quit`；
-`[2]` 的 **Enter 開 item operation 選單**（`itemMenuItems`，第一列主要動作；修訂 2026-09-20。VTP §A.0.K 2026-09-21 把 Enter 改寫為「啟動該項目最直觀的操作、依 app context 而定」：webu 對頁面 item 是開選單、對 textbox 是直接開 input popup（空或有值，2026-09-21）、對 landmark / heading / 目錄列是直接開合、對 bookmark / history 列是開新分頁——每種列跨 surface 一致），
+`[2]` 的 **Enter = 滑鼠左鍵在 terminal 的對應**（`enterItem`，定案 2026-09-21；VTP §A.0.K「啟動該項目最直觀的操作、依 app context 而定」：textbox → `editField`（password 遮罩、prompt 寫 password）、select → `chooseOptions`、button / check / media / unsupported → click、link → `askOpenLink` 開 confirm（`confirmOpenLink`，帶 node id）確認後 click、landmark / heading → fold、其他 → message popup「尚未定義」；list screen 的 bookmark / history 列開新分頁、目錄列開合——每種列跨 surface 一致。2026-09-20 的「Enter 開 item 選單」作廢，`optItemMenu` 拿掉，`optionsKey` 只剩 select 與 move picker），
 Space 開完整選單（同一份 item 列 + panel region `[R] [T] [P] [N] [/] [v] [L] [A] [O] [I] [Z] [Y] [C]`）；
 `[1]` 的 `[w] [c] [r] [y]` / `[T] [X] [U]`；header 五個 chip 是 screen（`screen` enum；`switchScreen` / `screenKey` / `listAction`，`W` `B` `H` `D` `S` 全域），list screen 的 Space menu = `listPanel.menuItems`，鍵與 `update` 同一組（2026-09-21）。help popup 列全域鍵。
 options popup（`m.options`）以 `optionsKind` 區分兩種內容：item 選單、select 的 option 清單（Choose
@@ -189,7 +189,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - Chromium 下載 / 啟動 / 關閉、`webu version`、`webu browser update`、`webu <url>`
 - role 白名單每 role 一份 fixture；`docs/support.md`
 - `[2]` 頁面：URL 列、分隔線、排版、游標、`j/k/u/d/gg/G`、捲動指示與 loading hint
-- Enter = 該 item 的 operation 選單（第一列主要動作：link Open、button Click、select Choose）；textbox 直接開 input popup（空或有值，2026-09-21；Submit / Edit / Clear / Yank 在 Space 選單）；landmark / heading 直接開合
+- Enter = 左鍵的對應（2026-09-21）：textbox 開 input popup（password 遮罩）、select 開 option 清單、button / check / media / unsupported click、link 先 confirm 再開、landmark / heading 開合、其他 notice；item 選單只在 Space
 - `[1]` 分頁：新開 / 切換（綠字）/ 關閉 / clone / reload / yank / close others；`target=_blank` 尚未接 `Target.targetCreated`
 - goto popup（全域 `L` / `[1]` `[2]` 的 `T`）：非 URL 當搜尋（預設 Google，2026-09-21 起）；`L` 帶目前 URL 當 placeholder，Tab 接手編輯、Backspace 清掉（`inputPopup.update`）；label 2026-09-21 改成 `[L]ocation`（popup title「Location」）；`bracketHotkey` 仍支援 label 中段加括號（只對字母；數字鍵在 label 裡出現過曾印成 `dir[1]`，2026-09-21 修）
 - `P` / `N` / `R`、Yank url / text / value、Inspect（暫以 toast 呈現）

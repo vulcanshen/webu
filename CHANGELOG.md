@@ -4,10 +4,20 @@
 
 ### Changed
 
-- **Enter on a text box opens the box.** No menu in between, empty or
-  filled: a click on a field focuses it and nothing else happens, so
-  there is nothing to disclose first. Submit, Edit, Clear and Yank are in
-  the Space menu, Submit first.
+- **Enter is a click; Space is the menu.** Enter on an item does what a
+  left click would, in terminal terms: a text box opens to type, a select
+  drops its list, a button or check box is pressed, a landmark or heading
+  collapses / expands. A link asks first — its text and URL in a confirm
+  — and opens on Enter again. An item with no Enter action yet says so.
+  The item's other operations — Open in new tab, Submit, Clear, Yank —
+  are in the Space menu, no longer behind Enter.
+
+### Fixed
+
+- **An empty password box is known as one**, and its input popup masks
+  the typing from the first keystroke. It was told apart by the dots in
+  its value, which an empty one has none of; now the DOM snapshot says
+  which inputs are `type=password`.
 
 ## [0.1.0] — 2026-09-21
 

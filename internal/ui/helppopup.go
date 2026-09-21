@@ -36,7 +36,7 @@ type helpEntry struct{ key, desc string }
 var helpContent = []helpEntry{
 	{"", "Core keys"},
 	{"Tab · 1-2", "next panel / this panel"},
-	{"Enter", "what can I do with this item (first row: the obvious thing); a text box opens to type"},
+	{"Enter", "the item, as a click: a field opens, a select lists, a link asks first, a heading folds"},
 	{"Esc", "close the top float; on a screen, back to Web"},
 	{"Space", "what can I do here: the item and the panel"},
 	{"?", "this help"},

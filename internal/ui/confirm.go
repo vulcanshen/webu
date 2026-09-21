@@ -3,6 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/chromedp/cdproto/cdp"
 )
 
 // confirmAction is what the caller does when the user commits (ux.md §5).
@@ -17,6 +18,7 @@ const (
 	confirmDialog                     // a page's alert / confirm / beforeunload
 	confirmCert                       // proceed past a certificate error
 	confirmClearSite                  // DevTools: clear everything for the origin
+	confirmOpenLink                   // Enter on a link: open it in this tab
 )
 
 // confirmPopup is the message class (§6.1): a short question with one yes and
@@ -31,7 +33,8 @@ type confirmPopup struct {
 	warn    bool   // render the first line in the warning colour
 	action  confirmAction
 	tabID   int
-	at      int // the list entry the action is about
+	at      int               // the list entry the action is about
+	node    cdp.BackendNodeID // the link, for confirmOpenLink
 	layer   int
 	screenW int
 	screenH int

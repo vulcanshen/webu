@@ -4,6 +4,7 @@
 <p><a href="nav2.html" target="_blank">B in a new tab</a></p>
 <form onsubmit="event.preventDefault(); document.querySelector(&quot;#out&quot;).textContent = &quot;submitted:&quot; + this.n.value;">
 <label>Name <input name="n"></label>
+<label>Secret <input name="p" type="password"></label>
 <label>Pick <select name="s"><option>One</option><option>Two</option></select></label>
 <button type="submit">Send</button>
 </form>
