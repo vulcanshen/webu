@@ -232,7 +232,7 @@ func (m *AppModel) deleteFolder(path string) tea.Cmd {
 		return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
 	}
 	m.lists.setEntries(m.bookmarkEntries())
-	return nil
+	return m.toast.show("folder "+path+" removed", toastInfo)
 }
 
 // ---------------------------------------------------------- adding one

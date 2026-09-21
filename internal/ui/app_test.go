@@ -336,8 +336,36 @@ func TestScreensAndSession(t *testing.T) {
 	d.key("esc") // the toast that said so
 	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
 
+	// A folder inside another can be deleted from the inside out: x on
+	// the innermost row removes that path, and the parent it implied goes
+	// with it once nothing else needs it.
+	d.m.lists.cursorTo(0) // Hacker News, in dev/sub
+	d.key("A")
+	d.until("nested folder box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFolder })
+	d.key("x/y")
+	d.key("enter")
+	d.until("nested folders made", func() bool { return len(d.m.folders) == 2 && d.m.folders[1] == "dev/sub/x/y" })
+	d.key("esc") // the toast
+	d.until("nested toast gone", func() bool { return !d.m.toast.anim.owns() })
+	d.m.lists.cursorToFolder("dev/sub/x")
+	d.key("x")
+	if len(d.m.folders) != 2 {
+		t.Error("x must not go while y is inside it")
+	}
+	d.key("esc")
+	d.until("refusal gone", func() bool { return !d.m.toast.anim.owns() })
+	d.m.lists.cursorToFolder("dev/sub/x/y")
+	d.key("x")
+	d.until("y removed", func() bool { return len(d.m.folders) == 1 })
+	if names := d.m.folderNames(); len(names) != 2 || names[1] != "dev/sub" {
+		t.Errorf("x, implied only by y, should be gone too: %v", names)
+	}
+	d.key("esc")
+	d.until("removal toast gone", func() bool { return !d.m.toast.anim.owns() })
+
 	// a adds a bookmark where the cursor is, in two boxes; with no page
 	// up, the title box offers the URL, and Enter takes the offer.
+	d.m.lists.cursorToFolder("dev")
 	d.key("a")
 	d.until("url box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputBookmarkURL })
 	d.key("go.dev")
