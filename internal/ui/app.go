@@ -849,16 +849,16 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		return m, m.enterSelect(true)
 	case "V":
+		// The family's easter egg, on the family's key (splash.go).
+		return m, m.splash.show()
+	case "v":
 		// Visual mode, the way into the text itself: the item cursor stops
 		// only on items, and a paragraph is reached by character (ux.md
-		// §1). Upper case like every other panel operation, and it reads
-		// the same from any panel, like /.
+		// §1). Lower case as the one exception to "panel operations are
+		// upper case" (revised 2026-09-21): V is the family's egg, and a
+		// mode is not a panel operation. It reads the same from any panel,
+		// like /.
 		return m, m.enterSelect(false)
-	case "v":
-		// The family's easter egg is on V; in webu V is visual mode, so
-		// the egg takes the lower case — the one letter no panel and no
-		// screen claims (splash.go, ux.md §A.2).
-		return m, m.splash.show()
 	}
 
 	switch m.focus {
@@ -1065,7 +1065,7 @@ func (m AppModel) screenKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.switchScreen(k)
 		case " ":
 			return m.openMenu()
-		case "v":
+		case "V":
 			// The easter egg, the same letter as on the web (splash.go).
 			return m, m.splash.show()
 		}
@@ -1351,7 +1351,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
 		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
-		menuItem{label: "Visual mode", key: "V", hint: "walk the text by character, copy some", disabled: t == nil},
+		menuItem{label: "Visual mode", key: "v", hint: "walk the text by character, copy some", disabled: t == nil},
 		menuItem{label: "Location", key: "L", hint: "a URL or a search; this page's own is offered"},
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
@@ -1548,7 +1548,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/":
 		return m, m.enterSelect(true)
-	case "V", "select":
+	case "v", "select":
 		return m, m.enterSelect(false)
 	case "A":
 		if t != nil {

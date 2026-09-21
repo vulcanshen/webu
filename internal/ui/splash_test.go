@@ -7,22 +7,22 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// A bare v is the family's easter egg (its V is webu's visual mode): the
-// logo reveals in stages, the name and version follow, and any key puts
-// the screen back.
+// V is the family's easter egg, here as everywhere in the family (visual
+// mode is the lower-case v): the logo reveals in stages, the name and
+// version follow, and any key puts the screen back.
 func TestSplashEasterEgg(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir())
 	t.Setenv("WEBU_DATA", t.TempDir())
 	d := newDriver(t, New(nil, ""))
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 
-	d.key("V")
-	if d.m.splash.isActive() {
-		t.Fatal("V is visual mode, never the splash")
-	}
 	d.key("v")
+	if d.m.splash.isActive() {
+		t.Fatal("v is visual mode, never the splash")
+	}
+	d.key("V")
 	if !d.m.splash.isActive() {
-		t.Fatal("v should open the splash")
+		t.Fatal("V should open the splash")
 	}
 	d.until("the mark revealed and named", func() bool { return d.m.splash.identityVisible })
 	v := d.m.View()
@@ -37,11 +37,11 @@ func TestSplashEasterEgg(t *testing.T) {
 		t.Error("any key should dismiss the splash and put the frame back")
 	}
 
-	// On a list screen v is the egg too; the screen is still there after.
+	// On a list screen V is the egg too; the screen is still there after.
 	d.key("B")
-	d.key("v")
+	d.key("V")
 	if !d.m.splash.isActive() {
-		t.Fatal("v on the Bookmarks screen should open the splash")
+		t.Fatal("V on the Bookmarks screen should open the splash")
 	}
 	d.key("esc")
 	if d.m.splash.isActive() || d.m.screen != screenBookmarks {

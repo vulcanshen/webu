@@ -142,7 +142,7 @@ Every letter hotkey below is also a row in that surface's `Space` menu. The brac
  screens   W / B / H / D / S           Esc on a screen goes back to the web
  panels    1 / 2 of the web  ·  Tab
  cursor    j k    u d (half page)      gg G      h l along a row
- page      P / N previous / next       L location      / search      V visual mode
+ page      P / N previous / next       L location      / search      v visual mode
  global    Space menu    ? help    q quit    Ctrl+C force quit
 ```
 
@@ -152,7 +152,7 @@ Every letter hotkey below is also a row in that surface's `Space` menu. The brac
 
 ### `[2]` Page
 
-`Enter` on an item opens its operations — a link's Open / Open in new tab / Yank link url, a button's Click, a text box's Edit or Submit / Edit / Clear / Yank, a select's Choose, a landmark's or heading's Collapse / Expand — plus Yank text and Inspect on every one. Panel operations: `R` reload · `T` new tab · `P` / `N` back / forward · `/` search · `V` visual mode · `L` location · `A` add bookmark · `O` outline · `I` inspect (DevTools) · `Z` zoom · `Y` yank page url · `C` close this tab.
+`Enter` on an item opens its operations — a link's Open / Open in new tab / Yank link url, a button's Click, a text box's Edit or Submit / Edit / Clear / Yank, a select's Choose, a landmark's or heading's Collapse / Expand — plus Yank text and Inspect on every one. Panel operations: `R` reload · `T` new tab · `P` / `N` back / forward · `/` search · `v` visual mode · `L` location · `A` add bookmark · `O` outline · `I` inspect (DevTools) · `Z` zoom · `Y` yank page url · `C` close this tab.
 
 A text box's Enter opens a one-line box: `Enter` writes the value back, `Esc` leaves the page untouched. The Location box (`L`) opens with the page's own URL on offer: `Tab` takes it to edit, `Backspace` clears it, and words that are not a URL go to the search engine.
 
@@ -167,7 +167,7 @@ A text box's Enter opens a one-line box: `Enter` writes the value back, `Esc` le
 
 `h` / `l` switch between **Network** (`Enter` a request's headers and body, `C` clear, `/` filter), **Storage** (cookies, local and session storage: `x` delete, `y` yank the value, `C` clear site data, `/` filter), **Console** (every entry whole, wrapped; `Enter` an entry's detail — an object listed property by property; `i` the prompt, a REPL that evaluates in the page; `C` clear, `/` filter) and **Source** (the page's HTML, `/` grep). `Esc` closes.
 
-### Visual mode (`V` or `/`)
+### Visual mode (`v` or `/`)
 
 The page holds still and the frame turns yellow. `h j k l` move by character, `w` / `e` / `b` by word, `0` / `$` to either end of the line, `u` / `d` half a page, `gg` / `G` to the ends; `v` / `V` start selecting by character or by line, `y` copies to the system clipboard (`pbcopy`, `wl-copy`, `xclip` or `xsel`), `/` searches with `n` / `N`, `Enter` acts on the item under the cursor, `Esc` leaves.
 

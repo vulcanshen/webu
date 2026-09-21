@@ -178,19 +178,19 @@ func TestSelectRowsDrawTheCursor(t *testing.T) {
 	}
 }
 
-func TestVEntersSelectionFromAnyPanel(t *testing.T) {
+func TestLowerVEntersSelectionFromAnyPanel(t *testing.T) {
 	m := New(nil, "")
 	tb := selectFixture()
 	m.tabs = append(m.tabs, tb)
 	m.shown = 0
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("V")})
+	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
 	mm := model.(AppModel)
 	if !mm.sel.on || mm.sel.typing || mm.focus != panelPage {
 		t.Errorf("V: on=%v typing=%v focus=%d", mm.sel.on, mm.sel.typing, mm.focus)
 	}
 	mm.focus = panelTabs
 	mm.sel.on = false
-	model, _ = mm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("V")})
+	model, _ = mm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
 	mm = model.(AppModel)
 	if !mm.sel.on || mm.focus != panelPage {
 		t.Errorf("V from [1] moves to [2] first: on=%v focus=%d", mm.sel.on, mm.focus)

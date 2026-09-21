@@ -128,7 +128,7 @@ backendDOMNodeId，找不到落到同序位。
 
 依 ux.md §A 落地。已實作的入口：footer `space menu   ? help   tab/1-2 panels   q quit`；
 `[2]` 的 **Enter 開 item operation 選單**（`itemMenuItems`，第一列主要動作；修訂 2026-09-20。VTP §A.0.K 2026-09-21 把 Enter 改寫為「啟動該項目最直觀的操作、依 app context 而定」：webu 對頁面 item 是開選單、對 landmark / heading / 目錄列是直接開合、對 bookmark / history 列是開新分頁——每種列跨 surface 一致），
-Space 開完整選單（同一份 item 列 + panel region `[R] [T] [P] [N] [/] [V] [L] [A] [O] [I] [Z] [Y] [C]`）；
+Space 開完整選單（同一份 item 列 + panel region `[R] [T] [P] [N] [/] [v] [L] [A] [O] [I] [Z] [Y] [C]`）；
 `[1]` 的 `[w] [c] [r] [y]` / `[T] [X] [U]`；header 五個 chip 是 screen（`screen` enum；`switchScreen` / `screenKey` / `listAction`，`W` `B` `H` `D` `S` 全域），list screen 的 Space menu = `listPanel.menuItems`，鍵與 `update` 同一組（2026-09-21）。help popup 列全域鍵。
 options popup（`m.options`）以 `optionsKind` 區分兩種內容：item 選單、select 的 option 清單（Choose
 在原浮層內換內容）；Add to… picker 隨 Shortcuts 拿掉，`[A]` 直接加進 Bookmarks。
@@ -203,12 +203,12 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
   `history.yaml`（YAML sequence、一次 append 一筆、無限保留）與 `session.yaml` 在 data dir（`store.dataFiles`，2026-09-21）；目錄解析在 `internal/paths`
   （`Config` = `~/.config/webu`、`Data` = `~/.webu/datas`、`Downloads`、`Cache`；`WEBU_CONFIG` / `WEBU_DATA` / `WEBU_CACHE` 覆寫），browser（profile、log 在 data）/ store 共用
 - session：離開（q 或 signal）時 main 寫下所有分頁，啟動時還原成 pending（dim、不預載），切到才載
-- splash 彩蛋（2026-09-21，`splash.go` 從 sshu 搬來）：`logoPixels` 由 `docs/icon.svg` 中心點取樣生成（D 底片 / U 框 / W E B 三個字母），stage 順序 bg → W → E → B → U rise；裸 `v` 在 `panelKey` 全域 switch 與 `screenKey` 觸發（`V` 維持 visual mode；家族的 `V` 在 webu 改小寫當特例），`handleKey` 最前面讓 splash 吃掉所有鍵、`View` 整幀換掉
+- splash 彩蛋（2026-09-21，`splash.go` 從 sshu 搬來）：`logoPixels` 由 `docs/icon.svg` 中心點取樣生成（D 底片 / U 框 / W E B 三個字母），stage 順序 bg → W → E → B → U rise；`V` 在 `panelKey` 全域 switch 與 `screenKey` 觸發（家族同鍵；visual mode 因此改成小寫 `v`，唯一的小寫 panel-level 鍵，2026-09-21），`handleKey` 最前面讓 splash 吃掉所有鍵、`View` 整幀換掉
 - CLI（2026-09-21）：`webu <url|words>...` 每個參數一個新分頁、第一個在前（`New(b, start...)` → `firstFrame` 逐個 `openTab(resolveURL(u))`），`-` 開頭視為未知選項；`webu help` 印用法
 - 歷史：每個分頁 load 完的最終 URL + 標題記一筆，同 URL 的 settle 重抓不重複記
 - 即時更新（function.md §6）：`page.Prepare` 在第一次導航前 `Runtime.addBinding` + 注入 MutationObserver
   （childList / characterData / subtree，150 ms 合併），`Runtime.bindingCalled` 走與 load event 同一條 settle 路
-- Visual mode（`V`）與 `/` 搜尋、Outline、Zoom、Inspect popup、DevTools 四分頁（Network / Storage / Console / Source，2026-09-21 起 Network 在前、開啟停在 Network）與 Network detail（§A）
+- Visual mode（`v`）與 `/` 搜尋、Outline、Zoom、Inspect popup、DevTools 四分頁（Network / Storage / Console / Source，2026-09-21 起 Network 在前、開啟停在 Network）與 Network detail（§A）
 - JS dialog、`target=_blank` 新分頁、憑證錯誤 confirm、下載 toast、HTTP auth、檔案上傳、Undo close、離開時下載中的 confirm（§5）
 - 整合測試 `TestAppNavigatesAndFillsAForm`（本機頁：載入 → 點 → 回 → 打字 → Submit → 選 option）、
   `TestListPopupsAndSession`（無瀏覽器：B 開 / 過濾 / 刪 / 存檔）、`hooks_test.go` 五支（新視窗、三種

@@ -141,7 +141,7 @@ restore_session: true
  screen    W / B / H / D / S           screen 上按 Esc 回到 web
  面板      web 的 1 / 2  ·  Tab
  游標      j k    u d（半頁）          gg G      h l 沿著同一列
- 頁面      P / N 上一頁 / 下一頁       L location      / 搜尋      V visual mode
+ 頁面      P / N 上一頁 / 下一頁       L location      / 搜尋      v visual mode
  全域      Space 選單    ? help    q 離開    Ctrl+C 硬退
 ```
 
@@ -151,7 +151,7 @@ restore_session: true
 
 ### `[2]` Page
 
-item 上 `Enter` 開它的操作 —— 連結的 Open / Open in new tab / Yank link url、按鈕的 Click、輸入框的 Edit 或 Submit / Edit / Clear / Yank、下拉選單的 Choose、landmark 與 heading 的 Collapse / Expand —— 每一種都另有 Yank text 與 Inspect。panel operation：`R` 重載 · `T` 新分頁 · `P` / `N` 上一頁 / 下一頁 · `/` 搜尋 · `V` visual mode · `L` location · `A` 加書籤 · `O` outline · `I` inspect（DevTools）· `Z` zoom · `Y` yank page url · `C` 關掉這個分頁。
+item 上 `Enter` 開它的操作 —— 連結的 Open / Open in new tab / Yank link url、按鈕的 Click、輸入框的 Edit 或 Submit / Edit / Clear / Yank、下拉選單的 Choose、landmark 與 heading 的 Collapse / Expand —— 每一種都另有 Yank text 與 Inspect。panel operation：`R` 重載 · `T` 新分頁 · `P` / `N` 上一頁 / 下一頁 · `/` 搜尋 · `v` visual mode · `L` location · `A` 加書籤 · `O` outline · `I` inspect（DevTools）· `Z` zoom · `Y` yank page url · `C` 關掉這個分頁。
 
 輸入框的 Enter 開一行輸入框：`Enter` 把值寫回頁面、`Esc` 頁面不動。Location 框（`L`）開啟時帶著目前頁面的 URL 當預設值：`Tab` 接手編輯、`Backspace` 整個清掉，不像 URL 的字就送去搜尋引擎。
 
@@ -166,7 +166,7 @@ item 上 `Enter` 開它的操作 —— 連結的 Open / Open in new tab / Yank 
 
 `h` / `l` 在 **Network**（`Enter` 看 request 的 header 與 body、`C` 清空、`/` 過濾）、**Storage**（cookie、local 與 session storage：`x` 刪、`y` yank 值、`C` 清掉這個站的資料、`/` 過濾）、**Console**（每筆完整折行顯示；`Enter` 看該筆的細節 —— 物件一個 property 一列；`i` 開提示列，在頁面裡 eval 的 REPL；`C` 清空、`/` 過濾）與 **Source**（頁面的 HTML，`/` grep）之間切換。`Esc` 關閉。
 
-### Visual mode（`V` 或 `/`）
+### Visual mode（`v` 或 `/`）
 
 頁面停住、邊框轉黃。`h j k l` 逐字元移動，`w` / `e` / `b` 逐字、`0` / `$` 到行首行尾、`u` / `d` 半頁、`gg` / `G` 到頭尾；`v` / `V` 開始逐字元或逐列選取，`y` 複製到系統剪貼簿（`pbcopy`、`wl-copy`、`xclip` 或 `xsel`），`/` 搜尋、`n` / `N` 下一個 / 上一個，`Enter` 對游標下的 item 動作，`Esc` 離開。
 

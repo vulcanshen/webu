@@ -31,7 +31,7 @@ runs its JavaScript, it keeps its cookies.
   rule; settings edit `config.yaml` in place.
 - **Location on `L`**, as Chrome's Cmd+L, with the page's URL on offer;
   words that are not a URL go to the configured search engine.
-- **Visual mode on `V`**: walk the text by character with vim's motions,
+- **Visual mode on `v`**: walk the text by character with vim's motions,
   select, yank to the system clipboard; `/` searches the page.
 - **DevTools on `I`**: Network with request details, Storage with cookie
   and storage editing, a Console that lists every entry whole and evaluates
@@ -39,4 +39,4 @@ runs its JavaScript, it keeps its cookies.
 - **What a page asks for, answered in place**: alert / confirm / prompt,
   HTTP auth, file uploads, `target=_blank`, certificate errors, downloads.
 - **Session restore** on the next launch, tabs unloaded until switched to.
-- **The u-family easter egg** — the icon, revealed pixel by pixel, on a bare `v` (the family's `V` is visual mode here).
+- **The u-family easter egg** — the icon, revealed pixel by pixel, on `V`, the family's key.

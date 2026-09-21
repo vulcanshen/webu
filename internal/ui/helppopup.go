@@ -45,7 +45,7 @@ var helpContent = []helpEntry{
 	{"P · N", "previous / next page"},
 	{"L", "go to a URL: this page's own is offered, Tab edits it"},
 	{"/", "search the page (enters selection mode)"},
-	{"V", "visual mode: walk the text by character, v/V select, y copy"},
+	{"v", "visual mode: walk the text by character, v/V select, y copy"},
 	{"q", "quit"},
 	{"Ctrl+C", "force quit"},
 	{"", "Navigate"},

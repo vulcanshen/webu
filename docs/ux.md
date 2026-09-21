@@ -39,8 +39,8 @@ VTP §A.0.K 原本寫「確認 / 進入」，2026-09-21 改寫成「啟動該項
 而目錄列、landmark、heading 最直觀的操作只有一個（開合），就直接做。同一種列在所有 surface 的 Enter 都一樣，這條沒變。
 
 **不是 core-key 的**：`q` 離開、`Ctrl+C` 硬退、`P` / `N` 前後頁、`/` 搜尋、header 的三個全域
-字母 `B` `H` `D`、`V` visual mode。它們是 §A.2 軌的動作，全部列在 `?` help。Visual mode（本文件其他地方的
-「選取模式」）的鍵是 `V`（修訂 2026-09-20：`Alt+v` 先拿掉、補回裸 `v`、再改成大寫 `V` 與其他 panel
+字母 `B` `H` `D`、`v` visual mode。它們是 §A.2 軌的動作，全部列在 `?` help。Visual mode（本文件其他地方的
+「選取模式」）的鍵是 `v`（修訂 2026-09-21：`V` 還給家族的 splash 彩蛋，visual mode 改回小寫 `v` 當特例——一個 mode 不是 panel operation。2026-09-20 的過程：`Alt+v` 先拿掉、補回裸 `v`、再改成大寫 `V` 與其他 panel
 operation 一致 —— item 游標只停在 item 上，要進到段落文字裡得有一個直接的鍵；`/` 搜尋也進得去）。
 
 ### §A.1 Contextual track — Space menu
@@ -75,8 +75,8 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 頁面**沒有任何 item**（純文字頁）：Space menu 只剩 panel operation，扁平不分 region。
 
 **`[2]` 一般模式，panel operation**：`[R] Reload`、`[T]ab`（新分頁，與 `[1]` 的 `[T]` 一模一樣；修訂 2026-09-20）、`[P] Previous`、`[N] Next`、
-`[/] Search`（進 visual mode）、`[V] Visual mode`（修訂 2026-09-20：原 `[V] View source` 搬進 DevTools › Source，
-`V` 讓給 visual mode——panel operation 一律大寫，小寫 `v` 在這一區很突兀）、`[L]ocation`（修訂 2026-09-21：原 `UR[L]`，label 改 Location、hint 改「a URL or a search; this page's own is offered」；2026-09-20 從 `[U]` 改來，對應 Chrome 的 Cmd+L；全域鍵，任何面板都能按，見 §7）、`[A]dd bookmark`（修訂 2026-09-20：原 `[A] Add to…` picker 二選一，Shortcuts 拿掉後只剩 Bookmarks，直接加）、`[O] Outline`、`[I]nspect`（DevTools；修訂 2026-09-20：原 `[D]`，`D` 讓給 header 的 Downloads，`I` 對應 Chrome 的 Cmd+Opt+I）、
+`[/] Search`（進 visual mode）、`[v]isual mode`（修訂 2026-09-20：原 `[V] View source` 搬進 DevTools › Source，`V` 讓給 visual mode；
+2026-09-21：再改小寫 `v`，`V` 還給家族的 splash 彩蛋——mode 不是 panel operation，這是這一區唯一的小寫）、`[L]ocation`（修訂 2026-09-21：原 `UR[L]`，label 改 Location、hint 改「a URL or a search; this page's own is offered」；2026-09-20 從 `[U]` 改來，對應 Chrome 的 Cmd+L；全域鍵，任何面板都能按，見 §7）、`[A]dd bookmark`（修訂 2026-09-20：原 `[A] Add to…` picker 二選一，Shortcuts 拿掉後只剩 Bookmarks，直接加）、`[O] Outline`、`[I]nspect`（DevTools；修訂 2026-09-20：原 `[D]`，`D` 讓給 header 的 Downloads，`I` 對應 Chrome 的 Cmd+Opt+I）、
 `[Z] Zoom`、`[Y] Yank page url`、`[C]lose`（關掉 `[2]` 正在顯示的分頁；`[1]` 的小寫 `w` 關的是游標列；
 修訂 2026-09-21：原 `[W] Close`，`W` 讓給 header 的 Web）。
 
@@ -110,10 +110,10 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 | History screen | `H` | header chip + help |
 | Downloads screen | `D` | header chip + help（修訂 2026-09-20：Shortcuts 與 `S` 拿掉、Downloads 補上） |
 | Settings screen | `S` | header chip + help（修訂 2026-09-21：目前只有 `download_dir`） |
-| splash 彩蛋 | 裸的 `v`，任何面板、任何 screen（家族的鍵是 `V`；webu 的 `V` 是 visual mode，彩蛋改住小寫，當特例——它是唯一沒有面板或 screen 認領的小寫字母；2026-09-21） | 不揭露，是彩蛋 |
+| splash 彩蛋 | `V`，任何面板、任何 screen（家族同鍵；visual mode 為此改成小寫 `v`，2026-09-21） | 不揭露，是彩蛋 |
 | 上一頁 / 下一頁 | `P` / `N` | help |
 | 切面板 | `Tab`、`1`–`2` | footer + help |
-| Visual mode（選取模式） | `V`（從 `[1]` 按 → 先把焦點移到 `[2]` 再進模式）；`/` 亦可 | help |
+| Visual mode（選取模式） | `v`（從 `[1]` 按 → 先把焦點移到 `[2]` 再進模式）；`/` 亦可 | help |
 | 頁內搜尋 | `/`；同上 | help |
 | 離開 | `q`（有下載進行中先 confirm；**浮層內不作用**，浮層只認 Esc）、`Ctrl+C` 硬退 | footer + help |
 | 導覽詞彙 | §3 | help |
@@ -232,11 +232,11 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `W` `B` `H` `D` `S`、`q`、`?`、`v`（彩蛋）；只在 `[W]eb`：`P` `N` `L`、`/`、`V`、`Tab`、`1`–`2` |
+| 全域 | `W` `B` `H` `D` `S`、`q`、`?`、`V`（彩蛋）；只在 `[W]eb`：`P` `N` `L`、`/`、`v`、`Tab`、`1`–`2` |
 | `[1]` item | `w` `c` `r` `y` |
 | `[1]` panel | `T` `X` `U` |
 | `[2]` item | **無**（menu-only） |
-| `[2]` panel | `R` `T` `A` `O` `I` `Z` `Y` `C`（`V` 是全域的 visual mode，`L` 是全域的 location；`T` 與 `[1]` 同義；`C` 原是 `W`，修訂 2026-09-21） |
+| `[2]` panel | `R` `T` `A` `O` `I` `Z` `Y` `C`（`v` 是全域的 visual mode，`L` 是全域的 location；`T` 與 `[1]` 同義；`C` 原是 `W`，修訂 2026-09-21） |
 | Bookmarks screen | `a` `m` `x` `y` / `A` `/`（`e` 待做；`a` 小寫 = 加書籤、`A` 大寫 = 加目錄，都在游標所在目錄下） |
 | Downloads screen | `o` `x` `y` / `C` `/` |
 | History screen | `x` `y` / `C` `/` |
@@ -244,7 +244,7 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 | DevTools | `x` `y` / `C` `/`；`h/l` 切分頁 |
 | 選取模式 | `hjkl` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
 
-撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊；小寫 `v`（彩蛋）與 `[1]` 的 `w c r y`、Bookmarks 的 `a m x y`、Downloads 的 `o x y` 無重疊，visual mode 內的 `v`（開始選取）在模式裡、不同時可按（Bookmarks screen 的 `F` 是該 screen 的，與全域不撞）（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
+撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊；小寫 `v`（visual mode）與 `[1]` 的 `w c r y`、Bookmarks 的 `a m x y`、Downloads 的 `o x y` 無重疊，visual mode 內的 `v`（開始選取）在模式裡、不同時可按；`V`（彩蛋）與各面板大寫無重疊（Bookmarks screen 的 `F` 是該 screen 的，與全域不撞）（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
 sshu 的 `[D]isconnect` 同例；`L` 與導覽 `l`（沿列右移）同例；`I` 與 DevTools Console 的 `i`（insert）在不同 surface。
 DevTools 原本的 `D` 讓給 header 的 Downloads（修訂 2026-09-20），改成 `[I]nspect`。`U` 只剩 `[1]` 的 undo close
 （修訂 2026-09-20：原本 `[2]` 也用 `U` 開 goto、同字依面板不同義；goto 改成全域 `L` 後不再同字）。Bookmarks 的新目錄用 `F`
@@ -321,7 +321,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 `Tab` 切面板 · `Enter` click · `Esc` 關浮層 / 離開選取模式 / screen 回 Web · `Space` menu · `?` help
 
 ### 全域
-`W` Web · `B` Bookmarks · `H` History · `D` Downloads · `S` Settings · `P` 上一頁 · `N` 下一頁 · `L` location · `q` quit · `/` 搜尋（進 visual mode）· `V` visual mode
+`W` Web · `B` Bookmarks · `H` History · `D` Downloads · `S` Settings · `P` 上一頁 · `N` 下一頁 · `L` location · `q` quit · `/` 搜尋（進 visual mode）· `v` visual mode
 
 ### `[1]` Tabs
 `w` close · `c` clone · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
