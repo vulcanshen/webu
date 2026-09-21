@@ -1,108 +1,224 @@
-# webu — 設計文件
+# webu
 
-終端機瀏覽器。Chromium 在背景 headless 跑，webu 取它的 accessibility tree 轉成自己的
-IR（Intermediate Representation，中間表示法），以 TUI 呈現；操作經 CDP（Chrome DevTools
-Protocol）打回 Chromium。一句話：**把 screen reader 的輸出畫成 TUI，而不是唸出來。**
+[![GitHub Release](https://img.shields.io/github/v/release/vulcanshen/webu)](https://github.com/vulcanshen/webu/releases)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/vulcanshen/webu)](https://go.dev/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-u-family 成員（kbu / filu / sshu 之後），依 VTP（`thoughts/tui-design`）設計。
+**Language**: English · [繁體中文](README-zh_TW.md)
+
+**A terminal browser** — `Tab` / `Enter` / `Esc` / `Space` / `?` drive everything. A real Chromium runs headless in the background; webu takes its accessibility tree, turns it into a page of items and flowing text, and draws that in your terminal. Every action goes back through the Chrome DevTools Protocol, so the page is the real page: it logs in, it runs its JavaScript, it keeps its cookies. A screen reader's output, drawn as a page rather than read aloud.
+
+> _When in doubt, hit_ **`Space`**.
+
+webu is a member of the `u`-family and a browser-domain implementation of [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md) — the same design system as [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (filesystem) and [sshu](https://github.com/vulcanshen/sshu) (ssh). See [`docs/webu-implementation.md`](docs/webu-implementation.md) for what was found on the way and where things stand, and [`docs/function.md`](docs/function.md), [`docs/ui.md`](docs/ui.md), [`docs/ux.md`](docs/ux.md) for the design — including the approaches that were tried and rejected.
+
+The difference from w3m or lynx is where the page comes from. Those parse HTML themselves, so a site that is mostly JavaScript is a blank. webu does not parse HTML at all: Chromium renders the page and webu reads what Chromium's accessibility layer says is on it — the same tree a screen reader reads — so whatever Chromium can show, webu can show as text.
+
+## Demo
 
 ![demo](docs/demo.gif)
 
-一頁走完：Hacker News 畫成 item 與文字流，`j/k/l` 走；`Enter` 看這個 item 能做什麼、`Space` 看整份選單；
-`L` 是 Chrome 的 Cmd+L；`B` 是書籤 screen（目錄樹，Enter 開新分頁）；`I` 是 DevTools。
+Hacker News as items and flow, `j`/`k`/`l` walking them; `Enter` on a story lists what it can do, `Space` lists the whole menu; `L` is Chrome's Cmd+L with the page's URL on offer; `B` is the Bookmarks screen — folders as a tree, `Enter` opening one in a new tab; `I` is DevTools with Network, Storage and Console; `?` is the help.
 
-## 三份文件
+## Five keys to drive webu
 
-| 檔 | 回答的問題 | 讀的順序 |
-|---|---|---|
-| [`docs/function.md`](docs/function.md) | 哪些事 Chromium 做、哪些事 webu 做、做到什麼程度；翻譯層（AX tree → IR）的 role 白名單與 fallback；Chromium 的取得與執行模式；shell 功能清單 | 1 |
-| [`docs/ui.md`](docs/ui.md) | 版面、header 的 screen 與兩個面板的職責、popup、DevTools popup、色帶、存檔、每項功能落到哪個 surface 哪一版 | 2 |
-| [`docs/ux.md`](docs/ux.md) | core-key 語意、兩種模式（一般 / 選取）、文字輸入、每個 focus 的 Space menu、hotkey 分層全表、`?` 內容、浮層行為、時間軸、goto popup | 3 |
-
-三份都以 2026-09-20 的討論定案，決定處標日期；擱置與 v2 項目在各自的待決 / 擱置段落，
-不散落在正文。
-
-## 定案摘要
-
-- **架構**：自帶釘死版本的 Chromium、`--headless=new` 無視窗、webu 自己的持久 profile；不 attach 使用者的 Chrome、不開放版本覆寫
-- **翻譯層**：以 AX role 白名單為單位保證，未支援 role fallback 成純文字、不隱藏、Enter 仍可 click；每 role 一份 fixture，站級只做 smoke
-- **多媒體**：只畫佔位框；ASCII 轉換 / 內建 viewer / 外部工具全部擱置
-- **CAPTCHA**：第一版不支援，明講；交棒機制擱置
-- **版面**：最上列 header `[W]eb [B]ookmarks [H]istory [D]ownloads [S]ettings`（sshu 式 screen chip 列，右端數進行中的下載；`[W]eb` 之外的四個各佔滿整個 body）、`[W]eb` 是側欄 24 欄固定 `[1]` Tabs（cursor 反白 vs 綠字 = `[2]` 正在顯示）、`[2]` 永遠是頁面、第一列 URL
-- **語意**：Enter = 該 item 的 item operation 選單（第一列是主要動作，再 Enter 執行）、Space = 完整選單（item + panel）、Esc 只做取消 / 關閉；`P` / `N` 前後頁；選取模式（字元游標、Yellow 邊框）由 `/` 搜尋或 Space menu 的 Select text 進入（修訂 2026-09-20）
-- **文字輸入**：所有 textbox Enter 開 input popup（Enter 確認 / Tab no-op / Esc 取消）；有值的 textbox Enter 開選單（Submit / Edit / Clear / Yank）
-- **hotkey**：小寫 = item、大寫 = panel 或全域；全域 `W B H D S P N L`；`[2]` item operation 無 letter hotkey、menu-only
-
-## 還開著的
-
-| 項目 | 去處 |
+| Key | Behavior |
 |---|---|
-| link 色帶 | `ui.md` §4，畫出來再挑 |
-| `[2]` item operation 的 letter hotkey | `ux.md` §8，用了再說 |
+| **`Tab`** | Move focus between the two panels of the web screen: `[1] Tabs` and `[2] Page` |
+| **`Enter`** | The item's most intuitive operation: on a page item, the menu of what it can do with the obvious thing first; on a landmark, heading or bookmark folder, collapse or expand; on a bookmark or a history entry, open it in a new tab |
+| **`Space`** | *What can I do here?* — the contextual menu for whatever has focus: `item operation` and `panel operation`. Also closes any popup |
+| **`Esc`** | Back out — close the top popup, leave visual mode, clear a filter, return from a screen to the web |
+| **`?`** | Global help — the whole key vocabulary in one list |
 
-## 目錄
+The header's screens are switched with a single shifted letter — **`W` / `B` / `H` / `D` / `S`** — and `1` / `2` address the two panels of the web screen. Every letter hotkey is also a row in the `Space` menu, with the key printed in its bracket exactly as you press it, so there is nothing to memorize unless you want to.
+
+## The header and the two panels
 
 ```
-README.md                    本檔
-docs/function.md             功能邊界
-docs/ui.md                   版面與 surface
-docs/ux.md                   互動語意
-docs/webu-implementation.md  實作怎麼落地、實測出來的決定、做到哪
-docs/support.md              支援的 AX role（由 internal/ir/roles.go 產生）
-cmd/webu/                    進入點
-CHANGELOG.md                 每版的變更，release notes 從這裡取
-.goreleaser.yaml             goreleaser：build / archive / brew tap
-.github/workflows/release.yml  推 v* tag 就發布
-install.sh / uninstall.sh    不走 Homebrew 的安裝 / 移除
-docs/demo.gif                README 的示範（tape 在 .local/demos/demo.tape，make gif 重錄）
-internal/browser/            Chromium 下載、profile、啟動、關閉
-internal/ir/                 AX tree → IR，每個 role 一份 fixture
-internal/page/               CDP 端：擷取與動作
-internal/ui/                 TUI
-tools/axdump/                看任何頁面的 AX tree（用本機 Chrome）
+ [W]eb ╱ [B]ookmarks ╱ [H]istory ╱ [D]ownloads ╱ [S]ettings
 ```
 
-## 安裝
+**`[W]eb`** — `[1] Tabs` beside `[2] Page`. The tabs list is one row per Chromium target; the cursor says where you are, green says which one the page panel is showing, and two tabs on the same URL are numbered in the order they were opened. The page panel is always the page: its first row is the URL, then the page as **items** — links, buttons, text boxes, checks, selects, media, headings, landmarks — with paragraphs flowing between them at a measured width. `j`/`k` step by row and `h`/`l` along one, so a row of links is walked sideways rather than skipped. Landmarks open as a named rule (`▾ navigation Repository ────`) and collapse on `Enter`; so do headings, down to the next heading of their level. Navigation lists flow on one line. A JSON, YAML, TOML, Markdown or plain-text response is drawn as one code block with syntax colour instead of Chrome's own viewer.
 
-macOS / Linux（amd64、arm64；Linux arm64 除外——Chromium snapshot 沒有那個 build）。
+**`[B]ookmarks`** — a tree: the top level first, then each folder as a row of its own with what it holds beneath it. `Enter` on a bookmark opens it in a new tab; on a folder it collapses or expands. `a` adds a bookmark where the cursor is — its URL, then its title, with the page the web is showing on offer, so the current page is `a`, `Enter`, `Enter`. `A` adds a folder there, and a path like `a/b/c` makes every level. `m` moves a bookmark through a picker of the tree.
+
+**`[H]istory`** — every page visited, newest first, kept for good; `C` is the one way it shrinks. **`[D]ownloads`** — this session's downloads with their progress, and the rule under the header doubles as the progress bar while one runs. **`[S]ettings`** — `config.yaml` edited in place: `Enter` opens a box with the value in force on offer.
+
+## Install
+
+> webu is **macOS / Linux only** (amd64 and arm64 on macOS, amd64 on Linux — the Chromium snapshot bucket has no Linux ARM build). No native Windows build.
+
+**Homebrew** (macOS / Linux):
 
 ```bash
-brew install vulcanshen/tap/webu                                     # Homebrew
-curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/install.sh | sh   # 或：最新 release 進 ~/.local/bin
-go install github.com/vulcanshen/webu/cmd/webu@latest               # 或：從原始碼
+brew install vulcanshen/tap/webu
 ```
 
-**Chromium 怎麼來**：release 只有 Go 執行檔。webu 只跑釘死 revision 的 Chromium（版本編在執行檔裡），
-第一次啟動會把它下載到 cache 目錄（macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`，約 175–250 MB），
-畫面上會說大小與進度；之後不再下載。升級後若釘的版本變了，`webu browser update` 重抓。
-不碰使用者自己的 Chrome，也不接受別的 Chromium 路徑（`docs/function.md` §9）。
+**Install script** (drops the latest release binary into `~/.local/bin`, or `/usr/local/bin` as root):
 
-**檔案在哪**：使用者寫的（`config.yaml`、`bookmarks.yaml`）在 `~/.config/webu`；webu 自己產生的
-（`history.yaml`、`session.yaml`、`downloads/`、Chromium `profile/`、`webu.log`）在 `~/.webu/datas`。
-`WEBU_CONFIG` / `WEBU_DATA` / `WEBU_CACHE` 可各自覆寫。
-
-**需要 Nerd Font**：連結、媒體、面板與 header 的圖示都是 Nerd Font glyph，且排版量的是它們的寬度。
-
-移除：`curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/uninstall.sh | sh`（會逐一問要不要刪設定、資料、下載的 Chromium）。
-
-## 發布
-
-與 kbu / filu / sshu 同一套：推 `v*` tag → GitHub Actions 跑測試（runner 沒有 Chromium，瀏覽器測試自動 skip）→
-goreleaser 出 darwin / linux 的 tar.gz + checksums → 更新 `vulcanshen/homebrew-tap` 的 formula（需要 repo secret `ACTION_TOKEN`）。
-Release notes 取自 `CHANGELOG.md` 對應版本那一節。本機先 `make release-check`、`make snapshot` 看 `dist/`。
-
-## 開發
-
-技術棧：Go + Bubble Tea + Lipgloss + bubbletea-overlay + chromedp，同 u-family。
-
-```
-make build              → ./webu；首次啟動會下載釘死版本的 Chromium（約 175–250 MB）到 cache 目錄
-make test               所有測試；有下載過 Chromium 才會跑整合測試，否則 skip
-make fixtures           用釘死的 Chromium 重抓 internal/ir 的 role fixture 與 docs/support.md
-WEBU_SMOKE=1 go test ./internal/ui -run TestSmoke -v     真站 smoke（Hacker News、GitHub）
-make axdump URL=https://…                                任何頁面的 AX tree
+```bash
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/install.sh | sh
 ```
 
-第一個 milestone（`docs/function.md` §11）已達：v1 role 白名單每個 role 一份 fixture 通過，
-本機頁面能點、能填表、能選 option，Hacker News 與 GitHub 畫得出來。做到哪、沒做哪，見
-`docs/webu-implementation.md` §9。
+**From source**:
+
+```bash
+go install github.com/vulcanshen/webu/cmd/webu@latest
+```
+
+or clone and build:
+
+```bash
+git clone https://github.com/vulcanshen/webu.git
+cd webu
+make build     # → ./webu   (CGO_ENABLED=0, -trimpath, stripped)
+./webu
+```
+
+A `Makefile` wraps the common tasks — `make build`, `make install` (→ `$GOBIN`) / `make uninstall`, `make test`, `make fixtures` (re-capture the role fixtures against the pinned Chromium), `make gif` (re-record the demo), `make snapshot` (a goreleaser dry run into `dist/`). Run `make` to list them.
+
+**Chromium comes on the first launch, not in the box.** The release is the Go binary alone. webu runs one pinned Chromium revision — compiled into the binary, never overridden, never your own Chrome — and the first launch downloads it once into the cache directory (macOS `~/Library/Caches/webu`, Linux `~/.cache/webu`; about 175–250 MB), saying so with a progress line. After an upgrade that pins a new revision, `webu browser update` fetches it. `webu version` prints both versions.
+
+**A Nerd Font is required**, not optional: links, media, the panels and the header are drawn with Nerd Font glyphs, and the layout measures them.
+
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/uninstall.sh | sh
+```
+
+Removes the binary, then asks — never assumes — about each of the three directories below: settings, data, and the downloaded Chromium.
+
+## Quick start
+
+```bash
+webu                              # the last session's tabs, or an empty page
+webu https://news.ycombinator.com # straight to a page
+```
+
+`L` opens the Location box; type a URL, or words to search for. `j`/`k` walk the items, `Enter` shows what the one under the cursor can do. Press `Space` on any panel and read the menu — it lists exactly what that panel can do.
+
+## Where your data lives
+
+Three directories, by what is in them:
+
+| | What | Where |
+|---|---|---|
+| settings | `config.yaml`, `bookmarks.yaml` — what you write | `~/.config/webu` (`$XDG_CONFIG_HOME/webu` when set; `$WEBU_CONFIG` names it outright) |
+| data | `history.yaml`, `session.yaml`, `downloads/`, the Chromium `profile/` (cookies, logins), `webu.log` — what webu produces | `~/.webu/datas` (`$WEBU_DATA`) |
+| cache | the pinned Chromium, re-downloadable | macOS `~/Library/Caches/webu`, Linux `~/.cache/webu` (`$XDG_CACHE_HOME/webu`, `$WEBU_CACHE`) |
+
+Settings and bookmarks are hand-editable YAML; bookmarks carry a `folder` path each, plus a `folders:` list so an empty folder survives. The history is a YAML sequence appended one visit at a time. Every write is atomic.
+
+### Settings — `config.yaml`
+
+```yaml
+# Where a search goes when what you typed at L is not a URL. Default DuckDuckGo.
+search_engine: https://duckduckgo.com/?q=
+# Where downloads land. Default ~/.webu/datas/downloads.
+download_dir: ~/Downloads
+# How wide a paragraph flows before it wraps, in cells. Default 100.
+measure: 100
+```
+
+The `[S]ettings` screen edits the same file.
+
+## Key bindings
+
+Every letter hotkey below is also a row in that surface's `Space` menu. The bracket shows the key **exactly as you press it**: `[A]dd folder` is shift+A, `[a]dd` is a bare `a`, and nothing fires that the marking does not name.
+
+### Everywhere
+
+```
+ screens   W / B / H / D / S           Esc on a screen goes back to the web
+ panels    1 / 2 of the web  ·  Tab
+ cursor    j k    u d (half page)      gg G      h l along a row
+ page      P / N previous / next       L location      / search      V visual mode
+ global    Space menu    ? help    q quit    Ctrl+C force quit
+```
+
+### `[1]` Tabs — lower case is the row, upper case is the panel
+
+`Enter` switch to the tab · `w` close · `c` clone · `r` reload · `y` yank url · `T` new tab · `X` close others · `U` undo close
+
+### `[2]` Page
+
+`Enter` on an item opens its operations — a link's Open / Open in new tab / Yank link url, a button's Click, a text box's Edit or Submit / Edit / Clear / Yank, a select's Choose, a landmark's or heading's Collapse / Expand — plus Yank text and Inspect on every one. Panel operations: `R` reload · `T` new tab · `P` / `N` back / forward · `/` search · `V` visual mode · `L` location · `A` add bookmark · `O` outline · `I` inspect (DevTools) · `Z` zoom · `Y` yank page url · `C` close this tab.
+
+A text box's Enter opens a one-line box: `Enter` writes the value back, `Esc` leaves the page untouched. The Location box (`L`) opens with the page's own URL on offer: `Tab` takes it to edit, `Backspace` clears it, and words that are not a URL go to the search engine.
+
+### The screens
+
+- **Bookmarks** — `Enter` open in a new tab, or collapse / expand a folder · `a` add a bookmark here · `m` move · `x` delete (an empty folder too) · `y` yank url · `A` add a folder here (`a/b/c` makes each level) · `/` filter
+- **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `C` clear · `/` filter
+- **Downloads** — `Enter` open the file · `o` source in a new tab · `x` remove (a running download is stopped) · `y` yank path · `C` clear the finished ones · `/` filter
+- **Settings** — `Enter` edit; the value in force is on offer (`Tab` takes it, `Backspace` clears it, an emptied line means the default)
+
+### DevTools (`I`)
+
+`h` / `l` switch between **Network** (`Enter` a request's headers and body, `C` clear, `/` filter), **Storage** (cookies, local and session storage: `x` delete, `y` yank the value, `C` clear site data, `/` filter), **Console** (every entry whole, wrapped; `Enter` an entry's detail — an object listed property by property; `i` the prompt, a REPL that evaluates in the page; `C` clear, `/` filter) and **Source** (the page's HTML, `/` grep). `Esc` closes.
+
+### Visual mode (`V` or `/`)
+
+The page holds still and the frame turns yellow. `h j k l` move by character, `w` / `e` / `b` by word, `0` / `$` to either end of the line, `u` / `d` half a page, `gg` / `G` to the ends; `v` / `V` start selecting by character or by line, `y` copies to the system clipboard (`pbcopy`, `wl-copy`, `xclip` or `xsel`), `/` searches with `n` / `N`, `Enter` acts on the item under the cursor, `Esc` leaves.
+
+## Features
+
+- **A real browser behind the text** — one pinned Chromium, headless, with webu's own persistent profile: logins survive a restart, JavaScript runs, cookies are kept, and nothing of your own Chrome is touched. Every page problem is Chromium's to solve; webu only draws the answer.
+- **The accessibility tree, not the HTML** — what a screen reader would read is what you see: roles, names, states. A role webu does not know is drawn as its text with a marker, never hidden, and still clickable. Every supported role has a fixture captured against the pinned revision, so an engine bump is a decision rather than a drift.
+- **Items and flow** — links, buttons, fields, headings and landmarks are stops for the cursor; prose flows between them at a measured width, tables keep their columns, code keeps its lines and its syntax colour, navigation lists flow on one line. `h`/`l` walk a row of links; `j`/`k` step rows.
+- **Collapse what is in the way** — a landmark's rule and a heading's row fold everything under them into one line that says what it hides, and the Outline (`O`) jumps into a folded section by opening it first.
+- **Two menus, one table** — `Enter` is the item's operations, `Space` is item and panel together, and the letter in every bracket is generated from the same table the key handler reads, so a hotkey that is not in the menu cannot exist.
+- **A header of screens** — Web, Bookmarks, History, Downloads, Settings on one chip row, the lit chip the one you are on; each list screen is a single panel with its keys in the bottom border and its own `Space` menu.
+- **Bookmarks in folders** — a path per bookmark, folders as rows of a tree, a picker to move between them, and a folder that exists until you delete it.
+- **Downloads you can watch** — progress on the rule under the header, a screen that lists them with their state, opening the file with the desktop's opener, and `q` that asks before cutting one off.
+- **What a page asks, answered in place** — `alert` / `confirm` / `prompt` and `beforeunload`, HTTP basic and digest auth, file uploads, `target=_blank` as a new tab that is switched to, a certificate error as a question, all as popups in webu's own shape.
+- **Location as Chrome does it** — `L` from any panel, the current URL on offer, `Tab` to edit it, anything that is not a URL searched.
+- **Visual mode with vim's motions** — the page freezes, the cursor walks characters, `y` lands the selection on the system clipboard.
+- **DevTools in the terminal** — Network with request details and bodies, Storage editable, a Console that prints objects the way Chrome's does and evaluates what you type, the page's source with grep.
+- **Non-HTML answered as text** — JSON, YAML, TOML, Markdown, XML and plain responses become one syntax-coloured code block, folded at the measure, never cut.
+- **Session restore** — the tabs come back on the next launch, unloaded until switched to.
+- **Frame stability** — every rendered line is exactly the terminal width at every size, with any content; a test checks it across sizes, panels and screens.
+- **unix-first, static binary** — macOS + Linux; `CGO_ENABLED=0`. The chromedp log goes to a file, never to the terminal the TUI is drawing on.
+
+## Status
+
+**v0.1.0.** The first release: the pinned Chromium, the page as items and flow, the two menus, the header of screens with bookmarks in folders, history, downloads and settings, the Location box, visual mode, DevTools, and everything a page can ask for. See [CHANGELOG.md](CHANGELOG.md).
+
+Not there yet:
+- **editing a bookmark** in place (delete and add it again for now) and fuzzy search on the History screen (it is a substring filter)
+- **hover** — pages that reveal on mouse-over stay closed; the cursor is a keyboard cursor
+- **iframes** — drawn as a placeholder; their content is not walked
+- a `<textarea>` in your own `$EDITOR`, and a file picker for uploads (a path is typed for now)
+- **media** — images, video and audio are placeholders; yank the URL and open it elsewhere
+- **CAPTCHA, passkeys / WebAuthn, WebRTC** — said plainly when met, not solved: there is no windowed browser to hand off to yet
+- mouse support, a Linux ARM build (no Chromium snapshot for it)
+
+## Built with
+
+Go, [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss), [bubbletea-overlay](https://github.com/rmhubbert/bubbletea-overlay) for the floats, [chromedp](https://github.com/chromedp/chromedp) for the Chrome DevTools Protocol, and [chroma](https://github.com/alecthomas/chroma) for syntax colour. The browser is the Chromium project's own snapshot build, pinned by revision. Colours are catppuccin-mocha.
+
+## Docs
+
+| File | Answers | Read |
+|---|---|---|
+| [`docs/function.md`](docs/function.md) | What Chromium does and what webu does, and how far; the translation layer's role whitelist and fallback; how Chromium is fetched and run; the feature list | 1st |
+| [`docs/ui.md`](docs/ui.md) | The layout, the header's screens and the two panels, the popups, DevTools, the colour bands, the files, which surface and version each feature lands in | 2nd |
+| [`docs/ux.md`](docs/ux.md) | Core-key semantics, the two modes, text entry, every focus's `Space` menu, the whole hotkey table, the help, how floats behave, the timeline, the Location box | 3rd |
+| [`docs/webu-implementation.md`](docs/webu-implementation.md) | How it was actually built, what the CDP work turned up, what is done and what is not | — |
+| [`docs/support.md`](docs/support.md) | The supported accessibility roles, generated from the role table | — |
+
+The three design docs are in Traditional Chinese, with every decision dated in place.
+
+## Development
+
+```
+make build              → ./webu; the first launch downloads the pinned Chromium into the cache
+make test               every test; the browser-backed ones run only once Chromium is downloaded, else skip
+make fixtures           re-capture internal/ir's role fixtures and docs/support.md against the pinned Chromium
+WEBU_SMOKE=1 go test ./internal/ui -run TestSmoke -v     real-site smokes (Hacker News, GitHub)
+make axdump URL=https://…                                any page's accessibility tree, through the local Chrome
+make gif                re-record docs/demo.gif from .local/demos/demo.tape (VHS, a Nerd Font, network)
+```
+
+Releases are the family's: push a `v*` tag, GitHub Actions runs the tests on both platforms, goreleaser builds the archives and updates the Homebrew tap, and the release notes are the matching section of `CHANGELOG.md`.
