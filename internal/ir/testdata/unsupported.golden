@@ -21,7 +21,7 @@ document "unsupported" url=file:///Users/vulcan/Documents/sideproj/webu/internal
     text "Saved." #79
   unsupported:alert block #36
     text "Something happened." #80
-  unsupported:dialog focusable block #37
+  landmark:dialog focusable #37
     paragraph #38
       text "Dialog text" #81
     button "OK" focusable #39

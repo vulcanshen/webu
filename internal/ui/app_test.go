@@ -963,23 +963,51 @@ func TestNavigationEntry(t *testing.T) {
 	d.key("esc")
 	d.until("space menu gone", func() bool { return !d.m.spaceMenu.isActive() })
 
-	// A search with one box: Enter is the box itself, and what is typed
-	// lands in the page's field — which is behind the row, not an item.
+	// A search with one box: Enter is the box itself; what is typed lands
+	// in the page's field — behind the row, not an item — and is offered
+	// to the page's Enter at once; Enter on that submits.
 	d.cursorOn(ir.Landmark, "Find")
 	d.key("enter")
 	d.until("the search box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
 	d.key("webu")
 	d.key("enter")
-	d.until("typed into the field", func() bool {
-		found := false
-		d.page().root.Walk(func(x *ir.Node) bool {
-			if x.Kind == ir.Textbox && x.Name == "Find" && x.Value == "webu" {
-				found = true
-			}
-			return !found
-		})
-		return found
+	d.until("offered to search", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmSubmitField })
+	if l := d.m.confirm.lines; len(l) == 0 || l[0] != "webu" {
+		t.Errorf("the confirm should show what would be searched: %q", l)
+	}
+	d.key("enter")
+	d.until("searched", func() bool { return strings.Contains(dumpLayout(d.page().lay), "searched:webu") })
+
+	// A search box that is an item (type=search) is the same: the value
+	// is written, the offer made; Esc keeps the value and sends nothing.
+	d.cursorOn(ir.Textbox, "Look")
+	d.key("enter")
+	d.until("the look box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField && d.m.input.search })
+	d.key("abc")
+	d.key("enter")
+	d.until("offered again", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmSubmitField })
+	d.key("esc")
+	d.until("kept, unsent", func() bool {
+		n := d.page().current()
+		return !d.m.confirm.isActive() && n != nil && n.Kind == ir.Textbox && n.Value == "abc"
 	})
+	if strings.Contains(dumpLayout(d.page().lay), "searched:abc") {
+		t.Error("Esc on the offer should not submit")
+	}
+
+	// A dialog is chrome too: one row with its name, its buttons behind
+	// Enter; the cookie banner's Accept takes it off the page.
+	if v := d.m.View(); !strings.Contains(v, "Cookies +1") {
+		t.Fatalf("the dialog should be one row:\n%s", v)
+	}
+	d.cursorOn(ir.Landmark, "Cookies")
+	d.key("enter")
+	d.until("its buttons", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	if got := d.m.options.items[d.m.options.cursor].label; got != "Accept" {
+		t.Errorf("the dialog's row should be its button, is %q", got)
+	}
+	d.key("enter")
+	d.until("dialog gone", func() bool { return !strings.Contains(d.m.View(), "Cookies +1") })
 
 	// The class-marked trail is a navigation of its own, with its link.
 	d.cursorOn(ir.Landmark, "Root")

@@ -261,7 +261,7 @@ func isEntry(n *ir.Node) bool {
 		return false
 	}
 	switch n.Role {
-	case "banner", "navigation", "search", "complementary", "contentinfo":
+	case "banner", "navigation", "search", "complementary", "contentinfo", "dialog", "alertdialog":
 		return true
 	}
 	return false
@@ -280,6 +280,8 @@ func entryIcon(n *ir.Node) string {
 		return glyphSearch
 	case n.Role == "complementary":
 		return glyphSidebar
+	case n.Role == "dialog", n.Role == "alertdialog":
+		return glyphDialog
 	}
 	return glyphFooter
 }
@@ -314,6 +316,18 @@ func entryLabel(n *ir.Node, pageURL string) string {
 	}
 	if h := firstOf(n, ir.Heading); h != nil {
 		return oneLine(h.Text())
+	}
+	if n.Role == "dialog" || n.Role == "alertdialog" {
+		// A nameless dialog's first words say what it wants: "We use
+		// cookies…".
+		var first string
+		n.Walk(func(x *ir.Node) bool {
+			if first == "" && x.Kind == ir.Text && strings.TrimSpace(x.Name) != "" {
+				first = oneLine(x.Name)
+			}
+			return first == ""
+		})
+		return truncate(first, 40)
 	}
 	return ""
 }

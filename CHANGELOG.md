@@ -40,6 +40,14 @@
   select; a search with one box opens the box outright. The Space menu
   lists the same rows under item operation. main, article, region and
   form are the page itself and stay as they were.
+- **A dialog is chrome too** — a cookie banner, a modal: one row with
+  its name or its first words, its buttons behind `Enter`.
+- **A search box offers to search.** `Enter` in the box writes the
+  value and asks; `Enter` again presses Enter in the field, `Esc` keeps
+  the value unsent. A search box is one by `type=search`, or any box in
+  a search landmark.
+- **Menus scroll.** A menu taller than the terminal keeps the cursor's
+  row in view; `j`/`k` wrap at the ends, as everywhere in the family.
 
 ### Fixed
 
