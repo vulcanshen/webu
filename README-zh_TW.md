@@ -157,7 +157,7 @@ item 上 `Enter` 就是滑鼠左鍵：輸入框直接開框打字（密碼框遮
 
 ### 四個 screen
 
-- **Bookmarks** —— `Enter` 開新分頁、或收合 / 展開目錄 · `a` 在這裡加書籤 · `m` 搬移 · `x` 刪除（目錄也行：有東西的先問，確認就連整棵樹一起刪） · `y` yank url · `A` 在這裡加目錄（`a/b/c` 一次開三層） · `I` 匯入瀏覽器的匯出檔到自己的目錄 · `/` 過濾
+- **Bookmarks** —— `Enter` 開新分頁、或收合 / 展開目錄 · `a` 在這裡加書籤 · `m` 搬移 · `r` 改名（目錄也行，底下的跟著搬） · `x` 刪除（目錄也行：有東西的先問，確認就連整棵樹一起刪） · `y` yank url · `A` 在這裡加目錄（`a/b/c` 一次開三層） · `I` 匯入瀏覽器的匯出檔到自己的目錄 · `/` 過濾
 - **History** —— `Enter` 開新分頁 · `x` 刪除 · `y` yank url · `C` 清空 · `/` 過濾
 - **Downloads** —— `Enter` 開檔 · `o` 來源開新分頁 · `x` 移除（進行中的會先停掉） · `y` yank path · `C` 清掉已完成的 · `/` 過濾
 - **Settings** —— `Enter` 編輯文字設定（目前生效的值當預設值：`Tab` 接手、`Backspace` 清掉、清空後 Enter 就是回預設）或切換開關
@@ -194,7 +194,7 @@ item 上 `Enter` 就是滑鼠左鍵：輸入框直接開框打字（密碼框遮
 **v0.1.0。** 第一版：釘死的 Chromium、頁面畫成 item 與文字流、兩份選單、header 的 screen（書籤目錄、歷史、下載、設定）、Location 框、visual mode、DevTools，以及頁面會問的每一件事。見 [CHANGELOG.md](CHANGELOG.md)。
 
 還沒有的：
-- **就地編輯書籤**（先刪再加），以及 History screen 的 fuzzy 搜尋（目前是子字串過濾）
+- **就地改書籤的 URL**（`r` 能改名；URL 目前先刪再加），以及 History screen 的 fuzzy 搜尋（目前是子字串過濾）
 - **hover** —— 滑鼠移過才展開的頁面維持收著；游標是鍵盤游標
 - **iframe** —— 畫成佔位框，不走進去
 - `<textarea>` 用你自己的 `$EDITOR` 編輯、上傳檔案的檔案選擇器（目前打路徑）

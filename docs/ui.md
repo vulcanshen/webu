@@ -130,7 +130,7 @@ hint 嵌下邊框、`Esc` 只在一處解析。
 
 | Popup | 類型 | 內容 | item operation | panel operation | 子 popup |
 |---|---|---|---|---|---|
-| **Bookmarks**（screen） | 單一面板 | 根層 + 每目錄一組（目錄列可停游標；樹狀摺疊 v2） | Enter 開**新分頁**（2026-09-21）、Edit（待做）、Delete、Move（picker）、Yank url | Add 目前頁、New folder、Import、`/` 搜尋 | Edit → form；Delete → confirm；Move → 目錄 picker；Import → file picker → input（根目錄名） |
+| **Bookmarks**（screen） | 單一面板 | 根層 + 每目錄一組（目錄列可停游標；樹狀摺疊 v2） | Enter 開**新分頁**（2026-09-21）、Rename（title；目錄列改名連底下一起搬）、Delete、Move（picker）、Yank url | Add 目前頁、New folder、Import、`/` 搜尋 | Rename → input；Delete → confirm；Move → 目錄 picker；Import → file picker → input（根目錄名） |
 | **Downloads**（screen） | 單一面板 | 本次 session 的下載，新的在上：檔名 + 右欄是進度（`42%  1.2 MB of 3.0 MB`）、落地路徑、或 cancelled | Enter 用系統開啟器開檔、Open source in new tab、Remove（進行中先 `Browser.cancelDownload`；檔案不動）、Yank path | Clear 已完成 / 取消的 | — |
 | **History**（screen） | 單一面板，filu 原生 finder 形式 | 時間倒序、打字即 fuzzy、串流載入 | Enter 開**新分頁**、Delete 該筆、Yank url | Clear | Clear → confirm |
 | **Settings**（screen） | 單一面板 | 一列一個 key，目前 `download_dir`（空 = 預設） | Enter → input popup 改值 | — | input |

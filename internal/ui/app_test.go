@@ -82,6 +82,8 @@ func (d *driver) key(k string) {
 		d.send(tea.KeyMsg{Type: tea.KeyEnter})
 	case "esc":
 		d.send(tea.KeyMsg{Type: tea.KeyEscape})
+	case "backspace":
+		d.send(tea.KeyMsg{Type: tea.KeyBackspace})
 	default:
 		d.send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)})
 	}
@@ -829,5 +831,76 @@ func TestDeleteFolderTree(t *testing.T) {
 	}
 	if list, folders, err := store.LoadBookmarks(); err != nil || len(list) != 1 || len(folders) != 0 {
 		t.Errorf("saved: %d bookmarks, %d folders, %v", len(list), len(folders), err)
+	}
+}
+
+// TestRenameBookmarks: r on a bookmark edits its title in a box holding
+// the current one; r on a folder renames that level, and everything
+// under it follows; an empty or a taken name keeps the box.
+func TestRenameBookmarks(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	m := New(nil, "").WithStore([]store.Bookmark{
+		{Title: "Go", URL: "https://go.dev", Folder: "dev"},
+		{Title: "pkg", URL: "https://pkg.go.dev", Folder: "dev/go"},
+	}, []string{"dev/empty", "misc"}, store.Config{}, nil)
+	d := newDriver(t, m)
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.key("B")
+
+	d.m.lists.cursorTo(0)
+	d.key("r")
+	d.until("title box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputRename })
+	if d.m.input.value != "Go" {
+		t.Errorf("the box should hold the title, holds %q", d.m.input.value)
+	}
+	d.key("backspace")
+	d.key("backspace")
+	d.key("enter")
+	d.until("told to name it", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "name") })
+	if !d.m.input.isInteractive() {
+		t.Fatal("an empty name should keep the box")
+	}
+	d.key("The Go site")
+	d.key("enter")
+	d.until("renamed", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "renamed") })
+	if d.m.bookmarks[0].Title != "The Go site" || d.m.bookmarks[0].URL != "https://go.dev" {
+		t.Errorf("bookmark after: %+v", d.m.bookmarks[0])
+	}
+	d.until("box gone", func() bool { return !d.m.input.isActive() })
+
+	// A folder: its own name only, and a taken one is refused.
+	d.m.lists.cursorToFolder("dev")
+	d.key("r")
+	d.until("name box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputRename })
+	if d.m.input.value != "dev" {
+		t.Errorf("the box should hold the folder's name, holds %q", d.m.input.value)
+	}
+	for range 3 {
+		d.key("backspace")
+	}
+	d.key("misc")
+	d.key("enter")
+	d.until("refused", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "exists") })
+	if !d.m.input.isInteractive() {
+		t.Fatal("a taken name should keep the box")
+	}
+	for range 4 {
+		d.key("backspace")
+	}
+	d.key("code")
+	d.key("enter")
+	d.until("folder renamed", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "now code") })
+	if got := strings.Join(d.m.folderNames(), "|"); got != "code|code/empty|code/go|misc" {
+		t.Errorf("folders after: %q", d.m.folderNames())
+	}
+	if d.m.bookmarks[0].Folder != "code" || d.m.bookmarks[1].Folder != "code/go" {
+		t.Errorf("bookmarks should follow the folder: %+v", d.m.bookmarks)
+	}
+	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "code" {
+		t.Errorf("the cursor should be on the renamed folder, is on %+v", e)
+	}
+	if _, folders, err := store.LoadBookmarks(); err != nil || len(folders) != 4 {
+		t.Errorf("saved folders: %q, %v", folders, err)
 	}
 }
