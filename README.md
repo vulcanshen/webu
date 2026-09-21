@@ -12,8 +12,6 @@
 
 webu is a member of the `u`-family and a browser-domain implementation of [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md) — the same design system as [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (filesystem) and [sshu](https://github.com/vulcanshen/sshu) (ssh). See [`docs/webu-implementation.md`](docs/webu-implementation.md) for what was found on the way and where things stand, and [`docs/function.md`](docs/function.md), [`docs/ui.md`](docs/ui.md), [`docs/ux.md`](docs/ux.md) for the design — including the approaches that were tried and rejected.
 
-The difference from w3m or lynx is where the page comes from. Those parse HTML themselves, so a site that is mostly JavaScript is a blank. webu does not parse HTML at all: Chromium renders the page and webu reads what Chromium's accessibility layer says is on it — the same tree a screen reader reads — so whatever Chromium can show, webu can show as text.
-
 ## Demo
 
 ![demo](docs/demo.gif)
