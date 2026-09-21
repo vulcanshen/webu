@@ -168,6 +168,81 @@ func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 	}
 }
 
+// A heading collapses its section: what follows it up to the next heading
+// of its level or higher, or the end of its landmark (2026-09-21).
+func TestHeadingCollapsesItsSection(t *testing.T) {
+	heading := func(level int, id cdp.BackendNodeID, s string) *ir.Node {
+		return &ir.Node{Kind: ir.Heading, Level: level, ID: id, Children: []*ir.Node{text(s)}}
+	}
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "main", ID: 1, Children: []*ir.Node{
+			heading(1, 2, "Top"),
+			para(text("intro")),
+			link("A", "/a", 3),
+			heading(2, 4, "Sub"),
+			link("B", "/b", 5),
+			heading(1, 6, "Next"),
+			link("C", "/c", 7),
+		}},
+		{Kind: ir.Landmark, Role: "contentinfo", ID: 8, Children: []*ir.Node{link("F", "/f", 9)}},
+	}}
+	layout := func(folded ...cdp.BackendNodeID) (*tab, string) {
+		tb := &tab{cursor: -1, root: root, fold: map[cdp.BackendNodeID]bool{}}
+		for _, id := range folded {
+			tb.fold[id] = true
+		}
+		tb.relayout(60)
+		var b strings.Builder
+		for _, r := range tb.lay.rows {
+			b.WriteString(r.plain() + "\n")
+		}
+		return tb, b.String()
+	}
+	check := func(what, out string, present, absent []string) {
+		t.Helper()
+		for _, w := range present {
+			if !strings.Contains(out, w) {
+				t.Errorf("%s: missing %q in\n%s", what, w, out)
+			}
+		}
+		for _, w := range absent {
+			if strings.Contains(out, w) {
+				t.Errorf("%s: %q should be hidden in\n%s", what, w, out)
+			}
+		}
+	}
+	_, out := layout()
+	check("all open", out, []string{"# Top", "intro", "A", "## Sub", "B", "# Next", "C", "F"}, nil)
+	_, out = layout(2)
+	check("Top collapsed", out, []string{"▸ # Top · 3 items", "# Next", "C", "F"}, []string{"intro", "Sub", "B", " A"})
+	_, out = layout(4)
+	check("Sub collapsed", out, []string{"intro", "A", "▸ ## Sub · 1 item", "# Next", "C"}, []string{"B"})
+	_, out = layout(6)
+	check("Next collapsed, its landmark ends the section", out, []string{"▸ # Next · 1 item", "F"}, []string{"C"})
+
+	// Enter on the collapsed heading opens it and the cursor stays there.
+	tb, _ := layout(2)
+	for i, it := range tb.lay.items {
+		if it.node.ID == 2 {
+			tb.cursor = i
+		}
+	}
+	if !tb.lay.items[tb.cursor].folded {
+		t.Fatal("the heading's item should say it is folded")
+	}
+	tb.toggleFold(60)
+	if out := dumpLayout(tb.lay); !strings.Contains(out, "intro") || tb.lay.items[tb.cursor].node.ID != 2 {
+		t.Errorf("toggleFold should open the section and keep the cursor:\n%s", out)
+	}
+
+	// A jump to something the section hides opens the heading first.
+	tb, _ = layout(2)
+	tb.reveal(root.Children[0].Children[4], 60) // B
+	if out := dumpLayout(tb.lay); !strings.Contains(out, "B") || tb.fold[2] {
+		t.Errorf("reveal should expand the heading over B:\n%s", out)
+	}
+}
+
 func TestNavigationListFlowsOnOneLine(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		{Kind: ir.Landmark, Role: "navigation", ID: 1, Children: []*ir.Node{{Kind: ir.List, Children: []*ir.Node{

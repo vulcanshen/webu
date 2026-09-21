@@ -66,7 +66,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 | textarea | Edit（多行 popup）、Edit in editor（§2 editor 鏈）、Clear、Yank；無 Submit（瀏覽器裡 textarea 的 Enter 是換行） |
 | select | Choose（= Enter，option 清單 menu） |
 | image / media 佔位框 | Click（= Enter）、Yank media url |
-| heading | Fold section：摺到下一個同級或更高級 heading 為止，換頁即忘 |
+| heading | Collapse / Expand（Enter 直接切換；2026-09-21 落地）：收合到下一個同級或更高級 heading、或所在 landmark 結束為止，收合列畫成 `▸ # 標題 · N items`；重抓後仍記得，換頁即忘 |
 | 所有 item 共有 | Yank text、Inspect（message 類 popup：role、name、states、backendDOMNodeId、href 或 src） |
 | 未支援 role | 第一列 disabled：「role: slider，尚未支援，只能 click」（function.md §3 fallback） |
 

@@ -431,7 +431,7 @@ func (t *tab) textWidth() int {
 // cursor on it through the re-layout.
 func (t *tab) toggleFold(width int) {
 	n := t.current()
-	if n == nil || n.Kind != ir.Landmark {
+	if n == nil || (n.Kind != ir.Landmark && n.Kind != ir.Heading) {
 		return
 	}
 	if t.fold == nil {
@@ -447,8 +447,9 @@ func (t *tab) toggleFold(width int) {
 	}
 }
 
-// reveal opens every landmark shut around n, so a jump to it (the
-// Outline) has somewhere to land. Nothing happens when it is already drawn.
+// reveal opens every landmark shut around n, and every collapsed heading
+// whose section holds it, so a jump to it (the Outline) has somewhere to
+// land. Nothing happens when it is already drawn.
 func (t *tab) reveal(n *ir.Node, width int) {
 	if _, ok := t.lay.marks[n]; ok || t.root == nil {
 		return
@@ -481,6 +482,13 @@ func (t *tab) reveal(n *ir.Node, width int) {
 			changed = true
 		}
 	}
+	t.root.Walk(func(h *ir.Node) bool {
+		if h.Kind == ir.Heading && t.fold[h.ID] && sectionHolds(t.root, h, n) {
+			t.fold[h.ID] = false
+			changed = true
+		}
+		return true
+	})
 	if changed {
 		t.relayout(width)
 	}

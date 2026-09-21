@@ -155,8 +155,18 @@ type renderer struct {
 	items []item
 	flow  []atom
 	fold  map[cdp.BackendNodeID]bool
+	root  *ir.Node
 	// inNav counts navigations being entered: their lists flow inline.
 	inNav int
+	// A collapsed heading (2026-09-21) hides its section: everything after
+	// it up to the next heading of its level or higher, or the end of the
+	// landmark it is in. suppress is on while that is being skipped;
+	// foldLevel is the heading's level, foldLm the landmark depth it sat
+	// at, lmDepth the landmark depth now.
+	suppress  bool
+	foldLevel int
+	foldLm    int
+	lmDepth   int
 	// inNavList: a navigation list is flowing on one line, so an entry the
 	// page styled as a block flows too.
 	inNavList bool
@@ -179,7 +189,7 @@ func render(root *ir.Node, width int) layout {
 }
 
 func renderWith(root *ir.Node, o renderOpts) layout {
-	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold, marks: map[*ir.Node]int{}}
+	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold, root: root, marks: map[*ir.Node]int{}}
 	if o.measure > 0 && o.measure < r.width {
 		r.textW = o.measure
 	}
@@ -266,6 +276,26 @@ func inlineKind(n *ir.Node) bool {
 // ------------------------------------------------------------------ blocks
 
 func (r *renderer) block(n *ir.Node, depth int) {
+	if r.suppress {
+		// Inside a collapsed heading's section. The heading that ends it
+		// is drawn; a wrapper with that heading somewhere inside is walked
+		// for it and nothing of its own is drawn; anything else is skipped.
+		switch {
+		case n.Kind == ir.Heading && n.Level <= r.foldLevel:
+			r.suppress = false
+		case hasHeadingUpTo(n, r.foldLevel):
+			if n.Kind == ir.Landmark {
+				r.lmDepth++
+			}
+			r.children(n, depth)
+			if n.Kind == ir.Landmark {
+				r.leaveLandmark()
+			}
+			return
+		default:
+			return
+		}
+	}
 	switch n.Kind {
 	case ir.Document:
 		r.children(n, depth)
@@ -283,8 +313,10 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		if n.Role == "navigation" {
 			r.inNav++
 		}
+		r.lmDepth++
 		r.children(n, depth)
 		r.flush()
+		r.leaveLandmark()
 		if n.Role == "navigation" {
 			r.inNav--
 		}
@@ -296,11 +328,28 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		if !hasItem(n) {
 			id = r.newItem(n)
 		}
+		// A heading that is an item collapses on Enter, like a landmark's
+		// row: the row keeps the heading and says what it hides.
+		folded := id >= 0 && r.fold[n.ID]
+		if folded {
+			r.items[id].folded = true
+			r.add(atom{text: "▸", item: id, kind: segHeading})
+			r.add(atom{text: " ", item: id, kind: segHeading, space: true})
+		}
 		r.add(atom{text: strings.Repeat("#", clamp(n.Level, 1, 6)), item: id, kind: segHeading})
 		r.add(atom{text: " ", item: id, kind: segHeading, space: true})
 		r.inlineChildren(n, id, segHeading)
+		if folded {
+			if c := sectionItems(r.root, n); c > 0 {
+				r.add(atom{text: " ", item: id, kind: segDim, space: true})
+				r.add(atom{text: "· " + plural(c, "item"), item: id, kind: segDim})
+			}
+		}
 		r.flush()
 		r.gap = true
+		if folded {
+			r.suppress, r.foldLevel, r.foldLm = true, n.Level, r.lmDepth
+		}
 	case ir.Paragraph:
 		r.flush()
 		r.inlineChildren(n, -1, segPlain)
@@ -420,10 +469,96 @@ func (r *renderer) children(n *ir.Node, depth int) {
 	for _, c := range n.Children {
 		if c.IsBlock() {
 			r.block(c, depth+1)
-		} else {
+		} else if !r.suppress {
 			r.inline(c, -1, segPlain)
 		}
 	}
+}
+
+// leaveLandmark is the end of a landmark's children: a collapsed
+// heading's section cannot outlive the landmark it began in.
+func (r *renderer) leaveLandmark() {
+	r.lmDepth--
+	if r.suppress && r.lmDepth < r.foldLm {
+		r.suppress = false
+	}
+}
+
+// hasHeadingUpTo reports whether a heading of level or higher is inside n.
+func hasHeadingUpTo(n *ir.Node, level int) bool {
+	found := false
+	for _, c := range n.Children {
+		c.Walk(func(x *ir.Node) bool {
+			if x.Kind == ir.Heading && x.Level <= level {
+				found = true
+			}
+			return !found
+		})
+	}
+	return found
+}
+
+// walkSection visits, in reading order, what a heading's section holds:
+// everything after h up to the next heading of its level or higher, or the
+// end of the landmark h is in. fn returning false stops the walk.
+func walkSection(root, h *ir.Node, fn func(*ir.Node) bool) {
+	started, done, hLm := false, false, 0
+	var walk func(n *ir.Node, lm int)
+	walk = func(n *ir.Node, lm int) {
+		if done {
+			return
+		}
+		if n == h {
+			started, hLm = true, lm
+			return
+		}
+		if started {
+			if n.Kind == ir.Heading && n.Level <= h.Level {
+				done = true
+				return
+			}
+			if !fn(n) {
+				done = true
+				return
+			}
+		}
+		inner := lm
+		if n.Kind == ir.Landmark {
+			inner++
+		}
+		for _, c := range n.Children {
+			walk(c, inner)
+			if done {
+				return
+			}
+		}
+		if started && n.Kind == ir.Landmark && lm < hLm {
+			done = true
+		}
+	}
+	walk(root, 0)
+}
+
+// sectionItems counts the items a collapsed heading hides.
+func sectionItems(root, h *ir.Node) int {
+	count := 0
+	walkSection(root, h, func(n *ir.Node) bool {
+		if n.IsItem() {
+			count++
+		}
+		return true
+	})
+	return count
+}
+
+// sectionHolds reports whether n is inside heading h's section.
+func sectionHolds(root, h, n *ir.Node) bool {
+	held := false
+	walkSection(root, h, func(x *ir.Node) bool {
+		held = x == n
+		return !held
+	})
+	return held
 }
 
 // inlineChildren flows n's children; a block child inside a flow breaks it
