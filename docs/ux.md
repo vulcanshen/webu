@@ -88,7 +88,7 @@ Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡
 
 | screen / popup | item operation | panel operation |
 |---|---|---|
-| Bookmarks（screen） | Enter 開**新分頁**（修訂 2026-09-21：一律新分頁、不佔原分頁，`[o]` 因此拿掉）、`[e] Edit`（form，待做）、`[x] Delete`（confirm；在目錄列上 = 刪空目錄，不問）、`[m] Move`（options popup 當目錄 picker：`(no folder)` + 目錄樹（縮排表階層），數字鍵選；2026-09-21 落地）、`[y] Yank`、`[f] Folder here`（在游標所在層開新目錄；游標在目錄列上時 item operation 只剩 `[f] Subfolder`（開在它裡面）與 `[x] Delete`（空目錄才刪）） | `[A] Add` 目前頁、`[F] Folder` 最上層新目錄（input popup 問名字，一次一層、不收 `/`；空目錄也列出）、`[/]` 搜尋 |
+| Bookmarks（screen） | 書籤列：Enter 開**新分頁**（修訂 2026-09-21：一律新分頁、不佔原分頁，`[o]` 因此拿掉）、`[a] Add`（兩個 input popup：URL、再 title，加在游標所在的目錄；`[W]eb` 正在顯示的頁面當 placeholder，Enter 直接收下——加目前頁就是 `a` Enter Enter）、`[m] Move`（options popup 當目錄 picker：`(no folder)` + 目錄樹（縮排表階層），數字鍵選）、`[x] Delete`（confirm）、`[y] Yank`、`[e] Edit`（待做）。目錄列：Enter = Expand / Collapse（收起來一列 `▸ 󰉋 dev · 3 bookmarks`）、`[a] Add`（加在它裡面）、`[x] Delete`（空目錄才刪，不問） | `[A] Add folder`（加在游標所在目錄下；路徑 `a/b/c` 一次開三層；空目錄也列出）、`[/]` 搜尋。修訂 2026-09-21：原 `[A] Add this page` / `[F] Folder` / `[f] Subfolder` 拿掉 |
 | Downloads（screen） | Enter 開檔（系統開啟器；進行中 → toast）、`[o]` 來源 URL 開新分頁、`[x] Remove`（進行中先取消；檔案不動）、`[y] Yank path`（未落地時 yank 來源 URL） | `[C] Clear` 已完成 / 取消的 |
 | History（screen） | Enter 開**新分頁**（修訂 2026-09-21）、`[x] Delete` 該筆、`[y] Yank` | `[C] Clear`（confirm；唯一清除入口，歷史無限保留） |
 | Settings（screen） | Enter → input popup 改值 → 寫回 `config.yaml`、立即生效；目前只有 `download_dir`（2026-09-21）。**所有文字設定的 popup 同 `[L]ocation`**：目前生效的值當 placeholder，Tab 接手編輯、Backspace 整個清掉；沒動過就 Enter = 不改，清空後 Enter = 回預設 | — |
@@ -234,7 +234,7 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 | `[1]` panel | `T` `X` `U` |
 | `[2]` item | **無**（menu-only） |
 | `[2]` panel | `R` `T` `A` `O` `I` `Z` `Y` `C`（`V` 是全域的 visual mode，`L` 是全域的 location；`T` 與 `[1]` 同義；`C` 原是 `W`，修訂 2026-09-21） |
-| Bookmarks screen | `m` `f` `x` `y` / `A` `F` `/`（`e` 待做；`f` 小寫 = 在游標處開目錄、`F` = 最上層） |
+| Bookmarks screen | `a` `m` `x` `y` / `A` `/`（`e` 待做；`a` 小寫 = 加書籤、`A` 大寫 = 加目錄，都在游標所在目錄下） |
 | Downloads screen | `o` `x` `y` / `C` `/` |
 | History screen | `x` `y` / `C` `/` |
 | Settings screen | Enter |
