@@ -79,7 +79,7 @@ item，item 記自己跨哪幾列，游標才能把整個 run 反白。決定：
 - 表格 cell 內的 block 攤平成一行（`inCell`）；資料表欄寬從最寬的欄開始縮（同 sshu）
 - 空格延後放：字與空格一起塞不下就換行，不會出現 `right(`
 - **Landmark 摺疊**（ui.md §2 修訂）：`renderOpts.fold` 是 user 的決定（by backendDOMNodeId，重抓後仍在）、
-  沒決定時 `renderer.folded` 依「有 main 且不是 main 也不在 main 裡」預設摺疊；每個 landmark 的標題列是 item
+  沒決定時**全開**（修訂 2026-09-21，原本有 main 時 main 外預設摺疊）；`enterItem` 對 landmark 直接 dispatch `fold`，不開選單；每個 landmark 的標題列是 item
   （`item.folded`）；`tab.toggleFold` 重排並把游標留在原節點；`tab.reveal` 供 Outline 打開路徑上的 landmark
 - **navigation 內的短清單一行流式**：`renderer.inNav > 0 && navList(n)`，項目以 dim 的 `·` 隔開
 - **measure**：`renderOpts.measure` 只管 `wrap()` 的 `textW`；`store.Config.Measure` 預設 100
@@ -118,17 +118,17 @@ backendDOMNodeId，找不到落到同序位。
 | alert / confirm / prompt / beforeunload | tab 的 `ListenTarget` 收 `Page.javascriptDialogOpening` → `dialogMsg`（goroutine 送、不丟）→ alert / confirm / beforeunload 開 confirm popup，prompt 開 input popup（帶預設值）；Enter / Esc 都會 `Page.handleJavaScriptDialog` 回答（alert 的 Esc 也是 accept）。dialog 開著時 settle capture 暫停，因為碰 renderer 的 CDP 呼叫會卡到 dialog 關掉 |
 | `target=_blank` / `window.open` | `ListenBrowser` 收 `Target.targetCreated`（`Type=="page"` 且有 `OpenerID`、未 attached）→ `newTargetMsg` → `NewContext(WithTargetID)` + `Run` attach → `Prepare`（observer 也直接跑進現有 document）→ capture；加到 `[1]` 尾端並自動切換。實測 `rel=noopener` 預設下 `OpenerID` 仍有值 |
 | 憑證錯誤 | **偏離 function.md §8**：`Security.certificateError` 事件已從協定移除，只剩 `Security.setIgnoreCertificateErrors`。做法：導航失敗字串含 `ERR_CERT` → confirm「這個分頁、開著期間都放行？」→ 對該 tab `setIgnoreCertificateErrors(true)` 後重載；同分頁後續導航不再問，新分頁會再問 |
-| 下載 | 第一個 frame 對 browser 執行 `Browser.setDownloadBehavior(allow, downloadPath, eventsEnabled)`；`ListenBrowser` 收 `downloadWillBegin` → toast「downloading <name>」、`downloadProgress completed` → toast「saved <path>」、canceled → error toast。目錄 = `config.yaml` 的 `download_dir`，預設 `~/Downloads` |
+| 下載 | 第一個 frame 對 browser 執行 `Browser.setDownloadBehavior(allow, downloadPath, eventsEnabled)`；`ListenBrowser` 收 `downloadWillBegin` → toast「downloading <name>」、`downloadProgress completed` → toast「saved <path>」、canceled → error toast。目錄 = `config.yaml` 的 `download_dir`，預設 `paths.Downloads()` = `~/.webu/datas/downloads`（2026-09-21），`MkdirAll` 後才 `setDownloadBehavior`（`pointDownloads`，Settings 改值後再跑一次） |
 | HTTP basic / digest auth | `Prepare` 開 `Fetch.enable(handleAuthRequests)`；**這會讓每個 request 都 pause 一次**，tab 的 listener 收到 `requestPaused` 就在 goroutine 裡 `continueRequest`（Puppeteer 的 `page.authenticate` 同一做法；實測 GitHub repo 頁多花約 0.5 秒、HN 約 0.3 秒）；`authRequired` → `authMsg` → input popup 問帳號、再問密碼（遮罩）→ `continueWithAuth(ProvideCredentials)`；Esc → `CancelAuth`（頁面拿到 401） |
 | 檔案上傳 | `Prepare` 開 `Page.setInterceptFileChooserDialog(true)`；`fileChooserOpened` → `fileMsg` → input popup 問路徑（`~` 展開、多檔以空白分隔、先 stat）→ `DOM.setFileInputFiles(backendNodeId)`；Esc 就是沒選。ui.md §3.3 寫的 sshu filepicker 形式先以路徑輸入代替 |
-| Undo close、離開時下載中 | `[1]` 的 `U` 從 `m.closed`（最多 20 筆）重開；`q` 在 `downloading() > 0` 時先 confirm。`downloadWillBegin` / `downloadProgress`（帶 GUID、bytes、state）餵進 `m.dls`，header 右端數進行中的、`[D]ownloads` popup 列出（`downloads.go`：Enter 系統開啟器、`o` 來源開新分頁、`x` remove（進行中 `Browser.cancelDownload`）、`y` yank path、`C` 清已完成）。`w` 關分頁不問：下載是瀏覽器層事件、無法歸到某個分頁 |
+| Undo close、離開時下載中 | `[1]` 的 `U` 從 `m.closed`（最多 20 筆）重開；`q` 在 `downloading() > 0` 時先 confirm。`downloadWillBegin` / `downloadProgress`（帶 GUID、bytes、state）餵進 `m.dls`，header 右端數進行中的、`[D]ownloads` screen 列出（`downloads.go`：Enter 系統開啟器、`o` 來源開新分頁、`x` remove（進行中 `Browser.cancelDownload`）、`y` yank path、`C` 清已完成）。`w` 關分頁不問：下載是瀏覽器層事件、無法歸到某個分頁 |
 
 ## §A VTP in webu
 
 依 ux.md §A 落地。已實作的入口：footer `space menu   ? help   tab/1-2 panels   q quit`；
 `[2]` 的 **Enter 開 item operation 選單**（`itemMenuItems`，第一列主要動作；修訂 2026-09-20），
-Space 開完整選單（同一份 item 列 + panel region `[R] [T] [P] [N] [/] [V] UR[L] [A] [O] [I] [Z] [Y] [W]`）；
-`[1]` 的 `[w] [c] [r] [y]` / `[T] [X] [U]`；header 三個 chip 沒有 Space menu，各自一個全域鍵（`B` `H` `D`）。help popup 列全域鍵。
+Space 開完整選單（同一份 item 列 + panel region `[R] [T] [P] [N] [/] [V] [L] [A] [O] [I] [Z] [Y] [C]`）；
+`[1]` 的 `[w] [c] [r] [y]` / `[T] [X] [U]`；header 五個 chip 是 screen（`screen` enum；`switchScreen` / `screenKey` / `listAction`，`W` `B` `H` `D` `S` 全域），list screen 的 Space menu = `listPanel.menuItems`，鍵與 `update` 同一組（2026-09-21）。help popup 列全域鍵。
 options popup（`m.options`）以 `optionsKind` 區分兩種內容：item 選單、select 的 option 清單（Choose
 在原浮層內換內容）；Add to… picker 隨 Shortcuts 拿掉，`[A]` 直接加進 Bookmarks。
 
@@ -164,7 +164,9 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - Outline：`layout.marks` 記每個 landmark / heading 的第一列；popup 是 spaceMenu 實例（同 sshu picker 的重用），
   開啟時游標停在「目前位置之前最後一個」項目；Enter → `tab.jumpTo`
 - Zoom：`m.zoom` 讓 `[2]` 獨佔整個畫面（narrow 模式同一條路），寬度改變會重排
-- 版面（修訂 2026-09-20）：header 一列（`header()`，借 sshu 的 `tabRow` / `tabChain`：開著的 list popup 對應 chip 點亮，右端 `downloading()`）+ 分隔線（`headerRule()` = sshu `tabRule`，`downloadProgress()` 混合進行中下載的百分比當進度條）+ `[1] Tabs`（`sideW` 24）與 `[2] Page` 並列 + footer；`panelH = h - 3`。Places 面板連同 `side1Items` / `cur1` / Shortcuts 全部刪除
+- 版面（修訂 2026-09-20）：header 一列（`header()`，借 sshu 的 `tabRow` / `tabChain`：目前 screen 的 chip 點亮，右端 `downloading()`）+ 分隔線（`headerRule()` = sshu `tabRule`，`downloadProgress()` 混合進行中下載的百分比當進度條）+ `[1] Tabs`（`sideW` 24）與 `[2] Page` 並列 + footer；`panelH = h - 3`。Places 面板連同 `side1Items` / `cur1` / Shortcuts 全部刪除
+- Console eval（2026-09-21）：`Runtime.evaluate` 不用 `returnByValue`（`window` 會回 Object reference chain is too long），改 `generatePreview`；
+  plain object / array 用 `callFunctionOn(JSON.stringify)` 印 JSON，其餘印 `Description {preview}`（`objectText` / `previewText`）
 - View source 已搬進 DevTools › Source（`devsource.go`：`chromedp.OuterHTML("html")`、行號、`/` grep；
   修訂 2026-09-20，`V` 讓給 visual mode）；獨立的 viewer popup 一併移除
 - Inspect：message popup 列 role / name / value / url / state / node id
@@ -187,18 +189,20 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - `[2]` 頁面：URL 列、分隔線、排版、游標、`j/k/u/d/gg/G`、捲動指示與 loading hint
 - Enter = click；textbox 空 → input popup、有值 → Submit / Edit / Clear / Yank；select → option 清單
 - `[1]` 分頁：新開 / 切換（綠字）/ 關閉 / clone / reload / yank / close others；`target=_blank` 尚未接 `Target.targetCreated`
-- goto popup（全域 `L` / `[1]` `[2]` 的 `T`）：非 URL 當 DuckDuckGo 搜尋；`L` 帶目前 URL 當 placeholder，Tab 接手編輯、Backspace 清掉（`inputPopup.update`）；`bracketHotkey` 會把 label 中間的鍵原地加括號（`UR[L]`）
+- goto popup（全域 `L` / `[1]` `[2]` 的 `T`）：非 URL 當 DuckDuckGo 搜尋；`L` 帶目前 URL 當 placeholder，Tab 接手編輯、Backspace 清掉（`inputPopup.update`）；label 2026-09-21 改成 `[L]ocation`（popup title「Location」）；`bracketHotkey` 仍支援 label 中段加括號
 - `P` / `N` / `R`、Yank url / text / value、Inspect（暫以 toast 呈現）
 - 窄寬只畫焦點側；`TestViewFitsTheTerminal` 檢查四種尺寸每列寬度
-- header 三個 popup（`listpopup.go` 一個 model 三種內容：Bookmarks / History / Downloads）：Enter 開啟、`o` 新分頁、`x` 刪（confirm）、`y` yank、`A` 加目前頁、
-  History 的 `C` 清（confirm）、`/` 打字過濾（子字串，fuzzy 之後）；`[2]` 的 `[A]dd bookmark` 直接加
+- header 四個 list screen（`listpanel.go` 一個 model 四種內容：Bookmarks / History / Downloads / Settings，`panelFrameLegend` 畫成單一面板、hint 在下邊框）：Enter 一律開**新分頁**並回 `[W]eb`（2026-09-21）、`x` 刪（confirm）、`y` yank、`A` 加目前頁、
+  History 的 `C` 清（confirm）、`/` 打字過濾（子字串，fuzzy 之後）；Esc 先清過濾再回 Web（`handleKey`，用 `floatOwned()` 而非 `popupOpen()` 判斷，否則 confirm 收合動畫期間 Esc 會被吞）；
+  Settings 的 Enter → `inputSetting` → `store.SaveConfig` + `pointDownloads`；`[2]` 的 `[A]dd bookmark` 直接加
 - `internal/store`：`bookmarks.yaml`（flat，`folder` 欄位先留著）、`config.yaml`（`search_engine` / `download_dir` / `measure`；`shortcuts` 已拿掉）、
-  `history`（append-only、tab 分隔、無限保留）、`session.yaml`；目錄解析在 `internal/paths`，browser / store 共用
+  `history.yaml`（YAML sequence、一次 append 一筆、無限保留）與 `session.yaml` 在 data dir（`store.dataFiles`，2026-09-21）；目錄解析在 `internal/paths`
+  （`Config` = `~/.config/webu`、`Data` = `~/.webu/datas`、`Downloads`、`Cache`；`WEBU_CONFIG` / `WEBU_DATA` / `WEBU_CACHE` 覆寫），browser（profile、log 在 data）/ store 共用
 - session：離開（q 或 signal）時 main 寫下所有分頁，啟動時還原成 pending（dim、不預載），切到才載
 - 歷史：每個分頁 load 完的最終 URL + 標題記一筆，同 URL 的 settle 重抓不重複記
 - 即時更新（function.md §6）：`page.Prepare` 在第一次導航前 `Runtime.addBinding` + 注入 MutationObserver
   （childList / characterData / subtree，150 ms 合併），`Runtime.bindingCalled` 走與 load event 同一條 settle 路
-- Visual mode（`V`）與 `/` 搜尋、Outline、Zoom、Inspect popup、DevTools 四分頁（Storage / Network / Console / Source）與 Network detail（§A）
+- Visual mode（`V`）與 `/` 搜尋、Outline、Zoom、Inspect popup、DevTools 四分頁（Network / Storage / Console / Source，2026-09-21 起 Network 在前、開啟停在 Network）與 Network detail（§A）
 - JS dialog、`target=_blank` 新分頁、憑證錯誤 confirm、下載 toast、HTTP auth、檔案上傳、Undo close、離開時下載中的 confirm（§5）
 - 整合測試 `TestAppNavigatesAndFillsAForm`（本機頁：載入 → 點 → 回 → 打字 → Submit → 選 option）、
   `TestListPopupsAndSession`（無瀏覽器：B 開 / 過濾 / 刪 / 存檔）、`hooks_test.go` 五支（新視窗、三種

@@ -46,11 +46,27 @@ const (
 // config.yaml can change it.
 const searchEngine = store.DefaultSearch
 
+// screen is which header chip is lit: the web, or one of the lists that
+// take the whole body (ui.md §1.1, revised 2026-09-21).
+type screen int
+
+const (
+	screenWeb screen = iota // [1] Tabs and [2] Page
+	screenBookmarks
+	screenHistory
+	screenDownloads
+	screenSettings
+)
+
+// screenKeys are the header's letters, global from any screen.
+var screenKeys = map[string]screen{"W": screenWeb, "B": screenBookmarks, "H": screenHistory, "D": screenDownloads, "S": screenSettings}
+
 type AppModel struct {
-	w, h  int
-	focus panelID
-	cur2  int
-	top2  int
+	w, h   int
+	screen screen
+	focus  panelID
+	cur2   int
+	top2   int
 
 	tabs      []*tab
 	shown     int // index into tabs panel [2] displays; -1 for none
@@ -74,7 +90,7 @@ type AppModel struct {
 	spaceMenu spaceMenu
 	options   spaceMenu // a textbox's Submit/Edit/Clear/Yank, or a select's options
 	outline   spaceMenu // the page's landmarks and headings
-	lists     listPopup // Bookmarks / History / Downloads
+	lists     listPanel // the screen behind a header chip after [W]eb
 	devtools  devtoolsPopup
 	message   messagePopup
 	help      helpPopup
@@ -100,7 +116,7 @@ type AppModel struct {
 	upload *fileMsg
 	// closed is the tabs closed this session, for [U]ndo close in [1].
 	closed []store.SessionTab
-	// dls is this session's downloads, oldest first: the Downloads popup
+	// dls is this session's downloads, oldest first: the Downloads screen
 	// lists them, the header counts the ones still running.
 	dls []download
 	// pendingG holds the first half of the gg chord.
@@ -119,7 +135,7 @@ func New(b *browser.Browser, startURL string) AppModel {
 		spaceMenu: newSpaceMenu(),
 		options:   spaceMenu{anim: newPopupAnimator("options")},
 		outline:   newOutlineMenu(),
-		lists:     newListPopup(),
+		lists:     newListPanel(),
 		devtools:  newDevtoolsPopup(),
 		message:   newMessagePopup(),
 		help:      newHelpPopup(),
@@ -174,7 +190,7 @@ func (m AppModel) Close() {
 func (m AppModel) narrow() bool { return m.w < narrowW }
 func (m AppModel) panelH() int  { return m.h - 3 } // the header row, its rule, and the footer row
 func (m AppModel) layer() int {
-	if m.spaceMenu.isActive() || m.options.isActive() || m.lists.isActive() ||
+	if m.spaceMenu.isActive() || m.options.isActive() ||
 		m.outline.isActive() || m.devtools.isActive() {
 		return 2
 	}
@@ -218,7 +234,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AnimTickMsg:
 		return m, tea.Batch(
 			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.outline.anim.tick(msg),
-			m.lists.anim.tick(msg), m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
+			m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
 			m.message.anim.tick(msg),
 			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.toast.anim.tick(msg))
 
@@ -402,19 +418,28 @@ func (m *AppModel) firstFrame() tea.Cmd {
 		cmds = append(cmds, t.load(t.url))
 	}
 	if m.browser != nil {
-		ctx, dir := m.browser.Ctx, m.downloadDir()
-		cmds = append(cmds, func() tea.Msg {
-			// Chromium does not create the directory it is pointed at.
-			if err := os.MkdirAll(dir, 0o755); err != nil {
-				return actionErrMsg{err: fmt.Errorf("downloads: %w", err)}
-			}
-			if err := page.SetDownloads(ctx, dir); err != nil {
-				return actionErrMsg{err: fmt.Errorf("downloads: %w", err)}
-			}
-			return nil
-		})
+		cmds = append(cmds, m.pointDownloads())
 	}
 	return tea.Batch(cmds...)
+}
+
+// pointDownloads tells the browser where downloads go (ui.md §6): on the
+// first frame, and again when the setting changes.
+func (m AppModel) pointDownloads() tea.Cmd {
+	if m.browser == nil {
+		return nil
+	}
+	ctx, dir := m.browser.Ctx, m.downloadDir()
+	return func() tea.Msg {
+		// Chromium does not create the directory it is pointed at.
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return actionErrMsg{err: fmt.Errorf("downloads: %w", err)}
+		}
+		if err := page.SetDownloads(ctx, dir); err != nil {
+			return actionErrMsg{err: fmt.Errorf("downloads: %w", err)}
+		}
+		return nil
+	}
 }
 
 // downloadDir is config.yaml's download_dir, or ~/.webu/datas/downloads
@@ -595,14 +620,23 @@ func (m *AppModel) recordVisit(t *tab) {
 
 func (m AppModel) popupOpen() bool {
 	return m.spaceMenu.isActive() || m.options.isActive() || m.outline.isActive() ||
-		m.lists.isActive() || m.devtools.isActive() || m.message.isActive() ||
+		m.devtools.isActive() || m.message.isActive() ||
 		m.help.isActive() || m.confirm.isActive() || m.input.isActive()
+}
+
+// floatOwned reports whether some float still holds the keyboard — not
+// merely is on screen: one that is closing has let go (§6.2), and an Esc
+// that arrived during its animation belongs to whatever is under it.
+func (m AppModel) floatOwned() bool {
+	return m.toast.anim.owns() || m.input.anim.owns() || m.confirm.anim.owns() ||
+		m.options.anim.owns() || m.outline.anim.owns() || m.devtools.anim.owns() ||
+		m.message.anim.owns() || m.help.anim.owns() || m.spaceMenu.anim.owns()
 }
 
 // typing reports whether a float is taking text: every printable key is a
 // character then (§4.5). A search being typed in selection mode counts.
 func (m AppModel) typing() bool {
-	return m.input.anim.owns() || (m.lists.anim.owns() && m.lists.typing) ||
+	return m.input.anim.owns() || (m.screen != screenWeb && m.lists.typing) ||
 		(m.devtools.anim.owns() && m.devtools.typing) ||
 		(m.sel.on && m.sel.typing && !m.popupOpen())
 }
@@ -612,7 +646,17 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// With nothing up it belongs to selection mode when that is on, and
 	// otherwise does nothing — the previous page is P (ux.md §A.0.K).
 	if msg.Type == tea.KeyEscape {
-		if m.sel.on && !m.popupOpen() {
+		switch {
+		case m.floatOwned():
+			return m.closeTop()
+		case m.screen != screenWeb:
+			// A screen is not a float, but Esc unwinds it the same way: the
+			// filter first, then back to the web it was opened from.
+			if !m.lists.escTyping() {
+				m.screen = screenWeb
+			}
+			return m, nil
+		case m.sel.on:
 			return m.selectKey(msg)
 		}
 		return m.closeTop()
@@ -641,8 +685,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.optionsKey(msg)
 	case m.outline.anim.owns():
 		return m.outlineKey(msg)
-	case m.lists.anim.owns():
-		return m.listKey(msg)
 	case m.devtools.anim.owns():
 		return m.devtoolsKey(msg)
 	case m.message.anim.owns():
@@ -659,6 +701,9 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case m.spaceMenu.anim.owns():
 		return m.menuKey(msg)
+	}
+	if m.screen != screenWeb {
+		return m.screenKey(msg)
 	}
 	if m.sel.on {
 		// The mode holds the keyboard (ux.md §1): Space is its cheatsheet,
@@ -702,12 +747,6 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		return m, m.options.close()
 	case m.outline.anim.owns():
 		return m, m.outline.close()
-	case m.lists.anim.owns():
-		// A filter being typed is the innermost thing Esc can drop.
-		if m.lists.escTyping() {
-			return m, nil
-		}
-		return m, m.lists.close()
 	case m.devtools.anim.owns():
 		// Innermost first: the detail, then a filter being typed, then the
 		// popup.
@@ -732,7 +771,7 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 // over, and the user is back on the panel (§7.1).
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.input.close(), m.confirm.close(), m.options.close(),
-		m.outline.close(), m.lists.close(), m.devtools.close(), m.message.close(),
+		m.outline.close(), m.devtools.close(), m.message.close(),
 		m.help.close(), m.spaceMenu.close())
 }
 
@@ -763,19 +802,9 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.focus = panelID(k[0] - '1')
 		return m, nil
 	case "q":
-		// A download in flight would be cut off (ux.md §5): ask first.
-		if n := m.downloading(); n > 0 {
-			return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Quit",
-				lines:  []string{plural(n, "download") + " still in progress.", "Quitting stops it."},
-				accept: "quit", warn: true, action: confirmQuit}, m.layer())
-		}
-		return m.quit()
-	case "B":
-		return m, m.openList(listBookmarks)
-	case "D":
-		return m, m.openList(listDownloads)
-	case "H":
-		return m, m.openList(listHistory)
+		return m.askQuit()
+	case "W", "B", "H", "D", "S":
+		return m.switchScreen(k)
 	case "L":
 		return m.dispatch("L")
 	case "P":
@@ -952,11 +981,51 @@ type evalMsg struct {
 	entry page.ConsoleEntry
 }
 
-// ------------------------------------------------------------------- lists
+// askQuit is q: a download in flight would be cut off (ux.md §5), so it
+// asks first; otherwise it goes.
+func (m AppModel) askQuit() (tea.Model, tea.Cmd) {
+	if n := m.downloading(); n > 0 {
+		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Quit",
+			lines:  []string{plural(n, "download") + " still in progress.", "Quitting stops it."},
+			accept: "quit", warn: true, action: confirmQuit}, m.layer())
+	}
+	return m.quit()
+}
 
-// openList shows one of the header's popups with its current content.
-func (m *AppModel) openList(kind listKind) tea.Cmd {
-	return m.lists.open(kind, m.listEntries(kind), m.layer())
+// ----------------------------------------------------------------- screens
+
+// switchScreen is a header letter: the chip lights and its screen takes
+// the body. A list screen opens from the top, filter cleared, on what is
+// there now. The web keeps its tabs and page exactly as they were.
+func (m AppModel) switchScreen(k string) (tea.Model, tea.Cmd) {
+	s, ok := screenKeys[k]
+	if !ok {
+		return m, nil
+	}
+	m.screen = s
+	if s != screenWeb {
+		kind := listKind(s - 1)
+		m.lists.show(kind, m.listEntries(kind))
+	}
+	return m, nil
+}
+
+// screenKey is a key on a list screen with no float up: the header's
+// letters and q are global there too, Space is the screen's menu, and the
+// rest is the list's own.
+func (m AppModel) screenKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	k := msg.String()
+	if !m.lists.typing {
+		switch k {
+		case "q":
+			return m.askQuit()
+		case "W", "B", "H", "D", "S":
+			return m.switchScreen(k)
+		case " ":
+			return m.openMenu()
+		}
+	}
+	return m.listAction(m.lists.update(msg))
 }
 
 func (m AppModel) listEntries(kind listKind) []listEntry {
@@ -975,41 +1044,55 @@ func (m AppModel) listEntries(kind listKind) []listEntry {
 		for _, v := range m.history {
 			out = append(out, listEntry{title: v.Title, url: v.URL, at: v.At})
 		}
+	case listSettings:
+		// One row for now: where downloads go (ui.md §6). Empty in the
+		// file means the default, and the row says which it is.
+		v := m.cfg.DownloadDir
+		if v == "" {
+			v = "(default) " + m.downloadDir()
+		}
+		out = append(out, listEntry{title: "download_dir", meta: v})
 	}
 	return out
 }
 
-func (m AppModel) listKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	action := m.lists.update(msg)
-	if action == "" {
+// listAction runs one of a list screen's operations by its key — from the
+// key itself or from the Space menu, the same place either way.
+func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
+	if key == "" {
 		return m, nil
 	}
 	e, at, ok := m.lists.current()
-	switch action {
-	case "open":
+	switch key {
+	case "enter":
 		if !ok {
 			return m, nil
 		}
-		if m.lists.kind == listDownloads {
+		switch m.lists.kind {
+		case listDownloads:
 			return m, m.openDownload(at)
+		case listSettings:
+			return m, m.input.ask(inputPopup{title: "Settings", glyph: glyphSettings,
+				prompt: e.title + " — where downloads are saved; empty for the default",
+				value:  m.cfg.DownloadDir, accept: "save", action: inputSetting}, m.layer())
 		}
-		if t := m.shownTab(); t != nil {
-			m.focus = panelPage
-			return m, tea.Batch(m.closeStack(), t.load(e.url))
-		}
-		return m, tea.Batch(m.closeStack(), m.openTab(e.url, true))
-	case "newtab":
+		// A bookmark or a visit opens in a NEW tab and never over the one
+		// [W]eb was showing (revised 2026-09-21).
+		m.screen = screenWeb
+		return m, m.openTab(e.url, true)
+	case "o":
 		if !ok {
 			return m, nil
 		}
-		return m, tea.Batch(m.closeStack(), m.openTab(e.url, true))
-	case "add":
+		m.screen = screenWeb
+		return m, m.openTab(e.url, true)
+	case "A":
 		t := m.shownTab()
 		if t == nil || t.url == "" {
 			return m, m.toast.show("no page to add", toastInfo)
 		}
 		return m, m.addEntry(m.lists.kind, t.title, t.url)
-	case "yank":
+	case "y":
 		if !ok {
 			return m, nil
 		}
@@ -1017,7 +1100,7 @@ func (m AppModel) listKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.yankDownload(at)
 		}
 		return m, copyToClipboard(e.url)
-	case "delete":
+	case "x":
 		if !ok {
 			return m, nil
 		}
@@ -1029,7 +1112,7 @@ func (m AppModel) listKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Delete",
 			lines: []string{nameOr(e.title, e.url), e.url}, accept: "delete", warn: true,
 			action: confirmDeleteEntry, at: at}, m.layer()+1)
-	case "clear":
+	case "C":
 		if m.lists.kind == listDownloads {
 			m.clearDownloads()
 			return m, nil
@@ -1037,6 +1120,8 @@ func (m AppModel) listKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Clear history",
 			lines:  []string{"Every visit ever recorded goes.", "This is the only way the log shrinks."},
 			accept: "clear", warn: true, action: confirmClearHistory}, m.layer()+1)
+	case "/":
+		m.lists.typing = true
 	}
 	return m, nil
 }
@@ -1095,6 +1180,11 @@ func (m *AppModel) deleteEntry(at int) tea.Cmd {
 func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 	var items []menuItem
 	title := ""
+	if m.screen != screenWeb {
+		_, title = m.lists.title()
+		m.spaceMenu.setItems(m.lists.menuItems(), title, 1)
+		return m, m.spaceMenu.open()
+	}
 	switch m.focus {
 	case panelTabs:
 		title = "Tabs"
@@ -1282,6 +1372,9 @@ func (m AppModel) busy() bool {
 // dispatch runs one action by its key — the same function whether the key
 // was pressed on the panel or chosen from the menu, so the two cannot drift.
 func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
+	if m.screen != screenWeb {
+		return m.listAction(key)
+	}
 	t := m.shownTab()
 	// While the page is on its way, the keys that would act on it — or
 	// stack another move on the one in flight — are swallowed (ux.md §6):
@@ -1540,6 +1633,15 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.closeStack(), t.act(func(ctx context.Context) error { return page.Type(ctx, id, value) }))
 	case inputPrompt:
 		return m, tea.Batch(m.input.close(), m.answerDialog(true, value))
+	case inputSetting:
+		// The one setting so far; the browser is pointed at the new place
+		// at once, so the next download lands there.
+		m.cfg.DownloadDir = strings.TrimSpace(value)
+		if err := store.SaveConfig(m.cfg); err != nil {
+			return m, tea.Batch(m.input.close(), m.toast.show("config.yaml: "+err.Error(), toastError))
+		}
+		m.lists.setEntries(m.listEntries(listSettings))
+		return m, tea.Batch(m.input.close(), m.pointDownloads(), m.toast.show("saved config.yaml", toastInfo))
 	case inputEval:
 		// The prompt stays; the expression and, when it comes, its result
 		// go to the console list behind it.
@@ -1809,6 +1911,8 @@ func (m AppModel) View() string {
 	ph := m.panelH()
 	var out string
 	switch {
+	case m.screen != screenWeb:
+		out = m.lists.panel(m.w, ph)
 	case m.zoom || (m.narrow() && m.focus == panelPage):
 		out = m.pagePanel(m.w, ph)
 	case m.narrow():
@@ -1821,9 +1925,6 @@ func (m AppModel) View() string {
 	// Bottom to top: the menu first so what it opened lands above it.
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.lists.isActive() {
-		out = overlay.Composite(m.lists.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.outline.isActive() {
 		out = overlay.Composite(m.outline.view(), out, overlay.Center, overlay.Center, 0, 0)
@@ -1852,17 +1953,16 @@ func (m AppModel) View() string {
 	return out
 }
 
-// header is the top row (ui.md §1.1): the three global popups as one
-// chain of chips — lit while one of them is open — and, on the right, the
-// downloads still in flight. sshu's tab row, reused: it is the same shape
-// for the same reason, chrome above the surfaces that never moves.
-var headerLabels = []string{"[B]ookmarks", "[H]istory", "[D]ownloads"}
+// header is the top row (ui.md §1.1): the screens as one chain of chips,
+// the current one lit, and on the right the downloads still in flight.
+// sshu's tab row, reused for the same reason: chrome above the surfaces
+// that never moves, and the lit chip is what says which surface you are
+// on (revised 2026-09-21: [W]eb and [S]ettings joined the three lists,
+// which became screens rather than popups).
+var headerLabels = []string{"[W]eb", "[B]ookmarks", "[H]istory", "[D]ownloads", "[S]ettings"}
 
 func (m AppModel) header() string {
-	active := -1
-	if m.lists.isActive() {
-		active = int(m.lists.kind)
-	}
+	active := int(m.screen)
 	status, live := "", false
 	if n := m.downloading(); n > 0 {
 		status, live = plural(n, "download")+" in flight", true
@@ -1910,6 +2010,9 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 // row, locked (ui.md §5). Selection mode replaces it with only the keys
 // that work there (ux.md §B: the footer is honest).
 func (m AppModel) footer() string {
+	if m.screen != screenWeb {
+		return keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"esc", "web"}, {"q", "quit"}}, m.w)
+	}
 	if m.sel.on && !m.popupOpen() {
 		return keyLegend(selectLegendPairs(m.sel.typing), m.w)
 	}

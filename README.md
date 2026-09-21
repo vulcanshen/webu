@@ -11,7 +11,7 @@ u-family 成員（kbu / filu / sshu 之後），依 VTP（`thoughts/tui-design`�
 | 檔 | 回答的問題 | 讀的順序 |
 |---|---|---|
 | [`docs/function.md`](docs/function.md) | 哪些事 Chromium 做、哪些事 webu 做、做到什麼程度；翻譯層（AX tree → IR）的 role 白名單與 fallback；Chromium 的取得與執行模式；shell 功能清單 | 1 |
-| [`docs/ui.md`](docs/ui.md) | 版面、三個面板的職責、五個 popup、DevTools popup、色帶、存檔、每項功能落到哪個 surface 哪一版 | 2 |
+| [`docs/ui.md`](docs/ui.md) | 版面、header 的 screen 與兩個面板的職責、popup、DevTools popup、色帶、存檔、每項功能落到哪個 surface 哪一版 | 2 |
 | [`docs/ux.md`](docs/ux.md) | core-key 語意、兩種模式（一般 / 選取）、文字輸入、每個 focus 的 Space menu、hotkey 分層全表、`?` 內容、浮層行為、時間軸、goto popup | 3 |
 
 三份都以 2026-09-20 的討論定案，決定處標日期；擱置與 v2 項目在各自的待決 / 擱置段落，
@@ -23,10 +23,10 @@ u-family 成員（kbu / filu / sshu 之後），依 VTP（`thoughts/tui-design`�
 - **翻譯層**：以 AX role 白名單為單位保證，未支援 role fallback 成純文字、不隱藏、Enter 仍可 click；每 role 一份 fixture，站級只做 smoke
 - **多媒體**：只畫佔位框；ASCII 轉換 / 內建 viewer / 外部工具全部擱置
 - **CAPTCHA**：第一版不支援，明講；交棒機制擱置
-- **版面**：最上列 header `[B]ookmarks [H]istory [D]ownloads`（全域 popup 的 chip 列，右端數進行中的下載）、側欄 24 欄固定 `[1]` Tabs（cursor 反白 vs 綠字 = `[2]` 正在顯示）、`[2]` 永遠是頁面、第一列 URL
+- **版面**：最上列 header `[W]eb [B]ookmarks [H]istory [D]ownloads [S]ettings`（sshu 式 screen chip 列，右端數進行中的下載；`[W]eb` 之外的四個各佔滿整個 body）、`[W]eb` 是側欄 24 欄固定 `[1]` Tabs（cursor 反白 vs 綠字 = `[2]` 正在顯示）、`[2]` 永遠是頁面、第一列 URL
 - **語意**：Enter = 該 item 的 item operation 選單（第一列是主要動作，再 Enter 執行）、Space = 完整選單（item + panel）、Esc 只做取消 / 關閉；`P` / `N` 前後頁；選取模式（字元游標、Yellow 邊框）由 `/` 搜尋或 Space menu 的 Select text 進入（修訂 2026-09-20）
 - **文字輸入**：所有 textbox Enter 開 input popup（Enter 確認 / Tab no-op / Esc 取消）；有值的 textbox Enter 開選單（Submit / Edit / Clear / Yank）
-- **hotkey**：小寫 = item、大寫 = panel 或全域；全域 `B H D P N L`；`[2]` item operation 無 letter hotkey、menu-only
+- **hotkey**：小寫 = item、大寫 = panel 或全域；全域 `W B H D S P N L`；`[2]` item operation 無 letter hotkey、menu-only
 
 ## 還開著的
 

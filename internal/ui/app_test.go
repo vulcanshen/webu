@@ -247,7 +247,7 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 // TestListPopupsAndSession drives panel [1] without a browser: B opens the
 // bookmarks, the filter narrows them, x asks before deleting, and the
 // session written on the way out is what was open.
-func TestListPopupsAndSession(t *testing.T) {
+func TestScreensAndSession(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir())
 	t.Setenv("WEBU_DATA", t.TempDir())
 	m := New(nil, "").WithStore(
@@ -256,11 +256,17 @@ func TestListPopupsAndSession(t *testing.T) {
 		nil)
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	if h := d.m.header(); !strings.Contains(h, "[W]eb") || !strings.Contains(h, "[S]ettings") {
+		t.Errorf("header: %q", h)
+	}
 
+	// B is the Bookmarks screen: the whole body, the chip lit, the web kept.
 	d.key("B")
-	d.until("bookmarks open", func() bool { return d.m.lists.isInteractive() })
-	if got := len(d.m.lists.visible()); got != 2 {
-		t.Fatalf("visible %d", got)
+	if d.m.screen != screenBookmarks || len(d.m.lists.visible()) != 2 {
+		t.Fatalf("screen %v, visible %d", d.m.screen, len(d.m.lists.visible()))
+	}
+	if v := d.m.View(); !strings.Contains(v, "Hacker News") || strings.Contains(v, "[1] Tabs") {
+		t.Errorf("the bookmarks screen should replace the web panels:\n%s", v)
 	}
 	d.key("/")
 	d.key("go")
@@ -276,12 +282,17 @@ func TestListPopupsAndSession(t *testing.T) {
 		t.Errorf("bookmarks.yaml after delete: %+v", saved)
 	}
 	d.key("esc") // the filter
-	d.key("esc") // the popup
-	d.until("closed", func() bool { return !d.m.lists.isActive() })
+	if d.m.screen != screenBookmarks || d.m.lists.filter != "" {
+		t.Fatalf("first Esc should clear the filter: screen %v filter %q", d.m.screen, d.m.lists.filter)
+	}
+	d.key("esc") // back to the web
+	if d.m.screen != screenWeb {
+		t.Fatalf("second Esc should go back to the web: %v", d.m.screen)
+	}
 
-	// Downloads: the header counts what is in flight, the popup lists it,
+	// Downloads: the header counts what is in flight, the screen lists it,
 	// newest first, and the row follows the file as it lands.
-	if h := d.m.header(); !strings.Contains(h, "[B]ookmarks") || strings.Contains(h, "in flight") {
+	if h := d.m.header(); strings.Contains(h, "in flight") {
 		t.Errorf("header at rest: %q", h)
 	}
 	d.send(downloadMsg{guid: "g1", name: "a.zip", url: "https://x/a.zip", begin: true})
@@ -296,7 +307,9 @@ func TestListPopupsAndSession(t *testing.T) {
 		t.Errorf("rule progress: %d%% moving=%v", pct, moving)
 	}
 	d.key("D")
-	d.until("downloads open", func() bool { return d.m.lists.isInteractive() })
+	if d.m.screen != screenDownloads {
+		t.Fatalf("screen %v", d.m.screen)
+	}
 	if e, _, ok := d.m.lists.current(); !ok || e.title != "a.zip" || !strings.Contains(e.meta, "50%") {
 		t.Errorf("download row: %+v %v", e, ok)
 	}
@@ -311,11 +324,27 @@ func TestListPopupsAndSession(t *testing.T) {
 	if len(d.m.dls) != 0 || len(d.m.lists.visible()) != 0 {
 		t.Errorf("after clear: %+v", d.m.dls)
 	}
-	// The "saved" toast is the topmost float, so Esc takes it first (§4.3).
-	d.key("esc")
-	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
-	d.key("esc")
-	d.until("downloads closed", func() bool { return !d.m.lists.isActive() })
+
+	// Settings: one row, Enter edits it, the file and the row follow.
+	d.key("S")
+	if e, _, ok := d.m.lists.current(); d.m.screen != screenSettings || !ok || e.title != "download_dir" || !strings.HasPrefix(e.meta, "(default) ") {
+		t.Fatalf("settings row: %+v %v (screen %v)", e, ok, d.m.screen)
+	}
+	d.key("enter")
+	d.until("setting box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputSetting })
+	d.key("/tmp/dl")
+	d.key("enter")
+	d.until("saved", func() bool { return !d.m.input.isActive() })
+	if cfg, _ := store.LoadConfig(); cfg.DownloadDir != "/tmp/dl" || d.m.cfg.DownloadDir != "/tmp/dl" {
+		t.Errorf("config.yaml after save: %+v", cfg)
+	}
+	if e, _, _ := d.m.lists.current(); e.meta != "/tmp/dl" {
+		t.Errorf("settings row after save: %+v", e)
+	}
+	d.key("W")
+	if d.m.screen != screenWeb {
+		t.Fatalf("W should be the web: %v", d.m.screen)
+	}
 
 	// No tabs, no browser: the session is empty and does not panic.
 	if s := d.m.Session(); len(s.Tabs) != 0 {
@@ -353,6 +382,20 @@ func TestViewFitsTheTerminal(t *testing.T) {
 			for i, l := range lines {
 				if w := dispW(l); w != size[0] {
 					t.Errorf("%dx%d focus %d line %d is %d wide: %q", size[0], size[1], focus, i, w, l)
+				}
+			}
+		}
+		// The list screens fill the same frame, empty or not.
+		for _, s := range []screen{screenBookmarks, screenHistory, screenDownloads, screenSettings} {
+			model, _ := mm.switchScreen(map[screen]string{screenBookmarks: "B", screenHistory: "H", screenDownloads: "D", screenSettings: "S"}[s])
+			sm := model.(AppModel)
+			lines := strings.Split(sm.View(), "\n")
+			if len(lines) != size[1] {
+				t.Errorf("%dx%d screen %d: %d lines", size[0], size[1], s, len(lines))
+			}
+			for i, l := range lines {
+				if w := dispW(l); w != size[0] {
+					t.Errorf("%dx%d screen %d line %d is %d wide: %q", size[0], size[1], s, i, w, l)
 				}
 			}
 		}

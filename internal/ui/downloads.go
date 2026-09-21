@@ -12,7 +12,7 @@ import (
 )
 
 // download is one file the browser is saving (function.md §8), as the
-// Downloads popup lists it. The list is this session's: Chromium writes
+// Downloads screen lists it. The list is this session's: Chromium writes
 // the file, webu only watches it land.
 type download struct {
 	guid, name, url, path string
@@ -66,7 +66,7 @@ func (m *AppModel) noteDownload(msg downloadMsg) tea.Cmd {
 			cmd = m.toast.show("download cancelled", toastError)
 		}
 	}
-	if m.lists.isActive() && m.lists.kind == listDownloads {
+	if m.lists.kind == listDownloads {
 		m.lists.setEntries(m.listEntries(listDownloads))
 	}
 	return cmd
