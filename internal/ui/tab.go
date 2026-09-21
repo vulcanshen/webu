@@ -397,17 +397,23 @@ func (t *tab) firstItem() int {
 	if len(t.lay.items) == 0 {
 		return -1
 	}
+	at := 0
 	for i, it := range t.lay.items {
 		if it.node.Kind == ir.Landmark && it.node.Role == "main" {
 			for j := i + 1; j < len(t.lay.items); j++ {
 				if t.lay.items[j].node.Kind != ir.Landmark {
-					return j
+					at = j
+					break
 				}
 			}
 			break
 		}
 	}
-	return 0
+	// Never on a skip link: what it offers is what this function does.
+	for at < len(t.lay.items)-1 && isSkipLink(t.lay.items[at].node) {
+		at++
+	}
+	return at
 }
 
 func (t *tab) relayout(width int) {

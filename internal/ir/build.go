@@ -27,6 +27,9 @@ type Capture struct {
 	// Breadcrumb marks the elements the page calls a breadcrumb — by
 	// class, aria-label or schema.org itemtype — nav, list or div.
 	Breadcrumb map[cdp.BackendNodeID]bool `json:"breadcrumb,omitempty"`
+	// Skip marks the links the page calls a skip link by class — the
+	// "Skip to main content" at the top; the text says it too (ui).
+	Skip map[cdp.BackendNodeID]bool `json:"skip,omitempty"`
 	// ContentType is document.contentType: what the response was. Empty
 	// in the role fixtures, which are all HTML.
 	ContentType string `json:"contentType,omitempty"`
@@ -117,6 +120,7 @@ func Build(c Capture) *Node {
 		display:    c.Display,
 		protected:  c.Protected,
 		current:    c.Current,
+		skip:       c.Skip,
 		breadcrumb: maps.Clone(c.Breadcrumb),
 	}
 	for _, n := range c.Nodes {
@@ -138,6 +142,7 @@ type builder struct {
 	display    map[cdp.BackendNodeID]string
 	protected  map[cdp.BackendNodeID]bool
 	current    map[cdp.BackendNodeID]bool
+	skip       map[cdp.BackendNodeID]bool
 	breadcrumb map[cdp.BackendNodeID]bool // consumed as trails are wrapped
 	navDepth   int                        // navigation landmarks being entered
 }
@@ -222,6 +227,7 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 		Value:   str(ax.Value),
 		ID:      ax.BackendDOMNodeID,
 		Current: b.current[ax.BackendDOMNodeID],
+		Skip:    b.skip[ax.BackendDOMNodeID],
 	}
 	for _, p := range ax.Properties {
 		switch p.Name {

@@ -1334,6 +1334,12 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 			items = append(items, menuItem{label: "Collapse", key: "fold", hint: "one line, out of the way"})
 		}
 	case ir.Link:
+		if isSkipLink(n) {
+			items = append(items,
+				menuItem{label: "Skip", key: "skip", hint: "to the content, as it says"},
+				menuItem{label: "Yank link url", key: "yankurl", hint: oneLine(n.URL)})
+			break
+		}
 		items = append(items,
 			menuItem{label: "Open", key: "click", hint: "click it"},
 			menuItem{label: "Open in new tab", key: "newtab", hint: "and switch to it"},
@@ -1650,6 +1656,10 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 			t.toggleFold(m.pageW())
 			t.scrollToCursor(m.pageVisible())
 		}
+	case "skip":
+		if t != nil {
+			return m.skipToContent(t)
+		}
 	case "newtab":
 		if n := t.current(); n != nil && n.URL != "" {
 			return m, m.openTab(n.URL, true)
@@ -1757,11 +1767,30 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 		id := n.ID
 		return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
 	case ir.Link:
+		if isSkipLink(n) {
+			return m.skipToContent(t)
+		}
 		return m, m.askOpenLink(n)
 	}
 	return m, m.message.show(glyphInfo, "Enter", []string{
 		"Nothing is defined for Enter on this item yet.",
 		"Space lists what can be done with it."}, false, m.layer())
+}
+
+// skipToContent is Enter on a skip link, which means exactly this: the
+// cursor to the first item of the content — main's first, else the one
+// after the link — and the page scrolled to it. The link is never
+// followed: its target is an anchor, and webu has nothing to scroll.
+func (m AppModel) skipToContent(t *tab) (tea.Model, tea.Cmd) {
+	at := t.firstItem()
+	if at <= t.cursor && t.cursor+1 < len(t.lay.items) {
+		at = t.cursor + 1
+	}
+	if at >= 0 {
+		t.cursor = at
+		t.scrollToCursor(m.pageVisible())
+	}
+	return m, nil
 }
 
 // enterCell is Enter on a data table's cell, drawn cut to its column
