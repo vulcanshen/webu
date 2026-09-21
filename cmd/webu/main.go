@@ -106,6 +106,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "webu: %s: %v (running without it)\n", e.name, e.err)
 		}
 	}
+	// restore_session: false starts empty, or on the command line's URLs.
+	// The session is still written on the way out, so switching it back
+	// on brings the latest one back.
+	if !cfg.Restore() {
+		session = store.Session{}
+	}
 	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session)
 	p := tea.NewProgram(app, tea.WithAltScreen())
 

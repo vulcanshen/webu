@@ -1087,7 +1087,7 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 		case m.lists.kind == listDownloads:
 			return m, m.openDownload(e.ref)
 		case m.lists.kind == listSettings:
-			return m, m.settingBox(e.ref)
+			return m, m.changeSetting(e.ref)
 		case e.isFolder:
 			m.toggleFolder(e.folder)
 			return m, nil

@@ -448,9 +448,32 @@ func TestScreensAndSession(t *testing.T) {
 	if cfg, _ := store.LoadConfig(); cfg.DownloadDir != "/tmp/dl" || d.m.cfg.DownloadDir != "/tmp/dl" {
 		t.Errorf("config.yaml after save: %+v", cfg)
 	}
-	if e, _, _ := d.m.lists.current(); e.meta != "/tmp/dl" {
+	if e, _, _ := d.m.lists.current(); !strings.HasPrefix(e.meta, "/tmp/dl  ") {
 		t.Errorf("settings row after save: %+v", e)
 	}
+	// A switch flips on Enter and is written at once.
+	d.key("j")
+	if e, _, ok := d.m.lists.current(); !ok || e.title != "restore_session" || !e.toggle || !strings.HasPrefix(e.meta, "(default) on") {
+		t.Fatalf("restore_session row: %+v %v", e, ok)
+	}
+	d.key("enter")
+	if d.m.cfg.Restore() {
+		t.Fatal("Enter should switch restore_session off")
+	}
+	if cfg, _ := store.LoadConfig(); cfg.Restore() {
+		t.Errorf("config.yaml after the switch: %+v", cfg)
+	}
+	if e, _, _ := d.m.lists.current(); !strings.HasPrefix(e.meta, "off  ") {
+		t.Errorf("the row should read off: %+v", e)
+	}
+	d.key("esc") // the toast
+	d.until("switch toast gone", func() bool { return !d.m.toast.anim.owns() })
+	d.key("enter")
+	if !d.m.cfg.Restore() {
+		t.Fatal("Enter again should switch it back on")
+	}
+	d.key("esc")
+	d.until("switch toast gone again", func() bool { return !d.m.toast.anim.owns() })
 	d.key("W")
 	if d.m.screen != screenWeb {
 		t.Fatalf("W should be the web: %v", d.m.screen)

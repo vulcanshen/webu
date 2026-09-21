@@ -77,8 +77,9 @@ Bookmarks 依目錄分組（2026-09-21）：根層在前，之後每個目錄一
 Enter 直接收下）；目錄列 **Enter = 展開 / 收合**（收起來一列 `▸ 󰉋 dev · 3 bookmarks`，狀態只在 session 內）；`[m]` 搬移
 （options popup 當 picker：`(no folder)` + 目錄樹，縮排表階層，數字鍵選，游標跟著搬過去）；目錄列上 `x` 只刪空目錄
 （沒有書籤、沒有子目錄），而且只刪那一層——上層不會因為變空而跟著消失（`bookmarks.yaml` 的 `folders:` 寫下每一層，含路徑帶出來的）；`/` 過濾時攤平只列命中的書籤。修訂 2026-09-21：原 `[F]` / `[f]` / `[A] Add this page` 拿掉。
-Settings：一列一個 key（目前只有 `download_dir`），Enter → input popup，**目前生效的值當 placeholder**（同 Location：Tab 接手、
-Backspace 清掉；沒動過就 Enter 不改，清空後 Enter = 預設）→ 寫回 `config.yaml`、立即生效（重新 `setDownloadBehavior`）。
+Settings：一列一個 key，右欄是生效的值加一句用途（`download_dir`、`restore_session`）。文字設定 Enter → input popup，**目前生效的值當 placeholder**
+（同 Location：Tab 接手、Backspace 清掉；沒動過就 Enter 不改，清空後 Enter = 預設）；開關 Enter 直接切換。都寫回 `config.yaml`、立即生效
+（`download_dir` 重新 `setDownloadBehavior`；`restore_session` 下次啟動生效）。
 footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
 
 ### `[1]` — 分頁清單
@@ -234,7 +235,7 @@ footer 一列：`space menu   ? help   tab/1-2 panels   q quit`，五個 core-ke
 | History | YAML sequence，一次 append 一筆（時間、URL、標題）；**無限保留**，History screen 的 Clear 是唯一清除入口 | `~/.webu/datas/history.yaml` |
 | Session | 離開時寫下所有分頁 URL，下次還原 | `~/.webu/datas/session.yaml` |
 | 下載檔案 | `download_dir`，預設 | `~/.webu/datas/downloads/` |
-| 設定 | v1 key：`download_dir`（預設 `~/.webu/datas/downloads`，Settings screen 可改）、搜尋引擎（若 goto 當搜尋）、`measure`；proxy v2 | `~/.config/webu/config.yaml` |
+| 設定 | v1 key：`download_dir`（預設 `~/.webu/datas/downloads`，Settings screen 可改）、`restore_session`（預設 true，Settings screen 的開關；2026-09-21）、搜尋引擎（若 goto 當搜尋）、`measure`；proxy v2 | `~/.config/webu/config.yaml` |
 | Chromium | 釘死 revision | `~/.cache/webu/chromium-<rev>/` |
 | profile | Chromium user-data-dir | `~/.webu/datas/profile/` |
 | log | chromedp 的 log（絕不進終端機） | `~/.webu/datas/webu.log` |

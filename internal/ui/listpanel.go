@@ -45,6 +45,8 @@ type listEntry struct {
 	// folded: a folder row drawn shut; count is what it hides.
 	folded bool
 	count  int
+	// toggle marks a settings row that is a switch: Enter flips it.
+	toggle bool
 }
 
 type listPanel struct {
@@ -236,6 +238,9 @@ func (m *listPanel) escTyping() bool {
 func (m listPanel) menuItems() []menuItem {
 	switch m.kind {
 	case listSettings:
+		if e, _, ok := m.current(); ok && e.toggle {
+			return []menuItem{{label: "Toggle", key: "enter", hint: "switch it on or off; saved at once"}}
+		}
 		return []menuItem{{label: "Edit", key: "enter", hint: "change this setting; empty means the default"}}
 	case listDownloads:
 		return []menuItem{
@@ -298,6 +303,9 @@ func (m listPanel) hintPairs() [][2]string {
 	switch m.kind {
 	case listSettings:
 		pairs = [][2]string{{"Enter", "edit"}}
+		if e, _, ok := m.current(); ok && e.toggle {
+			pairs = [][2]string{{"Enter", "toggle"}}
+		}
 	case listDownloads:
 		pairs = [][2]string{{"Enter", "open file"}, {"o", "source in new tab"}, {"x", "remove"},
 			{"y", "yank path"}, {"C", "clear done"}, {"/", "filter"}}
