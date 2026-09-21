@@ -852,12 +852,13 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Visual mode, the way into the text itself: the item cursor stops
 		// only on items, and a paragraph is reached by character (ux.md
 		// §1). Upper case like every other panel operation, and it reads
-		// the same from any panel, like /. With no page to walk, V is the
-		// family's easter egg instead (splash.go).
-		if t := m.shownTab(); t == nil || t.root == nil {
-			return m, m.splash.show()
-		}
+		// the same from any panel, like /.
 		return m, m.enterSelect(false)
+	case "v":
+		// The family's easter egg is on V; in webu V is visual mode, so
+		// the egg takes the lower case — the one letter no panel and no
+		// screen claims (splash.go, ux.md §A.2).
+		return m, m.splash.show()
 	}
 
 	switch m.focus {
@@ -1064,8 +1065,8 @@ func (m AppModel) screenKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.switchScreen(k)
 		case " ":
 			return m.openMenu()
-		case "V":
-			// No page here to walk: the family's easter egg (splash.go).
+		case "v":
+			// The easter egg, the same letter as on the web (splash.go).
 			return m, m.splash.show()
 		}
 	}

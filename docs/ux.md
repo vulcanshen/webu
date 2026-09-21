@@ -110,7 +110,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 | History screen | `H` | header chip + help |
 | Downloads screen | `D` | header chip + help（修訂 2026-09-20：Shortcuts 與 `S` 拿掉、Downloads 補上） |
 | Settings screen | `S` | header chip + help（修訂 2026-09-21：目前只有 `download_dir`） |
-| splash 彩蛋 | `V`——在沒有頁面可走的地方：`[W]eb` 沒有頁面時、四個 list screen 上（家族的鍵是 `V`；webu 有頁面時 `V` 是 visual mode，所以彩蛋住在 `V` 不會是 visual mode 的地方；2026-09-21） | 不揭露，是彩蛋 |
+| splash 彩蛋 | 裸的 `v`，任何面板、任何 screen（家族的鍵是 `V`；webu 的 `V` 是 visual mode，彩蛋改住小寫，當特例——它是唯一沒有面板或 screen 認領的小寫字母；2026-09-21） | 不揭露，是彩蛋 |
 | 上一頁 / 下一頁 | `P` / `N` | help |
 | 切面板 | `Tab`、`1`–`2` | footer + help |
 | Visual mode（選取模式） | `V`（從 `[1]` 按 → 先把焦點移到 `[2]` 再進模式）；`/` 亦可 | help |
@@ -232,7 +232,7 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `W` `B` `H` `D` `S`、`q`、`?`；只在 `[W]eb`：`P` `N` `L`、`/`、`V`、`Tab`、`1`–`2` |
+| 全域 | `W` `B` `H` `D` `S`、`q`、`?`、`v`（彩蛋）；只在 `[W]eb`：`P` `N` `L`、`/`、`V`、`Tab`、`1`–`2` |
 | `[1]` item | `w` `c` `r` `y` |
 | `[1]` panel | `T` `X` `U` |
 | `[2]` item | **無**（menu-only） |
@@ -244,7 +244,7 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 | DevTools | `x` `y` / `C` `/`；`h/l` 切分頁 |
 | 選取模式 | `hjkl` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
 
-撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊（Bookmarks screen 的 `F` 是該 screen 的，與全域不撞）（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
+撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊；小寫 `v`（彩蛋）與 `[1]` 的 `w c r y`、Bookmarks 的 `a m x y`、Downloads 的 `o x y` 無重疊，visual mode 內的 `v`（開始選取）在模式裡、不同時可按（Bookmarks screen 的 `F` 是該 screen 的，與全域不撞）（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
 sshu 的 `[D]isconnect` 同例；`L` 與導覽 `l`（沿列右移）同例；`I` 與 DevTools Console 的 `i`（insert）在不同 surface。
 DevTools 原本的 `D` 讓給 header 的 Downloads（修訂 2026-09-20），改成 `[I]nspect`。`U` 只剩 `[1]` 的 undo close
 （修訂 2026-09-20：原本 `[2]` 也用 `U` 開 goto、同字依面板不同義；goto 改成全域 `L` 後不再同字）。Bookmarks 的新目錄用 `F`
