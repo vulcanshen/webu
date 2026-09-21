@@ -68,9 +68,8 @@ letter hotkey；header 就是 kbu statusbar chip 那種 Layer 2 ambient 揭露�
 
 一個面板佔滿 header 與 footer 之間（`listpanel.go`）：title chip = glyph + 名字，邊框 hint 列該 screen 的鍵
 （Enter / `x` / `y` / `A` / `C` / `/` / Esc），Space menu 是同一份（item / panel 兩 region）。
-**第一列是欄位 header**（dim：Title / URL、Title / When URL、File / Progress、Setting / Value），游標從第二列起，
-不貼著 title chip（修訂 2026-09-21）。title 欄（書籤名、頁標題、檔名、設定 key）用 Blue、其後的 URL / 路徑 / 值 dim（修訂 2026-09-21：
-讓「這一列是什麼」與「它指向哪」分開）；目錄列維持文字色。
+**第一列是欄位 header**（Blue：Title / URL、Title / When URL、File / Progress、Setting / Value——它是 chrome 在命名欄位，
+與 footer 命名按鍵同一個色帶；修訂 2026-09-21，原本 dim），游標從第二列起，不貼著 title chip。列本身：title 文字色、其後的 URL / 路徑 / 值 dim。
 Enter 開 bookmark / history **一律新分頁**並回 `[W]eb`，不佔原分頁（修訂 2026-09-21）。空狀態走 sshu empty.go 形狀。
 Bookmarks 依目錄分組（2026-09-21）：根層在前，之後每個目錄一列 `󰉋 name`（可停游標，像 filu 的目錄列），其下的書籤再縮排；
 目錄**可以巢狀**（路徑 `dev/go`，樹狀縮排，父目錄緊接著子目錄）：`[A]dd folder` 在游標所在目錄下開新目錄（游標在目錄列上就開在它裡面、
