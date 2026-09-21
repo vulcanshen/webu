@@ -426,8 +426,12 @@ func TestScreensAndSession(t *testing.T) {
 
 	// Settings: one row, Enter edits it, the file and the row follow.
 	d.key("S")
-	if e, _, ok := d.m.lists.current(); d.m.screen != screenSettings || !ok || e.title != "download_dir" || !strings.HasPrefix(e.meta, "(default) ") {
-		t.Fatalf("settings row: %+v %v (screen %v)", e, ok, d.m.screen)
+	if e, _, ok := d.m.lists.current(); d.m.screen != screenSettings || !ok || e.title != "search_engine" || !strings.Contains(e.meta, "google.com") {
+		t.Fatalf("first settings row: %+v %v (screen %v)", e, ok, d.m.screen)
+	}
+	d.key("j")
+	if e, _, ok := d.m.lists.current(); !ok || e.title != "download_dir" || !strings.HasPrefix(e.meta, "(default) ") {
+		t.Fatalf("settings row: %+v %v", e, ok)
 	}
 	d.key("enter")
 	d.until("setting box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputSetting })
@@ -451,6 +455,31 @@ func TestScreensAndSession(t *testing.T) {
 	if e, _, _ := d.m.lists.current(); !strings.HasPrefix(e.meta, "/tmp/dl  ") {
 		t.Errorf("settings row after save: %+v", e)
 	}
+	// measure takes a number of cells and refuses anything else, keeping
+	// the box open with the reason.
+	d.key("j")
+	if e, _, ok := d.m.lists.current(); !ok || e.title != "measure" || !strings.HasPrefix(e.meta, "(default) 100") {
+		t.Fatalf("measure row: %+v %v", e, ok)
+	}
+	d.key("enter")
+	d.until("measure box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputSetting })
+	d.send(tea.KeyMsg{Type: tea.KeyBackspace})
+	d.key("wide")
+	d.key("enter")
+	d.until("refused", func() bool { return d.m.toast.isActive() })
+	if !d.m.input.isActive() || d.m.cfg.Measure != 0 {
+		t.Fatalf("a bad measure should keep the box open and the setting as it was: %d", d.m.cfg.Measure)
+	}
+	d.send(tea.KeyMsg{Type: tea.KeyCtrlU})
+	d.key("80")
+	d.key("enter")
+	d.until("measure saved", func() bool { return d.m.cfg.Measure == 80 && !d.m.input.isActive() })
+	if cfg, _ := store.LoadConfig(); cfg.Measure != 80 {
+		t.Errorf("config.yaml after measure: %+v", cfg)
+	}
+	d.key("esc")
+	d.until("measure toast gone", func() bool { return !d.m.toast.anim.owns() })
+
 	// A switch flips on Enter and is written at once.
 	d.key("j")
 	if e, _, ok := d.m.lists.current(); !ok || e.title != "restore_session" || !e.toggle || !strings.HasPrefix(e.meta, "(default) on") {

@@ -357,7 +357,7 @@ Chromium 引擎只負責「給一個 URL，把頁面跑起來」；使用者感�
 | 功能 | 怎麼做 | 存檔 | 成本 |
 |---|---|---|---|
 | 分頁 | 一個 target 一個分頁。`Target.createTarget` / `closeTarget`；`target=_blank` 自動產生新 target，監聽 `targetCreated` | 無 | 低 |
-| 輸入網址 | goto popup。非 URL 輸入當搜尋，預設 DuckDuckGo（`ux.md` §7） | 無 | 低 |
+| 輸入網址 | goto popup。非 URL 輸入當搜尋，預設 Google（`ux.md` §7；2026-09-21 起，原 DuckDuckGo） | 無 | 低 |
 | 上一頁下一頁 | `Page.getNavigationHistory` / `navigateToHistoryEntry`，每分頁各一份 | 無 | 極低 |
 | 頁內搜尋 | 對 IR 文字做，命中後 cursor 停到最近的 item；折行後高亮要處理。不用 `DOM.performSearch` | 無 | 低到中 |
 | 憑證錯誤 | 自簽憑證會讓導航直接失敗。`Security.certificateError` 事件接住、confirm「要繼續嗎」，等同 Chrome「進階 → 繼續前往」。ops 用戶必要 | 無；第一版每次問，不記住 | 低 |
