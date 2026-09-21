@@ -116,8 +116,9 @@ Settings and bookmarks are hand-editable YAML; bookmarks carry a `folder` path e
 ### Settings — `config.yaml`
 
 ```yaml
-# Where a search goes when what you typed at L is not a URL. Default DuckDuckGo.
-search_engine: https://duckduckgo.com/?q=
+# Where a search goes when what you typed at L is not a URL: the words are
+# appended to it. Default Google.
+search_engine: https://www.google.com/search?q=
 # Where downloads land. Default ~/.webu/datas/downloads.
 download_dir: ~/Downloads
 # How wide a paragraph flows before it wraps, in cells. Default 100.
@@ -127,7 +128,7 @@ measure: 100
 restore_session: true
 ```
 
-The `[S]ettings` screen edits the same file.
+The `[S]ettings` screen edits the same file, and every key the file knows is a row there — a test holds that.
 
 ## Key bindings
 

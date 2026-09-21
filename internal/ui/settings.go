@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"errors"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,7 +16,11 @@ import (
 // box that opens with the value in force on offer, as the Location box
 // offers the page's URL — Tab takes it to edit, Backspace clears it; Enter
 // on the untouched offer changes nothing, Enter on an emptied line means
-// the default. A switch flips on Enter (2026-09-21).
+// the default. A switch flips on Enter.
+//
+// Every key config.yaml knows has a row here — the rule since 2026-09-21,
+// and TestSettingsCoverConfig holds it: a key that can only be set by
+// editing the file is a key most people never find.
 type setting struct {
 	key string
 	// desc says what the key does, on the row and in the box.
@@ -23,16 +29,48 @@ type setting struct {
 	get func(store.Config) string
 	// def is what an empty value means, for the row and the offer.
 	def func(AppModel) string
-	// set writes a text setting; toggle flips a switch. One of the two.
-	set    func(*store.Config, string)
+	// set writes a text setting, refusing what it cannot take; toggle
+	// flips a switch. One of the two.
+	set    func(*store.Config, string) error
 	toggle func(*store.Config)
 }
 
+// settings is in config.yaml's order.
 var settings = []setting{
+	{key: "search_engine", desc: "where a search goes when what you typed is not a URL",
+		get: func(c store.Config) string { return c.SearchEngine },
+		set: func(c *store.Config, v string) error {
+			if v != "" && !strings.Contains(v, "://") {
+				return errors.New("a URL the words are appended to, like " + store.DefaultSearch)
+			}
+			c.SearchEngine = v
+			return nil
+		},
+		def: func(AppModel) string { return store.DefaultSearch }},
 	{key: "download_dir", desc: "where downloads land",
 		get: func(c store.Config) string { return c.DownloadDir },
-		set: func(c *store.Config, v string) { c.DownloadDir = v },
+		set: func(c *store.Config, v string) error { c.DownloadDir = v; return nil },
 		def: func(m AppModel) string { return m.downloadDir() }},
+	{key: "measure", desc: "how wide a paragraph flows before it wraps, in cells",
+		get: func(c store.Config) string {
+			if c.Measure <= 0 {
+				return ""
+			}
+			return strconv.Itoa(c.Measure)
+		},
+		set: func(c *store.Config, v string) error {
+			if v == "" {
+				c.Measure = 0
+				return nil
+			}
+			n, err := strconv.Atoi(v)
+			if err != nil || n < 20 {
+				return errors.New("a number of cells, 20 or more")
+			}
+			c.Measure = n
+			return nil
+		},
+		def: func(AppModel) string { return strconv.Itoa(store.DefaultMeasure) }},
 	{key: "restore_session", desc: "reopen the tabs that were open when webu last quit",
 		get: func(c store.Config) string {
 			if c.RestoreSession == nil {
@@ -96,7 +134,8 @@ func (m *AppModel) settingBox(ref int) tea.Cmd {
 		placeholder: cur, accept: "save", action: inputSetting}, m.layer())
 }
 
-// saveSetting is the box's answer.
+// saveSetting is the box's answer. A value the setting refuses keeps the
+// box open with the reason, so what was typed is not lost.
 func (m *AppModel) saveSetting(value string, untouched bool) tea.Cmd {
 	if m.settingRef < 0 || m.settingRef >= len(settings) {
 		return m.input.close()
@@ -105,21 +144,38 @@ func (m *AppModel) saveSetting(value string, untouched bool) tea.Cmd {
 		return m.input.close() // the offer was neither taken nor declined
 	}
 	s := settings[m.settingRef]
-	s.set(&m.cfg, strings.TrimSpace(value))
+	if err := s.set(&m.cfg, strings.TrimSpace(value)); err != nil {
+		return m.toast.show(s.key+": "+err.Error(), toastError)
+	}
 	return tea.Batch(m.input.close(), m.saveConfig(s.key))
 }
 
-// saveConfig writes config.yaml, refreshes the rows, and tells the browser
-// at once when it is the download dir that changed, so the next download
-// lands in the new place.
+// saveConfig writes config.yaml, refreshes the rows, and applies what
+// takes effect at once: the browser is pointed at a new download dir, the
+// pages are laid out again for a new measure.
 func (m *AppModel) saveConfig(what string) tea.Cmd {
 	if err := store.SaveConfig(m.cfg); err != nil {
 		return m.toast.show("config.yaml: "+err.Error(), toastError)
 	}
 	m.lists.setEntries(m.settingEntries())
 	cmds := []tea.Cmd{m.toast.show(what+" — saved config.yaml", toastInfo)}
-	if strings.HasPrefix(what, "download_dir") {
+	switch {
+	case strings.HasPrefix(what, "download_dir"):
 		cmds = append(cmds, m.pointDownloads())
+	case strings.HasPrefix(what, "measure"):
+		m.applyMeasure()
 	}
 	return tea.Batch(cmds...)
+}
+
+// applyMeasure gives every tab the measure now in force and lays it out
+// again, cursor kept in view.
+func (m *AppModel) applyMeasure() {
+	for _, t := range m.tabs {
+		t.measure = m.cfg.TextWidth()
+		if t.root != nil {
+			t.relayout(m.pageW())
+			t.scrollToCursor(m.pageVisible())
+		}
+	}
 }

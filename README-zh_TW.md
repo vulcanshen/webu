@@ -116,8 +116,8 @@ webu help                         # 完整用法；webu version 印版本
 ### 設定 —— `config.yaml`
 
 ```yaml
-# 在 L 打的不是 URL 時，搜尋送去哪。預設 DuckDuckGo。
-search_engine: https://duckduckgo.com/?q=
+# 在 L 打的不是 URL 時，搜尋送去哪：打的字接在後面。預設 Google。
+search_engine: https://www.google.com/search?q=
 # 下載落在哪。預設 ~/.webu/datas/downloads。
 download_dir: ~/Downloads
 # 段落折行的欄寬。預設 100。
@@ -127,7 +127,7 @@ measure: 100
 restore_session: true
 ```
 
-`[S]ettings` screen 編輯的就是這個檔。
+`[S]ettings` screen 編輯的就是這個檔，而且檔案裡有的 key 那裡一定有一列 —— 有測試守著。
 
 ## 按鍵
 

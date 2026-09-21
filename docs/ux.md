@@ -298,7 +298,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 1. 輸入列：打字即從 Bookmarks / History fuzzy 建議
 2. Enter 時判斷輸入：
    - 像 URL（有 scheme、或 `host.tld` 形）→ 無 scheme 補 `https://`
-   - 不像 URL → **當搜尋**，預設 DuckDuckGo，`config.yaml` 的 `search_engine` 可換
+   - 不像 URL → **當搜尋**，預設 Google（修訂 2026-09-21，原 DuckDuckGo），`config.yaml` 的 `search_engine` 可換（Settings screen 也能改）
 3. `L` 開在目前分頁，`T` 開新分頁
 
 ---

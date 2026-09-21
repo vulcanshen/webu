@@ -55,8 +55,9 @@ func (c Config) TextWidth() int {
 	return c.Measure
 }
 
-// DefaultSearch is where a goto that is not a URL goes (ux.md §7).
-const DefaultSearch = "https://duckduckgo.com/?q="
+// DefaultSearch is where a goto that is not a URL goes (ux.md §7). Google
+// since 2026-09-21; it was DuckDuckGo.
+const DefaultSearch = "https://www.google.com/search?q="
 
 // Search is the engine prefix in force.
 func (c Config) Search() string {
