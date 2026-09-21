@@ -1025,3 +1025,47 @@ func TestNavigationEntry(t *testing.T) {
 	d.key("enter")
 	d.until("page B", d.loaded("Page B"))
 }
+
+// TestTableCells: a data table's cells are stops; Enter on a text cell
+// is its content in full under the column's header; Enter on a cell that
+// is one link asks to open it, as the link would; l walks the row.
+func TestTableCells(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	exe, ok := browser.Installed()
+	if !ok {
+		t.Skip("pinned Chromium not installed; run webu once")
+	}
+	b, err := browser.Launch(exe, t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	abs, _ := filepath.Abs("testdata/nav.html")
+	d := newDriver(t, New(b, "file://"+abs))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("page A", d.loaded("Page A"))
+
+	d.cursorOn(ir.Cell, "Ann Example")
+	d.key("enter")
+	d.until("the cell in full", func() bool { return d.m.message.isInteractive() })
+	if d.m.message.title != "Name" || !strings.Contains(strings.Join(d.m.message.lines, " "), "to be cut by the column") {
+		t.Errorf("the popup should be the whole cell under its column's header: %q %q", d.m.message.title, d.m.message.lines)
+	}
+	d.key("esc")
+	d.until("popup gone", func() bool { return !d.m.message.isActive() })
+
+	d.key("l")
+	if n := d.page().current(); n == nil || n.Kind != ir.Cell || strings.TrimSpace(n.Text()) != "home" {
+		t.Fatalf("l should walk to the next cell, is on %+v", n)
+	}
+	d.key("enter")
+	d.until("asks to open", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
+	d.key("esc")
+	d.until("confirm gone", func() bool { return !d.m.confirm.isActive() })
+
+	d.cursorOn(ir.Cell, "none")
+	d.key("enter")
+	d.until("the other cell", func() bool { return d.m.message.isInteractive() && d.m.message.title == "Site" })
+}

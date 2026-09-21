@@ -76,7 +76,7 @@ item，item 記自己跨哪幾列，游標才能把整個 run 反白。決定：
 - 相鄰兩個 item、或 item 後接字詞，補一個空格（AX tree 丟掉了元素間的空白）；標點不補
 - `<label>` 包住的欄位：label 文字 = 欄位的 accessible name，renderer 把欄位前那段等於 name 的純文字吃掉
 - 沒名字的 link 顯示 URL 最後一段（`vote`、`news.ycombinator.com`），整條 URL 在 Inspect
-- 表格 cell 內的 block 攤平成一行（`inCell`）；資料表欄寬從最寬的欄開始縮（同 sshu）
+- 表格 cell 內的 block 攤平成一行（`inCell`）；資料表欄寬從最寬的欄開始縮（同 sshu）；**每格一個 item**（2026-09-21：`table()` 對每個 cell `newItem`、`cellSegs(td, id)` 期間 `r.cellItem = id` 讓格裡的 Link / Button / Textbox / Check / Combobox / Media 走 `itemOf` 不另開 item；`row.table` / `row.header` 讓 pagepanel 畫 `tableBg` / `tableHeaderBg`，`segTableHeader` 改 Text 粗體）；`enterCell`：沒東西 → `showCell`（message popup，`columnHeader` 當標題、`wrapWords` 折行、`messagePopup.scroll` j/k u/d G g）、只有一個目標且文字相同 → `enterOn(target)`、混合 → `openItemMenu`（`itemMenuItems` 的 Cell 列：Content + `targetItems`）；`enterOn` 是 enterItem 對互動節點那半段抽出來的
 - 空格延後放：字與空格一起塞不下就換行，不會出現 `right(`
 - **Heading 收合**（2026-09-21）：`renderer.suppress` 在收合的 heading 之後跳過節點，到 `foldLevel` 以上的 heading 或離開 `foldLm` 那層 landmark（`leaveLandmark`）為止；含終止 heading 的 wrapper 只走進去不畫自己（`hasHeadingUpTo`）；`walkSection` / `sectionItems` / `sectionHolds` 用同一套邊界算 `· N items` 與 Outline 的 reveal
 - **Landmark 摺疊**（ui.md §2 修訂）：`renderOpts.fold` 是 user 的決定（by backendDOMNodeId，重抓後仍在）、

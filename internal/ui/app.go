@@ -740,6 +740,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			mm, cmd := m.selectKey(msg)
 			return mm, tea.Batch(closeCmd, cmd)
 		}
+		// A long message — a cell in full — scrolls by the page's keys.
+		m.message.scroll(msg.String())
 		return m, nil
 	case m.help.anim.owns():
 		m.help.update(msg)
@@ -1311,31 +1313,17 @@ const (
 func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 	var items []menuItem
 	switch n.Kind {
+	case ir.Cell:
+		// A cell cut to its column: the content in full, then whatever
+		// it holds (the same rows an entry lists).
+		items = append(items, menuItem{label: "Content", key: "cell:content", hint: "the cell in full"})
+		items = append(items, targetItems(n)...)
 	case ir.Landmark:
 		if isEntry(n) {
 			// What it holds, one row each, the nesting of its lists as
 			// indent: this IS the row's operation list.
-			ts := entryTargets(n)
-			for i, t := range ts {
-				label := oneLine(t.node.Name)
-				if label == "" {
-					label = oneLine(nameOr(t.node.Text(), t.node.URL))
-				}
-				hint := oneLine(t.node.URL)
-				switch t.node.Kind {
-				case ir.Button:
-					hint = "button"
-				case ir.Textbox:
-					hint = "a field: type into it"
-				case ir.Check:
-					hint = "check box"
-				case ir.Combobox:
-					hint = "select"
-				}
-				items = append(items, menuItem{label: strings.Repeat("  ", t.depth) + truncate(label, 60),
-					key: "entry:" + itoa(i), hint: hint})
-			}
-			if len(ts) == 0 {
+			items = append(items, targetItems(n)...)
+			if len(items) == 0 {
 				items = append(items, menuItem{label: "nothing to open in it", key: "entry:none", hint: "no link, button or field inside", disabled: true})
 			}
 			break
@@ -1381,6 +1369,33 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 	return append(items,
 		menuItem{label: "Yank text", key: "yanktext", hint: "what it says"},
 		menuItem{label: "Inspect", key: "inspect", hint: "role, name, node id"})
+}
+
+// targetItems is what an entry row or a table cell holds, one row each
+// — a link, a button, a field, a check box, a select — with the nesting
+// of its lists as indent; the key is the target's place (dispatch).
+func targetItems(n *ir.Node) []menuItem {
+	var items []menuItem
+	for i, t := range entryTargets(n) {
+		label := oneLine(t.node.Name)
+		if label == "" {
+			label = oneLine(nameOr(t.node.Text(), t.node.URL))
+		}
+		hint := oneLine(t.node.URL)
+		switch t.node.Kind {
+		case ir.Button:
+			hint = "button"
+		case ir.Textbox:
+			hint = "a field: type into it"
+		case ir.Check:
+			hint = "check box"
+		case ir.Combobox:
+			hint = "select"
+		}
+		items = append(items, menuItem{label: strings.Repeat("  ", t.depth) + truncate(label, 60),
+			key: "entry:" + itoa(i), hint: hint})
+	}
+	return items
 }
 
 // pageMenuItems is panel [2]'s Space menu: the item's operations, then the
@@ -1509,9 +1524,15 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
+	if key == "cell:content" {
+		if n := t.current(); t != nil && n != nil && n.Kind == ir.Cell {
+			return m, m.showCell(t, n)
+		}
+		return m, nil
+	}
 	if strings.HasPrefix(key, "entry:") {
-		// Something inside an entry row, by its place in the row's
-		// operation list (itemMenuItems).
+		// Something inside an entry row, or a table cell, by its place in
+		// the row's operation list (itemMenuItems).
 		if n := t.current(); t != nil && n != nil && !m.busy() {
 			i, err := strconv.Atoi(strings.TrimPrefix(key, "entry:"))
 			if ts := entryTargets(n); err == nil && i >= 0 && i < len(ts) {
@@ -1692,14 +1713,8 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	switch n.Kind {
-	case ir.Textbox:
-		return m, m.editField(n)
-	case ir.Combobox:
-		return m.chooseOptions()
-	case ir.Button, ir.Check, ir.Media, ir.Unsupported:
-		return m.dispatch("click")
-	case ir.Link:
-		return m, m.askOpenLink(n)
+	case ir.Cell:
+		return m.enterCell(t, n)
 	case ir.Landmark:
 		if isEntry(n) {
 			// Chrome: its own operation is its operation list, what it
@@ -1722,9 +1737,58 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	case ir.Heading:
 		return m.dispatch("fold")
 	}
+	return m.enterOn(t, n)
+}
+
+// enterOn is Enter on an interactive node: the item under the cursor,
+// or the one thing a table cell holds. A field opens to type, a select
+// drops its list, a link asks first, the rest is a click; anything else
+// says nothing is defined.
+func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
+	if m.busy() {
+		return m, nil
+	}
+	switch n.Kind {
+	case ir.Textbox:
+		return m, m.editField(n)
+	case ir.Combobox:
+		return m.chooseOptionsFor(n)
+	case ir.Button, ir.Check, ir.Media, ir.Unsupported:
+		id := n.ID
+		return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
+	case ir.Link:
+		return m, m.askOpenLink(n)
+	}
 	return m, m.message.show(glyphInfo, "Enter", []string{
 		"Nothing is defined for Enter on this item yet.",
 		"Space lists what can be done with it."}, false, m.layer())
+}
+
+// enterCell is Enter on a data table's cell, drawn cut to its column
+// (table): the content in full, a popup that scrolls — unless the cell
+// is one link, one button, one field and nothing else, in which case the
+// cell IS that thing and Enter is its Enter; a cell holding text and
+// links both opens its operation list, Content first (2026-09-21).
+func (m AppModel) enterCell(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
+	ts := entryTargets(n)
+	switch {
+	case len(ts) == 0:
+		return m, m.showCell(t, n)
+	case len(ts) == 1 && oneLine(n.Text()) == oneLine(ts[0].node.Text()):
+		return m.enterOn(t, ts[0].node)
+	}
+	return m.openItemMenu(n)
+}
+
+// showCell is a cell's content in full: the column's header as the
+// title, the text wrapped, the page's keys to scroll when it is long.
+func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
+	title := nameOr(columnHeader(t.root, n), "cell")
+	text := strings.TrimSpace(n.Text())
+	if text == "" {
+		text = "(empty)"
+	}
+	return m.message.show(glyphTable, title, wrapWords(text, min(72, max(20, m.w-12))), false, m.layer())
 }
 
 // openItemMenu is Enter on an item whose own operation IS its operation

@@ -132,6 +132,12 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 					style = codeStyles[segCode]
 				}
 				b.WriteString(style.Render(text))
+			case row.table:
+				bg := tableBg
+				if row.header {
+					bg = tableHeaderBg
+				}
+				b.WriteString(styles[s.kind].Background(bg).Render(text))
 			default:
 				b.WriteString(styles[s.kind].Render(text))
 			}
@@ -168,15 +174,14 @@ func segStyles() map[segKind]lipgloss.Style {
 		segLandmark:    lipgloss.NewStyle().Foreground(dimColor).Bold(true),
 		segNavBar:      lipgloss.NewStyle().Foreground(focusColor),
 		segNav:         lipgloss.NewStyle().Foreground(textColor).Background(codeBg),
-		segTableHeader: lipgloss.NewStyle().Foreground(headerColor).Bold(true),
+		segTableHeader: lipgloss.NewStyle().Foreground(textColor).Bold(true), // the header row's ground tells it apart (pagepanel)
 	}
 }
 
 // codeStyles is the syntax palette inside a code block, every entry on the
-// code ground. Keys share mauve with table headers — both are the name of
-// a value; strings are the code colour; the rest stay out of the bands the
-// app reserves (green for the shown tab, yellow for visual mode, red and
-// peach for the override).
+// code ground. Keys are mauve — the name of a value; strings are the code
+// colour; the rest stay out of the bands the app reserves (green for the
+// shown tab, yellow for visual mode, red and peach for the override).
 func codeStyles() map[segKind]lipgloss.Style {
 	on := func(c lipgloss.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c).Background(codeBg) }
 	return map[segKind]lipgloss.Style{

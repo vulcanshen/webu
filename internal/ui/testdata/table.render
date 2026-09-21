@@ -5,4 +5,12 @@ Bob   25
 
 g1 g2
 -- items --
-0 link "profile" rows 2-2
+0 cell "Name" rows 1-1
+1 cell "Age" rows 1-1
+2 cell "Link" rows 1-1
+3 cell "Ann" rows 2-2
+4 cell "30" rows 2-2
+5 cell "profile" rows 2-2
+6 cell "Bob" rows 3-3
+7 cell "25" rows 3-3
+8 cell "" rows 3-3
