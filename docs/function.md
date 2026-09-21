@@ -472,9 +472,10 @@ webu 拿掉 `--enable-automation`、走 `--headless=new`、profile 持久帶 coo
 | 指令 | 行為 |
 |---|---|
 | `webu` | 還原上次 session 的分頁（不預先載入，切到才載） |
-| `webu <url>` | 還原 session 並多開一個分頁到該 URL，焦點在它 |
+| `webu <url|words> ...` | 還原 session 並為每個參數多開一個分頁（第一個在前、焦點在它）；參數的解讀同 Location 框：沒 scheme 的 host 補 `https://`、不像 URL 的字當搜尋（修訂 2026-09-21：原本只收一個 URL） |
 | `webu browser update` | 更新釘死的 Chromium revision（§9） |
 | `webu version` | webu 版本與 Chromium revision |
+| `webu help`（`-h` / `--help`） | 用法；其他 `-` 開頭的參數視為未知選項，印用法並以 2 離開 |
 
 首次啟動：先下載 Chromium（§9，明講大小），再進 TUI。
 

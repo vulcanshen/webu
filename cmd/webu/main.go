@@ -21,12 +21,27 @@ import (
 	"github.com/vulcanshen/webu/internal/version"
 )
 
+// usage is `webu help`: the whole command line (function.md §12).
+const usage = `webu — a terminal browser
+
+  webu                     the last session's tabs
+  webu <url|words> ...     open each in a new tab, the first in front;
+                           words that are not a URL are searched
+  webu version             webu's version and the Chromium revision it runs
+  webu browser update      fetch the pinned Chromium again
+  webu help                this
+`
+
 func main() {
 	args := os.Args[1:]
-	// `webu version` answers before anything else, so it works with no
-	// Chromium and no config.
+	// `webu version` and `webu help` answer before anything else, so they
+	// work with no Chromium and no config.
 	if len(args) == 1 && args[0] == "version" {
 		fmt.Printf("webu %s (chromium r%d)\n", version.Display(), browser.Revision)
+		return
+	}
+	if len(args) == 1 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
+		fmt.Print(usage)
 		return
 	}
 	// `webu browser update` is the one door to a new revision (function.md
@@ -38,10 +53,15 @@ func main() {
 		}
 		return
 	}
-	startURL := ""
-	if len(args) == 1 {
-		startURL = args[0]
+	// Anything else is what to open: URLs, or words to search for, a new
+	// tab each — the command line is the Location box (function.md §12).
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			fmt.Fprintf(os.Stderr, "webu: unknown option %s\n\n%s", a, usage)
+			os.Exit(2)
+		}
 	}
+	startURLs := args
 
 	exe, err := ensureChromium(false)
 	if err != nil {
@@ -86,7 +106,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "webu: %s: %v (running without it)\n", e.name, e.err)
 		}
 	}
-	app := ui.New(b, startURL).WithStore(bookmarks, folders, cfg, history).WithSession(session)
+	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session)
 	p := tea.NewProgram(app, tea.WithAltScreen())
 
 	// Whatever door the program leaves through — q, an outside SIGINT or

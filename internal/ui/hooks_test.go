@@ -295,6 +295,27 @@ func TestSearchThenEnterClicks(t *testing.T) {
 	d.until("page B", d.loaded("Page B"))
 }
 
+// The command line is the Location box: every argument is a tab, the first
+// one shown, and a bare host gets its scheme (function.md §12).
+func TestCommandLineOpensEachArgument(t *testing.T) {
+	b := hookBrowser(t)
+	abs, _ := filepath.Abs("testdata/nav.html")
+	abs2, _ := filepath.Abs("testdata/nav2.html")
+	d := newDriver(t, New(b, "file://"+abs, "file://"+abs2).WithStore(nil, nil, store.Config{}, nil))
+	t.Cleanup(d.m.Close)
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("page A", d.loaded("Page A"))
+	if len(d.m.tabs) != 2 || d.m.shown != 0 {
+		t.Fatalf("%d tabs, shown %d", len(d.m.tabs), d.m.shown)
+	}
+	d.until("page B in the second tab", func() bool { return d.m.tabs[1].title == "Page B" })
+
+	m := New(nil, "go.dev", " ", "two words")
+	if len(m.startURLs) != 2 || m.resolveURL(m.startURLs[0]) != "https://go.dev" || !strings.Contains(m.resolveURL(m.startURLs[1]), "q=two") {
+		t.Errorf("start arguments: %v -> %q, %q", m.startURLs, m.resolveURL(m.startURLs[0]), m.resolveURL(m.startURLs[1]))
+	}
+}
+
 // A bookmark opens in a new tab, never over the one the web was showing.
 func TestBookmarkOpensANewTab(t *testing.T) {
 	b := hookBrowser(t)

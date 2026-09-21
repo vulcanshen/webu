@@ -203,6 +203,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
   `history.yaml`（YAML sequence、一次 append 一筆、無限保留）與 `session.yaml` 在 data dir（`store.dataFiles`，2026-09-21）；目錄解析在 `internal/paths`
   （`Config` = `~/.config/webu`、`Data` = `~/.webu/datas`、`Downloads`、`Cache`；`WEBU_CONFIG` / `WEBU_DATA` / `WEBU_CACHE` 覆寫），browser（profile、log 在 data）/ store 共用
 - session：離開（q 或 signal）時 main 寫下所有分頁，啟動時還原成 pending（dim、不預載），切到才載
+- CLI（2026-09-21）：`webu <url|words>...` 每個參數一個新分頁、第一個在前（`New(b, start...)` → `firstFrame` 逐個 `openTab(resolveURL(u))`），`-` 開頭視為未知選項；`webu help` 印用法
 - 歷史：每個分頁 load 完的最終 URL + 標題記一筆，同 URL 的 settle 重抓不重複記
 - 即時更新（function.md §6）：`page.Prepare` 在第一次導航前 `Runtime.addBinding` + 注入 MutationObserver
   （childList / characterData / subtree，150 ms 合併），`Runtime.bindingCalled` 走與 load event 同一條 settle 路

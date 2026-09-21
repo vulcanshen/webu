@@ -92,7 +92,12 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/uninstall.sh |
 ```bash
 webu                              # 上次 session 的分頁，或一個空頁
 webu https://news.ycombinator.com # 直接開一頁
+webu go.dev lobste.rs             # 每個參數一個分頁，第一個在前；scheme 自動補
+webu "terminal browser"           # 不像 URL 的字就拿去搜尋
+webu help                         # 完整用法；webu version 印版本
 ```
+
+命令列就是 Location 框：每個參數都在上次 session 還原的分頁之後開一個新分頁 —— 家族其他工具用不到、瀏覽器少不了的入口。
 
 `L` 開 Location 輸入框：打 URL，或打要搜尋的字。`j`/`k` 走 item，`Enter` 看游標下那個能做什麼。在任何面板按 `Space` 讀選單 —— 它列的就是這個面板能做的全部事情。
 
