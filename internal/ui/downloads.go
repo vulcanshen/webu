@@ -113,9 +113,9 @@ func (m AppModel) downloadProgress() (pct int, moving bool) {
 	return pct, moving
 }
 
-// downloadAt maps a row of the popup — newest first — back to the list.
-func (m AppModel) downloadAt(row int) (download, int) {
-	i := len(m.dls) - 1 - row
+// downloadAt is the download at index i of the list, or -1: a row of the
+// screen carries its index (listEntry.ref), whatever order it shows in.
+func (m AppModel) downloadAt(i int) (download, int) {
 	if i < 0 || i >= len(m.dls) {
 		return download{}, -1
 	}
@@ -124,8 +124,8 @@ func (m AppModel) downloadAt(row int) (download, int) {
 
 // openDownload is Enter on a row: the file, in whatever the desktop opens
 // it with. A file still arriving is not a file yet.
-func (m AppModel) openDownload(row int) tea.Cmd {
-	d, i := m.downloadAt(row)
+func (m AppModel) openDownload(ref int) tea.Cmd {
+	d, i := m.downloadAt(ref)
 	switch {
 	case i < 0:
 		return nil
@@ -142,8 +142,8 @@ func (m AppModel) openDownload(row int) tea.Cmd {
 
 // yankDownload copies the saved path, or the source URL while the file is
 // still on its way.
-func (m AppModel) yankDownload(row int) tea.Cmd {
-	d, i := m.downloadAt(row)
+func (m AppModel) yankDownload(ref int) tea.Cmd {
+	d, i := m.downloadAt(ref)
 	if i < 0 {
 		return nil
 	}
@@ -155,8 +155,8 @@ func (m AppModel) yankDownload(row int) tea.Cmd {
 
 // removeDownload is x on a row: the row goes, and a download still running
 // is stopped first. The file, if it landed, stays where it is.
-func (m *AppModel) removeDownload(row int) tea.Cmd {
-	d, i := m.downloadAt(row)
+func (m *AppModel) removeDownload(ref int) tea.Cmd {
+	d, i := m.downloadAt(ref)
 	if i < 0 {
 		return nil
 	}

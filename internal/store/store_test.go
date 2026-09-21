@@ -9,16 +9,16 @@ func TestRoundTrips(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir())
 	t.Setenv("WEBU_DATA", t.TempDir())
 
-	if b, err := LoadBookmarks(); err != nil || len(b) != 0 {
+	if b, _, err := LoadBookmarks(); err != nil || len(b) != 0 {
 		t.Fatalf("empty state: %v %v", b, err)
 	}
 	want := []Bookmark{{Title: "HN", URL: "https://news.ycombinator.com/"}, {Title: "Go", URL: "https://go.dev", Folder: "dev"}}
-	if err := SaveBookmarks(want); err != nil {
+	if err := SaveBookmarks(want, []string{"dev", "later"}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := LoadBookmarks()
-	if err != nil || len(got) != 2 || got[1].Folder != "dev" {
-		t.Fatalf("bookmarks: %+v %v", got, err)
+	got, folders, err := LoadBookmarks()
+	if err != nil || len(got) != 2 || got[1].Folder != "dev" || len(folders) != 2 || folders[1] != "later" {
+		t.Fatalf("bookmarks: %+v %v %v", got, folders, err)
 	}
 
 	cfg, _ := LoadConfig()

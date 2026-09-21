@@ -252,8 +252,7 @@ func TestScreensAndSession(t *testing.T) {
 	t.Setenv("WEBU_DATA", t.TempDir())
 	m := New(nil, "").WithStore(
 		[]store.Bookmark{{Title: "Hacker News", URL: "https://news.ycombinator.com/"}, {Title: "Go", URL: "https://go.dev"}},
-		store.Config{},
-		nil)
+		nil, store.Config{}, nil)
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	if h := d.m.header(); !strings.Contains(h, "[W]eb") || !strings.Contains(h, "[S]ettings") {
@@ -265,8 +264,8 @@ func TestScreensAndSession(t *testing.T) {
 	if d.m.screen != screenBookmarks || len(d.m.lists.visible()) != 2 {
 		t.Fatalf("screen %v, visible %d", d.m.screen, len(d.m.lists.visible()))
 	}
-	if v := d.m.View(); !strings.Contains(v, "Hacker News") || strings.Contains(v, "[1] Tabs") {
-		t.Errorf("the bookmarks screen should replace the web panels:\n%s", v)
+	if v := d.m.View(); !strings.Contains(v, "Hacker News") || strings.Contains(v, "[1] Tabs") || !strings.Contains(v, "Title") {
+		t.Errorf("the bookmarks screen should replace the web panels, with a column header:\n%s", v)
 	}
 	d.key("/")
 	d.key("go")
@@ -278,16 +277,50 @@ func TestScreensAndSession(t *testing.T) {
 	d.until("confirm", func() bool { return d.m.confirm.isInteractive() })
 	d.key("enter")
 	d.until("deleted", func() bool { return len(d.m.bookmarks) == 1 })
-	if saved, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Title != "Hacker News" {
+	if saved, _, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Title != "Hacker News" {
 		t.Errorf("bookmarks.yaml after delete: %+v", saved)
 	}
 	d.key("esc") // the filter
 	if d.m.screen != screenBookmarks || d.m.lists.filter != "" {
 		t.Fatalf("first Esc should clear the filter: screen %v filter %q", d.m.screen, d.m.lists.filter)
 	}
+
+	// F makes a folder; m moves the bookmark into it through a picker; the
+	// folder is a row of its own, and x on it only goes when it is empty.
+	d.key("F")
+	d.until("folder box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFolder })
+	d.key("dev")
+	d.key("enter")
+	d.until("folder made", func() bool { return len(d.m.folders) == 1 })
+	if e, _, ok := d.m.lists.current(); !ok || e.isFolder || e.title != "Hacker News" {
+		t.Fatalf("the cursor should still be on the bookmark: %+v", e)
+	}
+	d.key("m")
+	d.until("move picker", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optMoveTo })
+	d.key("1")
+	d.until("moved", func() bool { return d.m.bookmarks[0].Folder == "dev" })
+	if saved, folders, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Folder != "dev" || len(folders) != 1 {
+		t.Errorf("bookmarks.yaml after move: %+v %v", saved, folders)
+	}
+	if e, _, ok := d.m.lists.current(); !ok || e.isFolder || e.folder != "dev" {
+		t.Errorf("the cursor should follow the moved bookmark: %+v", e)
+	}
+	if v := d.m.View(); !strings.Contains(v, glyphFolder+" dev") {
+		t.Errorf("the folder should be a row of its own:\n%s", v)
+	}
+	d.key("k") // up, onto the folder row
+	if e, _, _ := d.m.lists.current(); !e.isFolder {
+		t.Fatalf("k should land on the folder row: %+v", e)
+	}
+	d.key("x")
+	if len(d.m.folders) != 1 {
+		t.Error("a folder with a bookmark in it must not go")
+	}
+	d.key("esc") // the toast that said so
+	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
 	d.key("esc") // back to the web
 	if d.m.screen != screenWeb {
-		t.Fatalf("second Esc should go back to the web: %v", d.m.screen)
+		t.Fatalf("Esc should go back to the web: %v", d.m.screen)
 	}
 
 	// Downloads: the header counts what is in flight, the screen lists it,
@@ -332,6 +365,17 @@ func TestScreensAndSession(t *testing.T) {
 	}
 	d.key("enter")
 	d.until("setting box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputSetting })
+	if d.m.input.value != "" || !strings.HasSuffix(d.m.input.placeholder, "downloads") {
+		t.Fatalf("the box should offer the value in force: value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
+	}
+	d.key("enter") // the offer untouched: nothing changes
+	d.until("box closed", func() bool { return !d.m.input.isActive() })
+	if d.m.cfg.DownloadDir != "" {
+		t.Fatalf("Enter on the untouched offer changed the setting: %q", d.m.cfg.DownloadDir)
+	}
+	d.key("enter")
+	d.until("setting box again", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputSetting })
+	d.send(tea.KeyMsg{Type: tea.KeyBackspace}) // decline the offer
 	d.key("/tmp/dl")
 	d.key("enter")
 	d.until("saved", func() bool { return !d.m.input.isActive() })

@@ -82,6 +82,7 @@ type AppModel struct {
 
 	// webu's own files, loaded by main and written back as they change.
 	bookmarks []store.Bookmark
+	folders   []string // bookmark folders declared on their own (bookmarks.go)
 	cfg       store.Config
 	history   []store.Visit
 
@@ -119,6 +120,9 @@ type AppModel struct {
 	// dls is this session's downloads, oldest first: the Downloads screen
 	// lists them, the header counts the ones still running.
 	dls []download
+	// moveRef is the bookmark a Move picker is about; settingRef the row a
+	// Settings box is editing.
+	moveRef, settingRef int
 	// pendingG holds the first half of the gg chord.
 	pendingG bool
 }
@@ -148,8 +152,8 @@ func New(b *browser.Browser, startURL string) AppModel {
 }
 
 // WithStore hands the app its files. The UI never reads them itself.
-func (m AppModel) WithStore(bookmarks []store.Bookmark, cfg store.Config, history []store.Visit) AppModel {
-	m.bookmarks, m.cfg, m.history = bookmarks, cfg, history
+func (m AppModel) WithStore(bookmarks []store.Bookmark, folders []string, cfg store.Config, history []store.Visit) AppModel {
+	m.bookmarks, m.folders, m.cfg, m.history = bookmarks, folders, cfg, history
 	return m
 }
 
@@ -1032,26 +1036,18 @@ func (m AppModel) listEntries(kind listKind) []listEntry {
 	var out []listEntry
 	switch kind {
 	case listBookmarks:
-		for _, b := range m.bookmarks {
-			out = append(out, listEntry{title: b.Title, url: b.URL})
-		}
+		return m.bookmarkEntries()
 	case listDownloads:
 		for i := len(m.dls) - 1; i >= 0; i-- { // newest first, as Chrome lists them
 			d := m.dls[i]
-			out = append(out, listEntry{title: d.name, url: d.url, meta: d.describe(), at: d.at})
+			out = append(out, listEntry{title: d.name, url: d.url, meta: d.describe(), at: d.at, ref: i})
 		}
 	case listHistory:
-		for _, v := range m.history {
-			out = append(out, listEntry{title: v.Title, url: v.URL, at: v.At})
+		for i, v := range m.history {
+			out = append(out, listEntry{title: v.Title, url: v.URL, at: v.At, ref: i})
 		}
 	case listSettings:
-		// One row for now: where downloads go (ui.md §6). Empty in the
-		// file means the default, and the row says which it is.
-		v := m.cfg.DownloadDir
-		if v == "" {
-			v = "(default) " + m.downloadDir()
-		}
-		out = append(out, listEntry{title: "download_dir", meta: v})
+		return m.settingEntries()
 	}
 	return out
 }
@@ -1062,30 +1058,38 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 	if key == "" {
 		return m, nil
 	}
-	e, at, ok := m.lists.current()
+	e, _, ok := m.lists.current()
 	switch key {
 	case "enter":
 		if !ok {
 			return m, nil
 		}
-		switch m.lists.kind {
-		case listDownloads:
-			return m, m.openDownload(at)
-		case listSettings:
-			return m, m.input.ask(inputPopup{title: "Settings", glyph: glyphSettings,
-				prompt: e.title + " — where downloads are saved; empty for the default",
-				value:  m.cfg.DownloadDir, accept: "save", action: inputSetting}, m.layer())
+		switch {
+		case m.lists.kind == listDownloads:
+			return m, m.openDownload(e.ref)
+		case m.lists.kind == listSettings:
+			return m, m.settingBox(e.ref)
+		case e.isFolder:
+			return m, m.toast.show("a folder: m on a bookmark moves it in", toastInfo)
 		}
 		// A bookmark or a visit opens in a NEW tab and never over the one
 		// [W]eb was showing (revised 2026-09-21).
 		m.screen = screenWeb
 		return m, m.openTab(e.url, true)
 	case "o":
-		if !ok {
+		if !ok || e.isFolder {
 			return m, nil
 		}
 		m.screen = screenWeb
 		return m, m.openTab(e.url, true)
+	case "m":
+		if !ok || e.isFolder {
+			return m, m.toast.show("m moves a bookmark; put the cursor on one", toastInfo)
+		}
+		return m, m.movePicker(e.ref)
+	case "F":
+		return m, m.input.ask(inputPopup{title: "New folder", glyph: glyphFolder,
+			prompt: "name of the folder", accept: "create", action: inputFolder}, m.layer())
 	case "A":
 		t := m.shownTab()
 		if t == nil || t.url == "" {
@@ -1093,25 +1097,28 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, m.addEntry(m.lists.kind, t.title, t.url)
 	case "y":
-		if !ok {
+		if !ok || e.isFolder {
 			return m, nil
 		}
 		if m.lists.kind == listDownloads {
-			return m, m.yankDownload(at)
+			return m, m.yankDownload(e.ref)
 		}
 		return m, copyToClipboard(e.url)
 	case "x":
 		if !ok {
 			return m, nil
 		}
-		if m.lists.kind == listDownloads {
+		switch {
+		case e.isFolder:
+			return m, m.deleteFolder(e.title)
+		case m.lists.kind == listDownloads:
 			// Not destructive: the file stays; only the row goes (and a
 			// download still running is stopped, which is what x on it says).
-			return m, m.deleteEntry(at)
+			return m, m.deleteEntry(e.ref)
 		}
 		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Delete",
 			lines: []string{nameOr(e.title, e.url), e.url}, accept: "delete", warn: true,
-			action: confirmDeleteEntry, at: at}, m.layer()+1)
+			action: confirmDeleteEntry, at: e.ref}, m.layer()+1)
 	case "C":
 		if m.lists.kind == listDownloads {
 			m.clearDownloads()
@@ -1138,7 +1145,7 @@ func (m *AppModel) addEntry(kind listKind, title, url string) tea.Cmd {
 			}
 		}
 		m.bookmarks = append(m.bookmarks, store.Bookmark{Title: title, URL: url})
-		if err := store.SaveBookmarks(m.bookmarks); err != nil {
+		if err := store.SaveBookmarks(m.bookmarks, m.folders); err != nil {
 			return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
 		}
 	default:
@@ -1155,7 +1162,7 @@ func (m *AppModel) deleteEntry(at int) tea.Cmd {
 	case listBookmarks:
 		if at < len(m.bookmarks) {
 			m.bookmarks = append(m.bookmarks[:at], m.bookmarks[at+1:]...)
-			err = store.SaveBookmarks(m.bookmarks)
+			err = store.SaveBookmarks(m.bookmarks, m.folders)
 		}
 	case listDownloads:
 		return m.removeDownload(at)
@@ -1217,6 +1224,7 @@ type optionsKind int
 const (
 	optItemMenu optionsKind = iota // an item's operations (Enter on [2])
 	optSelect                      // a <select>'s options, keyed by index
+	optMoveTo                      // a bookmark's folder, keyed by index (bookmarks.go)
 )
 
 // itemMenuItems is an item's operations by role (menu-only, no letters —
@@ -1330,6 +1338,15 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.options, key, _ = m.options.update(msg)
 	if key == "" {
 		return m, nil
+	}
+	if m.optionsKind == optMoveTo {
+		// The Bookmarks screen's picker: no page is involved.
+		closeCmd := m.options.close()
+		idx, err := strconv.Atoi(key)
+		if err != nil {
+			return m, closeCmd
+		}
+		return m, tea.Batch(closeCmd, m.moveBookmark(m.moveRef, idx))
 	}
 	n := m.optionsFor
 	t := m.shownTab()
@@ -1634,14 +1651,10 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case inputPrompt:
 		return m, tea.Batch(m.input.close(), m.answerDialog(true, value))
 	case inputSetting:
-		// The one setting so far; the browser is pointed at the new place
-		// at once, so the next download lands there.
-		m.cfg.DownloadDir = strings.TrimSpace(value)
-		if err := store.SaveConfig(m.cfg); err != nil {
-			return m, tea.Batch(m.input.close(), m.toast.show("config.yaml: "+err.Error(), toastError))
-		}
-		m.lists.setEntries(m.listEntries(listSettings))
-		return m, tea.Batch(m.input.close(), m.pointDownloads(), m.toast.show("saved config.yaml", toastInfo))
+		// An offer still standing means nothing was typed or declined.
+		return m, m.saveSetting(value, value == "" && m.input.placeholder != "")
+	case inputFolder:
+		return m, tea.Batch(m.input.close(), m.addFolder(strings.TrimSpace(value)))
 	case inputEval:
 		// The prompt stays; the expression and, when it comes, its result
 		// go to the console list behind it.

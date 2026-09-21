@@ -68,9 +68,15 @@ letter hotkey；header 就是 kbu statusbar chip 那種 Layer 2 ambient 揭露�
 
 一個面板佔滿 header 與 footer 之間（`listpanel.go`）：title chip = glyph + 名字，邊框 hint 列該 screen 的鍵
 （Enter / `x` / `y` / `A` / `C` / `/` / Esc），Space menu 是同一份（item / panel 兩 region）。
+**第一列是欄位 header**（dim：Title / URL、Title / When URL、File / Progress、Setting / Value），游標從第二列起，
+不貼著 title chip（修訂 2026-09-21）。
 Enter 開 bookmark / history **一律新分頁**並回 `[W]eb`，不佔原分頁（修訂 2026-09-21）。空狀態走 sshu empty.go 形狀。
-Settings：一列一個 key（目前只有 `download_dir`），Enter → input popup（空 = 預設）→ 寫回 `config.yaml`、立即生效
-（重新 `setDownloadBehavior`）。footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
+Bookmarks 依目錄分組（2026-09-21）：根層在前，之後每個目錄一列 `󰉋 name`（可停游標，像 filu 的目錄列），其下的書籤縮排兩格；
+`[F]` 新目錄（空目錄也列出）、`[m]` 搬移（options popup 當 picker：`(no folder)` + 目錄清單，數字鍵選，游標跟著搬過去）、
+目錄列上 `x` 只刪空目錄；`/` 過濾時攤平只列命中的書籤。樹狀摺疊仍是 v2。
+Settings：一列一個 key（目前只有 `download_dir`），Enter → input popup，**目前生效的值當 placeholder**（同 Location：Tab 接手、
+Backspace 清掉；沒動過就 Enter 不改，清空後 Enter = 預設）→ 寫回 `config.yaml`、立即生效（重新 `setDownloadBehavior`）。
+footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
 
 ### `[1]` — 分頁清單
 
@@ -119,7 +125,7 @@ hint 嵌下邊框、`Esc` 只在一處解析。
 
 | Popup | 類型 | 內容 | item operation | panel operation | 子 popup |
 |---|---|---|---|---|---|
-| **Bookmarks**（screen） | 單一面板 | 樹狀，目錄可摺疊（filu tree 畫法） | Enter 開**新分頁**（2026-09-21）、Edit、Delete、Move、Yank url | Add 目前頁、New folder、`/` 搜尋 | Edit → form；Delete → confirm；Move → 目錄 picker |
+| **Bookmarks**（screen） | 單一面板 | 根層 + 每目錄一組（目錄列可停游標；樹狀摺疊 v2） | Enter 開**新分頁**（2026-09-21）、Edit（待做）、Delete、Move（picker）、Yank url | Add 目前頁、New folder、`/` 搜尋 | Edit → form；Delete → confirm；Move → 目錄 picker |
 | **Downloads**（screen） | 單一面板 | 本次 session 的下載，新的在上：檔名 + 右欄是進度（`42%  1.2 MB of 3.0 MB`）、落地路徑、或 cancelled | Enter 用系統開啟器開檔、Open source in new tab、Remove（進行中先 `Browser.cancelDownload`；檔案不動）、Yank path | Clear 已完成 / 取消的 | — |
 | **History**（screen） | 單一面板，filu 原生 finder 形式 | 時間倒序、打字即 fuzzy、串流載入 | Enter 開**新分頁**、Delete 該筆、Yank url | Clear | Clear → confirm |
 | **Settings**（screen） | 單一面板 | 一列一個 key，目前 `download_dir`（空 = 預設） | Enter → input popup 改值 | — | input |
@@ -219,7 +225,7 @@ footer 一列：`space menu   ? help   tab/1-2 panels   q quit`，五個 core-ke
 
 | 資料 | 形式 | 位置 |
 |---|---|---|
-| Bookmarks | 巢狀 yaml，目錄 = 巢狀 | `~/.config/webu/bookmarks.yaml` |
+| Bookmarks | flat yaml：`bookmarks:`（各帶 `folder`）+ `folders:`（自己宣告的目錄，含空的；2026-09-21） | `~/.config/webu/bookmarks.yaml` |
 | Downloads 清單 | 只在記憶體、本次 session；檔案本身落在 `download_dir` | — |
 | History | YAML sequence，一次 append 一筆（時間、URL、標題）；**無限保留**，History screen 的 Clear 是唯一清除入口 | `~/.webu/datas/history.yaml` |
 | Session | 離開時寫下所有分頁 URL，下次還原 | `~/.webu/datas/session.yaml` |

@@ -35,7 +35,7 @@ func hookBrowser(t *testing.T) *browser.Browser {
 
 func startAt(t *testing.T, b *browser.Browser, url string, cfg store.Config) *driver {
 	t.Helper()
-	d := newDriver(t, New(b, url).WithStore(nil, cfg, nil))
+	d := newDriver(t, New(b, url).WithStore(nil, nil, cfg, nil))
 	t.Cleanup(d.m.Close)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	return d
