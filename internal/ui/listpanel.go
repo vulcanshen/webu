@@ -32,6 +32,14 @@ type listEntry struct {
 	// a download's progress, a setting's value.
 	meta string
 	at   time.Time // History only
+	// ref is the row's index in what backs it — m.bookmarks, m.history,
+	// m.dls, the settings table — so a delete or a move lands on the right
+	// one whatever order the screen shows them in.
+	ref int
+	// folder is the bookmark's folder; isFolder marks a folder's own row,
+	// which the cursor can land on the way filu's stops on a directory.
+	folder   string
+	isFolder bool
 }
 
 type listPanel struct {
@@ -63,6 +71,17 @@ func (m *listPanel) setEntries(entries []listEntry) {
 	m.cursor = clamp(m.cursor, 0, max(0, len(m.visible())-1))
 }
 
+// cursorTo puts the cursor on the row backed by ref, if it is visible.
+func (m *listPanel) cursorTo(ref int) {
+	for p, i := range m.visible() {
+		if e := m.entries[i]; !e.isFolder && e.ref == ref {
+			m.cursor = p
+			m.top = scrollTo(m.top, m.cursor, m.rows())
+			return
+		}
+	}
+}
+
 func (m listPanel) title() (glyph, text string) {
 	switch m.kind {
 	case listHistory:
@@ -75,12 +94,35 @@ func (m listPanel) title() (glyph, text string) {
 	return glyphBookmark, "Bookmarks"
 }
 
-// visible is the indexes into entries that pass the filter.
+// columns names the two columns, for the header row over the list: it is
+// what keeps the first row off the title chip (revised 2026-09-21).
+func (m listPanel) columns() (string, string) {
+	switch m.kind {
+	case listHistory:
+		return "Title", "When  URL"
+	case listDownloads:
+		return "File", "Progress, or where it landed"
+	case listSettings:
+		return "Setting", "Value"
+	}
+	return "Title", "URL"
+}
+
+// visible is the indexes into entries that pass the filter. A filter
+// flattens the tree: only matches show, and a folder row is not a match.
 func (m listPanel) visible() []int {
 	q := strings.ToLower(strings.TrimSpace(m.filter))
 	out := make([]int, 0, len(m.entries))
 	for i, e := range m.entries {
-		if q == "" || strings.Contains(strings.ToLower(e.title), q) || strings.Contains(strings.ToLower(e.url), q) {
+		if q == "" {
+			out = append(out, i)
+			continue
+		}
+		if e.isFolder {
+			continue
+		}
+		if strings.Contains(strings.ToLower(e.title), q) || strings.Contains(strings.ToLower(e.url), q) ||
+			strings.Contains(strings.ToLower(e.folder), q) {
 			out = append(out, i)
 		}
 	}
@@ -97,9 +139,10 @@ func (m listPanel) current() (listEntry, int, bool) {
 }
 
 // rows is how many entries fit: the screen less the header, its rule, the
-// footer and the two borders, and the filter line when there is one.
+// footer, the two borders and the column header, and the filter line when
+// there is one.
 func (m listPanel) rows() int {
-	n := m.screenH - 5
+	n := m.screenH - 6
 	if m.typing || m.filter != "" {
 		n--
 	}
@@ -107,10 +150,10 @@ func (m listPanel) rows() int {
 }
 
 // update handles one key and returns the key that names an action —
-// "enter", "o", "x", "y", "A", "C" — or "": the app runs it, since the
-// panel does not know what a URL is for, and the Space menu hands the
-// same keys to the same place. Esc is the app's (§4.3); while typing, Esc
-// clearing the filter is answered by escTyping.
+// "enter", "o", "m", "x", "y", "A", "F", "C" — or "": the app runs it,
+// since the panel does not know what a URL is for, and the Space menu
+// hands the same keys to the same place. Esc is the app's (§4.3); while
+// typing, Esc clearing the filter is answered by escTyping.
 func (m *listPanel) update(msg tea.KeyMsg) string {
 	k := msg.String()
 	if m.typing {
@@ -149,7 +192,7 @@ func (m *listPanel) update(msg tea.KeyMsg) string {
 		if m.kind == listDownloads {
 			return k
 		}
-	case "A":
+	case "m", "F", "A":
 		if m.kind == listBookmarks {
 			return k
 		}
@@ -205,19 +248,21 @@ func (m listPanel) menuItems() []menuItem {
 	return []menuItem{
 		{header: true, label: "item operation"},
 		{label: "Open in new tab", key: "enter", hint: "and switch to it"},
-		{label: "Delete", key: "x", hint: "this bookmark"},
+		{label: "Move", key: "m", hint: "into a folder, or out to the top"},
+		{label: "Delete", key: "x", hint: "this bookmark; on a folder row, the empty folder"},
 		{label: "Yank url", key: "y", hint: "to the clipboard"},
 		{separator: true},
 		{header: true, label: "panel operation"},
 		{label: "Add this page", key: "A", hint: "the one [W]eb is showing"},
+		{label: "Folder", key: "F", hint: "a new one; move bookmarks into it with m"},
 		{label: "Filter", key: "/", hint: "type to narrow the list"},
 	}
 }
 
-// hint is the border legend: bright the key, dim what it does (§4.4).
-func (m listPanel) hint() string {
+// hintPairs is the border legend: bright the key, dim what it does (§4.4).
+func (m listPanel) hintPairs() [][2]string {
 	if m.typing {
-		return hintLegend([][2]string{{"Enter", "done"}, {"Esc", "clear"}})
+		return [][2]string{{"Enter", "done"}, {"Esc", "clear"}}
 	}
 	var pairs [][2]string
 	switch m.kind {
@@ -229,13 +274,25 @@ func (m listPanel) hint() string {
 	case listHistory:
 		pairs = [][2]string{{"Enter", "open in new tab"}, {"x", "delete"}, {"y", "yank url"}, {"C", "clear"}, {"/", "filter"}}
 	default:
-		pairs = [][2]string{{"Enter", "open in new tab"}, {"x", "delete"}, {"y", "yank url"}, {"A", "add this page"}, {"/", "filter"}}
+		pairs = [][2]string{{"Enter", "open in new tab"}, {"m", "move"}, {"x", "delete"}, {"y", "yank url"},
+			{"A", "add this page"}, {"F", "folder"}, {"/", "filter"}}
 	}
-	return hintLegend(append(pairs, [2]string{"Esc", "web"}))
+	return append(pairs, [2]string{"Esc", "web"})
+}
+
+// fitLegend keeps as many pairs as fit in w cells, dropped from the right
+// the way the footer drops them (chrome.go keyLegend).
+func fitLegend(pairs [][2]string, w int) string {
+	for n := len(pairs); n > 0; n-- {
+		if s := hintLegend(pairs[:n]); dispW(s) <= w {
+			return s
+		}
+	}
+	return ""
 }
 
 // panel draws the screen: one framed panel, the keyboard's (focus blue),
-// the legend in its bottom border.
+// a column header over the rows and the legend in the bottom border.
 func (m listPanel) panel(outerW, outerH int) string {
 	glyph, text := m.title()
 	innerW, innerH := outerW-2, outerH-2
@@ -243,6 +300,10 @@ func (m listPanel) panel(outerW, outerH int) string {
 	txt := lipgloss.NewStyle().Foreground(textColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)
+	frame := func(rows []string) string {
+		return panelFrameLegend(innerW, fitLines(rows, innerW, innerH), " "+glyph+" "+text+" ",
+			fitLegend(m.hintPairs(), innerW-4), toneFocus)
+	}
 
 	rows := []string{}
 	if m.typing || m.filter != "" {
@@ -254,23 +315,43 @@ func (m listPanel) panel(outerW, outerH int) string {
 		}
 	}
 	vis := m.visible()
+	h1, h2 := m.columns()
+	titleW := dispW(h1)
+	for _, i := range vis {
+		e := m.entries[i]
+		w := dispW(oneLine(nameOr(e.title, e.url)))
+		if e.folder != "" && !e.isFolder {
+			w += 2 // indented under its folder
+		}
+		titleW = max(titleW, w)
+	}
+	titleW = min(titleW, innerW/2)
+	rows = append(rows, dim.Render(padRight(" "+padRight(h1, titleW)+"  "+h2, innerW)))
 	if len(vis) == 0 {
 		fact, hint := m.emptyState()
 		if m.filter != "" {
 			fact, hint = "nothing matches", emptyHint("Press Esc to clear the filter", "Esc")
 		}
 		rows = append(rows, emptyBody(innerW, innerH-len(rows), fact, hint)...)
-		return panelFrameLegend(innerW, fitLines(rows, innerW, innerH), " "+glyph+" "+text+" ", m.hint(), toneFocus)
+		return frame(rows)
 	}
-	titleW := 0
-	for _, i := range vis {
-		titleW = max(titleW, dispW(oneLine(m.entries[i].title)))
-	}
-	titleW = min(titleW, innerW/2)
 	end := min(len(vis), m.top+m.rows())
 	for r := m.top; r < end; r++ {
 		e := m.entries[vis[r]]
-		title := padRight(oneLine(nameOr(e.title, e.url)), titleW)
+		if e.isFolder {
+			line := padRight(" "+glyphFolder+" "+oneLine(e.title), innerW)
+			if r == m.cursor {
+				rows = append(rows, cur.Render(line))
+			} else {
+				rows = append(rows, txt.Render(line))
+			}
+			continue
+		}
+		name := oneLine(nameOr(e.title, e.url))
+		if e.folder != "" {
+			name = "  " + name
+		}
+		title := padRight(name, titleW)
 		meta := e.url
 		if e.meta != "" {
 			meta = e.meta
@@ -285,7 +366,7 @@ func (m listPanel) panel(outerW, outerH int) string {
 			rows = append(rows, txt.Render(" "+title)+dim.Render(padRight("  "+meta, innerW-titleW-1)))
 		}
 	}
-	return panelFrameLegend(innerW, fitLines(rows, innerW, innerH), " "+glyph+" "+text+" ", m.hint(), toneFocus)
+	return frame(rows)
 }
 
 // emptyState is the fact and the way on when the list has nothing (sshu
@@ -297,5 +378,5 @@ func (m listPanel) emptyState() (string, []hintWord) {
 	case listDownloads:
 		return "no downloads yet", emptyHint("Files the page saves are listed here; W is the web", "W")
 	}
-	return "no bookmarks yet", emptyHint("Press A on a page to add it, or W for the web", "A", "W")
+	return "no bookmarks yet", emptyHint("Press A on a page to add it, F for a folder, or W for the web", "A", "F", "W")
 }

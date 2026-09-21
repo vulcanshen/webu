@@ -74,7 +74,7 @@ func main() {
 
 	// webu's own files. None of them is fatal: a file that will not parse
 	// is news for the toast, not a reason to withhold the browser.
-	bookmarks, bmErr := store.LoadBookmarks()
+	bookmarks, folders, bmErr := store.LoadBookmarks()
 	cfg, cfgErr := store.LoadConfig()
 	history, histErr := store.LoadHistory()
 	session, sessErr := store.LoadSession()
@@ -86,7 +86,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "webu: %s: %v (running without it)\n", e.name, e.err)
 		}
 	}
-	app := ui.New(b, startURL).WithStore(bookmarks, cfg, history).WithSession(session)
+	app := ui.New(b, startURL).WithStore(bookmarks, folders, cfg, history).WithSession(session)
 	p := tea.NewProgram(app, tea.WithAltScreen())
 
 	// Whatever door the program leaves through — q, an outside SIGINT or

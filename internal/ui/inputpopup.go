@@ -22,6 +22,7 @@ const (
 	inputFile                   // a path for a file chooser
 	inputEval                   // the console prompt: JavaScript, run in the page
 	inputSetting                // a value for config.yaml, from the Settings screen
+	inputFolder                 // a new bookmark folder's name
 )
 
 // inputPopup is one line of text with a question above it — the message

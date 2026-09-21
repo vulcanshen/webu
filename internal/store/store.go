@@ -128,18 +128,23 @@ func saveYAML(name string, v any) error {
 	return os.Rename(tmp, p)
 }
 
+// bookmarksFile is bookmarks.yaml: the bookmarks, each naming its folder,
+// and the folders themselves — so a folder made before anything is put in
+// it survives (2026-09-21).
 type bookmarksFile struct {
 	Bookmarks []Bookmark `yaml:"bookmarks"`
+	Folders   []string   `yaml:"folders,omitempty"`
 }
 
-func LoadBookmarks() ([]Bookmark, error) {
+// LoadBookmarks returns the bookmarks and the folders declared on their own.
+func LoadBookmarks() ([]Bookmark, []string, error) {
 	var f bookmarksFile
 	err := loadYAML("bookmarks.yaml", &f)
-	return f.Bookmarks, err
+	return f.Bookmarks, f.Folders, err
 }
 
-func SaveBookmarks(list []Bookmark) error {
-	return saveYAML("bookmarks.yaml", bookmarksFile{Bookmarks: list})
+func SaveBookmarks(list []Bookmark, folders []string) error {
+	return saveYAML("bookmarks.yaml", bookmarksFile{Bookmarks: list, Folders: folders})
 }
 
 func LoadConfig() (Config, error) {

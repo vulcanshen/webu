@@ -88,10 +88,10 @@ Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡
 
 | screen / popup | item operation | panel operation |
 |---|---|---|
-| Bookmarks（screen） | Enter 開**新分頁**（修訂 2026-09-21：一律新分頁、不佔原分頁，`[o]` 因此拿掉）、`[e] Edit`（form）、`[x] Delete`（confirm）、`[m] Move`（目錄 picker）、`[y] Yank` | `[A] Add` 目前頁、`[F] Folder` 新目錄、`[/]` 搜尋 |
+| Bookmarks（screen） | Enter 開**新分頁**（修訂 2026-09-21：一律新分頁、不佔原分頁，`[o]` 因此拿掉）、`[e] Edit`（form，待做）、`[x] Delete`（confirm；在目錄列上 = 刪空目錄，不問）、`[m] Move`（options popup 當目錄 picker：`(no folder)` + 目錄清單，數字鍵選；2026-09-21 落地）、`[y] Yank` | `[A] Add` 目前頁、`[F] Folder` 新目錄（input popup 問名字；空目錄也列出）、`[/]` 搜尋 |
 | Downloads（screen） | Enter 開檔（系統開啟器；進行中 → toast）、`[o]` 來源 URL 開新分頁、`[x] Remove`（進行中先取消；檔案不動）、`[y] Yank path`（未落地時 yank 來源 URL） | `[C] Clear` 已完成 / 取消的 |
 | History（screen） | Enter 開**新分頁**（修訂 2026-09-21）、`[x] Delete` 該筆、`[y] Yank` | `[C] Clear`（confirm；唯一清除入口，歷史無限保留） |
-| Settings（screen） | Enter → input popup 改值（空 = 預設）→ 寫回 `config.yaml`、立即生效；目前只有 `download_dir`（2026-09-21） | — |
+| Settings（screen） | Enter → input popup 改值 → 寫回 `config.yaml`、立即生效；目前只有 `download_dir`（2026-09-21）。**所有文字設定的 popup 同 `[L]ocation`**：目前生效的值當 placeholder，Tab 接手編輯、Backspace 整個清掉；沒動過就 Enter = 不改，清空後 Enter = 回預設 | — |
 | DevTools › Storage | `[x] Delete`、`[y] Yank value` | `[C] Clear site data`（confirm）、`[/]` 過濾 |
 | DevTools › Network | Enter detail | `[C] Clear`、`[/]` |
 | DevTools › Console | Enter：該筆的完整內容（detail） | `[i] Insert`：eval 輸入列（REPL：Enter 執行、輸入列留著、Esc 結束；`> 運算式` / `< 結果` 進清單）、`[C] Clear`、`[/]` |
@@ -234,14 +234,14 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 | `[1]` panel | `T` `X` `U` |
 | `[2]` item | **無**（menu-only） |
 | `[2]` panel | `R` `T` `A` `O` `I` `Z` `Y` `C`（`V` 是全域的 visual mode，`L` 是全域的 location；`T` 與 `[1]` 同義；`C` 原是 `W`，修訂 2026-09-21） |
-| Bookmarks screen | `x` `y` / `A` `/`（`e` `m` `F` 待做） |
+| Bookmarks screen | `m` `x` `y` / `A` `F` `/`（`e` 待做） |
 | Downloads screen | `o` `x` `y` / `C` `/` |
 | History screen | `x` `y` / `C` `/` |
 | Settings screen | Enter |
 | DevTools | `x` `y` / `C` `/`；`h/l` 切分頁 |
 | 選取模式 | `hjkl` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
 
-撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
+撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊（Bookmarks screen 的 `F` 是該 screen 的，與全域不撞）（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
 sshu 的 `[D]isconnect` 同例；`L` 與導覽 `l`（沿列右移）同例；`I` 與 DevTools Console 的 `i`（insert）在不同 surface。
 DevTools 原本的 `D` 讓給 header 的 Downloads（修訂 2026-09-20），改成 `[I]nspect`。`U` 只剩 `[1]` 的 undo close
 （修訂 2026-09-20：原本 `[2]` 也用 `U` 開 goto、同字依面板不同義；goto 改成全域 `L` 後不再同字）。Bookmarks 的新目錄用 `F`
