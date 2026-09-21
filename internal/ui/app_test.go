@@ -938,6 +938,28 @@ func TestNavigationEntry(t *testing.T) {
 	if n := d.page().current(); n == nil || n.Kind != ir.Heading {
 		t.Errorf("Enter on the skip link should land on the content, landed on %+v", n)
 	}
+	// A block of skip links — "Skip to:" and a list of anchors — is one
+	// row of its own; Enter lists them, and one lands the cursor on what
+	// its anchor names, the form here, without following anything.
+	if !strings.Contains(dumpLayout(d.page().lay), "Skip to +2") {
+		t.Errorf("the skip block should be one row with its count:\n%s", dumpLayout(d.page().lay))
+	}
+	d.cursorOn(ir.Landmark, "Skip to")
+	d.key("enter")
+	d.until("the skip block's list", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	if got := d.m.options.items[d.m.options.cursor].label; got != "Form" {
+		t.Errorf("the first row should be the first target, is %q", got)
+	}
+	d.key("enter")
+	if n := d.page().current(); n == nil || n.Kind != ir.Landmark || n.Role != "form" || d.m.confirm.isActive() {
+		t.Errorf("Form should land the cursor on the form, no confirm; landed on %+v", n)
+	}
+	// So does any link into the page: a table of contents entry.
+	d.cursorOn(ir.Link, "to the form")
+	d.key("enter")
+	if n := d.page().current(); n == nil || n.Kind != ir.Landmark || n.Role != "form" || d.m.confirm.isActive() {
+		t.Errorf("a link into the page should land the cursor, no confirm; landed on %+v", n)
+	}
 	// The row names where the user is in it — aria-current — not the
 	// landmark: the tab in the navigation, the last crumb in a breadcrumb
 	// (a trail named so, and one only the DOM's class says is one). The

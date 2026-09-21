@@ -1767,6 +1767,11 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 		id := n.ID
 		return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
 	case ir.Link:
+		// A link into the page lands the cursor, no confirm: nothing is
+		// left. A skip link with no anchor to land on is the content.
+		if frag := sameFragment(t.url, n.URL); frag != "" && t.jumpToAnchor(frag, m.pageVisible()) {
+			return m, nil
+		}
 		if isSkipLink(n) {
 			return m.skipToContent(t)
 		}
@@ -1841,9 +1846,30 @@ func (m AppModel) actOn(t *tab, x *ir.Node, search bool) (tea.Model, tea.Cmd) {
 		return m, m.editFieldAs(x, search || x.Role == "searchbox")
 	case ir.Combobox:
 		return m.chooseOptionsFor(x)
+	case ir.Link:
+		if frag := sameFragment(t.url, x.URL); frag != "" && t.jumpToAnchor(frag, m.pageVisible()) {
+			return m, nil
+		}
 	}
 	id := x.ID
 	return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
+}
+
+// sameFragment is the fragment of a link that points into the page it
+// is on — "#main", or the page's own URL with a fragment — else "".
+func sameFragment(pageURL, url string) string {
+	i := strings.Index(url, "#")
+	if i < 0 {
+		return ""
+	}
+	base, frag := url[:i], url[i+1:]
+	if j := strings.Index(pageURL, "#"); j >= 0 {
+		pageURL = pageURL[:j]
+	}
+	if frag == "" || (base != "" && base != pageURL) {
+		return ""
+	}
+	return frag
 }
 
 // askOpenLink puts a link's text and URL up before following it: a click

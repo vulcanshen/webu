@@ -61,10 +61,11 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 				}
 				return false
 			}),
-			Skip: attrMarks(docs, strs, func(tag, name, value string) bool {
-				return tag == "a" && name == "class" && strings.Contains(value, "skip")
+			Skip: attrMarks(docs, strs, func(_, name, value string) bool {
+				return (name == "class" || name == "id" || name == "aria-label") && strings.Contains(value, "skip")
 			}),
 		}
+		c.Anchors, c.Parents = anchors(docs, strs)
 		// What the response was: a JSON or plain-text document is drawn as
 		// its text, not as Chrome's viewer for it (ir.Build).
 		if obj, _, err := runtime.Evaluate("document.contentType").WithReturnByValue(true).Do(ctx); err == nil && obj != nil {
@@ -109,6 +110,44 @@ func attrMarks(docs []*domsnapshot.DocumentSnapshot, strs []string, pick func(ta
 		}
 	}
 	return out
+}
+
+// anchors reads two things off the snapshot's node table that a link
+// into the page needs (ui tab.jumpToAnchor): every element's id, as the
+// page wrote it, and every node's parent — so the item nearest under
+// the element a fragment names can be found from the outside.
+func anchors(docs []*domsnapshot.DocumentSnapshot, strs []string) (map[string]cdp.BackendNodeID, map[cdp.BackendNodeID]cdp.BackendNodeID) {
+	ids := map[string]cdp.BackendNodeID{}
+	parents := map[cdp.BackendNodeID]cdp.BackendNodeID{}
+	if len(docs) == 0 || docs[0].Nodes == nil {
+		return ids, parents
+	}
+	nodes := docs[0].Nodes
+	str := func(i int64) string {
+		if i < 0 || int(i) >= len(strs) {
+			return ""
+		}
+		return strs[i]
+	}
+	for i, back := range nodes.BackendNodeID {
+		if i < len(nodes.ParentIndex) {
+			if p := nodes.ParentIndex[i]; p >= 0 && int(p) < len(nodes.BackendNodeID) {
+				parents[back] = nodes.BackendNodeID[p]
+			}
+		}
+		if i >= len(nodes.Attributes) {
+			continue
+		}
+		attrs := nodes.Attributes[i]
+		for j := 0; j+1 < len(attrs); j += 2 {
+			if str(attrs[j]) == "id" {
+				if id := str(attrs[j+1]); id != "" {
+					ids[id] = back
+				}
+			}
+		}
+	}
+	return ids, parents
 }
 
 // displayMap joins the snapshot's node table to its layout table: layout row

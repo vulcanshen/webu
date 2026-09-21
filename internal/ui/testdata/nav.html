@@ -1,9 +1,11 @@
 <!doctype html><html><head><title>Page A</title></head><body>
 <a href="#out" class="skip-link">Skip to content</a>
+<div class="skip-links"><span>Skip to:</span><ul><li><a href="#form1">Form</a></li><li><a href="#nav1">Menu</a></li></ul></div>
 <h1>Page A</h1>
 <p>Some text and <a href="nav2.html">a link to B</a> here.</p>
 <p><a href="nav2.html" target="_blank">B in a new tab</a></p>
-<form onsubmit="event.preventDefault(); document.querySelector(&quot;#out&quot;).textContent = &quot;submitted:&quot; + this.n.value;">
+<p><a href="#form1">to the form</a></p>
+<form id="form1" onsubmit="event.preventDefault(); document.querySelector(&quot;#out&quot;).textContent = &quot;submitted:&quot; + this.n.value;">
 <label>Name <input name="n"></label>
 <label>Look <input type="search" name="l"></label>
 <label>Secret <input name="p" type="password"></label>
@@ -16,7 +18,7 @@
 <button type="button" onclick="document.querySelector(&quot;#out&quot;).textContent = &quot;confirmed:&quot; + confirm(&quot;sure?&quot;)">Confirm</button>
 </p>
 <p id="out"></p>
-<nav aria-label="Main"><ul><li><a href="nav2.html">B via nav</a></li><li><a href="#out" aria-current="page">Anchor</a></li></ul></nav>
+<nav id="nav1" aria-label="Main"><ul><li><a href="nav2.html">B via nav</a></li><li><a href="#out" aria-current="page">Anchor</a></li></ul></nav>
 <nav aria-label="Breadcrumb"><ol><li><a href="nav2.html">Home</a></li><li aria-current="page">Page A</li></ol></nav>
 <ol class="breadcrumb"><li><a href="nav2.html">Root</a></li><li>Here</li></ol>
 <form role="search" onsubmit="event.preventDefault(); document.querySelector(&quot;#out&quot;).textContent = &quot;searched:&quot; + this.q.value;"><label>Find <input type="search" name="q"></label><button type="button">Go</button></form>
