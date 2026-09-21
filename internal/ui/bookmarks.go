@@ -221,32 +221,61 @@ func (m *AppModel) addFolder(parent, path string) tea.Cmd {
 	return m.toast.show("folder "+full, toastInfo)
 }
 
-// deleteFolder is x on a folder row: only an empty one goes — the
-// bookmarks and folders in it are the user's, not the folder's — and only
-// that one: the folders above it stay, empty or not.
+// deleteFolder is x on a folder row. An empty one goes at once; one with
+// anything in it asks first — how many bookmarks and folders go with it
+// — and then the whole tree goes (revised 2026-09-21: an import lands as
+// one tree, and row by row was no way to undo it; before, a folder with
+// anything in it was refused). Only that tree: the folders above it
+// stay, empty or not.
 func (m *AppModel) deleteFolder(path string) tea.Cmd {
+	books, folders := 0, 0
 	for _, b := range m.bookmarks {
 		if inFolder(b.Folder, path) {
-			return m.toast.show("not empty: move its bookmarks out first", toastInfo)
+			books++
 		}
 	}
 	for _, f := range m.folderNames() {
 		if f != path && inFolder(f, path) {
-			return m.toast.show("not empty: delete the folders inside it first", toastInfo)
+			folders++
 		}
 	}
-	kept := m.folders[:0]
+	if books+folders == 0 {
+		return m.deleteFolderTree(path)
+	}
+	return m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Delete folder",
+		lines:  []string{path, "and everything in it: " + plural(books, "bookmark") + ", " + plural(folders, "folder")},
+		accept: "delete", warn: true, action: confirmDeleteFolder, folder: path}, m.layer()+1)
+}
+
+// deleteFolderTree takes path and everything under it out, and writes
+// the file.
+func (m *AppModel) deleteFolderTree(path string) tea.Cmd {
+	books := 0
+	kept := m.bookmarks[:0]
+	for _, b := range m.bookmarks {
+		if inFolder(b.Folder, path) {
+			books++
+			continue
+		}
+		kept = append(kept, b)
+	}
+	m.bookmarks = kept
+	keptFolders := m.folders[:0]
 	for _, f := range m.folders {
-		if f != path {
-			kept = append(kept, f)
+		if !inFolder(f, path) {
+			keptFolders = append(keptFolders, f)
 		}
 	}
-	m.folders = kept
+	m.folders = keptFolders
 	if err := m.saveBookmarks(); err != nil {
 		return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
 	}
 	m.lists.setEntries(m.bookmarkEntries())
-	return m.toast.show("folder "+path+" removed", toastInfo)
+	msg := "folder " + path + " removed"
+	if books > 0 {
+		msg += ", " + plural(books, "bookmark") + " with it"
+	}
+	return m.toast.show(msg, toastInfo)
 }
 
 // ---------------------------------------------------------- adding one

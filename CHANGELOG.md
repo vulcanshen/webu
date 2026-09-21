@@ -23,6 +23,10 @@
 - **`[1] Tabs` closes on `c`, not `w`.** A terminal has no window for a
   `w` to close, and the page panel's close is `C` already. The clone row
   becomes `[o] Open in new tab`, the same `o` as a download's source.
+- **`x` on a bookmark folder takes the whole tree**, after asking — how
+  many bookmarks and folders go with it. An empty folder still goes at
+  once. It used to refuse a folder with anything in it, which left an
+  import with no way back but row by row.
 
 ### Fixed
 

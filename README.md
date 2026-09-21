@@ -158,7 +158,7 @@ A text box's Enter opens a one-line box: `Enter` writes the value back, `Esc` le
 
 ### The screens
 
-- **Bookmarks** — `Enter` open in a new tab, or collapse / expand a folder · `a` add a bookmark here · `m` move · `x` delete (an empty folder too) · `y` yank url · `A` add a folder here (`a/b/c` makes each level) · `I` import a browser's export into a folder of its own · `/` filter
+- **Bookmarks** — `Enter` open in a new tab, or collapse / expand a folder · `a` add a bookmark here · `m` move · `x` delete (a folder too: one with anything in it asks first, then goes with its whole tree) · `y` yank url · `A` add a folder here (`a/b/c` makes each level) · `I` import a browser's export into a folder of its own · `/` filter
 - **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `C` clear · `/` filter
 - **Downloads** — `Enter` open the file · `o` source in a new tab · `x` remove (a running download is stopped) · `y` yank path · `C` clear the finished ones · `/` filter
 - **Settings** — `Enter` edit a text setting (the value in force is on offer: `Tab` takes it, `Backspace` clears it, an emptied line means the default) or flip a switch
