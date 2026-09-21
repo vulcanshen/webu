@@ -89,6 +89,9 @@ var (
 	glyphSettings = string(rune(0xf0493)) // nf-md-cog
 	glyphFolder   = string(rune(0xf024b)) // nf-md-folder — a bookmark folder's row
 	glyphCrumb    = string(rune(0xf0d20)) // nf-md-map_marker_path — a breadcrumb's entry row
+	glyphHeader   = string(rune(0xf06fc)) // nf-md-page_layout_header — a banner's
+	glyphFooter   = string(rune(0xf06fb)) // nf-md-page_layout_footer — a contentinfo's
+	glyphSidebar  = string(rune(0xf0836)) // nf-md-table_of_contents — a complementary's
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 

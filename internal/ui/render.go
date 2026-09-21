@@ -227,27 +227,24 @@ func (r *renderer) landmarkRule(n *ir.Node, id int, folded bool) {
 	}})
 }
 
-// navRow is a navigation's one row: an entry, not a region (ux.md
-// §A.0.K, 2026-09-21). A bar at the left and, on a ground of its own the
-// way a quote is set, where the user is in it — the tab they are on, or
-// a breadcrumb's last crumb — not the landmark's name. What it holds is
-// its item operations, not items: a row of links invites walking
-// sideways, and a terminal has no width to spare for one. +N says how
-// much is behind the row.
-func (r *renderer) navRow(n *ir.Node, id int) {
-	icon := glyphMenu
-	if n.Breadcrumb {
-		icon = glyphCrumb
-	}
-	label := " " + icon
+// entryRow is the one row a piece of page chrome gets — a banner, a
+// navigation or breadcrumb, a search, a sidebar, a footer: an entry, not
+// a region (ux.md §A.0.K, 2026-09-21). A bar at the left and, on a
+// ground of its own the way a quote is set, a glyph for its kind and a
+// word for where the user is in it, never the landmark's role. What it
+// holds is its item operations, not items: a row of links invites
+// walking sideways, and a terminal has no width to spare for one. +N
+// says how much is behind the row.
+func (r *renderer) entryRow(n *ir.Node, id int) {
+	label := " " + entryIcon(n)
 	pageURL := ""
 	if r.root != nil {
 		pageURL = r.root.URL
 	}
-	if cur := entryCurrent(n, pageURL); cur != "" {
-		label += " " + cur
+	if word := entryLabel(n, pageURL); word != "" {
+		label += " " + word
 	}
-	if c := len(navTargets(n)); c > 0 {
+	if c := len(entryTargets(n)); c > 0 {
 		label += " +" + itoa(c)
 	}
 	label = truncate(label+" ", max(1, r.width-2))
@@ -257,22 +254,99 @@ func (r *renderer) navRow(n *ir.Node, id int) {
 	}})
 }
 
-// navTarget is one thing a navigation opens — a link or a button — and
-// how deep in its lists it sits, for the menu's indent.
-type navTarget struct {
+// isEntry says whether a landmark is page chrome, drawn as an entry row.
+// main, article, region and form are the page itself and stay regions.
+func isEntry(n *ir.Node) bool {
+	if n.Kind != ir.Landmark {
+		return false
+	}
+	switch n.Role {
+	case "banner", "navigation", "search", "complementary", "contentinfo":
+		return true
+	}
+	return false
+}
+
+// entryIcon is the glyph that tells one kind of chrome from another.
+func entryIcon(n *ir.Node) string {
+	switch {
+	case n.Breadcrumb:
+		return glyphCrumb
+	case n.Role == "navigation":
+		return glyphMenu
+	case n.Role == "banner":
+		return glyphHeader
+	case n.Role == "search":
+		return glyphSearch
+	case n.Role == "complementary":
+		return glyphSidebar
+	}
+	return glyphFooter
+}
+
+// entryLabel is the word on an entry row: where the user is in a
+// navigation (entryCurrent); the site, for a banner — its first link
+// that is not a skip link, the logo's name; the box, for a search; else
+// the landmark's own name, else its first heading, else nothing — the
+// glyph says what it is.
+func entryLabel(n *ir.Node, pageURL string) string {
+	switch n.Role {
+	case "navigation":
+		return entryCurrent(n, pageURL)
+	case "banner":
+		var logo *ir.Node
+		n.Walk(func(x *ir.Node) bool {
+			if logo == nil && x.Kind == ir.Link && oneLine(x.Text()) != "" && !strings.Contains(x.URL, "#") {
+				logo = x
+			}
+			return logo == nil
+		})
+		if logo != nil {
+			return oneLine(logo.Text())
+		}
+	case "search":
+		if f := firstOf(n, ir.Textbox); f != nil && oneLine(f.Name) != "" {
+			return oneLine(f.Name)
+		}
+	}
+	if name := oneLine(n.Name); name != "" {
+		return name
+	}
+	if h := firstOf(n, ir.Heading); h != nil {
+		return oneLine(h.Text())
+	}
+	return ""
+}
+
+// firstOf is the first node of kind under n, in reading order.
+func firstOf(n *ir.Node, kind ir.Kind) *ir.Node {
+	var found *ir.Node
+	n.Walk(func(x *ir.Node) bool {
+		if found == nil && x != n && x.Kind == kind {
+			found = x
+		}
+		return found == nil
+	})
+	return found
+}
+
+// entryTarget is one thing an entry opens — a link, a button, a field, a
+// check box, a select — and how deep in its lists it sits, for the
+// menu's indent.
+type entryTarget struct {
 	node  *ir.Node
 	depth int
 }
 
-// navTargets is what a navigation holds, in reading order.
-func navTargets(n *ir.Node) []navTarget {
-	var out []navTarget
+// entryTargets is what an entry holds, in reading order.
+func entryTargets(n *ir.Node) []entryTarget {
+	var out []entryTarget
 	var walk func(x *ir.Node, lists int)
 	walk = func(x *ir.Node, lists int) {
 		for _, c := range x.Children {
 			switch c.Kind {
-			case ir.Link, ir.Button:
-				out = append(out, navTarget{c, max(0, lists-1)})
+			case ir.Link, ir.Button, ir.Textbox, ir.Check, ir.Combobox:
+				out = append(out, entryTarget{c, max(0, lists-1)})
 			case ir.List:
 				walk(c, lists+1)
 			default:
@@ -311,7 +385,7 @@ func entryCurrent(n *ir.Node, pageURL string) string {
 		if last != nil {
 			return oneLine(last.Text())
 		}
-	} else if best := urlMatch(navTargets(n), pageURL); best != nil {
+	} else if best := urlMatch(entryTargets(n), pageURL); best != nil {
 		return oneLine(best.Text())
 	}
 	return oneLine(n.Name)
@@ -319,7 +393,7 @@ func entryCurrent(n *ir.Node, pageURL string) string {
 
 // urlMatch is the target whose URL is the page's, else the longest whose
 // URL is a path prefix of it — /docs for a page at /docs/api — else nil.
-func urlMatch(ts []navTarget, pageURL string) *ir.Node {
+func urlMatch(ts []entryTarget, pageURL string) *ir.Node {
 	norm := func(u string) string {
 		if i := strings.Index(u, "#"); i >= 0 {
 			u = u[:i]
@@ -394,10 +468,10 @@ func (r *renderer) block(n *ir.Node, depth int) {
 	case ir.Landmark:
 		r.flush()
 		r.markNext = append(r.markNext, n)
-		if n.Role == "navigation" {
-			// An entry, not a region: one row, and what it holds is its
+		if isEntry(n) {
+			// Chrome, not content: one row, and what it holds is its
 			// item operations, not items (ux.md §A.0.K, 2026-09-21).
-			r.navRow(n, r.newItem(n))
+			r.entryRow(n, r.newItem(n))
 			r.gap = true
 			return
 		}
