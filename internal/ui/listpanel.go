@@ -340,10 +340,9 @@ func (m listPanel) panel(outerW, outerH int) string {
 	innerW, innerH := outerW-2, outerH-2
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)
-	// The title column is blue (2026-09-21): a bookmark's name, a visit's
-	// title, a file, a setting's key — the thing each row is — set apart
-	// from the URL, path or value that follows it in dim.
-	ttl := lipgloss.NewStyle().Foreground(focusColor)
+	// The column header is blue (2026-09-21): chrome naming the columns,
+	// like the footer naming its keys, and the same band as both.
+	hdr := lipgloss.NewStyle().Foreground(focusColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)
 	frame := func(rows []string) string {
@@ -371,7 +370,7 @@ func (m listPanel) panel(outerW, outerH int) string {
 		titleW = max(titleW, dispW(oneLine(nameOr(e.title, e.url)))+2*e.depth)
 	}
 	titleW = min(titleW, innerW/2)
-	rows = append(rows, dim.Render(padRight(" "+padRight(h1, titleW)+"  "+h2, innerW)))
+	rows = append(rows, hdr.Render(padRight(" "+padRight(h1, titleW)+"  "+h2, innerW)))
 	if len(vis) == 0 {
 		fact, hint := m.emptyState()
 		if m.filter != "" {
@@ -412,7 +411,7 @@ func (m listPanel) panel(outerW, outerH int) string {
 		if r == m.cursor {
 			rows = append(rows, cur.Render(padRight(" "+title+"  "+meta, innerW)))
 		} else {
-			rows = append(rows, ttl.Render(" "+title)+dim.Render(padRight("  "+meta, innerW-titleW-1)))
+			rows = append(rows, txt.Render(" "+title)+dim.Render(padRight("  "+meta, innerW-titleW-1)))
 		}
 	}
 	return frame(rows)
