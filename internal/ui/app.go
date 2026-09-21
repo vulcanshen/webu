@@ -1125,7 +1125,9 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 		}
 		switch {
 		case e.isFolder:
-			return m, m.deleteFolder(e.title)
+			// The path, not the row's own name: "sub" is "dev/sub" (a folder
+			// inside another could not be deleted until 2026-09-21).
+			return m, m.deleteFolder(e.folder)
 		case m.lists.kind == listDownloads:
 			// Not destructive: the file stays; only the row goes (and a
 			// download still running is stopped, which is what x on it says).
