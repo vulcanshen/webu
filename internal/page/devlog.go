@@ -50,6 +50,14 @@ type ConsoleEntry struct {
 	Text  string
 	At    time.Time
 	Where string // url:line when known
+	// Detail is the whole of an object — every own property, one per
+	// line — for the entry's detail; empty means Text is all there is.
+	// Text keeps the console's one-line preview, which ends in … the way
+	// Chrome's does (2026-09-21).
+	Detail string
+	// Seq numbers the entries of one log, so a detail fetched after the
+	// entry was logged finds its way back to it.
+	Seq int
 }
 
 // DevLog is a tab's record. Zero value is ready.
@@ -58,6 +66,7 @@ type DevLog struct {
 	net     []*NetEntry
 	byID    map[network.RequestID]*NetEntry
 	console []ConsoleEntry
+	seq     int
 }
 
 // Net is a copy of the requests, oldest first.
@@ -102,10 +111,26 @@ func (l *DevLog) addNet(e *NetEntry) {
 	}
 }
 
-func (l *DevLog) addConsole(e ConsoleEntry) {
+func (l *DevLog) addConsole(e ConsoleEntry) int {
+	l.seq++
+	e.Seq = l.seq
 	l.console = append(l.console, e)
 	if len(l.console) > DevLogCap {
 		l.console = l.console[1:]
+	}
+	return e.Seq
+}
+
+// SetDetail attaches the whole of an object to the entry it was logged
+// with, once it has been fetched.
+func (l *DevLog) SetDetail(seq int, detail string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for i := range l.console {
+		if l.console[i].Seq == seq {
+			l.console[i].Detail = detail
+			return
+		}
 	}
 }
 
@@ -145,10 +170,11 @@ func Eval(ctx context.Context, expr string) ConsoleEntry {
 			return nil
 		}
 		text := resultText(obj)
-		if obj != nil && obj.ObjectID != "" && obj.Type == runtime.TypeObject && obj.Subtype != runtime.SubtypeNull {
-			text = objectText(ctx, obj)
-		}
 		out = ConsoleEntry{Level: "result", Text: text}
+		if obj != nil && obj.ObjectID != "" && obj.Type == runtime.TypeObject && obj.Subtype != runtime.SubtypeNull {
+			out.Text = objectText(ctx, obj)
+			out.Detail = objectDetail(ctx, obj)
+		}
 		return nil
 	})
 	if err != nil {
@@ -175,6 +201,64 @@ func objectText(ctx context.Context, o *runtime.RemoteObject) string {
 		}
 	}
 	return previewText(o)
+}
+
+// listProps runs in the page against an object and lists its own
+// properties, getters read, each value described the short way the
+// console does (a string quoted, a node as its tag, anything else as its
+// class). It is the expanded view of Chrome's console, as text.
+const listProps = `function() {
+	const d = v => {
+		if (v === null) return 'null';
+		const t = typeof v;
+		if (t === 'string') return JSON.stringify(v);
+		if (t === 'undefined' || t === 'number' || t === 'boolean' || t === 'bigint') return String(v);
+		if (t === 'symbol') return v.toString();
+		if (t === 'function') return 'ƒ ' + (v.name || '') + '()';
+		if (Array.isArray(v)) return 'Array(' + v.length + ')';
+		if (typeof Node !== 'undefined' && v instanceof Node) return v.nodeType === 9 ? '#document' : (v.tagName ? v.tagName.toLowerCase() : v.nodeName);
+		const c = v.constructor && v.constructor.name;
+		return c || 'Object';
+	};
+	const out = [];
+	let names;
+	try { names = Object.getOwnPropertyNames(this); } catch (e) { return out; }
+	for (const k of names) {
+		if (out.length >= 3000) { out.push(['…', '']); break; }
+		let v;
+		try { v = this[k]; } catch (e) { out.push([k, '(inaccessible)']); continue; }
+		out.push([k, d(v)]);
+	}
+	return out;
+}`
+
+// objectDetail is the whole of an object, for its detail: the class on
+// the first line, then every own property. Empty when nothing could be
+// listed — the preview is all there is then.
+func objectDetail(ctx context.Context, o *runtime.RemoteObject) string {
+	res, _, err := runtime.CallFunctionOn(listProps).WithObjectID(o.ObjectID).WithReturnByValue(true).Do(ctx)
+	if err != nil || res == nil || len(res.Value) == 0 {
+		return ""
+	}
+	var props [][]string
+	if json.Unmarshal(res.Value, &props) != nil || len(props) == 0 {
+		return ""
+	}
+	head := o.Description
+	if o.Preview != nil && o.Preview.Description != "" {
+		head = o.Preview.Description
+	}
+	if head == "" {
+		head = o.ClassName
+	}
+	lines := make([]string, 0, len(props)+2)
+	lines = append(lines, head+" {")
+	for _, p := range props {
+		if len(p) == 2 {
+			lines = append(lines, "  "+p[0]+": "+p[1])
+		}
+	}
+	return strings.Join(append(lines, "}"), "\n")
 }
 
 // previewText is the preview Chromium attaches to an object: its
@@ -327,8 +411,33 @@ func Observe(ctx context.Context, l *DevLog) {
 				entry.Where = shortURL(f.URL) + ":" + itoa(int(f.LineNumber)+1)
 			}
 			l.mu.Lock()
-			l.addConsole(entry)
+			seq := l.addConsole(entry)
 			l.mu.Unlock()
+			// The whole of each object argument, fetched off the listener
+			// (a CDP call from inside one would deadlock) and attached to
+			// the entry when it lands.
+			var objs []*runtime.RemoteObject
+			for _, a := range e.Args {
+				if a != nil && a.ObjectID != "" && a.Type == runtime.TypeObject && a.Subtype != runtime.SubtypeNull {
+					objs = append(objs, a)
+				}
+			}
+			if len(objs) > 0 {
+				go func() {
+					var details []string
+					_ = run(ctx, func(ctx context.Context) error {
+						for _, o := range objs {
+							if d := objectDetail(ctx, o); d != "" {
+								details = append(details, d)
+							}
+						}
+						return nil
+					})
+					if len(details) > 0 {
+						l.SetDetail(seq, strings.Join(details, "\n\n"))
+					}
+				}()
+			}
 		case *runtime.EventExceptionThrown:
 			d := e.ExceptionDetails
 			if d == nil {
