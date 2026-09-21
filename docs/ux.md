@@ -14,14 +14,14 @@
 | Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
 |---|---|---|---|
 | **Contextual** | `Space` | footer 常駐 `space menu` | 當前 focus 的 contextual 動作 100% 在 Space menu 內。`[2]` 的 item operation **只走 Space menu、沒有 letter hotkey**（決定 2026-09-20：小寫 hotkey 造成困惑，先不做） |
-| **Non-contextual** | `?` | footer 常駐 `? help` | 全域動作 100% 在 help popup 內；header 列是三個全域 popup（Bookmarks / History / Downloads）的常駐 ambient 揭露（Layer 2；修訂 2026-09-20：原本是 `[1]` Places 面板，內容永遠三項、做成面板是浪費——併入最上列，Tabs 與 Page 並列） |
+| **Non-contextual** | `?` | footer 常駐 `? help` | 全域動作 100% 在 help popup 內；header 列是五個 screen（Web / Bookmarks / History / Downloads / Settings）的 chip 列，全域字母切換（Layer 2；修訂 2026-09-21：三個 list 從 popup 改成佔滿整個 body 的 screen，sshu 的 tab 作法，`[W]eb` `[S]ettings` 補上；2026-09-20 先從 `[1]` Places 面板併進 header） |
 
 ### §A.0.K core-key 語意
 
 | Core-key | 一般模式 | 選取模式（§1） | 對應通用 |
 |---|---|---|---|
 | `Tab` | `[1]` ↔ `[2]`；`1`–`2` 直達（修訂 2026-09-20：只剩兩個面板，header 不是面板、Tab 不停） | 同 | §4.1 |
-| `Enter` | **開游標所在 item 的 item operation 選單**，第一列是主要動作，再按 Enter 執行（修訂 2026-09-20，見下） | 離開模式、對字元游標所屬的節點開同一個選單 | §4.1 |
+| `Enter` | **開游標所在 item 的 item operation 選單**，第一列是主要動作，再按 Enter 執行（修訂 2026-09-20，見下）；landmark 的標題列例外：Enter 直接展開 / 收合（修訂 2026-09-21，一個動作不開選單） | 離開模式、對字元游標所屬的節點開同一個選單 | §4.1 |
 | `Esc` | 關最上層浮層；沒有浮層時**無作用**（上一頁是 `P`，Esc 不兼職） | 打字中：取消搜尋輸入；否則離開選取模式 | §4.3 |
 | `Space` | **滑鼠右鍵 context menu**；再按關閉；在浮層上按 = 關掉它 | 熱鍵 cheatsheet，按列出的鍵即執行並關閉 | §A.1 |
 | `?` | help；再按關閉；可疊在任何浮層上 | 同 | §A.2 |
@@ -47,7 +47,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 `panel operation`（kbu / filu / sshu 同字串）；只有一個 region 就保持扁平；一列的 menu
 不開、直接執行（sshu §11.16）。列的形狀 `[X]label` + 靠右說明，有 hotkey 才加 bracket。
 
-**header**：`[B]ookmarks` `[H]istory` `[D]ownloads` 三個 chip，各自一個全域鍵開 popup；不是面板，沒有 cursor、Tab 不停在上面、沒有 Space menu（修訂 2026-09-20，sshu 最上列 `[M]anage / [F]ile transfer / [S]SH` 的形狀）。
+**header**：`[W]eb` `[B]ookmarks` `[H]istory` `[D]ownloads` `[S]ettings` 五個 chip，各自一個全域鍵切換 screen（修訂 2026-09-21：list 從 popup 改成 screen，佔滿 header 與 footer 之間，sshu 最上列 `[M]anage / [F]ile transfer / [S]SH` 的作法；`[W]eb` 是左右並列的 Tabs / Page）。header 本身不是面板、沒有 cursor、Tab 不停在上面；每個 list screen 有自己的 Space menu（item / panel 兩 region，鍵與直接按的同一組）。Esc 在 screen 上：先清 `/` 過濾，再回 `[W]eb`。
 
 **`[1]` Tabs**
 
@@ -74,9 +74,9 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 
 **`[2]` 一般模式，panel operation**：`[R] Reload`、`[T]ab`（新分頁，與 `[1]` 的 `[T]` 一模一樣；修訂 2026-09-20）、`[P] Previous`、`[N] Next`、
 `[/] Search`（進 visual mode）、`[V] Visual mode`（修訂 2026-09-20：原 `[V] View source` 搬進 DevTools › Source，
-`V` 讓給 visual mode——panel operation 一律大寫，小寫 `v` 在這一區很突兀）、`UR[L]`（修訂 2026-09-20：原 `[U]`，改成對應 Chrome 的 Cmd+L；全域鍵，任何面板都能按，見 §7）、`[A]dd bookmark`（修訂 2026-09-20：原 `[A] Add to…` picker 二選一，Shortcuts 拿掉後只剩 Bookmarks，直接加）、`[O] Outline`、`[I]nspect`（DevTools；修訂 2026-09-20：原 `[D]`，`D` 讓給 header 的 Downloads，`I` 對應 Chrome 的 Cmd+Opt+I）、
-`[Z] Zoom`、`[Y] Yank page url`、`[W] Close`（關掉 `[2]` 正在顯示的分頁；
-`[1]` 的小寫 `w` 關的是游標列，同字依 focus 面板不同義，修訂 2026-09-20）。
+`V` 讓給 visual mode——panel operation 一律大寫，小寫 `v` 在這一區很突兀）、`[L]ocation`（修訂 2026-09-21：原 `UR[L]`，label 改 Location、hint 改「a URL or a search; this page's own is offered」；2026-09-20 從 `[U]` 改來，對應 Chrome 的 Cmd+L；全域鍵，任何面板都能按，見 §7）、`[A]dd bookmark`（修訂 2026-09-20：原 `[A] Add to…` picker 二選一，Shortcuts 拿掉後只剩 Bookmarks，直接加）、`[O] Outline`、`[I]nspect`（DevTools；修訂 2026-09-20：原 `[D]`，`D` 讓給 header 的 Downloads，`I` 對應 Chrome 的 Cmd+Opt+I）、
+`[Z] Zoom`、`[Y] Yank page url`、`[C]lose`（關掉 `[2]` 正在顯示的分頁；`[1]` 的小寫 `w` 關的是游標列；
+修訂 2026-09-21：原 `[W] Close`，`W` 讓給 header 的 Web）。
 
 Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡，不在 header、不在 §A.2
 （決定 2026-09-20）。使用者不用切面板，體驗留在頁面上。
@@ -84,13 +84,14 @@ Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡
 **`[2]` 選取模式**：cheatsheet popup，列 `hjkl`、`w/e/b`、`0/$`、`u/d`、`gg/G`、`v/V`、
 `y`、`/`、`n/N`、`Esc`。**按任一列出的鍵即執行並關閉 popup**（一步揭露，§A.0）。
 
-**popup 內部**
+**screen 與 popup 內部**
 
-| popup | item operation | panel operation |
+| screen / popup | item operation | panel operation |
 |---|---|---|
-| Bookmarks | Enter 開啟、`[o] Open in new tab`、`[e] Edit`（form）、`[x] Delete`（confirm）、`[m] Move`（目錄 picker）、`[y] Yank` | `[A] Add` 目前頁、`[F] Folder` 新目錄、`[/]` 搜尋 |
-| Downloads | Enter 開檔（系統開啟器；進行中 → toast）、`[o]` 來源 URL 開新分頁、`[x] Remove`（進行中先取消；檔案不動）、`[y] Yank path`（未落地時 yank 來源 URL） | `[C] Clear` 已完成 / 取消的 |
-| History | Enter、`[o]`、`[x] Delete` 該筆 | `[C] Clear`（confirm；唯一清除入口，歷史無限保留） |
+| Bookmarks（screen） | Enter 開**新分頁**（修訂 2026-09-21：一律新分頁、不佔原分頁，`[o]` 因此拿掉）、`[e] Edit`（form）、`[x] Delete`（confirm）、`[m] Move`（目錄 picker）、`[y] Yank` | `[A] Add` 目前頁、`[F] Folder` 新目錄、`[/]` 搜尋 |
+| Downloads（screen） | Enter 開檔（系統開啟器；進行中 → toast）、`[o]` 來源 URL 開新分頁、`[x] Remove`（進行中先取消；檔案不動）、`[y] Yank path`（未落地時 yank 來源 URL） | `[C] Clear` 已完成 / 取消的 |
+| History（screen） | Enter 開**新分頁**（修訂 2026-09-21）、`[x] Delete` 該筆、`[y] Yank` | `[C] Clear`（confirm；唯一清除入口，歷史無限保留） |
+| Settings（screen） | Enter → input popup 改值（空 = 預設）→ 寫回 `config.yaml`、立即生效；目前只有 `download_dir`（2026-09-21） | — |
 | DevTools › Storage | `[x] Delete`、`[y] Yank value` | `[C] Clear site data`（confirm）、`[/]` 過濾 |
 | DevTools › Network | Enter detail | `[C] Clear`、`[/]` |
 | DevTools › Console | Enter：該筆的完整內容（detail） | `[i] Insert`：eval 輸入列（REPL：Enter 執行、輸入列留著、Esc 結束；`> 運算式` / `< 結果` 進清單）、`[C] Clear`、`[/]` |
@@ -102,9 +103,11 @@ delete 用 `x` 不用 `d`：`d` 是半頁（sshu `[x] Delete`）。
 
 | 全域動作 | 鍵 | 揭露 |
 |---|---|---|
-| Bookmarks popup | `B` | header chip + help |
-| History popup | `H` | header chip + help |
-| Downloads popup | `D` | header chip + help（修訂 2026-09-20：Shortcuts 與 `S` 拿掉、Downloads 補上） |
+| Web screen | `W` | header chip + help（修訂 2026-09-21） |
+| Bookmarks screen | `B` | header chip + help |
+| History screen | `H` | header chip + help |
+| Downloads screen | `D` | header chip + help（修訂 2026-09-20：Shortcuts 與 `S` 拿掉、Downloads 補上） |
+| Settings screen | `S` | header chip + help（修訂 2026-09-21：目前只有 `download_dir`） |
 | 上一頁 / 下一頁 | `P` / `N` | help |
 | 切面板 | `Tab`、`1`–`2` | footer + help |
 | Visual mode（選取模式） | `V`（從 `[1]` 按 → 先把焦點移到 `[2]` 再進模式）；`/` 亦可 | help |
@@ -226,18 +229,19 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `B` `H` `D` `P` `N` `L`、`q`、`?`、`/`、`V`、`Tab`、`1`–`2` |
+| 全域 | `W` `B` `H` `D` `S`、`q`、`?`；只在 `[W]eb`：`P` `N` `L`、`/`、`V`、`Tab`、`1`–`2` |
 | `[1]` item | `w` `c` `r` `y` |
 | `[1]` panel | `T` `X` `U` |
 | `[2]` item | **無**（menu-only） |
-| `[2]` panel | `R` `T` `A` `O` `I` `Z` `Y` `W`（`V` 是全域的 visual mode，`L` 是全域的 go to URL；`T` 與 `[1]` 同義） |
-| Bookmarks popup | `o` `e` `x` `m` `y` / `A` `F` `/` |
-| Downloads popup | `o` `x` `y` / `C` |
-| History popup | `o` `x` / `C` |
+| `[2]` panel | `R` `T` `A` `O` `I` `Z` `Y` `C`（`V` 是全域的 visual mode，`L` 是全域的 location；`T` 與 `[1]` 同義；`C` 原是 `W`，修訂 2026-09-21） |
+| Bookmarks screen | `x` `y` / `A` `/`（`e` `m` `F` 待做） |
+| Downloads screen | `o` `x` `y` / `C` `/` |
+| History screen | `x` `y` / `C` `/` |
+| Settings screen | Enter |
 | DevTools | `x` `y` / `C` `/`；`h/l` 切分頁 |
 | 選取模式 | `hjkl` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
 
-撞字檢查：全域 `B H D P N L` 與各面板大寫 `R U A O I Z V Y W T X C F` 無重疊。`D` 與導覽 `d` 只差大小寫，
+撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
 sshu 的 `[D]isconnect` 同例；`L` 與導覽 `l`（沿列右移）同例；`I` 與 DevTools Console 的 `i`（insert）在不同 surface。
 DevTools 原本的 `D` 讓給 header 的 Downloads（修訂 2026-09-20），改成 `[I]nspect`。`U` 只剩 `[1]` 的 undo close
 （修訂 2026-09-20：原本 `[2]` 也用 `U` 開 goto、同字依面板不同義；goto 改成全域 `L` 後不再同字）。Bookmarks 的新目錄用 `F`
@@ -274,7 +278,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 | 頁面載入中 | `[2]` 邊框 hint 顯示 loading；`[1]` 該列掛 live glyph。**修訂（2026-09-20，實機試用後）**：從按下鍵那一刻起 `[2]` 整頁變 dim、URL 列的圖示換成 live glyph，到新頁面落地為止；期間 `P` / `N` / `R` / item 的 click 一律吞掉（debounce）——終端機使用者按鍵很快，連按 `PPP` 只能算一次，不能一口氣退好幾頁。沒有上一頁時 toast 說「nothing to go back to」、頁面不動 |
 | 即時更新（SSE / WebSocket） | 重畫不退階（通用 §7.2）；cursor 靠 backendDOMNodeId 留位，失敗用指紋（function.md §4） |
 | `target=_blank` | 新分頁加到 `[1]` 尾端並**自動切換** |
-| 任何會換頁的動作（點 link、goto 確認、Bookmarks / History 開啟、`[1]` Enter 切分頁） | context shift：Space menu 清掉；`[2]` 第一列 URL 更新；item 游標回到 main 第一個 item；**焦點一律回 `[2]`** |
+| 任何會換頁的動作（點 link、goto 確認、Bookmarks / History 開啟——一律開新分頁（修訂 2026-09-21）、`[1]` Enter 切分頁） | context shift：Space menu 清掉；screen 回 `[W]eb`；`[2]` 第一列 URL 更新；item 游標回到 main 第一個 item；**焦點一律回 `[2]`** |
 | 歷史記錄時機 | `Page.loadEventFired` 後的最終 URL + 標題；SPA 的 `Page.navigatedWithinDocument` 也記；`about:blank` 與錯誤頁不記 |
 | 離開 | 存 session（所有分頁 URL）→ 殺 Chromium（u-family 子行程慣例） |
 | 啟動 | 還原分頁但**不預先載入**，切到才載；未載入的分頁在 `[1]` 以 dim 顯示，切到時 `[2]` 先是 loading |
@@ -284,7 +288,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 
 ## §7 goto popup
 
-`L`（全域，對應 Chrome 的 Cmd+L；或 `[1]` / `[2]` 的 `T`）開 goto popup，filu goto picker 形式：
+`L`（`[L]ocation`，全域，對應 Chrome 的 Cmd+L；或 `[1]` / `[2]` 的 `T`）開 goto popup（title「Location」），filu goto picker 形式：
 
 0. 開啟時輸入列是空的，以 dim 帶出目前分頁的 URL 當 placeholder（修訂 2026-09-20）：
    `Tab` 把它接進輸入列編輯、`Backspace` 整個清掉、直接打字則從頭來。
@@ -311,16 +315,16 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 ## 附錄 — hotkey 全表
 
 ### Core key（跨 surface 不變）
-`Tab` 切面板 · `Enter` click · `Esc` 關浮層 / 離開選取模式 · `Space` menu · `?` help
+`Tab` 切面板 · `Enter` click · `Esc` 關浮層 / 離開選取模式 / screen 回 Web · `Space` menu · `?` help
 
 ### 全域
-`B` Bookmarks · `H` History · `D` Downloads · `P` 上一頁 · `N` 下一頁 · `L` go to URL · `q` quit · `/` 搜尋（進 visual mode）· `V` visual mode
+`W` Web · `B` Bookmarks · `H` History · `D` Downloads · `S` Settings · `P` 上一頁 · `N` 下一頁 · `L` location · `q` quit · `/` 搜尋（進 visual mode）· `V` visual mode
 
 ### `[1]` Tabs
 `w` close · `c` clone · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
 
 ### `[2]` Page
-`R` reload · `T` new tab · `A` add bookmark · `O` outline · `I` inspect（DevTools：storage / network / console / source）· `Z` zoom · `Y` yank page url · `W` close this tab
+`R` reload · `T` new tab · `A` add bookmark · `O` outline · `I` inspect（DevTools：network / storage / console / source）· `Z` zoom · `Y` yank page url · `C` close this tab
 
 ### 導覽（跨 surface 同義）
 `j/k` · `u/d` · `gg/G` · `h/l`（DevTools 分頁）· `1-2`

@@ -14,7 +14,7 @@
 ### 1.1 Grid
 
 ```
- [B]ookmarks  [H]istory  [D]ownloads                       1 download in flight   ← header，chip 列
+ [W]eb  [B]ookmarks  [H]istory  [D]ownloads  [S]ettings    1 download in flight   ← header，chip 列
 ────────────────────────────────────────────────────────────────────────────────  ← 分隔線；下載中兼進度條
 ╭ [1] Tabs ────────────────────╮╭ [2] Page ─────────────────────────────────────╮
 │ ▸ chromedp/chromedp · GitHub ││ 󰖟 github.com/chromedp/chromedp    ← 第一列 URL │
@@ -30,8 +30,8 @@
 ```
 
 兩個面板並列，編號左到右（kbu / filu 慣例）。頂部**一列 header**（修訂 2026-09-20，sshu 最上列
-`[M]anage / [F]ile transfer / [S]SH` 的 chip chain）：`[B]ookmarks` `[H]istory` `[D]ownloads` 三個全域 popup 的常駐揭露，
-開著的那個 chip 點亮；右端是狀態槽，有下載進行中時寫 `N download(s) in flight`（live 綠）。原本的 `[1]` Places 面板
+`[M]anage / [F]ile transfer / [S]SH` 的 chip chain）：`[W]eb` `[B]ookmarks` `[H]istory` `[D]ownloads` `[S]ettings` 五個 screen 的 chip，
+目前的那個點亮（修訂 2026-09-21：list 從 popup 改成 screen——`[W]eb` 是下圖左右並列的 Tabs / Page，其他四個各佔滿整個 body）；右端是狀態槽，有下載進行中時寫 `N download(s) in flight`（live 綠）。原本的 `[1]` Places 面板
 內容永遠是三項、做成面板是浪費，併進 header 之後 Tabs 與 Page 並列。URL 收進 `[2]` 內部第一列（filu breadcrumb / sshu cwd 的做法）。
 
 ### 1.2 尺寸規則
@@ -51,18 +51,26 @@
 
 ### header — 全域動作的常駐揭露
 
-一列 chip chain：**`[B]ookmarks`、`[H]istory`、`[D]ownloads`**（修訂 2026-09-20：原本是 `[1]` Places 面板，
+一列 chip chain：**`[W]eb`、`[B]ookmarks`、`[H]istory`、`[D]ownloads`、`[S]ettings`**（修訂 2026-09-20：原本是 `[1]` Places 面板，
 三列 Bookmarks / Shortcuts / History。內容永遠三項、做成面板是浪費，改成 sshu 最上列
 `[M]anage / [F]ile transfer / [S]SH` 那種 chip 列。Shortcuts 一併拿掉——有 Bookmarks、goto popup 又帶目前 URL
-當 placeholder，它沒有自己的理由；Downloads 補上，就是原本排到 v2 的下載清單）。每個 chip 一個全域鍵開 popup（§3），
-**`[2]` 不換內容**；開著的 chip 點亮（sshu active tab 的畫法），沒有 cursor、Tab 不停在這一列。
+當 placeholder，它沒有自己的理由；Downloads 補上，就是原本排到 v2 的下載清單）。每個 chip 一個全域鍵切換 screen（修訂 2026-09-21：原本 B / H / D 開 popup，
+現在各自是佔滿 body 的 screen，`[W]eb` 回到 Tabs / Page，`[S]ettings` 新增）；目前的 chip 點亮（sshu active tab 的畫法），header 沒有 cursor、Tab 不停在這一列。
 右端是狀態槽：有下載進行中時顯示 `N download(s) in flight`（live 綠），否則空。header 下面一列分隔線（sshu `tabRule`），下載中兼作進度條。
 
 Outline 與 DevTools **不在這裡**（決定 2026-09-20）：它們的作用對象是目前頁面，是 contextual
 動作，走 `[2]` 的 Space menu panel operation（`ux.md` §A.1）。使用者體驗留在頁面上、不切面板。
 
-VTP 定位：三個都是 non-contextual 動作（沒有作用對象），依 §A.2 走 `?` 入口 +
+VTP 定位：五個都是 non-contextual 動作（沒有作用對象），依 §A.2 走 `?` 入口 +
 letter hotkey；header 就是 kbu statusbar chip 那種 Layer 2 ambient 揭露。
+
+### list screen — Bookmarks / History / Downloads / Settings
+
+一個面板佔滿 header 與 footer 之間（`listpanel.go`）：title chip = glyph + 名字，邊框 hint 列該 screen 的鍵
+（Enter / `x` / `y` / `A` / `C` / `/` / Esc），Space menu 是同一份（item / panel 兩 region）。
+Enter 開 bookmark / history **一律新分頁**並回 `[W]eb`，不佔原分頁（修訂 2026-09-21）。空狀態走 sshu empty.go 形狀。
+Settings：一列一個 key（目前只有 `download_dir`），Enter → input popup（空 = 預設）→ 寫回 `config.yaml`、立即生效
+（重新 `setDownloadBehavior`）。footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
 
 ### `[1]` — 分頁清單
 
@@ -87,8 +95,9 @@ letter hotkey；header 就是 kbu statusbar chip 那種 Layer 2 ambient 揭露�
 - 第一列：URL（純文字、不可 focus、縮法見 §1.2）；第二列分隔線；之後是 IR 渲染的頁面
 - cursor 只停在 item（互動節點 + heading + landmark 的標題列），文字段落是 item 之間的 flow
 - **Landmark（修訂 2026-09-20）**：每個 landmark 以一列帶名字的細線開頭（`▾ navigation Repository ────`），
-  是 item，Enter → Collapse / Expand。頁面有 `main` 時，`main` 之外、也不在 `main` 裡的 landmark **預設摺疊**
-  （`▸ banner · 14 items`），main 裡的全開；沒有 main 的頁全開。Outline 跳進摺疊的 landmark 會先把它打開
+  是 item，**Enter 直接開合**（修訂 2026-09-21：原本開 item menu 選 Collapse / Expand；Space menu 仍列這兩項）。
+  **全部預設展開**（修訂 2026-09-21：原本有 `main` 時 main 之外的預設摺疊，實機看了像頁面壞掉）；收合的畫成
+  `▸ banner · 14 items`，Outline 跳進摺疊的 landmark 會先把它打開
 - **導覽清單一行流式**：navigation 裡、每項都短的 list 畫成 `Platform · Solutions · Resources` 一行折行
 - **文字欄寬上限**：段落折行寬度 = min(面板寬, `config.yaml` 的 `measure`，預設 100)；表格、code、分隔線仍用整個面板寬
 - **非 HTML 的回應**（修訂 2026-09-20）：JSON / 純文字 / XML / CSV 等依 `document.contentType` 整份畫成一個 code block，
@@ -101,19 +110,20 @@ letter hotkey；header 就是 kbu statusbar chip 那種 Layer 2 ambient 揭露�
 
 ## §3 Popup
 
-五個 popup：三個由 header 開（Bookmarks / History / Downloads）、兩個由 `[2]` 的 Space menu
-panel operation 開（Outline / DevTools）；加上既有的 Space menu / help / confirm / input / form / toast。
+兩個 popup 由 `[2]` 的 Space menu panel operation 開（Outline / DevTools；修訂 2026-09-21：Bookmarks / History /
+Downloads 不再是 popup，是 header 的 screen，見 §2）；加上既有的 Space menu / help / confirm / input / form / toast。
 全部走 §6 Popup Convention：一個 popup 一個檔一個 PopupAnimator、title = glyph + 文字、
 hint 嵌下邊框、`Esc` 只在一處解析。
 
-### 3.1 五個 popup
+### 3.1 screen 與 popup
 
 | Popup | 類型 | 內容 | item operation | panel operation | 子 popup |
 |---|---|---|---|---|---|
-| **Bookmarks** | menu | 樹狀，目錄可摺疊（filu tree 畫法） | Enter 開啟（目前分頁）、Open in new tab、Edit、Delete、Move、Yank url | Add 目前頁、New folder、`/` 搜尋 | Edit → form；Delete → confirm；Move → 目錄 picker |
-| **Downloads** | menu | 本次 session 的下載，新的在上：檔名 + 右欄是進度（`42%  1.2 MB of 3.0 MB`）、落地路徑、或 cancelled | Enter 用系統開啟器開檔、Open source in new tab、Remove（進行中先 `Browser.cancelDownload`；檔案不動）、Yank path | Clear 已完成 / 取消的 | — |
-| **History** | menu，filu 原生 finder 形式 | 時間倒序、打字即 fuzzy、串流載入 | Enter 開啟、Open in new tab、Delete 該筆 | Clear | Clear → confirm |
-| **DevTools** | viewport，**帶 tab bar**（見 3.2） | Storage / Network / Console 三分頁 | 依分頁 | 依分頁 | Network detail |
+| **Bookmarks**（screen） | 單一面板 | 樹狀，目錄可摺疊（filu tree 畫法） | Enter 開**新分頁**（2026-09-21）、Edit、Delete、Move、Yank url | Add 目前頁、New folder、`/` 搜尋 | Edit → form；Delete → confirm；Move → 目錄 picker |
+| **Downloads**（screen） | 單一面板 | 本次 session 的下載，新的在上：檔名 + 右欄是進度（`42%  1.2 MB of 3.0 MB`）、落地路徑、或 cancelled | Enter 用系統開啟器開檔、Open source in new tab、Remove（進行中先 `Browser.cancelDownload`；檔案不動）、Yank path | Clear 已完成 / 取消的 | — |
+| **History**（screen） | 單一面板，filu 原生 finder 形式 | 時間倒序、打字即 fuzzy、串流載入 | Enter 開**新分頁**、Delete 該筆、Yank url | Clear | Clear → confirm |
+| **Settings**（screen） | 單一面板 | 一列一個 key，目前 `download_dir`（空 = 預設） | Enter → input popup 改值 | — | input |
+| **DevTools** | viewport，**帶 tab bar**（見 3.2） | Network / Storage / Console / Source 四分頁 | 依分頁 | 依分頁 | Network detail |
 | **Outline** | menu | 目前頁的 landmark + heading，縮排表層級 | Enter：`[2]` cursor 跳到該節點 | — | — |
 
 Shortcuts popup 拿掉了（2026-09-20）：它與 Bookmarks 形狀相近、只差「少量常用」這個 mindset，
@@ -125,11 +135,11 @@ reset 子 popup、route tick 與 update。
 ### 3.2 DevTools popup
 
 u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬到 popup title 列，
-`h/l` 切分頁。外殼一檔一 animator，三個分頁各一檔一 sub-model。尺寸接近全螢幕、無 padRow
+`h/l` 切分頁，順序 Network / Storage / Console / Source、開啟停在 Network（修訂 2026-09-21：原 Storage 在前）。外殼一檔一 animator，四個分頁各一檔一 sub-model。尺寸接近全螢幕、無 padRow
 （Network 欄位吃寬度）。
 
 ```
-╭─ 󰙨 DevTools  Storage │ Network │ Console ──────────────────────────────────╮
+╭─ 󰙨 DevTools  Network │ Storage │ Console │ Source ─────────────────────────╮
 │ github.com                                                                 │
 │ cookies · 9                                                                │
 │ ▸ logged_in     yes         .github.com  /  2027-09-20  HttpOnly Secure    │
@@ -144,7 +154,7 @@ u-family 第一個帶 tab bar 的 popup：kbu §8.2 的 starship chip chain 搬�
 |---|---|---|---|---|
 | **Storage** | cookies `Network.getCookies(url)`；local / session `DOMStorage.getDOMStorageItems` | 三個 section 各一張表；cookie 欄位 name、value 截斷、domain、path、expires、flags | Delete 該筆（`Network.deleteCookies` / `DOMStorage.removeDOMStorageItem`）、Yank value、Clear site data（`Storage.clearDataForOrigin`）、`/` 過濾 | **完整** |
 | **Network** | `Network.enable` 後 `requestWillBeSent` / `responseReceived` / `loadingFinished` / `loadingFailed`；WebSocket frame 事件 | 一列一 request：method、status、type、URL 縮短、size、耗時 | Enter → detail 子 popup（headers + body，`Network.getResponseBody`）、`/` 過濾、Clear | 清單 + detail |
-| **Console** | `Runtime.consoleAPICalled`、`Runtime.exceptionThrown`、`Log.entryAdded` | viewport，等級 glyph，warn / error 用 override 色 | Enter → 該筆完整內容（detail 子 popup，訊息折行）、`[i]nsert` → Eval 輸入列（`Runtime.evaluate`，REPL）、`/` 過濾、Clear | **完整**（修訂 2026-09-20：Eval 提前到 v1；Enter 給 detail，因為清單裡長訊息被截斷看不到） |
+| **Console** | `Runtime.consoleAPICalled`、`Runtime.exceptionThrown`、`Log.entryAdded` | viewport，等級 glyph，warn / error 用 override 色 | Enter → 該筆完整內容（detail 子 popup，訊息折行）、`[i]nsert` → Eval 輸入列（`Runtime.evaluate`，REPL；結果以 reference + preview 取回：plain object / array 印 JSON，其餘印 `Window {window: Window, …}`——修訂 2026-09-21，原本 `returnByValue` 讓 `window` 回「Object reference chain is too long」）、`/` 過濾、Clear | **完整**（修訂 2026-09-20：Eval 提前到 v1；Enter 給 detail，因為清單裡長訊息被截斷看不到） |
 | **Source** | `DOM.getOuterHTML` | viewport，行號 | `/` grep（只留含關鍵字的行） | **完整**（修訂 2026-09-20：原本是 `[2]` 的 `[V] View source`，搬進來把 `V` 讓給 visual mode） |
 
 實作註記：
@@ -199,7 +209,7 @@ focus 二態同 kbu §8.4：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─�
 | Panel tab bar | 面板都沒有；tab bar 只出現在 DevTools popup |
 | Border hint | 只承載 tab-contextual 鍵（§6.6.2）。`[2]` 的 loading 狀態、`X of Y` 捲動指示放這裡 |
 
-footer 一列：`space menu   ? help   tab/1-2 panels   q quit`，五個 core-key 全在此揭露。
+footer 一列：`space menu   ? help   tab/1-2 panels   q quit`，五個 core-key 全在此揭露；list screen 上是 `space menu   ? help   esc web   q quit`。
 
 **Nerd Font 是設計、必裝**（filu / sshu §3.1）：role glyph、live glyph、powerline chip 都靠它；README 要講。
 
@@ -211,11 +221,16 @@ footer 一列：`space menu   ? help   tab/1-2 panels   q quit`，五個 core-ke
 |---|---|---|
 | Bookmarks | 巢狀 yaml，目錄 = 巢狀 | `~/.config/webu/bookmarks.yaml` |
 | Downloads 清單 | 只在記憶體、本次 session；檔案本身落在 `download_dir` | — |
-| History | append-only，時間、URL、標題；**無限保留**，History popup 的 Clear 是唯一清除入口 | `~/.config/webu/history` |
-| Session | 離開時寫下所有分頁 URL，下次還原 | `~/.config/webu/session.yaml` |
-| 設定 | v1 key：`download_dir`（預設 `~/Downloads`）、搜尋引擎（若 goto 當搜尋）；proxy v2 | `~/.config/webu/config.yaml` |
+| History | YAML sequence，一次 append 一筆（時間、URL、標題）；**無限保留**，History screen 的 Clear 是唯一清除入口 | `~/.webu/datas/history.yaml` |
+| Session | 離開時寫下所有分頁 URL，下次還原 | `~/.webu/datas/session.yaml` |
+| 下載檔案 | `download_dir`，預設 | `~/.webu/datas/downloads/` |
+| 設定 | v1 key：`download_dir`（預設 `~/.webu/datas/downloads`，Settings screen 可改）、搜尋引擎（若 goto 當搜尋）、`measure`；proxy v2 | `~/.config/webu/config.yaml` |
 | Chromium | 釘死 revision | `~/.cache/webu/chromium-<rev>/` |
-| profile | Chromium user-data-dir | `~/.config/webu/profile/` |
+| profile | Chromium user-data-dir | `~/.webu/datas/profile/` |
+| log | chromedp 的 log（絕不進終端機） | `~/.webu/datas/webu.log` |
+
+分法（修訂 2026-09-21）：**使用者寫的**（設定、書籤）在 `~/.config/webu`；**webu 自己產生的**（歷史、session、下載、profile、log）
+在 `~/.webu/datas`。`WEBU_CONFIG` / `WEBU_DATA` 各自覆寫；原本全部在 `~/.config/webu`，history 是 tab 分隔的純文字。
 
 v2：`webu import chrome-bookmarks`（Chrome 的 Bookmarks 是純 JSON，Chrome 跑著也讀得到，
 與 History 不同）。
@@ -236,8 +251,8 @@ function.md §8 的清單各落到哪個 surface、哪一版：
 | 錯誤頁 | `[2]` 空狀態形狀 | ✓ |
 | session 還原 | 無 UI，啟動時還原 | ✓ |
 | 下載 | toast（開始 / 完成） | ✓ |
-| 歷史 | History popup | ✓ |
-| 書籤 | Bookmarks popup | ✓ |
+| 歷史 | History screen | ✓ |
+| 書籤 | Bookmarks screen | ✓ |
 | Outline | `[2]` Space menu → Outline popup | ✓ |
 | cookie / storage | `[2]` Space menu → DevTools › Storage | ✓ |
 | network log | `[2]` Space menu → DevTools › Network | ✓ 清單 + detail |
@@ -245,7 +260,8 @@ function.md §8 的清單各落到哪個 surface、哪一版：
 | 清除某站資料 | DevTools › Storage 的 Clear site data | ✓ |
 | view source | `[2]` Space menu → DevTools › Source（修訂 2026-09-20） | ✓ |
 | print to PDF / 整頁截圖 | — | **移除**（2026-09-20） |
-| 下載清單 | header `[D]ownloads` popup（修訂 2026-09-20：提前到 v1） | ✓ |
+| 下載清單 | header `[D]ownloads` screen（修訂 2026-09-20：提前到 v1） | ✓ |
+| 設定 | header `[S]ettings` screen，目前 `download_dir`（2026-09-21） | ✓ |
 | 隱私分頁 | — | v2 |
 | proxy | config.yaml 一個 key | v2 |
 | reader mode | — | 看 Outline 夠不夠用 |
@@ -259,7 +275,7 @@ function.md §8 的清單各落到哪個 surface、哪一版：
 |---|---|---|
 | 1 | ~~hotkey 字母~~ | 已在 `ux.md` §4 定案 |
 | 2 | ~~非 URL 輸入~~ | **已決**：當搜尋，DuckDuckGo，`config.yaml` 的 `search_engine` 可換 |
-| 3 | ~~下載目錄~~ | **已決**：預設 `~/Downloads`，`config.yaml` 可改，toast 說存到哪 |
+| 3 | ~~下載目錄~~ | **已決**：預設 `~/.webu/datas/downloads`（修訂 2026-09-21，原 `~/Downloads`），`config.yaml` / Settings screen 可改，toast 說存到哪 |
 | 4 | ~~憑證錯誤~~ | **已決**：第一版每次問，不存例外 |
 | 5 | ~~`target=_blank` 新分頁是否自動切換~~ | **已決**：自動切換 |
 | 6 | link 色帶 | 本文件 §4，畫出來再挑 |

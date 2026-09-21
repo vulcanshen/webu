@@ -141,7 +141,7 @@ HN 是 table 排版，樹上是 `LayoutTable / row / cell / link`；GitHub 有�
 | table 排版當 list 用（HN） | 一個 row 裡有 N 個 link → 視為一個 list item，第一個 link 是主體，其餘是 meta |
 | 沒有 landmark 的站 | 以 heading 層級切段；找不到 main 就把最大的文字區塊當 main |
 | `div` + onclick、無 role（a11y 做爛的站） | `DOMDebugger.getEventListeners` 找有 click handler 的節點，或 `cursor:pointer`，補成 button |
-| 一頁幾千個節點（新聞站、Gmail） | landmark 摺疊、預設只展開 main |
+| 一頁幾千個節點（新聞站、Gmail） | landmark 可摺疊（Enter 開合；預設全開，2026-09-21）、Outline |
 | 點擊後新出現的子樹、無 `dialog` role | 視為浮層 |
 | SVG chart | 只取 `title` / `aria-label`，path 無數值，不假裝能讀 |
 
@@ -365,7 +365,7 @@ Chromium 引擎只負責「給一個 URL，把頁面跑起來」；使用者感�
 | 歷史 | Chrome 的 History 資料庫在它跑著時鎖住，只能自存：時間、URL、標題，append-only。查詢用 filu 的原生 finder 做 fuzzy | 自存 | 存低、UI 中 |
 | 書籤 | URL、標題、可選 tag，一個 yaml | 自存 | 低 |
 | session 還原 | 離開時寫下所有分頁 URL，下次開回來。與「離開時殺 Chromium」綁定 | 自存 | 低 |
-| 下載 | `Browser.setDownloadBehavior` 指定目錄 + 事件回報進度。v1 只 toast 開始 / 完成；清單面板 v2 | `config.yaml` 的 `download_dir`，預設 `~/Downloads` | toast 低、清單中 |
+| 下載 | `Browser.setDownloadBehavior` 指定目錄 + 事件回報進度。toast 開始 / 完成 + `[D]ownloads` screen（2026-09-20 / 21） | `config.yaml` 的 `download_dir`，預設 `~/.webu/datas/downloads`（2026-09-21） | toast 低、清單中 |
 | Proxy | `--proxy-server` flag；macOS 吃系統 proxy，Linux 不一定 | 設定檔 | 低 |
 | network log | `Network.enable` 後每個 request 有事件；面板列 method / status / URL / 耗時，可看 body。量大要過濾 | 無 | 中高 |
 | console | `Runtime.consoleAPICalled` + `Log.entryAdded`，一個 viewport | 無 | 低到中 |

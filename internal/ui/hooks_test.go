@@ -294,3 +294,26 @@ func TestSearchThenEnterClicks(t *testing.T) {
 	d.key("enter")
 	d.until("page B", d.loaded("Page B"))
 }
+
+// A bookmark opens in a new tab, never over the one the web was showing.
+func TestBookmarkOpensANewTab(t *testing.T) {
+	b := hookBrowser(t)
+	abs, _ := filepath.Abs("testdata/nav.html")
+	abs2, _ := filepath.Abs("testdata/nav2.html")
+	d := startAt(t, b, "file://"+abs, store.Config{})
+	d.until("page A", d.loaded("Page A"))
+	d.m.bookmarks = []store.Bookmark{{Title: "B", URL: "file://" + abs2}}
+
+	d.key("B")
+	if d.m.screen != screenBookmarks {
+		t.Fatalf("screen %v", d.m.screen)
+	}
+	d.key("enter")
+	if d.m.screen != screenWeb || len(d.m.tabs) != 2 || d.m.shown != 1 {
+		t.Fatalf("after Enter: screen %v, %d tabs, shown %d", d.m.screen, len(d.m.tabs), d.m.shown)
+	}
+	d.until("page B in the new tab", d.loaded("Page B"))
+	if d.m.tabs[0].title != "Page A" {
+		t.Errorf("the first tab should be untouched: %q", d.m.tabs[0].title)
+	}
+}

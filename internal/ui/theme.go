@@ -79,6 +79,7 @@ var (
 	glyphBookmark = string(rune(0xf00c0)) // nf-md-bookmark
 	glyphHistory  = string(rune(0xf02da)) // nf-md-history
 	glyphDownload = string(rune(0xf01da)) // nf-md-download
+	glyphSettings = string(rune(0xf0493)) // nf-md-cog
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 
