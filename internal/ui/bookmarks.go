@@ -70,6 +70,16 @@ func folderBase(f string) string {
 	return f
 }
 
+// saveBookmarks writes bookmarks.yaml with every folder there is declared
+// — the ones made by hand, the ones a path implied, the ones a bookmark
+// sits in — so a folder, once it exists, exists until x on its row. It
+// used to write only the declared ones, and deleting "x/y" then took the
+// "x" that only y had implied along with it (2026-09-21).
+func (m *AppModel) saveBookmarks() error {
+	m.folders = m.folderNames()
+	return store.SaveBookmarks(m.bookmarks, m.folders)
+}
+
 // inFolder reports whether path is f or inside it.
 func inFolder(path, f string) bool {
 	return path == f || strings.HasPrefix(path, f+"/")
@@ -169,7 +179,7 @@ func (m *AppModel) moveBookmark(ref, idx int) tea.Cmd {
 		folder = names[idx-1]
 	}
 	m.bookmarks[ref].Folder = folder
-	if err := store.SaveBookmarks(m.bookmarks, m.folders); err != nil {
+	if err := m.saveBookmarks(); err != nil {
 		return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
 	}
 	m.lists.setEntries(m.bookmarkEntries())
@@ -200,7 +210,7 @@ func (m *AppModel) addFolder(parent, path string) tea.Cmd {
 		}
 	}
 	m.folders = append(m.folders, full)
-	if err := store.SaveBookmarks(m.bookmarks, m.folders); err != nil {
+	if err := m.saveBookmarks(); err != nil {
 		return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
 	}
 	m.lists.setEntries(m.bookmarkEntries())
@@ -209,7 +219,8 @@ func (m *AppModel) addFolder(parent, path string) tea.Cmd {
 }
 
 // deleteFolder is x on a folder row: only an empty one goes — the
-// bookmarks and folders in it are the user's, not the folder's.
+// bookmarks and folders in it are the user's, not the folder's — and only
+// that one: the folders above it stay, empty or not.
 func (m *AppModel) deleteFolder(path string) tea.Cmd {
 	for _, b := range m.bookmarks {
 		if inFolder(b.Folder, path) {
@@ -228,7 +239,7 @@ func (m *AppModel) deleteFolder(path string) tea.Cmd {
 		}
 	}
 	m.folders = kept
-	if err := store.SaveBookmarks(m.bookmarks, m.folders); err != nil {
+	if err := m.saveBookmarks(); err != nil {
 		return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
 	}
 	m.lists.setEntries(m.bookmarkEntries())
@@ -286,7 +297,7 @@ func (m *AppModel) bookmarkTitleGiven(value string) tea.Cmd {
 		}
 	}
 	m.bookmarks = append(m.bookmarks, b)
-	if err := store.SaveBookmarks(m.bookmarks, m.folders); err != nil {
+	if err := m.saveBookmarks(); err != nil {
 		return tea.Batch(m.input.close(), m.toast.show("bookmarks.yaml: "+err.Error(), toastError))
 	}
 	m.lists.setEntries(m.bookmarkEntries())

@@ -76,7 +76,7 @@ Bookmarks 依目錄分組（2026-09-21）：根層在前，之後每個目錄一
 在書籤上就開在同一層；路徑 `a/b/c` 一次開三層）；`[a]dd` 在同一處加書籤（URL、title 兩個 input popup，正在顯示的頁面當 placeholder，
 Enter 直接收下）；目錄列 **Enter = 展開 / 收合**（收起來一列 `▸ 󰉋 dev · 3 bookmarks`，狀態只在 session 內）；`[m]` 搬移
 （options popup 當 picker：`(no folder)` + 目錄樹，縮排表階層，數字鍵選，游標跟著搬過去）；目錄列上 `x` 只刪空目錄
-（沒有書籤、沒有子目錄）；`/` 過濾時攤平只列命中的書籤。修訂 2026-09-21：原 `[F]` / `[f]` / `[A] Add this page` 拿掉。
+（沒有書籤、沒有子目錄），而且只刪那一層——上層不會因為變空而跟著消失（`bookmarks.yaml` 的 `folders:` 寫下每一層，含路徑帶出來的）；`/` 過濾時攤平只列命中的書籤。修訂 2026-09-21：原 `[F]` / `[f]` / `[A] Add this page` 拿掉。
 Settings：一列一個 key（目前只有 `download_dir`），Enter → input popup，**目前生效的值當 placeholder**（同 Location：Tab 接手、
 Backspace 清掉；沒動過就 Enter 不改，清空後 Enter = 預設）→ 寫回 `config.yaml`、立即生效（重新 `setDownloadBehavior`）。
 footer 在 screen 上是 `space menu   ? help   esc web   q quit`。

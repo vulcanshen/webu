@@ -292,7 +292,7 @@ func TestScreensAndSession(t *testing.T) {
 	d.until("folder box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFolder })
 	d.key("dev/sub")
 	d.key("enter")
-	d.until("folders made", func() bool { return len(d.m.folders) == 1 && d.m.folders[0] == "dev/sub" })
+	d.until("folders made", func() bool { return len(d.m.folders) == 2 && d.m.folders[1] == "dev/sub" })
 	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "dev/sub" || e.depth != 1 {
 		t.Fatalf("the cursor should land on the new folder, one level in: %+v", e)
 	}
@@ -306,7 +306,7 @@ func TestScreensAndSession(t *testing.T) {
 	}
 	d.key("2")
 	d.until("moved", func() bool { return d.m.bookmarks[0].Folder == "dev/sub" })
-	if saved, folders, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Folder != "dev/sub" || len(folders) != 1 {
+	if saved, folders, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Folder != "dev/sub" || len(folders) != 2 {
 		t.Errorf("bookmarks.yaml after move: %+v %v", saved, folders)
 	}
 	if e, _, ok := d.m.lists.current(); !ok || e.isFolder || e.depth != 2 {
@@ -330,7 +330,7 @@ func TestScreensAndSession(t *testing.T) {
 		t.Fatalf("unfolded dev should show three rows, not %d", got)
 	}
 	d.key("x")
-	if len(d.m.folders) != 1 {
+	if len(d.m.folders) != 2 {
 		t.Error("a folder with something in it must not go")
 	}
 	d.key("esc") // the toast that said so
@@ -344,21 +344,24 @@ func TestScreensAndSession(t *testing.T) {
 	d.until("nested folder box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFolder })
 	d.key("x/y")
 	d.key("enter")
-	d.until("nested folders made", func() bool { return len(d.m.folders) == 2 && d.m.folders[1] == "dev/sub/x/y" })
+	d.until("nested folders made", func() bool { return len(d.m.folders) == 4 && d.m.folders[3] == "dev/sub/x/y" })
 	d.key("esc") // the toast
 	d.until("nested toast gone", func() bool { return !d.m.toast.anim.owns() })
 	d.m.lists.cursorToFolder("dev/sub/x")
 	d.key("x")
-	if len(d.m.folders) != 2 {
+	if len(d.m.folders) != 4 {
 		t.Error("x must not go while y is inside it")
 	}
 	d.key("esc")
 	d.until("refusal gone", func() bool { return !d.m.toast.anim.owns() })
 	d.m.lists.cursorToFolder("dev/sub/x/y")
 	d.key("x")
-	d.until("y removed", func() bool { return len(d.m.folders) == 1 })
-	if names := d.m.folderNames(); len(names) != 2 || names[1] != "dev/sub" {
-		t.Errorf("x, implied only by y, should be gone too: %v", names)
+	d.until("y removed", func() bool { return len(d.m.folders) == 3 })
+	if names := d.m.folderNames(); len(names) != 3 || names[2] != "dev/sub/x" {
+		t.Errorf("x must stay when y goes, empty or not: %v", names)
+	}
+	if _, folders, _ := store.LoadBookmarks(); len(folders) != 3 {
+		t.Errorf("every folder is written down, not only the hand-made ones: %v", folders)
 	}
 	d.key("esc")
 	d.until("removal toast gone", func() bool { return !d.m.toast.anim.owns() })

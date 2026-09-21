@@ -1162,7 +1162,7 @@ func (m *AppModel) addEntry(kind listKind, title, url string) tea.Cmd {
 			}
 		}
 		m.bookmarks = append(m.bookmarks, store.Bookmark{Title: title, URL: url})
-		if err := store.SaveBookmarks(m.bookmarks, m.folders); err != nil {
+		if err := m.saveBookmarks(); err != nil {
 			return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
 		}
 	default:
@@ -1179,7 +1179,7 @@ func (m *AppModel) deleteEntry(at int) tea.Cmd {
 	case listBookmarks:
 		if at < len(m.bookmarks) {
 			m.bookmarks = append(m.bookmarks[:at], m.bookmarks[at+1:]...)
-			err = store.SaveBookmarks(m.bookmarks, m.folders)
+			err = m.saveBookmarks()
 		}
 	case listDownloads:
 		return m.removeDownload(at)
