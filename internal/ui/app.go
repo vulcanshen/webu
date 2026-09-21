@@ -1905,6 +1905,8 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, closeCmd
 		}
 		return m, tea.Batch(closeCmd, m.storageThen(t, func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) }))
+	case confirmDeleteFolder:
+		return m, tea.Batch(closeCmd, m.deleteFolderTree(m.confirm.folder))
 	case confirmOpenLink:
 		t := m.shownTab()
 		if t == nil {

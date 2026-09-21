@@ -280,7 +280,7 @@ func (m listPanel) menuItems() []menuItem {
 	}
 	items = append(items, menuItem{label: "Add", key: "a", hint: "a bookmark here: its URL, then its title"})
 	if ok && e.isFolder {
-		items = append(items, menuItem{label: "Delete", key: "x", hint: "this folder, once it is empty"})
+		items = append(items, menuItem{label: "Delete", key: "x", hint: "this folder; with anything in it, asks first, then the whole tree"})
 	} else {
 		items = append(items,
 			menuItem{label: "Move", key: "m", hint: "into a folder, or out to the top"},

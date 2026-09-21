@@ -779,3 +779,55 @@ func TestImportBookmarks(t *testing.T) {
 		t.Error("a taken name should keep the box open and import nothing")
 	}
 }
+
+// TestDeleteFolderTree: x on a folder with anything in it asks first,
+// naming what goes, and then takes the whole tree; an empty folder goes
+// at once; what is outside the folder stays.
+func TestDeleteFolderTree(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	m := New(nil, "").WithStore([]store.Bookmark{
+		{Title: "Go", URL: "https://go.dev", Folder: "dev"},
+		{Title: "pkg", URL: "https://pkg.go.dev", Folder: "dev/go"},
+		{Title: "HN", URL: "https://news.ycombinator.com"},
+	}, []string{"dev/empty", "misc"}, store.Config{}, nil)
+	d := newDriver(t, m)
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.key("B")
+	d.m.lists.cursorToFolder("dev")
+	d.key("x")
+	d.until("asked", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmDeleteFolder })
+	if l := d.m.confirm.lines; len(l) != 2 || l[0] != "dev" || !strings.Contains(l[1], "2 bookmarks") || !strings.Contains(l[1], "2 folders") {
+		t.Errorf("the confirm should name what goes: %q", l)
+	}
+	d.key("esc")
+	d.until("kept", func() bool { return !d.m.confirm.isActive() })
+	if len(d.m.bookmarks) != 3 {
+		t.Fatal("Esc should delete nothing")
+	}
+
+	d.m.lists.cursorToFolder("dev")
+	d.key("x")
+	d.until("asked again", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmDeleteFolder })
+	d.key("enter")
+	d.until("tree gone", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "2 bookmarks") })
+	if len(d.m.bookmarks) != 1 || d.m.bookmarks[0].Title != "HN" {
+		t.Errorf("bookmarks after: %+v", d.m.bookmarks)
+	}
+	if got := strings.Join(d.m.folderNames(), "|"); got != "misc" {
+		t.Errorf("folders after: %q", d.m.folderNames())
+	}
+
+	// An empty folder goes without a question. (The confirm above is
+	// still animating shut: let it finish, so a new one would show.)
+	d.until("confirm shut", func() bool { return !d.m.confirm.isActive() })
+	d.m.lists.cursorToFolder("misc")
+	d.key("x")
+	d.until("misc gone", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "misc") })
+	if d.m.confirm.isActive() || len(d.m.folderNames()) != 0 {
+		t.Error("an empty folder should go at once")
+	}
+	if list, folders, err := store.LoadBookmarks(); err != nil || len(list) != 1 || len(folders) != 0 {
+		t.Errorf("saved: %d bookmarks, %d folders, %v", len(list), len(folders), err)
+	}
+}
