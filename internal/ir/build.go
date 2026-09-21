@@ -27,9 +27,16 @@ type Capture struct {
 	// Breadcrumb marks the elements the page calls a breadcrumb — by
 	// class, aria-label or schema.org itemtype — nav, list or div.
 	Breadcrumb map[cdp.BackendNodeID]bool `json:"breadcrumb,omitempty"`
-	// Skip marks the links the page calls a skip link by class — the
-	// "Skip to main content" at the top; the text says it too (ui).
+	// Skip marks what the page calls a skip link by class, id or label —
+	// the "Skip to main content" at the top, or a block of them ("Skip
+	// to: Top Bar · Sidebar · Main Content"); a link's text says it too
+	// (ui). A block is wrapped in a navigation of its own at build time.
 	Skip map[cdp.BackendNodeID]bool `json:"skip,omitempty"`
+	// Anchors is every element id on the page and Parents every node's
+	// parent, off the same snapshot: what a link into the page lands on
+	// (ui tab.jumpToAnchor). Not part of the tree.
+	Anchors map[string]cdp.BackendNodeID            `json:"anchors,omitempty"`
+	Parents map[cdp.BackendNodeID]cdp.BackendNodeID `json:"parents,omitempty"`
 	// ContentType is document.contentType: what the response was. Empty
 	// in the role fixtures, which are all HTML.
 	ContentType string `json:"contentType,omitempty"`
@@ -120,7 +127,7 @@ func Build(c Capture) *Node {
 		display:    c.Display,
 		protected:  c.Protected,
 		current:    c.Current,
-		skip:       c.Skip,
+		skip:       maps.Clone(c.Skip),
 		breadcrumb: maps.Clone(c.Breadcrumb),
 	}
 	for _, n := range c.Nodes {
@@ -189,6 +196,21 @@ func (b *builder) container(ax *accessibility.Node, role string) []*Node {
 // convert yields the IR for one AX node: one node, several (a transparent
 // container's children), or none.
 func (b *builder) convert(ax *accessibility.Node) []*Node {
+	if b.skip[ax.BackendDOMNodeID] && str(ax.Role) != "link" {
+		// A block of skip links — "Skip to:" and a list of anchors —
+		// becomes a navigation of its own, so it is one row like the
+		// rest of the chrome (2026-09-21). Looked at before the ignored
+		// check: the block is a plain div, which Chromium ignores. The
+		// mark is spent, or this would recurse; a block with no anchor
+		// in it was not one.
+		delete(b.skip, ax.BackendDOMNodeID)
+		kids := b.convert(ax)
+		if !anchorLinks(kids) {
+			return kids
+		}
+		return []*Node{{Kind: Landmark, Role: "navigation", Name: skipName(kids), Skip: true,
+			ID: ax.BackendDOMNodeID, Children: kids}}
+	}
 	if ax.Ignored {
 		return b.children(ax)
 	}
@@ -317,6 +339,45 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 		n.Marker = marker(ax, b)
 	}
 	return []*Node{n}
+}
+
+// anchorLinks says whether nodes hold at least one link and every link
+// in them points at an anchor: the shape of a block of skip links.
+func anchorLinks(nodes []*Node) bool {
+	links, anchors := 0, 0
+	for _, n := range nodes {
+		n.Walk(func(x *Node) bool {
+			if x.Kind == Link {
+				links++
+				if strings.Contains(x.URL, "#") {
+					anchors++
+				}
+			}
+			return true
+		})
+	}
+	return links > 0 && links == anchors
+}
+
+// skipName is a skip block's word: its own text where it starts with
+// "skip" ("Skip to:"), else "Skip to".
+func skipName(nodes []*Node) string {
+	for _, n := range nodes {
+		first := ""
+		n.Walk(func(x *Node) bool {
+			if first == "" && x.Kind == Text && strings.TrimSpace(x.Name) != "" {
+				first = strings.TrimSpace(x.Name)
+			}
+			return first == ""
+		})
+		if first != "" {
+			if strings.HasPrefix(strings.ToLower(first), "skip") {
+				return strings.TrimRight(first, ": ")
+			}
+			break
+		}
+	}
+	return "Skip to"
 }
 
 // options collects every option under a combobox, wherever Chromium nested

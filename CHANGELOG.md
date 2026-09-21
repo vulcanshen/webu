@@ -43,8 +43,13 @@
 - **A dialog is chrome too** — a cookie banner, a modal: one row with
   its name or its first words, its buttons behind `Enter`.
 - **A skip link is chrome too.** "Skip to main content" is one row of
-  the same style; `Enter` does what it says, the cursor to the content.
-  A new page never starts on it.
+  the same style, and a block of them — "Skip to: Top Bar · Sidebar ·
+  Main Content" — is one row with its count; `Enter` does what they
+  say. A new page never starts on either.
+- **A link into the page lands the cursor.** A same-page anchor — a
+  skip link's target, a table of contents entry — moves the cursor to
+  what it names, no confirm and no reload; the page is asked only when
+  the anchor has nothing to stop on.
 - **A search box offers to search.** `Enter` in the box writes the
   value and asks; `Enter` again presses Enter in the field, `Esc` keeps
   the value unsent. A search box is one by `type=search`, or any box in

@@ -29,6 +29,11 @@ type tab struct {
 	url, title string
 	loading    bool
 	errText    string // a navigation Chromium refused: DNS, connection, certificate
+	// anchors and parents come off the capture's DOM snapshot: every
+	// element id, and every node's parent, so a link into the page can
+	// land the cursor (jumpToAnchor).
+	anchors map[string]cdp.BackendNodeID
+	parents map[cdp.BackendNodeID]cdp.BackendNodeID
 	// pending: restored from the last session but not loaded yet — it loads
 	// when it is switched to (ux.md §6).
 	pending bool
@@ -373,6 +378,7 @@ func (t *tab) apply(msg pageMsg, width int) {
 		wasID = int64(t.lay.items[t.cursor].node.ID)
 	}
 	t.root = ir.Build(msg.cap)
+	t.anchors, t.parents = msg.cap.Anchors, msg.cap.Parents
 	t.relayout(width)
 	if fresh {
 		t.cursor, t.top = t.firstItem(), 0
@@ -409,11 +415,51 @@ func (t *tab) firstItem() int {
 			break
 		}
 	}
-	// Never on a skip link: what it offers is what this function does.
-	for at < len(t.lay.items)-1 && isSkipLink(t.lay.items[at].node) {
+	// Never on a skip link, or a block of them: what they offer is what
+	// this function does.
+	for at < len(t.lay.items)-1 && isSkipItem(t.lay.items[at].node) {
 		at++
 	}
 	return at
+}
+
+// jumpToAnchor puts the cursor on the element a fragment names when it
+// is an item, else on the first item inside it, else on the item it is
+// inside of, and scrolls to it: what a link into the page does, in
+// webu's terms. False when the page has no such id, or nothing to stop
+// on either way — the click is then the page's to answer.
+func (t *tab) jumpToAnchor(frag string, visible int) bool {
+	target, ok := t.anchors[frag]
+	if !ok || target == 0 {
+		return false
+	}
+	// The element itself, or the first item inside it.
+	for i, it := range t.lay.items {
+		id := it.node.ID
+		for hop := 0; id != 0 && hop < 256; hop++ {
+			if id == target {
+				t.cursor = i
+				t.scrollToCursor(visible)
+				return true
+			}
+			id = t.parents[id]
+		}
+	}
+	// Else the item it is inside of: a span an item's text wraps.
+	byID := map[cdp.BackendNodeID]int{}
+	for i, it := range t.lay.items {
+		if it.node.ID != 0 {
+			byID[it.node.ID] = i
+		}
+	}
+	for id, hop := t.parents[target], 0; id != 0 && hop < 256; id, hop = t.parents[id], hop+1 {
+		if i, ok := byID[id]; ok {
+			t.cursor = i
+			t.scrollToCursor(visible)
+			return true
+		}
+	}
+	return false
 }
 
 func (t *tab) relayout(width int) {

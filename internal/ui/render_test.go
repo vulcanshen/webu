@@ -482,3 +482,30 @@ func TestSkipLinkIsARow(t *testing.T) {
 		t.Errorf("without main, a new page starts after the skip link: %d", at)
 	}
 }
+
+// TestJumpToAnchor: a fragment lands the cursor on the element it names
+// when that is an item, else on the first item inside it, else on the
+// item it sits inside, by the DOM's parents; an id the page lacks, or a
+// target with nothing to stop on, is no jump.
+func TestJumpToAnchor(t *testing.T) {
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		para(link("Top", "https://x.test/p", 1)),
+		{Kind: ir.Landmark, Role: "region", Name: "Sec", ID: 10, Children: []*ir.Node{para(link("Inside", "https://x.test/q", 11))}},
+		para(text("plain")),
+	}}
+	tb := &tab{cursor: 0, root: root,
+		anchors: map[string]cdp.BackendNodeID{"sec": 10, "inside": 11, "deep": 12, "plain": 13},
+		parents: map[cdp.BackendNodeID]cdp.BackendNodeID{11: 10, 12: 11, 13: 0}}
+	tb.relayout(60)
+	if !tb.jumpToAnchor("sec", 20) || tb.lay.items[tb.cursor].node.ID != 10 {
+		t.Errorf("the region itself is an item: cursor %d", tb.cursor)
+	}
+	tb.cursor = 0
+	if !tb.jumpToAnchor("deep", 20) || tb.lay.items[tb.cursor].node.ID != 11 {
+		t.Errorf("an id inside a link lands on the link, by parents: cursor %d", tb.cursor)
+	}
+	tb.cursor = 0
+	if tb.jumpToAnchor("plain", 20) || tb.jumpToAnchor("missing", 20) || tb.cursor != 0 {
+		t.Errorf("nothing to stop on is no jump: cursor %d", tb.cursor)
+	}
+}

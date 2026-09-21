@@ -277,6 +277,12 @@ func isSkipLink(n *ir.Node) bool {
 	return n.Skip || strings.HasPrefix(strings.ToLower(strings.TrimSpace(n.Text())), "skip")
 }
 
+// isSkipItem says whether an item is a skip link or a block of them —
+// the rows a new page never starts on (tab.firstItem).
+func isSkipItem(n *ir.Node) bool {
+	return isSkipLink(n) || (n.Kind == ir.Landmark && n.Skip)
+}
+
 // skipRow draws a skip link in the entry style: chrome, one row, and
 // Enter is what it says (app skipToContent).
 func (r *renderer) skipRow(n *ir.Node, id int) {
@@ -299,6 +305,8 @@ func isEntry(n *ir.Node) bool {
 // entryIcon is the glyph that tells one kind of chrome from another.
 func entryIcon(n *ir.Node) string {
 	switch {
+	case n.Skip:
+		return glyphSkip
 	case n.Breadcrumb:
 		return glyphCrumb
 	case n.Role == "navigation":
@@ -321,6 +329,9 @@ func entryIcon(n *ir.Node) string {
 // the landmark's own name, else its first heading, else nothing — the
 // glyph says what it is.
 func entryLabel(n *ir.Node, pageURL string) string {
+	if n.Skip {
+		return oneLine(n.Name) // "Skip to": what it is, there is no "where"
+	}
 	switch n.Role {
 	case "navigation":
 		return entryCurrent(n, pageURL)
@@ -384,12 +395,13 @@ type entryTarget struct {
 // entryTargets is what an entry holds, in reading order.
 func entryTargets(n *ir.Node) []entryTarget {
 	var out []entryTarget
+	keepSkip := n.Skip // a skip block's links ARE its list
 	var walk func(x *ir.Node, lists int)
 	walk = func(x *ir.Node, lists int) {
 		for _, c := range x.Children {
 			switch c.Kind {
 			case ir.Link, ir.Button, ir.Textbox, ir.Check, ir.Combobox:
-				if isSkipLink(c) {
+				if !keepSkip && isSkipLink(c) {
 					continue // says nothing an entry's list needs
 				}
 				out = append(out, entryTarget{c, max(0, lists-1)})
