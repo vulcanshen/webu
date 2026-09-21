@@ -20,9 +20,9 @@ type splashHintMsg struct{}
 // a gold figure that spells WEB, and it reveals in that order: the
 // background sheet, W, E, B, then the U frame rising around them.
 //
-// The family's key is V. In webu V is visual mode, so the egg takes the
-// lower case: a bare v, from any panel and any screen, outside a text
-// box and outside visual mode (ux.md §A.2).
+// The family's key is V, and it is V here too: visual mode moved to the
+// lower case for it (ux.md §A.2, 2026-09-21). From any panel and any
+// screen, outside a text box and outside visual mode.
 type splashModel struct {
 	active          bool
 	pixelOrder      []int    // reveal order across all stages

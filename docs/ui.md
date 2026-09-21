@@ -224,8 +224,8 @@ footer 一列：`space menu   ? help   tab/1-2 panels   q quit`，五個 core-ke
 
 ### 5.1 icon 與 splash 彩蛋
 
-`docs/icon.svg` 是 u-family mark 的 webu 版：藍 U 框住拼出 **WEB** 的金色字。裸的 `v`（任何面板、任何 screen；文字框與 visual mode 內除外）
-觸發 splash 彩蛋，kbu / filu / sshu 同款——家族用 `V`，webu 的 `V` 是 visual mode，彩蛋改住小寫當特例：底片掃入 → W 散點浮現 → E → B → 藍 U 框自底升起——**揭示順序唸出 w-e-b**——然後名稱 /
+`docs/icon.svg` 是 u-family mark 的 webu 版：藍 U 框住拼出 **WEB** 的金色字。`V`（任何面板、任何 screen；文字框與 visual mode 內除外）
+觸發 splash 彩蛋，kbu / filu / sshu 同款、同鍵——visual mode 因此改成小寫 `v`（2026-09-21）：底片掃入 → W 散點浮現 → E → B → 藍 U 框自底升起——**揭示順序唸出 w-e-b**——然後名稱 /
 版本 / tagline / 落款 / Esc 提示分兩拍淡入，任意鍵放回原畫面。像素畫由 icon.svg 逐格生成（中心點取樣 25×25，裁到圖案上下各留一列）；
 splash 期間鍵盤完全歸它（2026-09-21）。`docs/social-preview.png` 用同一張 icon，由 `.claude/commands/social-preview.md` 生成。
 
