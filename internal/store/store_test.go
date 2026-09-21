@@ -25,12 +25,17 @@ func TestRoundTrips(t *testing.T) {
 	if cfg.Search() != DefaultSearch {
 		t.Errorf("default search %q", cfg.Search())
 	}
+	if !cfg.Restore() {
+		t.Error("restore_session should default to on")
+	}
 	cfg.SearchEngine = "https://www.google.com/search?q="
+	off := false
+	cfg.RestoreSession = &off
 	if err := SaveConfig(cfg); err != nil {
 		t.Fatal(err)
 	}
 	cfg2, _ := LoadConfig()
-	if cfg2.Search() != cfg.SearchEngine {
+	if cfg2.Search() != cfg.SearchEngine || cfg2.Restore() {
 		t.Errorf("config: %+v", cfg2)
 	}
 

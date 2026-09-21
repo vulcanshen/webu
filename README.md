@@ -40,7 +40,7 @@ The header's screens are switched with a single shifted letter — **`W` / `B` /
 
 **`[B]ookmarks`** — a tree: the top level first, then each folder as a row of its own with what it holds beneath it. `Enter` on a bookmark opens it in a new tab; on a folder it collapses or expands. `a` adds a bookmark where the cursor is — its URL, then its title, with the page the web is showing on offer, so the current page is `a`, `Enter`, `Enter`. `A` adds a folder there, and a path like `a/b/c` makes every level. `m` moves a bookmark through a picker of the tree.
 
-**`[H]istory`** — every page visited, newest first, kept for good; `C` is the one way it shrinks. **`[D]ownloads`** — this session's downloads with their progress, and the rule under the header doubles as the progress bar while one runs. **`[S]ettings`** — `config.yaml` edited in place: `Enter` opens a box with the value in force on offer.
+**`[H]istory`** — every page visited, newest first, kept for good; `C` is the one way it shrinks. **`[D]ownloads`** — this session's downloads with their progress, and the rule under the header doubles as the progress bar while one runs. **`[S]ettings`** — `config.yaml` edited in place, each row a key with its value and what it does: `Enter` opens a box with the value in force on offer, or flips a switch.
 
 ## Install
 
@@ -122,6 +122,9 @@ search_engine: https://duckduckgo.com/?q=
 download_dir: ~/Downloads
 # How wide a paragraph flows before it wraps, in cells. Default 100.
 measure: 100
+# Reopen the tabs that were open when webu last quit. Default true;
+# false starts empty, or on the URLs given on the command line.
+restore_session: true
 ```
 
 The `[S]ettings` screen edits the same file.
@@ -155,7 +158,7 @@ A text box's Enter opens a one-line box: `Enter` writes the value back, `Esc` le
 - **Bookmarks** — `Enter` open in a new tab, or collapse / expand a folder · `a` add a bookmark here · `m` move · `x` delete (an empty folder too) · `y` yank url · `A` add a folder here (`a/b/c` makes each level) · `/` filter
 - **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `C` clear · `/` filter
 - **Downloads** — `Enter` open the file · `o` source in a new tab · `x` remove (a running download is stopped) · `y` yank path · `C` clear the finished ones · `/` filter
-- **Settings** — `Enter` edit; the value in force is on offer (`Tab` takes it, `Backspace` clears it, an emptied line means the default)
+- **Settings** — `Enter` edit a text setting (the value in force is on offer: `Tab` takes it, `Backspace` clears it, an emptied line means the default) or flip a switch
 
 ### DevTools (`I`)
 

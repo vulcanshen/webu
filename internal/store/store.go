@@ -32,6 +32,15 @@ type Config struct {
 	SearchEngine string `yaml:"search_engine,omitempty"`
 	DownloadDir  string `yaml:"download_dir,omitempty"`
 	Measure      int    `yaml:"measure,omitempty"` // text width cap in panel [2]; 0 is the default
+	// RestoreSession: reopen the tabs that were open when webu last quit.
+	// Absent means yes; a pointer so that "not set" and "set to false"
+	// are told apart, since the default is the true side (2026-09-21).
+	RestoreSession *bool `yaml:"restore_session,omitempty"`
+}
+
+// Restore reports whether the last session's tabs come back on launch.
+func (c Config) Restore() bool {
+	return c.RestoreSession == nil || *c.RestoreSession
 }
 
 // DefaultMeasure is how wide a paragraph flows before it wraps, whatever

@@ -471,7 +471,7 @@ webu 拿掉 `--enable-automation`、走 `--headless=new`、profile 持久帶 coo
 
 | 指令 | 行為 |
 |---|---|
-| `webu` | 還原上次 session 的分頁（不預先載入，切到才載） |
+| `webu` | 還原上次 session 的分頁（不預先載入，切到才載）；`config.yaml` 的 `restore_session: false` 則從空白開始，session 仍照存 |
 | `webu <url|words> ...` | 還原 session 並為每個參數多開一個分頁（第一個在前、焦點在它）；參數的解讀同 Location 框：沒 scheme 的 host 補 `https://`、不像 URL 的字當搜尋（修訂 2026-09-21：原本只收一個 URL） |
 | `webu browser update` | 更新釘死的 Chromium revision（§9） |
 | `webu version` | webu 版本與 Chromium revision |

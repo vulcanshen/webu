@@ -40,7 +40,7 @@ header 的 screen 用一個大寫字母切換 —— **`W` / `B` / `H` / `D` / `
 
 **`[B]ookmarks`** —— 一棵樹：根層在前，之後每個目錄一列、其下是裡面的書籤。書籤上 `Enter` 開新分頁，目錄列上 `Enter` 收合 / 展開。`a` 在游標所在處加書籤 —— 先 URL、再 title，`[W]eb` 正在顯示的頁面當預設值，所以加目前頁就是 `a`、`Enter`、`Enter`。`A` 在同一處加目錄，路徑 `a/b/c` 一次開三層。`m` 透過目錄樹的 picker 搬書籤。
 
-**`[H]istory`** —— 每個看過的頁面，新的在上，永久保留；`C` 是唯一的清除入口。**`[D]ownloads`** —— 本次 session 的下載與進度，下載中時 header 下面的分隔線兼進度條。**`[S]ettings`** —— 就地編輯 `config.yaml`：`Enter` 開一個輸入框，目前生效的值當預設值。
+**`[H]istory`** —— 每個看過的頁面，新的在上，永久保留；`C` 是唯一的清除入口。**`[D]ownloads`** —— 本次 session 的下載與進度，下載中時 header 下面的分隔線兼進度條。**`[S]ettings`** —— 就地編輯 `config.yaml`，一列一個 key，帶著它的值與用途：`Enter` 開一個輸入框（目前生效的值當預設值），或切換開關。
 
 ## 安裝
 
@@ -122,6 +122,9 @@ search_engine: https://duckduckgo.com/?q=
 download_dir: ~/Downloads
 # 段落折行的欄寬。預設 100。
 measure: 100
+# 啟動時是否重新開啟上次離開時的分頁。預設 true；
+# false 則從空白開始，或只開命令列給的網址。
+restore_session: true
 ```
 
 `[S]ettings` screen 編輯的就是這個檔。
@@ -155,7 +158,7 @@ item 上 `Enter` 開它的操作 —— 連結的 Open / Open in new tab / Yank 
 - **Bookmarks** —— `Enter` 開新分頁、或收合 / 展開目錄 · `a` 在這裡加書籤 · `m` 搬移 · `x` 刪除（空目錄也行） · `y` yank url · `A` 在這裡加目錄（`a/b/c` 一次開三層） · `/` 過濾
 - **History** —— `Enter` 開新分頁 · `x` 刪除 · `y` yank url · `C` 清空 · `/` 過濾
 - **Downloads** —— `Enter` 開檔 · `o` 來源開新分頁 · `x` 移除（進行中的會先停掉） · `y` yank path · `C` 清掉已完成的 · `/` 過濾
-- **Settings** —— `Enter` 編輯；目前生效的值當預設值（`Tab` 接手、`Backspace` 清掉、清空後 Enter 就是回預設）
+- **Settings** —— `Enter` 編輯文字設定（目前生效的值當預設值：`Tab` 接手、`Backspace` 清掉、清空後 Enter 就是回預設）或切換開關
 
 ### DevTools（`I`）
 
