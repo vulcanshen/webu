@@ -42,6 +42,9 @@ type listEntry struct {
 	folder   string
 	isFolder bool
 	depth    int
+	// folded: a folder row drawn shut; count is what it hides.
+	folded bool
+	count  int
 }
 
 type listPanel struct {
@@ -205,7 +208,7 @@ func (m *listPanel) update(msg tea.KeyMsg) string {
 		if m.kind == listDownloads {
 			return k
 		}
-	case "m", "f", "F", "A":
+	case "m", "a", "A":
 		if m.kind == listBookmarks {
 			return k
 		}
@@ -259,25 +262,30 @@ func (m listPanel) menuItems() []menuItem {
 		}
 	}
 	// Bookmarks: what the cursor is on decides the item half — a folder
-	// row has its own two operations (revised 2026-09-21).
+	// row folds on Enter, a bookmark opens (revised 2026-09-21).
 	items := []menuItem{{header: true, label: "item operation"}}
-	if e, _, ok := m.current(); ok && e.isFolder {
-		items = append(items,
-			menuItem{label: "Subfolder", key: "f", hint: "a new folder inside this one"},
-			menuItem{label: "Delete", key: "x", hint: "this folder, once it is empty"})
+	e, _, ok := m.current()
+	switch {
+	case ok && e.isFolder && e.folded:
+		items = append(items, menuItem{label: "Expand", key: "enter", hint: "show what is inside"})
+	case ok && e.isFolder:
+		items = append(items, menuItem{label: "Collapse", key: "enter", hint: "one row, out of the way"})
+	default:
+		items = append(items, menuItem{label: "Open in new tab", key: "enter", hint: "and switch to it"})
+	}
+	items = append(items, menuItem{label: "Add", key: "a", hint: "a bookmark here: its URL, then its title"})
+	if ok && e.isFolder {
+		items = append(items, menuItem{label: "Delete", key: "x", hint: "this folder, once it is empty"})
 	} else {
 		items = append(items,
-			menuItem{label: "Open in new tab", key: "enter", hint: "and switch to it"},
 			menuItem{label: "Move", key: "m", hint: "into a folder, or out to the top"},
 			menuItem{label: "Delete", key: "x", hint: "this bookmark"},
-			menuItem{label: "Yank url", key: "y", hint: "to the clipboard"},
-			menuItem{label: "Folder here", key: "f", hint: "a new folder where this bookmark is"})
+			menuItem{label: "Yank url", key: "y", hint: "to the clipboard"})
 	}
 	return append(items,
 		menuItem{separator: true},
 		menuItem{header: true, label: "panel operation"},
-		menuItem{label: "Add this page", key: "A", hint: "the one [W]eb is showing"},
-		menuItem{label: "Folder", key: "F", hint: "a new one at the top level"},
+		menuItem{label: "Add folder", key: "A", hint: "here; a path like a/b/c makes each level"},
 		menuItem{label: "Filter", key: "/", hint: "type to narrow the list"})
 }
 
@@ -296,8 +304,12 @@ func (m listPanel) hintPairs() [][2]string {
 	case listHistory:
 		pairs = [][2]string{{"Enter", "open in new tab"}, {"x", "delete"}, {"y", "yank url"}, {"C", "clear"}, {"/", "filter"}}
 	default:
-		pairs = [][2]string{{"Enter", "open in new tab"}, {"m", "move"}, {"x", "delete"}, {"y", "yank url"},
-			{"f/F", "folder"}, {"A", "add this page"}, {"/", "filter"}}
+		open := "open in new tab"
+		if e, _, ok := m.current(); ok && e.isFolder {
+			open = "expand / collapse"
+		}
+		pairs = [][2]string{{"Enter", open}, {"a", "add"}, {"m", "move"}, {"x", "delete"}, {"y", "yank url"},
+			{"A", "add folder"}, {"/", "filter"}}
 	}
 	return append(pairs, [2]string{"Esc", "web"})
 }
@@ -360,7 +372,14 @@ func (m listPanel) panel(outerW, outerH int) string {
 	for r := m.top; r < end; r++ {
 		e := m.entries[vis[r]]
 		if e.isFolder {
-			line := padRight(" "+strings.Repeat("  ", e.depth)+glyphFolder+" "+oneLine(e.title), innerW)
+			tri, tail := "▾", ""
+			if e.folded {
+				tri = "▸"
+				if e.count > 0 {
+					tail = " · " + plural(e.count, "bookmark")
+				}
+			}
+			line := padRight(" "+strings.Repeat("  ", e.depth)+tri+" "+glyphFolder+" "+oneLine(e.title)+tail, innerW)
 			if r == m.cursor {
 				rows = append(rows, cur.Render(line))
 			} else {
@@ -396,5 +415,5 @@ func (m listPanel) emptyState() (string, []hintWord) {
 	case listDownloads:
 		return "no downloads yet", emptyHint("Files the page saves are listed here; W is the web", "W")
 	}
-	return "no bookmarks yet", emptyHint("Press A on a page to add it, F for a folder, or W for the web", "A", "F", "W")
+	return "no bookmarks yet", emptyHint("Press a to add one, A for a folder, or W for the web", "a", "A", "W")
 }

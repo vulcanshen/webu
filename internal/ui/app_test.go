@@ -285,69 +285,74 @@ func TestScreensAndSession(t *testing.T) {
 		t.Fatalf("first Esc should clear the filter: screen %v filter %q", d.m.screen, d.m.lists.filter)
 	}
 
-	// F makes a folder; m moves the bookmark into it through a picker; the
-	// folder is a row of its own, and x on it only goes when it is empty.
-	d.key("F")
+	// A makes a folder — a path makes every level; m moves the bookmark
+	// into one through a picker; the folder is a row of its own, Enter
+	// folds it, and x on it only goes when it is empty.
+	d.key("A")
 	d.until("folder box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFolder })
-	d.key("dev")
+	d.key("dev/sub")
 	d.key("enter")
-	d.until("folder made", func() bool { return len(d.m.folders) == 1 })
-	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "dev" {
-		t.Fatalf("the cursor should land on the new folder: %+v", e)
+	d.until("folders made", func() bool { return len(d.m.folders) == 1 && d.m.folders[0] == "dev/sub" })
+	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "dev/sub" || e.depth != 1 {
+		t.Fatalf("the cursor should land on the new folder, one level in: %+v", e)
 	}
 	d.key("esc") // the toast
 	d.until("folder toast gone", func() bool { return !d.m.toast.anim.owns() })
 	d.m.lists.cursorTo(0) // Hacker News, at the top level
 	d.key("m")
 	d.until("move picker", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optMoveTo })
-	d.key("1")
-	d.until("moved", func() bool { return d.m.bookmarks[0].Folder == "dev" })
-	if saved, folders, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Folder != "dev" || len(folders) != 1 {
-		t.Errorf("bookmarks.yaml after move: %+v %v", saved, folders)
-	}
-	if e, _, ok := d.m.lists.current(); !ok || e.isFolder || e.folder != "dev" {
-		t.Errorf("the cursor should follow the moved bookmark: %+v", e)
-	}
-	if v := d.m.View(); !strings.Contains(v, glyphFolder+" dev") {
-		t.Errorf("the folder should be a row of its own:\n%s", v)
-	}
-	d.key("k") // up, onto the folder row
-	if e, _, _ := d.m.lists.current(); !e.isFolder {
-		t.Fatalf("k should land on the folder row: %+v", e)
-	}
-	d.key("x")
-	if len(d.m.folders) != 1 {
-		t.Error("a folder with a bookmark in it must not go")
-	}
-	d.key("esc") // the toast that said so
-	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
-
-	// f on the folder row makes a folder inside it; the tree shows the
-	// nesting, and so does the Move picker.
-	d.key("f")
-	d.until("subfolder box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFolder })
-	if !strings.Contains(d.m.input.prompt, "inside dev") {
-		t.Errorf("the box should say where the folder goes: %q", d.m.input.prompt)
-	}
-	d.key("sub")
-	d.key("enter")
-	d.until("subfolder made", func() bool { return len(d.m.folders) == 2 && d.m.folders[1] == "dev/sub" })
-	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "dev/sub" || e.depth != 1 {
-		t.Fatalf("the cursor should be on the new subfolder, one level in: %+v", e)
-	}
-	d.key("esc") // the toast
-	d.until("toast gone again", func() bool { return !d.m.toast.anim.owns() })
-	d.m.lists.cursorTo(0) // Hacker News, in dev
-	d.key("m")
-	d.until("move picker again", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optMoveTo })
 	if got := d.m.options.items[2].label; got != "  sub" {
 		t.Errorf("the picker should indent the subfolder: %q", got)
 	}
 	d.key("2")
-	d.until("moved into the subfolder", func() bool { return d.m.bookmarks[0].Folder == "dev/sub" })
-	if e, _, ok := d.m.lists.current(); !ok || e.isFolder || e.depth != 2 {
-		t.Errorf("the bookmark should sit two levels in: %+v", e)
+	d.until("moved", func() bool { return d.m.bookmarks[0].Folder == "dev/sub" })
+	if saved, folders, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Folder != "dev/sub" || len(folders) != 1 {
+		t.Errorf("bookmarks.yaml after move: %+v %v", saved, folders)
 	}
+	if e, _, ok := d.m.lists.current(); !ok || e.isFolder || e.depth != 2 {
+		t.Errorf("the cursor should follow the moved bookmark, two levels in: %+v", e)
+	}
+	if v := d.m.View(); !strings.Contains(v, glyphFolder+" dev") || !strings.Contains(v, glyphFolder+" sub") {
+		t.Errorf("both folders should be rows of their own:\n%s", v)
+	}
+
+	// Enter on the top folder folds everything under it into one row.
+	d.m.lists.cursorToFolder("dev")
+	d.key("enter")
+	if got := len(d.m.lists.visible()); got != 1 {
+		t.Fatalf("folded dev should leave one row, not %d", got)
+	}
+	if e, _, _ := d.m.lists.current(); !e.isFolder || !e.folded || e.count != 1 {
+		t.Errorf("the folded row should count what it hides: %+v", e)
+	}
+	d.key("enter")
+	if got := len(d.m.lists.visible()); got != 3 {
+		t.Fatalf("unfolded dev should show three rows, not %d", got)
+	}
+	d.key("x")
+	if len(d.m.folders) != 1 {
+		t.Error("a folder with something in it must not go")
+	}
+	d.key("esc") // the toast that said so
+	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
+
+	// a adds a bookmark where the cursor is, in two boxes; with no page
+	// up, the title box offers the URL, and Enter takes the offer.
+	d.key("a")
+	d.until("url box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputBookmarkURL })
+	d.key("go.dev")
+	d.key("enter")
+	d.until("title box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputBookmarkTitle })
+	if d.m.input.placeholder != "https://go.dev" {
+		t.Errorf("the title box should offer the URL: %q", d.m.input.placeholder)
+	}
+	d.key("enter")
+	d.until("added", func() bool { return len(d.m.bookmarks) == 2 })
+	if b := d.m.bookmarks[1]; b.URL != "https://go.dev" || b.Title != "https://go.dev" || b.Folder != "dev" {
+		t.Errorf("the typed bookmark: %+v", b)
+	}
+	d.key("esc") // the toast
+	d.until("added toast gone", func() bool { return !d.m.toast.anim.owns() })
 	d.key("esc") // back to the web
 	if d.m.screen != screenWeb {
 		t.Fatalf("Esc should go back to the web: %v", d.m.screen)

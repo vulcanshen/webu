@@ -121,9 +121,13 @@ type AppModel struct {
 	// lists them, the header counts the ones still running.
 	dls []download
 	// moveRef is the bookmark a Move picker is about; settingRef the row a
-	// Settings box is editing; folderParent where a folder being named goes.
+	// Settings box is editing; folderParent where a folder being named goes;
+	// newBookmark the one being typed in, between its two boxes;
+	// foldedFolders the folder rows shut with Enter (bookmarks.go).
 	moveRef, settingRef int
 	folderParent        string
+	newBookmark         store.Bookmark
+	foldedFolders       map[string]bool
 	// pendingG holds the first half of the gg chord.
 	pendingG bool
 }
@@ -1071,7 +1075,8 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 		case m.lists.kind == listSettings:
 			return m, m.settingBox(e.ref)
 		case e.isFolder:
-			return m, m.toast.show("a folder: m on a bookmark moves it in", toastInfo)
+			m.toggleFolder(e.folder)
+			return m, nil
 		}
 		// A bookmark or a visit opens in a NEW tab and never over the one
 		// [W]eb was showing (revised 2026-09-21).
@@ -1088,23 +1093,24 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 			return m, m.toast.show("m moves a bookmark; put the cursor on one", toastInfo)
 		}
 		return m, m.movePicker(e.ref)
-	case "f", "F":
-		// F is a folder at the top level; f one where the cursor is — inside
-		// the folder under it, or beside the bookmark under it.
-		m.folderParent = ""
-		prompt := "name of the folder"
-		if key == "f" && ok && e.folder != "" {
-			m.folderParent = e.folder
-			prompt += " inside " + e.folder
+	case "a":
+		// A bookmark typed in, where the cursor is: inside the folder under
+		// it, or beside the bookmark under it.
+		folder := ""
+		if ok {
+			folder = e.folder
 		}
-		return m, m.input.ask(inputPopup{title: "New folder", glyph: glyphFolder,
-			prompt: prompt, accept: "create", action: inputFolder}, m.layer())
+		return m, m.startAddBookmark(folder)
 	case "A":
-		t := m.shownTab()
-		if t == nil || t.url == "" {
-			return m, m.toast.show("no page to add", toastInfo)
+		// A folder where the cursor is; a path makes every level at once.
+		m.folderParent = ""
+		prompt := "folder to add; a path like a/b/c makes each level"
+		if ok && e.folder != "" {
+			m.folderParent = e.folder
+			prompt += ", inside " + e.folder
 		}
-		return m, m.addEntry(m.lists.kind, t.title, t.url)
+		return m, m.input.ask(inputPopup{title: "Add folder", glyph: glyphFolder,
+			prompt: prompt, accept: "create", action: inputFolder}, m.layer())
 	case "y":
 		if !ok || e.isFolder {
 			return m, nil
@@ -1664,6 +1670,10 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.saveSetting(value, value == "" && m.input.placeholder != "")
 	case inputFolder:
 		return m, tea.Batch(m.input.close(), m.addFolder(m.folderParent, value))
+	case inputBookmarkURL:
+		return m, m.bookmarkURLGiven(value)
+	case inputBookmarkTitle:
+		return m, m.bookmarkTitleGiven(value)
 	case inputEval:
 		// The prompt stays; the expression and, when it comes, its result
 		// go to the console list behind it.
