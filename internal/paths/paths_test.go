@@ -23,6 +23,11 @@ func TestDirsHonourOverrides(t *testing.T) {
 	if d, _ := Data(); d != filepath.Join("/tmp/h", ".webu", "datas") {
 		t.Errorf("Data under HOME %q", d)
 	}
+	t.Setenv("WEBU_CONFIG", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+	if d, _ := Config(); d != filepath.Join("/tmp/h", ".config", "webu") {
+		t.Errorf("Config under HOME %q", d)
+	}
 	if d, _ := Cache(); d != "/tmp/wk" {
 		t.Errorf("Cache %q", d)
 	}

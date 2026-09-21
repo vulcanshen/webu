@@ -1,0 +1,67 @@
+version: 2
+
+project_name: webu
+
+builds:
+  - main: ./cmd/webu
+    binary: webu
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/vulcanshen/webu/internal/version.Version={{.Version}}
+    goos:
+      # unix-first, like the rest of the u-family — no windows target.
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      # The Chromium snapshot bucket has no Linux ARM build, and webu runs
+      # only the pinned snapshot (function.md §9): a binary that could never
+      # fetch its engine is not shipped.
+      - goos: linux
+        goarch: arm64
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  disable: true
+
+# A formula, not a cask, like kbu / filu / sshu: a formula binary is never
+# stamped com.apple.quarantine, so an unsigned binary runs clean.
+#
+# The release ships the Go binary alone. Chromium is not bundled: webu
+# fetches the one pinned revision (~175–250 MB) into the cache directory on
+# first launch, with a progress line, and `webu browser update` is the door
+# to a new pin. Bundling would mean a 200 MB archive per platform and a
+# formula that downloads it again for every upgrade; the pin lives in the
+# binary, so the two stay in step either way.
+brews:
+  - repository:
+      owner: vulcanshen
+      name: homebrew-tap
+      token: "{{ .Env.ACTION_TOKEN }}"
+    homepage: "https://github.com/vulcanshen/webu"
+    description: "terminal browser (u-family) — headless Chromium's accessibility tree, drawn as a TUI: tabs, bookmarks, history, downloads, DevTools"
+    caveats: |
+      webu runs its own Chromium (a pinned revision), fetched once on the
+      first launch — about 175–250 MB into the cache directory (macOS:
+      ~/Library/Caches/webu, Linux: ~/.cache/webu). After an upgrade that
+      pins a new revision, `webu browser update` fetches it.
+
+      Settings and bookmarks live in ~/.config/webu; history, session,
+      downloads and the browser profile in ~/.webu/datas.
+
+      A Nerd Font terminal profile is required: links, media, panels and
+      the header are drawn with Nerd Font glyphs.
+    test: |
+      system "#{bin}/webu", "version"

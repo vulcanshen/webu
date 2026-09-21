@@ -27,7 +27,7 @@ tools/axdump/        看任何頁面的 AX tree（用本機 Chrome，不是釘�
 |---|---|
 | revision | `browser.Revision = 1701465`（V8 15.6、Chromium 156.0.8067.0 線）；三平台 HEAD 驗過都存在：Mac_Arm 175 MB、Mac 195 MB、Linux_x64 248 MB。Linux arm64 快照桶沒有，`ErrUnsupportedPlatform` 明講 |
 | 下載 | `browser.Download`：串流到 `<dir>.zip.part`、解到 `<dir>.tmp`、最後 rename；中途死掉不會留下 `Installed()` 誤信的東西。解壓保留 symlink（Mac bundle 的 `Versions/Current` 是 link，複製成檔案就起不來） |
-| 目錄 | cache：`WEBU_CACHE` > `XDG_CACHE_HOME/webu` > `os.UserCacheDir()/webu`；config：`WEBU_CONFIG` > `XDG_CONFIG_HOME/webu` > `os.UserConfigDir()/webu`（同 kbu / filu / sshu：macOS 沒設 XDG 時落在 `~/Library/…`，ui.md §6 寫的 `~/.config/webu` 是 XDG 拼法） |
+| 目錄 | cache：`WEBU_CACHE` > `XDG_CACHE_HOME/webu` > `os.UserCacheDir()/webu`；config：`WEBU_CONFIG` > `XDG_CONFIG_HOME/webu` > `~/.config/webu`（2026-09-21 起不走 `os.UserConfigDir`，macOS 也是 `~/.config`）；data：`WEBU_DATA` > `~/.webu/datas`（同 kbu / filu / sshu：macOS 沒設 XDG 時落在 `~/Library/…`，ui.md §6 寫的 `~/.config/webu` 是 XDG 拼法） |
 | flag | Puppeteer 那組減 `--enable-automation`（否則 `navigator.webdriver` 為 true），加 `--disable-blink-features=AutomationControlled`、`--headless=new`、`--user-data-dir=<config>/profile`；三個 background throttling 關閉（function.md §6 的節流坑）。`TestLaunchAnswers` 斷言 `navigator.webdriver === false` |
 | crashpad | macOS 上 Chromium 一律在 `~/Library/Application Support/Chromium/Crashpad` 放一個空資料庫，`--disable-breakpad` / `--disable-crash-reporter` / `--crash-dumps-dir` 都壓不掉；幾 KB，接受。`--crash-dumps-dir` 留著，Linux 吃 |
 | 關閉 | `chromedp.Cancel`（讓 profile flush）再 allocator cancel（保底 kill）；`main.go` 接 SIGHUP / SIGINT / SIGTERM |
