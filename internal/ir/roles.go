@@ -54,14 +54,14 @@ type Spec struct {
 var Roles = map[string]Spec{
 	"RootWebArea": {Kind: Document, Display: "the page; its name is the title"},
 
-	"banner":        {Kind: Landmark, Display: "landmark region, enters the outline"},
-	"navigation":    {Kind: Landmark, Display: "landmark region, enters the outline"},
+	"banner":        {Kind: Landmark, Display: "page chrome: one row, an entry; what it holds is behind Enter"},
+	"navigation":    {Kind: Landmark, Display: "page chrome: one row, an entry; what it holds is behind Enter"},
 	"main":          {Kind: Landmark, Display: "landmark region, enters the outline"},
-	"complementary": {Kind: Landmark, Display: "landmark region, enters the outline"},
-	"contentinfo":   {Kind: Landmark, Display: "landmark region, enters the outline"},
+	"complementary": {Kind: Landmark, Display: "page chrome: one row, an entry; what it holds is behind Enter"},
+	"contentinfo":   {Kind: Landmark, Display: "page chrome: one row, an entry; what it holds is behind Enter"},
 	"region":        {Kind: Landmark, Display: "landmark region, enters the outline"},
 	"form":          {Kind: Landmark, Display: "landmark region, enters the outline"},
-	"search":        {Kind: Landmark, Display: "landmark region, enters the outline"},
+	"search":        {Kind: Landmark, Display: "page chrome: one row, an entry; what it holds is behind Enter"},
 	"article":       {Kind: Landmark, Display: "landmark region, enters the outline"},
 
 	"heading":    {Kind: Heading, Action: Click, Display: "title with its level; cursor stops here"},

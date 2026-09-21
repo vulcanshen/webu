@@ -1299,7 +1299,7 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 type optionsKind int
 
 const (
-	optItemMenu optionsKind = iota // an item's operations on their own: a navigation's links (Enter on its row)
+	optItemMenu optionsKind = iota // an item's operations on their own: what an entry row holds (Enter on it)
 	optSelect                      // a <select>'s options, keyed by index
 	optMoveTo                      // a bookmark's folder, keyed by index (bookmarks.go)
 )
@@ -1312,20 +1312,31 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 	var items []menuItem
 	switch n.Kind {
 	case ir.Landmark:
-		if n.Role == "navigation" {
-			// The links and buttons it holds, one row each, the nesting
-			// of its lists as indent: this IS the row's operation list.
-			ts := navTargets(n)
+		if isEntry(n) {
+			// What it holds, one row each, the nesting of its lists as
+			// indent: this IS the row's operation list.
+			ts := entryTargets(n)
 			for i, t := range ts {
-				hint := oneLine(t.node.URL)
-				if t.node.Kind == ir.Button {
-					hint = "button"
+				label := oneLine(t.node.Name)
+				if label == "" {
+					label = oneLine(nameOr(t.node.Text(), t.node.URL))
 				}
-				items = append(items, menuItem{label: strings.Repeat("  ", t.depth) + truncate(oneLine(nameOr(t.node.Text(), t.node.URL)), 60),
-					key: "nav:" + itoa(i), hint: hint})
+				hint := oneLine(t.node.URL)
+				switch t.node.Kind {
+				case ir.Button:
+					hint = "button"
+				case ir.Textbox:
+					hint = "a field: type into it"
+				case ir.Check:
+					hint = "check box"
+				case ir.Combobox:
+					hint = "select"
+				}
+				items = append(items, menuItem{label: strings.Repeat("  ", t.depth) + truncate(label, 60),
+					key: "entry:" + itoa(i), hint: hint})
 			}
 			if len(ts) == 0 {
-				items = append(items, menuItem{label: "nothing to open in it", key: "nav:none", hint: "no link or button inside", disabled: true})
+				items = append(items, menuItem{label: "nothing to open in it", key: "entry:none", hint: "no link, button or field inside", disabled: true})
 			}
 			break
 		}
@@ -1431,7 +1442,7 @@ func (m AppModel) menuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // optionsKey drives the second-level menu: an item's own operation list
-// (a navigation's links), a select's options (whose keys are their
+// (what an entry row holds), a select's options (whose keys are their
 // index), or the Move to… picker.
 func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var key string
@@ -1498,14 +1509,13 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
-	if strings.HasPrefix(key, "nav:") {
-		// A navigation's link or button, by its place in the row's
-		// operation list (itemMenuItems): the click itself.
+	if strings.HasPrefix(key, "entry:") {
+		// Something inside an entry row, by its place in the row's
+		// operation list (itemMenuItems).
 		if n := t.current(); t != nil && n != nil && !m.busy() {
-			i, err := strconv.Atoi(strings.TrimPrefix(key, "nav:"))
-			if ts := navTargets(n); err == nil && i >= 0 && i < len(ts) {
-				id := ts[i].node.ID
-				return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
+			i, err := strconv.Atoi(strings.TrimPrefix(key, "entry:"))
+			if ts := entryTargets(n); err == nil && i >= 0 && i < len(ts) {
+				return m.actOn(t, ts[i].node)
 			}
 		}
 		return m, nil
@@ -1667,9 +1677,11 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 //   - a button, a check box, a media box, an unsupported node: the click
 //   - a link would leave the page for somewhere the screen does not show,
 //     so it asks first — text and URL in a confirm — and opens on Enter
-//   - a navigation's row is an entry: its own operation is the list of
-//     what it holds, the same rows the Space menu's item half shows
-//   - any other landmark's row, or a heading's, has no click to map; its
+//   - a chrome row — banner, navigation, breadcrumb, search, sidebar,
+//     footer — is an entry: its own operation is the list of what it
+//     holds, the same rows the Space menu's item half shows; a search
+//     with one box opens the box outright
+//   - a content landmark's row, or a heading's, has no click to map; its
 //     own action is to collapse or expand
 //   - anything else says that Enter has nothing defined for it yet; the
 //     Space menu still lists what it can do
@@ -1689,9 +1701,21 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	case ir.Link:
 		return m, m.askOpenLink(n)
 	case ir.Landmark:
-		if n.Role == "navigation" {
-			// An entry: its own operation IS its list of operations, the
-			// links it holds (2026-09-21).
+		if isEntry(n) {
+			// Chrome: its own operation is its operation list, what it
+			// holds — except a search with one box, whose one obvious
+			// operation is the box (2026-09-21).
+			if n.Role == "search" {
+				var boxes []*ir.Node
+				for _, x := range entryTargets(n) {
+					if x.node.Kind == ir.Textbox {
+						boxes = append(boxes, x.node)
+					}
+				}
+				if len(boxes) == 1 {
+					return m, m.editField(boxes[0])
+				}
+			}
 			return m.openItemMenu(n)
 		}
 		return m.dispatch("fold")
@@ -1704,14 +1728,28 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 }
 
 // openItemMenu is Enter on an item whose own operation IS its operation
-// list — a navigation, whose rows are the links it holds. The same rows
-// the Space menu's item half shows, on their own (ux.md §A.0.K).
+// list — an entry row, whose rows are what it holds. The same rows the
+// Space menu's item half shows, on their own (ux.md §A.0.K).
 func (m AppModel) openItemMenu(n *ir.Node) (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	m.optionsFor, m.optionsKind = n, optItemMenu
 	m.options.setItems(itemMenuItems(n, t.lay.items[t.cursor].folded),
 		truncate(oneLine(nameOr(n.Name, n.Role)), 40), m.layer())
 	return m, m.options.open()
+}
+
+// actOn does to a node inside an entry what Enter does to it as an item
+// (enterItem): a field opens to type, a select drops its list, the rest
+// is a click — no confirm for a link, the list having been the look.
+func (m AppModel) actOn(t *tab, x *ir.Node) (tea.Model, tea.Cmd) {
+	switch x.Kind {
+	case ir.Textbox:
+		return m, m.editField(x)
+	case ir.Combobox:
+		return m.chooseOptionsFor(x)
+	}
+	id := x.ID
+	return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
 }
 
 // askOpenLink puts a link's text and URL up before following it: a click
@@ -1730,8 +1768,16 @@ func (m *AppModel) askOpenLink(n *ir.Node) tea.Cmd {
 // the current one; picking one sets it (ux.md §2.4).
 func (m AppModel) chooseOptions() (tea.Model, tea.Cmd) {
 	t := m.shownTab()
-	n := t.current()
-	if t == nil || n == nil || n.Kind != ir.Combobox {
+	if t == nil {
+		return m, m.options.close()
+	}
+	return m.chooseOptionsFor(t.current())
+}
+
+// chooseOptionsFor is chooseOptions on a given select: the one under the
+// cursor, or one inside an entry row (actOn).
+func (m AppModel) chooseOptionsFor(n *ir.Node) (tea.Model, tea.Cmd) {
+	if n == nil || n.Kind != ir.Combobox {
 		return m, m.options.close()
 	}
 	items := make([]menuItem, 0, len(n.Children))

@@ -29,14 +29,17 @@
   many bookmarks and folders go with it. An empty folder still goes at
   once. It used to refuse a folder with anything in it, which left an
   import with no way back but row by row.
-- **A navigation is one row.** `▎ 󰍜 Docs +12`: a bar, the tab you are
-  on (`aria-current`, else the link whose URL is the page's or its
-  section), and how many links are behind it — none of them on the
-  page, where a row of links invites walking sideways and costs a screen
-  before the page begins. `Enter` lists them and `Enter` again opens
-  one; the Space menu lists the same rows under item operation. A
-  breadcrumb — by name, class or `itemtype` — is the same row with its
-  last crumb.
+- **The page's chrome is one row each.** A banner, a navigation, a
+  breadcrumb, a search, a sidebar, a footer: `▎ 󰍜 Docs +12` — a bar, a
+  glyph for the kind, a word for where you are (the tab you are on by
+  `aria-current` or by URL, a breadcrumb's last crumb, the site for a
+  banner, the box for a search) and how much is behind it — none of it
+  on the page, where a row of links invites walking sideways and costs
+  a screen before the page begins. `Enter` lists what it holds and
+  `Enter` again opens one — a link, a button, a field to type into, a
+  select; a search with one box opens the box outright. The Space menu
+  lists the same rows under item operation. main, article, region and
+  form are the page itself and stay as they were.
 
 ### Fixed
 

@@ -929,7 +929,7 @@ func TestNavigationEntry(t *testing.T) {
 	// landmark: the tab in the navigation, the last crumb in a breadcrumb
 	// (a trail named so, and one only the DOM's class says is one).
 	v := d.m.View()
-	for _, want := range []string{"Anchor +2", "Page A +1", "Here +1"} {
+	for _, want := range []string{"Anchor +2", "Page A +1", "Here +1", "Find +2"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("missing the entry row %q in:\n%s", want, v)
 		}
@@ -953,7 +953,7 @@ func TestNavigationEntry(t *testing.T) {
 	d.until("space menu", func() bool { return d.m.spaceMenu.isInteractive() })
 	found := false
 	for _, it := range d.m.spaceMenu.items {
-		if it.label == "Anchor" && it.key == "nav:1" {
+		if it.label == "Anchor" && it.key == "entry:1" {
 			found = true
 		}
 	}
@@ -962,6 +962,24 @@ func TestNavigationEntry(t *testing.T) {
 	}
 	d.key("esc")
 	d.until("space menu gone", func() bool { return !d.m.spaceMenu.isActive() })
+
+	// A search with one box: Enter is the box itself, and what is typed
+	// lands in the page's field — which is behind the row, not an item.
+	d.cursorOn(ir.Landmark, "Find")
+	d.key("enter")
+	d.until("the search box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
+	d.key("webu")
+	d.key("enter")
+	d.until("typed into the field", func() bool {
+		found := false
+		d.page().root.Walk(func(x *ir.Node) bool {
+			if x.Kind == ir.Textbox && x.Name == "Find" && x.Value == "webu" {
+				found = true
+			}
+			return !found
+		})
+		return found
+	})
 
 	// The class-marked trail is a navigation of its own, with its link.
 	d.cursorOn(ir.Landmark, "Root")

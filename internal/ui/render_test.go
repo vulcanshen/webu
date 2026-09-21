@@ -109,12 +109,12 @@ func text(s string) *ir.Node             { return &ir.Node{Kind: ir.Text, Name: 
 
 func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
-		{Kind: ir.Landmark, Role: "banner", ID: 1, Children: []*ir.Node{link("Home", "/", 2), link("About", "/a", 3)}},
+		{Kind: ir.Landmark, Role: "region", Name: "Header", ID: 1, Children: []*ir.Node{link("Home", "/", 2), link("About", "/a", 3)}},
 		{Kind: ir.Landmark, Role: "main", ID: 4, Children: []*ir.Node{
 			para(text("body text")),
 			{Kind: ir.Landmark, Role: "navigation", Name: "Repository", ID: 6, Children: []*ir.Node{link("Code", "/c", 7)}},
 		}},
-		{Kind: ir.Landmark, Role: "contentinfo", ID: 5, Children: []*ir.Node{text("footer")}},
+		{Kind: ir.Landmark, Role: "region", Name: "Footer", ID: 5, Children: []*ir.Node{text("footer")}},
 	}}
 	// Nothing folds by default (revised 2026-09-21), main or no main.
 	fresh := &tab{cursor: -1, root: root}
@@ -136,7 +136,7 @@ func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 		return b.String()
 	}
 	out := rows()
-	for _, want := range []string{"▸ banner · 2 items", "▾ main", "body text", "Repository +1", "▸ contentinfo"} {
+	for _, want := range []string{"▸ region Header · 2 items", "▾ main", "body text", "Repository +1", "▸ region Footer"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in\n%s", want, out)
 		}
@@ -147,16 +147,16 @@ func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 		t.Errorf("hidden content is drawn:\n%s", out)
 	}
 	// Items: three rules on the top level and the navigation's entry row.
-	if len(tb.lay.items) != 4 || tb.lay.items[0].node.Role != "banner" || !tb.lay.items[0].folded {
+	if len(tb.lay.items) != 4 || tb.lay.items[0].node.Role != "region" || !tb.lay.items[0].folded {
 		t.Fatalf("items: %s", out)
 	}
 	tb.cursor = 0
 	tb.toggleFold(60)
 	out = rows()
-	if !strings.Contains(out, "▾ banner") || !strings.Contains(out, "Home") {
+	if !strings.Contains(out, "▾ region Header") || !strings.Contains(out, "Home") {
 		t.Errorf("Enter on a folded landmark opens it:\n%s", out)
 	}
-	if tb.cursor != 0 || tb.lay.items[0].node.Role != "banner" {
+	if tb.cursor != 0 || tb.lay.items[0].node.Role != "region" {
 		t.Errorf("the cursor should stay on the landmark: %d", tb.cursor)
 	}
 	// The Outline reaching into a folded landmark opens the way.
@@ -186,7 +186,7 @@ func TestHeadingCollapsesItsSection(t *testing.T) {
 			heading(1, 6, "Next"),
 			link("C", "/c", 7),
 		}},
-		{Kind: ir.Landmark, Role: "contentinfo", ID: 8, Children: []*ir.Node{link("F", "/f", 9)}},
+		{Kind: ir.Landmark, Role: "region", Name: "Tail", ID: 8, Children: []*ir.Node{link("F", "/f", 9)}},
 	}}
 	layout := func(folded ...cdp.BackendNodeID) (*tab, string) {
 		tb := &tab{cursor: -1, root: root, fold: map[cdp.BackendNodeID]bool{}}
@@ -281,10 +281,29 @@ func TestNavigationIsOneRow(t *testing.T) {
 	if l := render(trail, 80); len(l.rows) != 1 || !strings.Contains(l.rows[0].plain(), "Article A +2") {
 		t.Errorf("a breadcrumb's row should be its last crumb:\n%s", dumpLayout(l))
 	}
+	// The rest of the chrome is the same row: a banner's word is the
+	// site (its first real link, a skip link passed over), a search's its
+	// box, a footer's its name; a field counts among what is behind it.
+	chrome := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "banner", ID: 20, Children: []*ir.Node{
+			link("Skip to content", "https://x.test/page#main", 21), link("Acme", "https://x.test/", 22), link("Sign in", "https://x.test/login", 23)}},
+		{Kind: ir.Landmark, Role: "search", ID: 30, Children: []*ir.Node{
+			{Kind: ir.Textbox, Role: "searchbox", Name: "Search Acme", ID: 31}, {Kind: ir.Button, Role: "button", Name: "Go", ID: 32}}},
+		{Kind: ir.Landmark, Role: "contentinfo", Name: "Site footer", ID: 40, Children: []*ir.Node{text("© Acme")}},
+	}}
+	cl := render(chrome, 80)
+	for _, want := range []string{"Acme +3", "Search Acme +2", "Site footer"} {
+		if !strings.Contains(dumpLayout(cl), want) {
+			t.Errorf("missing the entry row %q in:\n%s", want, dumpLayout(cl))
+		}
+	}
+	if len(cl.items) != 3 {
+		t.Errorf("three entry rows, nothing else, should be items:\n%s", dumpLayout(cl))
+	}
 	if len(l.items) != 1 || l.items[0].node.Role != "navigation" {
 		t.Errorf("only the entry row should be an item:\n%s", dumpLayout(l))
 	}
-	ts := navTargets(root.Children[0])
+	ts := entryTargets(root.Children[0])
 	if len(ts) != 4 || ts[0].node.Text() != "Platform" || ts[2].node.Text() != "Enterprise" || ts[2].depth != 1 || ts[3].depth != 0 {
 		t.Errorf("targets: %+v", ts)
 	}
