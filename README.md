@@ -6,6 +6,11 @@ Protocol）打回 Chromium。一句話：**把 screen reader 的輸出畫成 TUI
 
 u-family 成員（kbu / filu / sshu 之後），依 VTP（`thoughts/tui-design`）設計。
 
+![demo](docs/demo.gif)
+
+一頁走完：Hacker News 畫成 item 與文字流，`j/k/l` 走；`Enter` 看這個 item 能做什麼、`Space` 看整份選單；
+`L` 是 Chrome 的 Cmd+L；`B` 是書籤 screen（目錄樹，Enter 開新分頁）；`I` 是 DevTools。
+
 ## 三份文件
 
 | 檔 | 回答的問題 | 讀的順序 |
@@ -49,6 +54,7 @@ CHANGELOG.md                 每版的變更，release notes 從這裡取
 .goreleaser.yaml             goreleaser：build / archive / brew tap
 .github/workflows/release.yml  推 v* tag 就發布
 install.sh / uninstall.sh    不走 Homebrew 的安裝 / 移除
+docs/demo.gif                README 的示範（tape 在 .local/demos/demo.tape，make gif 重錄）
 internal/browser/            Chromium 下載、profile、啟動、關閉
 internal/ir/                 AX tree → IR，每個 role 一份 fixture
 internal/page/               CDP 端：擷取與動作
