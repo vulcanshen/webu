@@ -107,7 +107,7 @@ func link(name, url string, id int) *ir.Node {
 func para(children ...*ir.Node) *ir.Node { return &ir.Node{Kind: ir.Paragraph, Children: children} }
 func text(s string) *ir.Node             { return &ir.Node{Kind: ir.Text, Name: s} }
 
-func TestLandmarksFoldAroundMain(t *testing.T) {
+func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		{Kind: ir.Landmark, Role: "banner", ID: 1, Children: []*ir.Node{link("Home", "/", 2), link("About", "/a", 3)}},
 		{Kind: ir.Landmark, Role: "main", ID: 4, Children: []*ir.Node{
@@ -116,7 +116,15 @@ func TestLandmarksFoldAroundMain(t *testing.T) {
 		}},
 		{Kind: ir.Landmark, Role: "contentinfo", ID: 5, Children: []*ir.Node{text("footer")}},
 	}}
-	tb := &tab{cursor: -1, root: root}
+	// Nothing folds by default (revised 2026-09-21), main or no main.
+	fresh := &tab{cursor: -1, root: root}
+	fresh.relayout(60)
+	if out := dumpLayout(fresh.lay); !strings.Contains(out, "Home") || !strings.Contains(out, "footer") || strings.Contains(out, "▸") {
+		t.Errorf("a fresh page should be all open:\n%s", out)
+	}
+
+	// The user's word folds, and survives a re-layout.
+	tb := &tab{cursor: -1, root: root, fold: map[cdp.BackendNodeID]bool{1: true, 5: true}}
 	tb.relayout(60)
 	// The rows alone: the item list names a landmark by its whole text,
 	// folded or not, which is not what is on screen.
@@ -157,16 +165,6 @@ func TestLandmarksFoldAroundMain(t *testing.T) {
 	tb.reveal(root.Children[0].Children[1], 60)
 	if !strings.Contains(rows(), "About") {
 		t.Error("reveal should open the banner")
-	}
-
-	// A page with no main folds nothing.
-	root2 := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
-		{Kind: ir.Landmark, Role: "banner", ID: 1, Children: []*ir.Node{link("Home", "/", 2)}},
-	}}
-	tb2 := &tab{cursor: -1, root: root2}
-	tb2.relayout(60)
-	if out := dumpLayout(tb2.lay); !strings.Contains(out, "Home") || strings.Contains(out, "▸") {
-		t.Errorf("no main, nothing folded:\n%s", out)
 	}
 }
 

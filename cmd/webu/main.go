@@ -81,7 +81,7 @@ func main() {
 	for _, e := range []struct {
 		name string
 		err  error
-	}{{"bookmarks.yaml", bmErr}, {"config.yaml", cfgErr}, {"history", histErr}, {"session.yaml", sessErr}} {
+	}{{"bookmarks.yaml", bmErr}, {"config.yaml", cfgErr}, {"history.yaml", histErr}, {"session.yaml", sessErr}} {
 		if e.err != nil {
 			fmt.Fprintf(os.Stderr, "webu: %s: %v (running without it)\n", e.name, e.err)
 		}

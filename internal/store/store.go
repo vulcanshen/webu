@@ -1,11 +1,11 @@
-// Package store owns webu's own files (ui.md §6): bookmarks, shortcuts and
-// settings, the history log, and the session. Every one is small and
-// hand-editable; every loader treats a missing file as the empty state and
-// a broken one as news, never as a reason not to start.
+// Package store owns webu's own files (ui.md §6): bookmarks and settings
+// under the config dir, the history and the session under the data dir.
+// Every one is small and hand-editable; every loader treats a missing file
+// as the empty state and a broken one as news, never as a reason not to
+// start.
 package store
 
 import (
-	"bufio"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,8 +75,15 @@ type SessionTab struct {
 	Title string `yaml:"title,omitempty"`
 }
 
+// dataFiles are what webu writes as it runs; they live under paths.Data.
+// The rest — what the user writes — is under paths.Config (2026-09-21).
+var dataFiles = map[string]bool{"history.yaml": true, "session.yaml": true}
+
 func path(name string) (string, error) {
 	dir, err := paths.Config()
+	if dataFiles[name] {
+		dir, err = paths.Data()
+	}
 	if err != nil {
 		return "", err
 	}
@@ -153,17 +160,29 @@ func SaveSession(s Session) error { return saveYAML("session.yaml", s) }
 
 // -------------------------------------------------------------- history
 
-// The history file is append-only text, one visit per line — time, URL,
-// title, tab-separated — so a crash mid-write costs at most one line, and
-// so it can be read with grep. It is kept forever; the History popup's
-// Clear is the only way it shrinks (ui.md §6).
+// The history is history.yaml under the data dir (2026-09-21; it was a
+// tab-separated log under the config dir): a YAML sequence, one visit
+// appended at a time as its own block, so a crash mid-write costs at most
+// one entry and the file is still one sequence any YAML reader takes
+// whole. It is kept forever; the History screen's Clear is the only way it
+// shrinks (ui.md §6).
+
+type visitRec struct {
+	At    time.Time `yaml:"at"`
+	URL   string    `yaml:"url"`
+	Title string    `yaml:"title,omitempty"`
+}
 
 func AppendVisit(v Visit) error {
-	p, err := path("history")
+	p, err := path("history.yaml")
 	if err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+		return err
+	}
+	raw, err := yaml.Marshal([]visitRec{{At: v.At.UTC(), URL: clean(v.URL), Title: clean(v.Title)}})
+	if err != nil {
 		return err
 	}
 	f, err := os.OpenFile(p, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
@@ -171,56 +190,44 @@ func AppendVisit(v Visit) error {
 		return err
 	}
 	defer f.Close()
-	line := v.At.UTC().Format(time.RFC3339) + "\t" + clean(v.URL) + "\t" + clean(v.Title) + "\n"
-	_, err = f.WriteString(line)
+	_, err = f.Write(raw)
 	return err
 }
 
+// clean keeps a title or URL on one line: a tab or newline inside one
+// would be a second YAML line with no meaning.
 func clean(s string) string {
 	return strings.NewReplacer("\t", " ", "\n", " ", "\r", " ").Replace(s)
 }
 
 // LoadHistory returns every visit, newest first.
 func LoadHistory() ([]Visit, error) {
-	p, err := path("history")
+	p, err := path("history.yaml")
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.Open(p)
+	raw, err := os.ReadFile(p)
 	if os.IsNotExist(err) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	var out []Visit
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 64<<10), 1<<20)
-	for sc.Scan() {
-		parts := strings.SplitN(sc.Text(), "\t", 3)
-		if len(parts) < 2 {
-			continue
-		}
-		at, err := time.Parse(time.RFC3339, parts[0])
-		if err != nil {
-			continue
-		}
-		v := Visit{At: at, URL: parts[1]}
-		if len(parts) == 3 {
-			v.Title = parts[2]
-		}
-		out = append(out, v)
+	var recs []visitRec
+	if err := yaml.Unmarshal(raw, &recs); err != nil {
+		return nil, err
 	}
-	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
-		out[i], out[j] = out[j], out[i]
+	out := make([]Visit, 0, len(recs))
+	for i := len(recs) - 1; i >= 0; i-- {
+		r := recs[i]
+		out = append(out, Visit{At: r.At, URL: r.URL, Title: r.Title})
 	}
-	return out, sc.Err()
+	return out, nil
 }
 
 // ClearHistory empties the log.
 func ClearHistory() error {
-	p, err := path("history")
+	p, err := path("history.yaml")
 	if err != nil {
 		return err
 	}
@@ -231,23 +238,23 @@ func ClearHistory() error {
 	return err
 }
 
-// DeleteVisit removes every line matching the visit (same time and URL).
+// DeleteVisit removes every entry matching the visit (same time and URL)
+// and writes the rest back, oldest first as they were.
 func DeleteVisit(v Visit) error {
 	all, err := LoadHistory()
 	if err != nil {
 		return err
 	}
-	if err := ClearHistory(); err != nil {
-		return err
-	}
+	var keep []visitRec
 	for i := len(all) - 1; i >= 0; i-- {
 		x := all[i]
 		if x.URL == v.URL && x.At.Equal(v.At) {
 			continue
 		}
-		if err := AppendVisit(x); err != nil {
-			return err
-		}
+		keep = append(keep, visitRec{At: x.At.UTC(), URL: x.URL, Title: x.Title})
 	}
-	return nil
+	if len(keep) == 0 {
+		return ClearHistory()
+	}
+	return saveYAML("history.yaml", keep)
 }

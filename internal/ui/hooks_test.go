@@ -20,6 +20,7 @@ import (
 func hookBrowser(t *testing.T) *browser.Browser {
 	t.Helper()
 	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -211,11 +212,11 @@ func TestUndoCloseAndQuitConfirm(t *testing.T) {
 		t.Errorf("undo should pop the stack: %d left", len(d.m.closed))
 	}
 
-	// W in [2] closes the page being shown, whatever [1]'s cursor says.
+	// C in [2] closes the page being shown, whatever [1]'s cursor says.
 	d.key("2")
-	d.key("W")
+	d.key("C")
 	if len(d.m.tabs) != 0 || len(d.m.closed) != 1 || d.m.shownTab() != nil {
-		t.Fatalf("after W: %d tabs, %d closed", len(d.m.tabs), len(d.m.closed))
+		t.Fatalf("after C: %d tabs, %d closed", len(d.m.tabs), len(d.m.closed))
 	}
 	if !strings.Contains(d.m.View(), "no page") {
 		t.Errorf("[2] should be empty:\n%s", d.m.View())

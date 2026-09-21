@@ -126,7 +126,12 @@ func (l *DevLog) Add(e ConsoleEntry) {
 func Eval(ctx context.Context, expr string) ConsoleEntry {
 	var out ConsoleEntry
 	err := run(ctx, func(ctx context.Context) error {
-		obj, exc, err := runtime.Evaluate(expr).WithReturnByValue(true).
+		// Not returnByValue: that serialises the result, and `window` (or
+		// anything with a cycle) then fails with "Object reference chain is
+		// too long" — which is what the prompt printed for `window` until
+		// 2026-09-21. The object comes back by reference with a preview,
+		// and is printed the way the console prints one.
+		obj, exc, err := runtime.Evaluate(expr).WithGeneratePreview(true).
 			WithAwaitPromise(true).WithReplMode(true).Do(ctx)
 		if err != nil {
 			return err
@@ -139,7 +144,11 @@ func Eval(ctx context.Context, expr string) ConsoleEntry {
 			out = ConsoleEntry{Level: "error", Text: text}
 			return nil
 		}
-		out = ConsoleEntry{Level: "result", Text: resultText(obj)}
+		text := resultText(obj)
+		if obj != nil && obj.ObjectID != "" && obj.Type == runtime.TypeObject && obj.Subtype != runtime.SubtypeNull {
+			text = objectText(ctx, obj)
+		}
+		out = ConsoleEntry{Level: "result", Text: text}
 		return nil
 	})
 	if err != nil {
@@ -148,9 +157,68 @@ func Eval(ctx context.Context, expr string) ConsoleEntry {
 	return out
 }
 
+// objectText prints an object: a plain object or an array as its JSON
+// (`{"a":1}`, `[1,2]`), which says everything; anything else — a Window, a
+// document, a Location — by its class and the preview of its properties
+// (`Window {window: Window, self: Window, …}`), which is what the console
+// shows, since their JSON is empty or impossible.
+func objectText(ctx context.Context, o *runtime.RemoteObject) string {
+	if o.ClassName == "Object" || o.ClassName == "Array" {
+		res, _, err := runtime.CallFunctionOn(
+			"function() { try { const s = JSON.stringify(this); return s === undefined ? null : s } catch (e) { return null } }").
+			WithObjectID(o.ObjectID).WithReturnByValue(true).Do(ctx)
+		if err == nil && res != nil && res.Type == runtime.TypeString {
+			var s string
+			if json.Unmarshal(res.Value, &s) == nil {
+				return s
+			}
+		}
+	}
+	return previewText(o)
+}
+
+// previewText is the preview Chromium attaches to an object: its
+// description and the first properties, an ellipsis where it cut them.
+func previewText(o *runtime.RemoteObject) string {
+	p := o.Preview
+	if p == nil {
+		if o.Description != "" {
+			return o.Description
+		}
+		return string(o.Type)
+	}
+	parts := make([]string, 0, len(p.Properties))
+	for _, pr := range p.Properties {
+		v := pr.Value
+		switch {
+		case pr.Type == runtime.TypeString:
+			v = strconvQuote(pr.Value)
+		case pr.Type == runtime.TypeFunction:
+			v = "ƒ"
+		case pr.Type == runtime.TypeObject && pr.ValuePreview != nil && pr.ValuePreview.Description != "":
+			v = pr.ValuePreview.Description
+		case pr.Type == runtime.TypeObject && v == "":
+			v = "Object"
+		}
+		parts = append(parts, pr.Name+": "+v)
+	}
+	inner := strings.Join(parts, ", ")
+	if p.Overflow {
+		inner += ", …"
+	}
+	switch {
+	case o.Subtype == runtime.SubtypeArray:
+		return p.Description + " [" + inner + "]"
+	case p.Description == "Object":
+		return "{" + inner + "}"
+	case inner == "":
+		return p.Description // a Date, a RegExp: the description is the value
+	}
+	return p.Description + " {" + inner + "}"
+}
+
 // resultText is a value the way the console prints one: strings quoted,
-// numbers and booleans as written, objects as their JSON, the rest by
-// description.
+// numbers and booleans as written, the rest by value or description.
 func resultText(o *runtime.RemoteObject) string {
 	if o == nil {
 		return "undefined"

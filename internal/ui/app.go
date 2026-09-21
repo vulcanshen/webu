@@ -17,6 +17,7 @@ import (
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/page"
+	"github.com/vulcanshen/webu/internal/paths"
 	"github.com/vulcanshen/webu/internal/store"
 )
 
@@ -403,6 +404,10 @@ func (m *AppModel) firstFrame() tea.Cmd {
 	if m.browser != nil {
 		ctx, dir := m.browser.Ctx, m.downloadDir()
 		cmds = append(cmds, func() tea.Msg {
+			// Chromium does not create the directory it is pointed at.
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				return actionErrMsg{err: fmt.Errorf("downloads: %w", err)}
+			}
 			if err := page.SetDownloads(ctx, dir); err != nil {
 				return actionErrMsg{err: fmt.Errorf("downloads: %w", err)}
 			}
@@ -412,11 +417,16 @@ func (m *AppModel) firstFrame() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// downloadDir is config.yaml's download_dir, or ~/Downloads (ui.md §6).
+// downloadDir is config.yaml's download_dir, or ~/.webu/datas/downloads
+// (ui.md §6; revised 2026-09-21 — it was ~/Downloads). ~ is expanded.
 func (m AppModel) downloadDir() string {
 	dir := m.cfg.DownloadDir
 	if dir == "" {
-		dir = "~/Downloads"
+		if d, err := paths.Downloads(); err == nil {
+			dir = d
+		} else {
+			dir = "~/Downloads"
+		}
 	}
 	if strings.HasPrefix(dir, "~/") {
 		if home, err := os.UserHomeDir(); err == nil {
@@ -809,7 +819,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "R", "T", "Y", "A", "O", "Z", "I", "W":
+		case "R", "T", "Y", "A", "O", "Z", "I", "C":
 			return m.dispatch(k)
 		}
 	}
@@ -826,8 +836,11 @@ func (m *AppModel) openDevtools() tea.Cmd {
 		return m.toast.show("no page for DevTools", toastInfo)
 	}
 	m.devtools.refresh(t.dev)
-	fetch := m.fetchStorage()
-	if m.devtools.tab == devSource {
+	var fetch tea.Cmd
+	switch m.devtools.tab {
+	case devStorage:
+		fetch = m.fetchStorage()
+	case devSource:
 		fetch = m.fetchSource()
 	}
 	return tea.Batch(m.devtools.open(t.id, m.layer()), fetch)
@@ -1183,13 +1196,13 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
 		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
 		menuItem{label: "Visual mode", key: "V", hint: "walk the text by character, copy some", disabled: t == nil},
-		menuItem{label: "URL", key: "L", hint: "go to one; this page's own is offered"},
+		menuItem{label: "Location", key: "L", hint: "a URL or a search; this page's own is offered"},
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
-		menuItem{label: "Inspect", key: "I", hint: "DevTools: storage, network, console, source", disabled: t == nil},
+		menuItem{label: "Inspect", key: "I", hint: "DevTools: network, storage, console, source", disabled: t == nil},
 		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
 		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil},
-		menuItem{label: "W close", key: "W", hint: "this tab", disabled: t == nil})
+		menuItem{label: "Close", key: "C", hint: "this tab", disabled: t == nil})
 	return items
 }
 
@@ -1324,7 +1337,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		// Chrome's Cmd+L, from any panel: the box opens with the page's own
 		// URL on offer — Tab takes it into the line to edit, Backspace
 		// clears it, typing over it starts fresh (ux.md §7).
-		p := inputPopup{title: "Go to", glyph: glyphSearch,
+		p := inputPopup{title: "Location", glyph: glyphSearch,
 			prompt: "URL, or words to search for", accept: "open", action: inputGoto}
 		if t != nil && t.url != "" && t.url != "about:blank" {
 			p.placeholder = t.url
@@ -1354,9 +1367,10 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		// Inspect, Chrome's word for it (Cmd+Opt+I); D is the header's
 		// Downloads from any panel (revised 2026-09-20).
 		return m, m.openDevtools()
-	case "W":
+	case "C":
 		// The page's own close: the tab [2] is showing, wherever [1]'s
-		// cursor is. Its lowercase twin in [1] closes the cursor's tab.
+		// cursor is. Its lowercase twin in [1] closes the cursor's tab. It
+		// was W until W became the header's Web (2026-09-21).
 		if t != nil {
 			return m.closeTab(m.shown)
 		}
@@ -1435,6 +1449,12 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	n := t.current()
 	if t == nil || n == nil {
 		return m, nil
+	}
+	// A landmark's row has one action worth a keystroke — open or shut —
+	// so Enter does it outright; the menu (Space) still lists it with the
+	// yank and inspect rows (revised 2026-09-21).
+	if n.Kind == ir.Landmark {
+		return m.dispatch("fold")
 	}
 	m.optionsFor, m.optionsKind = n, optItemMenu
 	title := oneLine(n.Text())
