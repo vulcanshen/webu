@@ -98,6 +98,7 @@ type AppModel struct {
 	help      helpPopup
 	confirm   confirmPopup
 	input     inputPopup
+	picker    filePicker // a file, picked rather than typed (filepicker.go)
 	toast     toastModel
 
 	// optionsFor is the node the options menu is about, and optionsKind
@@ -129,6 +130,9 @@ type AppModel struct {
 	folderParent        string
 	newBookmark         store.Bookmark
 	foldedFolders       map[string]bool
+	// pendingImport is a browser's export the picker read, waiting for the
+	// folder name it goes under (bookmarks.go).
+	pendingImport *store.Import
 	// pendingG holds the first half of the gg chord.
 	pendingG bool
 }
@@ -160,6 +164,7 @@ func New(b *browser.Browser, start ...string) AppModel {
 		help:      newHelpPopup(),
 		confirm:   newConfirmPopup(),
 		input:     newInputPopup(),
+		picker:    newFilePicker(),
 		toast:     newToast(),
 	}
 	m.listenBrowser()
@@ -241,7 +246,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
 			&m.spaceMenu, &m.options, &m.outline, &m.lists, &m.devtools, &m.message,
-			&m.help, &m.confirm, &m.input, &m.toast} {
+			&m.help, &m.confirm, &m.input, &m.picker, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
 		m.relayoutTabs()
@@ -260,7 +265,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.outline.anim.tick(msg),
 			m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
 			m.message.anim.tick(msg),
-			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.toast.anim.tick(msg))
+			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg),
+			m.picker.anim.tick(msg), m.toast.anim.tick(msg))
 
 	case devTickMsg:
 		// The popup redraws from the tab's log while it is open, and the
@@ -647,14 +653,14 @@ func (m *AppModel) recordVisit(t *tab) {
 func (m AppModel) popupOpen() bool {
 	return m.spaceMenu.isActive() || m.options.isActive() || m.outline.isActive() ||
 		m.devtools.isActive() || m.message.isActive() ||
-		m.help.isActive() || m.confirm.isActive() || m.input.isActive()
+		m.help.isActive() || m.confirm.isActive() || m.input.isActive() || m.picker.isActive()
 }
 
 // floatOwned reports whether some float still holds the keyboard — not
 // merely is on screen: one that is closing has let go (§6.2), and an Esc
 // that arrived during its animation belongs to whatever is under it.
 func (m AppModel) floatOwned() bool {
-	return m.toast.anim.owns() || m.input.anim.owns() || m.confirm.anim.owns() ||
+	return m.toast.anim.owns() || m.input.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
 		m.options.anim.owns() || m.outline.anim.owns() || m.devtools.anim.owns() ||
 		m.message.anim.owns() || m.help.anim.owns() || m.spaceMenu.anim.owns()
 }
@@ -662,7 +668,7 @@ func (m AppModel) floatOwned() bool {
 // typing reports whether a float is taking text: every printable key is a
 // character then (§4.5). A search being typed in selection mode counts.
 func (m AppModel) typing() bool {
-	return m.input.anim.owns() || (m.screen != screenWeb && m.lists.typing) ||
+	return m.input.anim.owns() || m.picker.anim.owns() || (m.screen != screenWeb && m.lists.typing) ||
 		(m.devtools.anim.owns() && m.devtools.typing) ||
 		(m.sel.on && m.sel.typing && !m.popupOpen())
 }
@@ -712,6 +718,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case m.input.anim.owns():
 		return m.inputKey(msg)
+	case m.picker.anim.owns():
+		return m.pickerKey(msg)
 	case m.confirm.anim.owns():
 		return m.confirmKey(msg)
 	case m.options.anim.owns():
@@ -771,6 +779,8 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 			m.upload = nil // the chooser is simply left unanswered: nothing is chosen
 		}
 		return m, m.input.close()
+	case m.picker.anim.owns():
+		return m, m.picker.close()
 	case m.confirm.anim.owns():
 		if m.confirm.action == confirmDialog {
 			return m, tea.Batch(m.confirm.close(), m.answerDialog(false, ""))
@@ -803,7 +813,7 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 // closeStack tears every float down: an errand that ended in an action is
 // over, and the user is back on the panel (§7.1).
 func (m *AppModel) closeStack() tea.Cmd {
-	return tea.Batch(m.input.close(), m.confirm.close(), m.options.close(),
+	return tea.Batch(m.input.close(), m.picker.close(), m.confirm.close(), m.options.close(),
 		m.outline.close(), m.devtools.close(), m.message.close(),
 		m.help.close(), m.spaceMenu.close())
 }
@@ -1137,6 +1147,8 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 			folder = e.folder
 		}
 		return m, m.startAddBookmark(folder)
+	case "I":
+		return m, m.startImport()
 	case "A":
 		// A folder where the cursor is; a path makes every level at once.
 		m.folderParent = ""
@@ -1727,6 +1739,8 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.saveSetting(value, value == "" && m.input.placeholder != "")
 	case inputFolder:
 		return m, tea.Batch(m.input.close(), m.addFolder(m.folderParent, value))
+	case inputImportName:
+		return m, m.importBookmarks(value)
 	case inputBookmarkURL:
 		return m, m.bookmarkURLGiven(value)
 	case inputBookmarkTitle:
@@ -2043,6 +2057,9 @@ func (m AppModel) View() string {
 	}
 	if m.confirm.isActive() {
 		out = overlay.Composite(m.confirm.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.picker.isActive() {
+		out = overlay.Composite(m.picker.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.input.isActive() {
 		out = overlay.Composite(m.input.view(), out, overlay.Center, overlay.Center, 0, 0)

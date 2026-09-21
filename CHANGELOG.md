@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Import bookmarks.** `I` on the Bookmarks screen opens a file picker
+  — one directory at a time, type to narrow, Enter steps into a folder
+  or takes a file, Backspace steps out — for the HTML every browser
+  exports (Chrome, Firefox, Safari, Edge: the Netscape bookmark format).
+  The file is read at once, a folder name is asked for and required, and
+  the whole tree lands under it, empty folders included.
+
 ### Changed
 
 - **Enter is a click; Space is the menu.** Enter on an item does what a

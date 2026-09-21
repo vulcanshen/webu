@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -663,4 +664,118 @@ func TestGotoOffersThePageURL(t *testing.T) {
 		t.Errorf("T on [2]: action %v placeholder %q", d.m.input.action, d.m.input.placeholder)
 	}
 	d.key("esc")
+}
+
+// importSample is the shape Chrome writes — the Netscape format every
+// browser exports: a folder is an H3 and the DL after it.
+const importSample = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+    <DT><H3 PERSONAL_TOOLBAR_FOLDER="true">Bookmarks bar</H3>
+    <DL><p>
+        <DT><A HREF="https://go.dev/">Go</A>
+        <DT><H3>dev</H3>
+        <DL><p>
+            <DT><A HREF="https://pkg.go.dev/">pkg.go.dev</A>
+        </DL><p>
+    </DL><p>
+    <DT><H3>Other bookmarks</H3>
+    <DL><p>
+        <DT><H3>empty</H3>
+        <DL><p>
+        </DL><p>
+        <DT><A HREF="https://news.ycombinator.com/">Hacker News</A>
+    </DL><p>
+</DL><p>
+`
+
+// TestImportBookmarks drives I on the Bookmarks screen without a browser:
+// the picker opens in Downloads, a file that is not an export is refused
+// as soon as it is picked, the folder name is required and must be new,
+// and the whole tree lands under it.
+func TestImportBookmarks(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	dl := filepath.Join(home, "Downloads")
+	if err := os.MkdirAll(dl, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, body := range map[string]string{"bookmarks_9_21_26.html": importSample, "notes.txt": "not an export"} {
+		if err := os.WriteFile(filepath.Join(dl, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	m := New(nil, "").WithStore([]store.Bookmark{{Title: "Go", URL: "https://go.dev"}}, nil, store.Config{}, nil)
+	d := newDriver(t, m)
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.key("B")
+	d.key("I")
+	d.until("picker", func() bool { return d.m.picker.isInteractive() })
+	if d.m.picker.dir != dl {
+		t.Errorf("the picker should open in Downloads, opened in %s", d.m.picker.dir)
+	}
+
+	// Typing narrows; a file that is not an export is refused as soon as
+	// it is picked, before any name is asked.
+	d.key("notes")
+	d.key("enter")
+	d.until("refused", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "notes.txt") })
+	if d.m.input.isActive() {
+		t.Error("no name should be asked for a file that is not an export")
+	}
+	d.until("picker gone", func() bool { return !d.m.picker.isActive() })
+
+	d.key("I")
+	d.until("picker again", func() bool { return d.m.picker.isInteractive() })
+	d.key("book")
+	d.key("enter")
+	d.until("name asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputImportName })
+	if p := d.m.input.prompt; !strings.Contains(p, "3 bookmarks") || !strings.Contains(p, "4 folders") {
+		t.Errorf("the prompt should count what was read: %q", p)
+	}
+	// The name is required: Enter on nothing keeps the box.
+	d.key("enter")
+	d.until("told to name it", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "folder name") })
+	if !d.m.input.isInteractive() {
+		t.Fatal("the box should stay open without a name")
+	}
+	d.key("chrome")
+	d.key("enter")
+	d.until("imported", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "imported 3 bookmarks") })
+	d.until("box gone", func() bool { return !d.m.input.isActive() })
+
+	// The whole tree is under chrome, the empty folder too; what was
+	// there before is untouched; the cursor is on the new root.
+	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "chrome" {
+		t.Errorf("the cursor should be on the chrome folder, is on %+v", e)
+	}
+	wantFolders := []string{"chrome", "chrome/Bookmarks bar", "chrome/Bookmarks bar/dev", "chrome/Other bookmarks", "chrome/Other bookmarks/empty"}
+	if got := strings.Join(d.m.folderNames(), "|"); got != strings.Join(wantFolders, "|") {
+		t.Errorf("folders %q", d.m.folderNames())
+	}
+	if len(d.m.bookmarks) != 4 || d.m.bookmarks[0] != (store.Bookmark{Title: "Go", URL: "https://go.dev"}) {
+		t.Errorf("bookmarks %+v", d.m.bookmarks)
+	}
+	if b := d.m.bookmarks[2]; b.Folder != "chrome/Bookmarks bar/dev" || b.URL != "https://pkg.go.dev/" {
+		t.Errorf("the nested bookmark: %+v", b)
+	}
+	if list, folders, err := store.LoadBookmarks(); err != nil || len(list) != 4 || len(folders) != 5 {
+		t.Errorf("saved: %d bookmarks, %d folders, %v", len(list), len(folders), err)
+	}
+
+	// The same name again is refused: an import never merges into another.
+	d.key("I")
+	d.until("picker once more", func() bool { return d.m.picker.isInteractive() })
+	d.key("book")
+	d.key("enter")
+	d.until("name asked again", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputImportName })
+	d.key("chrome")
+	d.key("enter")
+	d.until("refused the name", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "exists") })
+	if !d.m.input.isInteractive() || len(d.m.bookmarks) != 4 {
+		t.Error("a taken name should keep the box open and import nothing")
+	}
 }

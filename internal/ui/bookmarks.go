@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -303,4 +306,110 @@ func (m *AppModel) bookmarkTitleGiven(value string) tea.Cmd {
 	m.lists.setEntries(m.bookmarkEntries())
 	m.lists.cursorTo(len(m.bookmarks) - 1)
 	return tea.Batch(m.input.close(), m.toast.show("added "+oneLine(nameOr(b.Title, b.URL)), toastInfo))
+}
+
+// ---- Import (2026-09-21): a browser's export, into a folder of its own
+
+// importDir is where the picker opens for a browser's export: Downloads,
+// where every browser writes one, else home.
+func importDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/"
+	}
+	if st, err := os.Stat(filepath.Join(home, "Downloads")); err == nil && st.IsDir() {
+		return filepath.Join(home, "Downloads")
+	}
+	return home
+}
+
+// startImport is I on the Bookmarks screen: the file first, picked rather
+// than typed (filepicker.go).
+func (m *AppModel) startImport() tea.Cmd {
+	return m.picker.open(glyphBookmark, "Import bookmarks", importDir(), m.layer())
+}
+
+// pickerKey drives the file picker; a pick goes to the one thing that
+// opens it so far, the Bookmarks import.
+func (m AppModel) pickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	path, done := m.picker.update(msg)
+	if !done {
+		return m, nil
+	}
+	closeCmd := m.picker.close()
+	cmd := m.importPicked(path)
+	return m, tea.Batch(closeCmd, cmd)
+}
+
+// importPicked reads the chosen file at once — a wrong file is news here,
+// not after a name was typed — and asks for the folder the bookmarks go
+// under. The name is required: an import lands in a folder of its own,
+// never loose among what is there.
+func (m *AppModel) importPicked(path string) tea.Cmd {
+	f, err := os.Open(path)
+	if err != nil {
+		return m.toast.show(err.Error(), toastError)
+	}
+	defer f.Close()
+	imp, err := store.ParseNetscape(f)
+	if err != nil {
+		return m.toast.show(filepath.Base(path)+": "+err.Error(), toastError)
+	}
+	m.pendingImport = &imp
+	prompt := fmt.Sprintf("%s: %s in %s. The folder to put them under (required)",
+		filepath.Base(path), plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"))
+	return m.input.ask(inputPopup{title: "Import bookmarks", glyph: glyphFolder,
+		prompt: prompt, accept: "import", action: inputImportName}, m.layer())
+}
+
+// importBookmarks puts the pending import under name — a folder that must
+// not exist yet, so two imports never run together and one is undone by
+// deleting its folder tree. An empty or a taken name keeps the box open.
+func (m *AppModel) importBookmarks(name string) tea.Cmd {
+	root := cleanFolderPath(name)
+	if root == "" {
+		return m.toast.show("a folder name is needed: the import goes under it", toastInfo)
+	}
+	for _, f := range m.folderNames() {
+		if f == root {
+			return m.toast.show("folder "+root+" exists; pick another name", toastInfo)
+		}
+	}
+	imp := m.pendingImport
+	if imp == nil {
+		return m.input.close()
+	}
+	m.pendingImport = nil
+	m.folders = append(m.folders, root)
+	for _, f := range imp.Folders {
+		m.folders = append(m.folders, root+"/"+f)
+	}
+	for _, b := range imp.Bookmarks {
+		if b.Folder == "" {
+			b.Folder = root
+		} else {
+			b.Folder = root + "/" + b.Folder
+		}
+		m.bookmarks = append(m.bookmarks, b)
+	}
+	closeCmd := m.input.close()
+	if err := m.saveBookmarks(); err != nil {
+		return tea.Batch(closeCmd, m.toast.show("bookmarks.yaml: "+err.Error(), toastError))
+	}
+	m.lists.setEntries(m.bookmarkEntries())
+	m.lists.cursorToFolder(root)
+	return tea.Batch(closeCmd, m.toast.show(fmt.Sprintf("imported %s and %s under %s",
+		plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"), root), toastInfo))
+}
+
+// cleanFolderPath trims a typed folder path to its parts: blanks and
+// empty levels dropped, so " a / /b " is a/b.
+func cleanFolderPath(path string) string {
+	var parts []string
+	for _, p := range strings.Split(path, "/") {
+		if p = strings.TrimSpace(p); p != "" {
+			parts = append(parts, p)
+		}
+	}
+	return strings.Join(parts, "/")
 }
