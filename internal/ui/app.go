@@ -1362,7 +1362,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 	return items
 }
 
-// textboxItems is the menu a filled textbox opens on Enter (ux.md §2.2):
+// textboxItems is a filled textbox's rows in the Space menu (ux.md §2.2):
 // Submit first, because that is what filling it was for.
 func textboxItems(n *ir.Node) []menuItem {
 	items := []menuItem{}
@@ -1611,7 +1611,9 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 // enterItem is Enter on panel [2]: the item's operations, as a menu of
 // their own, first row the main one (ux.md §A.0.K as revised 2026-09-20).
 // Space is the whole menu — this region and the page's — so Enter is the
-// short way to "what can I do with THIS".
+// short way to "what can I do with THIS". Two kinds skip the menu, having
+// one obvious action: a landmark's or heading's row folds, a textbox
+// opens to type.
 func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	n := t.current()
@@ -1623,6 +1625,13 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	// still lists it with the yank and inspect rows (revised 2026-09-21).
 	if n.Kind == ir.Landmark || n.Kind == ir.Heading {
 		return m.dispatch("fold")
+	}
+	// A textbox's one obvious action is to type into it — a click on a
+	// field focuses it and nothing else happens — so Enter opens the box
+	// outright, empty or filled (revised 2026-09-21). Submit, Clear and
+	// Yank are in the Space menu.
+	if n.Kind == ir.Textbox {
+		return m, m.editField(n)
 	}
 	m.optionsFor, m.optionsKind = n, optItemMenu
 	title := oneLine(n.Text())

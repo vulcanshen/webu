@@ -21,7 +21,7 @@
 | Core-key | 一般模式 | 選取模式（§1） | 對應通用 |
 |---|---|---|---|
 | `Tab` | `[1]` ↔ `[2]`；`1`–`2` 直達（修訂 2026-09-20：只剩兩個面板，header 不是面板、Tab 不停） | 同 | §4.1 |
-| `Enter` | VTP 2026-09-21 改寫為「**啟動該項目最直觀的操作、具體是什麼依 app context 而定**」（原「確認 / 進入」）。webu 的解讀：頁面 item → **開它的 item operation 選單**，第一列是主要動作，再按 Enter 執行（修訂 2026-09-20，見下）；landmark 標題列、heading、Bookmarks 目錄列 → 直接展開 / 收合（一個動作不開選單）；Bookmarks / History 列 → 開新分頁；Downloads 列 → 開檔；Settings 列 → 編輯框 | 離開模式、對字元游標所屬的節點開同一個選單 | §A.0.K |
+| `Enter` | VTP 2026-09-21 改寫為「**啟動該項目最直觀的操作、具體是什麼依 app context 而定**」（原「確認 / 進入」）。webu 的解讀：頁面 item → **開它的 item operation 選單**，第一列是主要動作，再按 Enter 執行（修訂 2026-09-20，見下）；textbox → 直接開 input popup（空或有值都是；修訂 2026-09-21，見下）；landmark 標題列、heading、Bookmarks 目錄列 → 直接展開 / 收合（一個動作不開選單）；Bookmarks / History 列 → 開新分頁；Downloads 列 → 開檔；Settings 列 → 編輯框 | 離開模式、對字元游標所屬的節點開同一個選單 | §A.0.K |
 | `Esc` | 關最上層浮層；沒有浮層時**無作用**（上一頁是 `P`，Esc 不兼職） | 打字中：取消搜尋輸入；否則離開選取模式 | §4.3 |
 | `Space` | **滑鼠右鍵 context menu**；再按關閉；在浮層上按 = 關掉它 | 熱鍵 cheatsheet，按列出的鍵即執行並關閉 | §A.1 |
 | `?` | help；再按關閉；可疊在任何浮層上 | 同 | §A.2 |
@@ -32,6 +32,10 @@ textbox 的 Submit、select 的 Choose），再按一次 Enter 執行；**Space 
 + panel operation）。理由：Enter 底下原本只有一個看不見的動作，使用者按下去不知道發生了什麼；
 開選單讓「對這個東西能做什麼」被揭露，主要動作只多一次 Enter。原本「有值 textbox 是唯一例外」
 的規則因此不再是例外，而是通則。
+
+**再修訂（2026-09-21，實機再試）**：**textbox 的 Enter 直接開 input popup**，空的、有值的都一樣——滑鼠左鍵點欄位就是聚焦打字，
+沒有看不見的動作要揭露，中間多一層選單只是多按一次；Submit / Edit / Clear / Yank 留在 Space 選單（cursor 停 Submit）。
+link、button、select 不變：點下去會換頁或觸發，先揭露再做。
 
 **與 filu 一致了**：filu 的 Enter 只進目錄不開檔；webu 的 Enter 也只開清單，不直接交給頁面。
 VTP §A.0.K 原本寫「確認 / 進入」，2026-09-21 改寫成「啟動該項目最直觀的操作、具體是什麼依 app context 而定」——
@@ -63,9 +67,9 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 |---|---|
 | link | Open（= Enter）、Open in new tab、Yank link url（寫明「link」：游標在連結上時，光寫 url 會被讀成整頁的，那是 panel operation 的 `[Y]`；修訂 2026-09-20） |
 | button / checkbox / radio / switch | Click（= Enter） |
-| textbox（空） | Edit（= Enter，開 input popup） |
-| textbox（有值） | **Submit**（送 Enter 給頁面）、Edit、Clear、Yank；cursor 預設停 Submit（sshu §6.6.1 主要意圖優先） |
-| textarea | Edit（多行 popup）、Edit in editor（§2 editor 鏈）、Clear、Yank；無 Submit（瀏覽器裡 textarea 的 Enter 是換行） |
+| textbox（空） | Edit（= Enter，直接開 input popup） |
+| textbox（有值） | Enter 直接 Edit（開 input popup、帶目前值；修訂 2026-09-21）。Space 選單：**Submit**（送 Enter 給頁面）、Edit、Clear、Yank；cursor 預設停 Submit（sshu §6.6.1 主要意圖優先） |
+| textarea | Enter 直接 Edit（多行 popup）。Space 選單：Edit、Edit in editor（§2 editor 鏈）、Clear、Yank；無 Submit（瀏覽器裡 textarea 的 Enter 是換行） |
 | select | Choose（= Enter，option 清單 menu） |
 | image / media 佔位框 | Click（= Enter）、Yank media url |
 | heading | Collapse / Expand（Enter 直接切換；2026-09-21 落地）：收合到下一個同級或更高級 heading、或所在 landmark 結束為止，收合列畫成 `▸ # 標題 · N items`；重抓後仍記得，換頁即忘 |
@@ -184,7 +188,7 @@ popup 一套解決，`[2]` 不用調整大小。
 | 狀態 | Enter | 顯示 |
 |---|---|---|
 | 空 | 直接開 input popup | `󰛿 label ______________` |
-| 有值 | 開選單（= Space menu：Submit / Edit / Clear / Yank，cursor 在 Submit） | `󰛿 label ____value_____`，glyph 不變 |
+| 有值 | 同樣直接開 input popup，帶目前值（修訂 2026-09-21；原本開選單、cursor 在 Submit）。Submit / Edit / Clear / Yank 在 Space 選單，cursor 在 Submit | `󰛿 label ____value_____`，glyph 不變 |
 
 **Submit** = 送一個 Enter keydown 給頁面（`Input.dispatchKeyEvent`）：沒有送出按鈕的搜尋框
 靠這個送出，等同瀏覽器的 implicit submission。密碼欄顯示 `••••`。
@@ -194,7 +198,7 @@ popup 一套解決，`[2]` 不用調整大小。
 
 ### 2.3 textarea 與 editor 鏈
 
-空的 Enter 開多行 popup；有值 Enter 開選單（Edit / Edit in editor / Clear / Yank）。
+Enter 開多行 popup，空的、有值的都是（修訂 2026-09-21）；Space 選單：Edit / Edit in editor / Clear / Yank。
 
 **Edit in editor** 的鏈：`$VISUAL` → `$EDITOR` → `vim` → `vi` → `nano` → **內建純文字
 多行 popup**（無上色、無折行處理）。前五個在 pty popup 裡跑（sshu `[e]dit` 同路，多兩級）。
