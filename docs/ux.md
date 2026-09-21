@@ -21,7 +21,7 @@
 | Core-key | 一般模式 | 選取模式（§1） | 對應通用 |
 |---|---|---|---|
 | `Tab` | `[1]` ↔ `[2]`；`1`–`2` 直達（修訂 2026-09-20：只剩兩個面板，header 不是面板、Tab 不停） | 同 | §4.1 |
-| `Enter` | VTP 2026-09-21 改寫為「**啟動該項目最直觀的操作、具體是什麼依 app context 而定**」（原「確認 / 進入」）。webu 的定義（定案 2026-09-21，見下）：**Enter = 滑鼠左鍵在 terminal 的對應，Space = 右鍵選單，兩者分開**。頁面 item：textbox / textarea / password → 直接開 input popup（password 遮罩）；select → 直接開 option 清單；button / checkbox / radio / switch / media / unsupported → 直接 click；link → **先 confirm popup**（連結文字 + URL），Enter 才開；自定義（左鍵沒有對應）：landmark 標題列、heading、Bookmarks 目錄列 → 展開 / 收合；沒定義到的 → notice popup「尚未定義」。Bookmarks / History 列 → 開新分頁；Downloads 列 → 開檔；Settings 列 → 編輯框 | 離開模式、對字元游標所屬的節點做同一件事 | §A.0.K |
+| `Enter` | VTP 2026-09-21 改寫為「**啟動該項目最直觀的操作、具體是什麼依 app context 而定**」（原「確認 / 進入」）。webu 的定義（定案 2026-09-21，見下）：**Enter = 滑鼠左鍵在 terminal 的對應，Space = 右鍵選單，兩者分開**。頁面 item：textbox / textarea / password → 直接開 input popup（password 遮罩）；select → 直接開 option 清單；button / checkbox / radio / switch / media / unsupported → 直接 click；link → **先 confirm popup**（連結文字 + URL），Enter 才開；navigation 列 → 它的 item operation 選單（裡面的連結，Enter 就開；2026-09-21）；自定義（左鍵沒有對應）：其他 landmark 標題列、heading、Bookmarks 目錄列 → 展開 / 收合；沒定義到的 → notice popup「尚未定義」。Bookmarks / History 列 → 開新分頁；Downloads 列 → 開檔；Settings 列 → 編輯框 | 離開模式、對字元游標所屬的節點做同一件事 | §A.0.K |
 | `Esc` | 關最上層浮層；沒有浮層時**無作用**（上一頁是 `P`，Esc 不兼職） | 打字中：取消搜尋輸入；否則離開選取模式 | §4.3 |
 | `Space` | **滑鼠右鍵 context menu**；再按關閉；在浮層上按 = 關掉它 | 熱鍵 cheatsheet，按列出的鍵即執行並關閉 | §A.1 |
 | `?` | help；再按關閉；可疊在任何浮層上 | 同 | §A.2 |
@@ -35,7 +35,8 @@ Space = 右鍵選單，兩者分開**，選單不再由 Enter 開——之前那
 - select：左鍵是拉下清單 → 直接開 option 清單
 - button / checkbox / radio / switch：直接 click；media 佔位框、unsupported 也是（就是一個 click，頁面決定）
 - link：左鍵會換頁、看不見要去哪 → **先 confirm popup**（連結文字 + URL），Enter 才開、Esc 不動；Open in new tab 在 Space 選單
-- 自定義：landmark 標題列、heading、Bookmarks 目錄列 → 展開 / 收合
+- navigation（landmark）：一行入口 `▎ 󰍜 名字 +N`，連結不進畫面；Enter = 它的 item operation 選單（裡面每個 link / button 一列、巢狀清單縮排、Enter 就 click）——「Enter = 該物件的期望操作」在入口型物件上的樣子；Space 照舊 item operation + panel operation（2026-09-21）
+- 自定義：其他 landmark 標題列、heading、Bookmarks 目錄列 → 展開 / 收合
 - 沒定義到的 → notice popup「Enter 尚未定義」，Space 仍列得出能做什麼
 
 **與 filu 的關係**：filu 的 Enter 只進目錄不開檔，webu 的 Enter 是左鍵——VTP §A.0.K（2026-09-21）「啟動該項目最直觀的操作、依 app context 而定」
@@ -72,6 +73,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 | select | Choose（= Enter，直接開 option 清單 menu） |
 | image / media 佔位框 | Click（= Enter）、Yank media url |
 | heading | Collapse / Expand（Enter 直接切換；2026-09-21 落地）：收合到下一個同級或更高級 heading、或所在 landmark 結束為止，收合列畫成 `▸ # 標題 · N items`；重抓後仍記得，換頁即忘 |
+| navigation（landmark） | 一行入口 `▎ 󰍜 名字 +N`（2026-09-21：連結不進畫面、不佔橫向空間——橫向不定長的東西會誘導 `h/l`，terminal 最忌諱；`j/k` 一步跳過）；Enter = item operation 選單：裡面每個 link / button 一列（巢狀清單縮排、button 標 button）、Enter 就 click；Space = 同一份 item operation + panel operation；Yank text、Inspect 照舊；不收合（沒東西可收）。取代原本的「導覽清單一行流式」 |
 | 所有 item 共有 | Yank text、Inspect（message 類 popup：role、name、states、backendDOMNodeId、href 或 src） |
 | 未支援 role | 第一列 disabled：「role: slider，尚未支援，只能 click」（function.md §3 fallback） |
 

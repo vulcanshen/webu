@@ -1,8 +1,7 @@
  ▾ banner ──────────────────────────────────────────────────
 Site header 󰌷 Home
 
- ▾ navigation Primary ──────────────────────────────────────
-󰌷 A 󰌷 B
+▎  Primary +2 
 
  ▾ main ────────────────────────────────────────────────────
 # Main heading
@@ -32,16 +31,14 @@ Footer text
 0 landmark "Site header Home" rows 0-0
 1 link "Home" rows 1-1
 2 landmark "A B" rows 3-3
-3 link "A" rows 4-4
-4 link "B" rows 4-4
-5 landmark "Main heading…" rows 6-6
-6 heading "Main heading" rows 7-7
-7 landmark "An article…" rows 9-9
-8 heading "An article" rows 10-10
-9 landmark "Section text." rows 14-14
-10 landmark "Q Q" rows 19-19
-11 textbox "Q" rows 20-20
-12 landmark "Find Find" rows 22-22
-13 textbox "Find" rows 23-23
-14 landmark "Sidebar" rows 25-25
-15 landmark "Footer text" rows 28-28
+3 landmark "Main heading…" rows 5-5
+4 heading "Main heading" rows 6-6
+5 landmark "An article…" rows 8-8
+6 heading "An article" rows 9-9
+7 landmark "Section text." rows 13-13
+8 landmark "Q Q" rows 18-18
+9 textbox "Q" rows 19-19
+10 landmark "Find Find" rows 21-21
+11 textbox "Find" rows 22-22
+12 landmark "Sidebar" rows 24-24
+13 landmark "Footer text" rows 27-27

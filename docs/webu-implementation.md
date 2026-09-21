@@ -82,7 +82,7 @@ item，item 記自己跨哪幾列，游標才能把整個 run 反白。決定：
 - **Landmark 摺疊**（ui.md §2 修訂）：`renderOpts.fold` 是 user 的決定（by backendDOMNodeId，重抓後仍在）、
   沒決定時**全開**（修訂 2026-09-21，原本有 main 時 main 外預設摺疊）；`enterItem` 對 landmark 直接 dispatch `fold`，不開選單；每個 landmark 的標題列是 item
   （`item.folded`）；`tab.toggleFold` 重排並把游標留在原節點；`tab.reveal` 供 Outline 打開路徑上的 landmark
-- **navigation 內的短清單一行流式**：`renderer.inNav > 0 && navList(n)`，項目以 dim 的 `·` 隔開
+- **navigation 一行入口**（2026-09-21，取代一行流式：`inNav` / `inNavList` / `navList` 拿掉）：`renderer.navRow` 一列 `segNavBar` + `segNav`（focusColor 直槓、codeBg 底）、`+N` = `len(navTargets(n))`（子樹裡的 Link / Button，記 List 巢狀深度當縮排）；`enterItem` 對 navigation → `openItemMenu`（`optItemMenu` 回來了、只給它用）→ `itemMenuItems` 每個目標一列 key `nav:i` → `dispatch` 的 `nav:` 前綴 click 第 i 個（busy 時吞掉）；Space 的 item operation 是同一份列
 - **measure**：`renderOpts.measure` 只管 `wrap()` 的 `textW`；`store.Config.Measure` 預設 100
 - **item 的 col**：`emit` 時記每個 item 在第一列的起始欄位；`tab.rowStep`（j/k 換列、找最近欄位）與
   `tab.alongRow`（h/l 同列）靠它

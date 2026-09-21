@@ -31,6 +31,8 @@ const (
 	segCode
 	segUnsupported
 	segLandmark    // a landmark's rule row: its role and name
+	segNavBar      // a navigation's entry row: the bar at its left…
+	segNav         // …and its label, on a ground of its own
 	segTableHeader // a table's header cells
 	// Inside a code block with a language (highlight.go).
 	segCodeKey
@@ -156,8 +158,6 @@ type renderer struct {
 	flow  []atom
 	fold  map[cdp.BackendNodeID]bool
 	root  *ir.Node
-	// inNav counts navigations being entered: their lists flow inline.
-	inNav int
 	// A collapsed heading (2026-09-21) hides its section: everything after
 	// it up to the next heading of its level or higher, or the end of the
 	// landmark it is in. suppress is on while that is being skipped;
@@ -167,9 +167,6 @@ type renderer struct {
 	foldLevel int
 	foldLm    int
 	lmDepth   int
-	// inNavList: a navigation list is flowing on one line, so an entry the
-	// page styled as a block flows too.
-	inNavList bool
 	indent    string // prefix every wrapped line of the current block gets
 	lead      string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
 	gap       bool   // a blank row is owed before the next content row
@@ -230,6 +227,50 @@ func (r *renderer) landmarkRule(n *ir.Node, id int, folded bool) {
 	}})
 }
 
+// navRow is a navigation's one row: an entry, not a region (ux.md
+// §A.0.K, 2026-09-21). A bar at the left and the name on a ground of its
+// own, the way a quote is set; what it holds is its item operations, not
+// items — a row of links invites walking sideways, and a terminal has no
+// width to spare for one. +N says how much is behind the row.
+func (r *renderer) navRow(n *ir.Node, id int) {
+	label := " " + glyphMenu + " " + oneLine(nameOr(n.Name, "navigation"))
+	if c := len(navTargets(n)); c > 0 {
+		label += " +" + itoa(c)
+	}
+	label = truncate(label+" ", max(1, r.width-2))
+	r.emit(row{segs: []seg{
+		{text: "▎", item: id, kind: segNavBar},
+		{text: label, item: id, kind: segNav},
+	}})
+}
+
+// navTarget is one thing a navigation opens — a link or a button — and
+// how deep in its lists it sits, for the menu's indent.
+type navTarget struct {
+	node  *ir.Node
+	depth int
+}
+
+// navTargets is what a navigation holds, in reading order.
+func navTargets(n *ir.Node) []navTarget {
+	var out []navTarget
+	var walk func(x *ir.Node, lists int)
+	walk = func(x *ir.Node, lists int) {
+		for _, c := range x.Children {
+			switch c.Kind {
+			case ir.Link, ir.Button:
+				out = append(out, navTarget{c, max(0, lists-1)})
+			case ir.List:
+				walk(c, lists+1)
+			default:
+				walk(c, lists)
+			}
+		}
+	}
+	walk(n, 0)
+	return out
+}
+
 func countItems(n *ir.Node) int {
 	count := 0
 	for _, c := range n.Children {
@@ -241,36 +282,6 @@ func countItems(n *ir.Node) int {
 		})
 	}
 	return count
-}
-
-// navList says whether a list is a row of short entries — the kind a
-// navigation is made of — that reads better as one line than as a column.
-// A link the page styled display:block is still a short entry: the
-// column was the page's CSS, not its structure.
-func navList(n *ir.Node) bool {
-	for _, li := range n.Children {
-		if li.Kind != ir.ListItem {
-			return false
-		}
-		for _, c := range li.Children {
-			if c.IsBlock() && !inlineKind(c) {
-				return false
-			}
-		}
-		if dispW(li.Text()) > 40 {
-			return false
-		}
-	}
-	return len(n.Children) > 0
-}
-
-// inlineKind is a node that flows by nature, whatever the page's CSS said.
-func inlineKind(n *ir.Node) bool {
-	switch n.Kind {
-	case ir.Text, ir.Link, ir.Button, ir.Textbox, ir.Check, ir.Combobox, ir.Media, ir.Code:
-		return true
-	}
-	return false
 }
 
 // ------------------------------------------------------------------ blocks
@@ -302,6 +313,13 @@ func (r *renderer) block(n *ir.Node, depth int) {
 	case ir.Landmark:
 		r.flush()
 		r.markNext = append(r.markNext, n)
+		if n.Role == "navigation" {
+			// An entry, not a region: one row, and what it holds is its
+			// item operations, not items (ux.md §A.0.K, 2026-09-21).
+			r.navRow(n, r.newItem(n))
+			r.gap = true
+			return
+		}
 		folded := r.folded(n)
 		id := r.newItem(n)
 		r.items[id].folded = folded
@@ -310,16 +328,10 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			r.gap = true
 			return
 		}
-		if n.Role == "navigation" {
-			r.inNav++
-		}
 		r.lmDepth++
 		r.children(n, depth)
 		r.flush()
 		r.leaveLandmark()
-		if n.Role == "navigation" {
-			r.inNav--
-		}
 		r.gap = true
 	case ir.Heading:
 		r.flush()
@@ -357,28 +369,6 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.gap = true
 	case ir.List:
 		r.flush()
-		if r.inNav > 0 && navList(n) {
-			// A navigation's list of short entries is one line of flow —
-			// Platform · Solutions · Resources — not a column: the column
-			// was costing a screen before the page began.
-			first := true
-			r.inNavList = true
-			for _, li := range n.Children {
-				if !first {
-					r.space()
-					r.add(atom{text: "·", item: -1, kind: segDim})
-					r.space()
-				}
-				first = false
-				r.inlineChildren(li, -1, segPlain)
-			}
-			r.inNavList = false
-			r.flush()
-			if depth <= 1 {
-				r.gap = true
-			}
-			return
-		}
 		r.children(n, depth)
 		r.flush()
 		if depth <= 1 {
@@ -565,7 +555,7 @@ func sectionHolds(root, h, n *ir.Node) bool {
 // — except inside a table cell, where it flattens (see inCell).
 func (r *renderer) inlineChildren(n *ir.Node, item int, kind segKind) {
 	for _, c := range n.Children {
-		if c.IsBlock() && !(r.inNavList && inlineKind(c)) {
+		if c.IsBlock() {
 			if r.inCell {
 				r.space()
 				r.inlineChildren(c, item, kind)
