@@ -203,7 +203,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
   `history.yaml`（YAML sequence、一次 append 一筆、無限保留）與 `session.yaml` 在 data dir（`store.dataFiles`，2026-09-21）；目錄解析在 `internal/paths`
   （`Config` = `~/.config/webu`、`Data` = `~/.webu/datas`、`Downloads`、`Cache`；`WEBU_CONFIG` / `WEBU_DATA` / `WEBU_CACHE` 覆寫），browser（profile、log 在 data）/ store 共用
 - session：離開（q 或 signal）時 main 寫下所有分頁，啟動時還原成 pending（dim、不預載），切到才載
-- splash 彩蛋（2026-09-21，`splash.go` 從 sshu 搬來）：`logoPixels` 由 `docs/icon.svg` 中心點取樣生成（D 底片 / U 框 / W E B 三個字母），stage 順序 bg → W → E → B → U rise；`V` 在 `shownTab()==nil || root==nil` 與 list screen 上觸發（有頁面時 `V` 仍是 visual mode），`handleKey` 最前面讓 splash 吃掉所有鍵、`View` 整幀換掉
+- splash 彩蛋（2026-09-21，`splash.go` 從 sshu 搬來）：`logoPixels` 由 `docs/icon.svg` 中心點取樣生成（D 底片 / U 框 / W E B 三個字母），stage 順序 bg → W → E → B → U rise；裸 `v` 在 `panelKey` 全域 switch 與 `screenKey` 觸發（`V` 維持 visual mode；家族的 `V` 在 webu 改小寫當特例），`handleKey` 最前面讓 splash 吃掉所有鍵、`View` 整幀換掉
 - CLI（2026-09-21）：`webu <url|words>...` 每個參數一個新分頁、第一個在前（`New(b, start...)` → `firstFrame` 逐個 `openTab(resolveURL(u))`），`-` 開頭視為未知選項；`webu help` 印用法
 - 歷史：每個分頁 load 完的最終 URL + 標題記一筆，同 URL 的 settle 重抓不重複記
 - 即時更新（function.md §6）：`page.Prepare` 在第一次導航前 `Runtime.addBinding` + 注入 MutationObserver
