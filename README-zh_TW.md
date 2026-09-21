@@ -1,5 +1,7 @@
 # webu
 
+<p align="center"><img src="docs/icon.svg" width="128" alt="webu icon" /></p>
+
 [![GitHub Release](https://img.shields.io/github/v/release/vulcanshen/webu)](https://github.com/vulcanshen/webu/releases)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/vulcanshen/webu)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
