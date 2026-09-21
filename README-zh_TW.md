@@ -12,8 +12,6 @@
 
 webu 是 `u`-family 的成員，也是 [這份 TUI 設計原則](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md) 在瀏覽器領域的實作 —— 與 [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（filesystem）、[sshu](https://github.com/vulcanshen/sshu)（ssh）同一套設計系統。實作路上發現了什麼、做到哪，在 [`docs/webu-implementation.md`](docs/webu-implementation.md)；設計本身在 [`docs/function.md`](docs/function.md)、[`docs/ui.md`](docs/ui.md)、[`docs/ux.md`](docs/ux.md) —— **包含試過而被否決的做法**。
 
-與 w3m、lynx 的差別在頁面從哪裡來。它們自己解析 HTML，所以一個幾乎全是 JavaScript 的網站就是一片空白。webu 完全不解析 HTML：頁面由 Chromium 渲染，webu 讀的是 Chromium 的 accessibility 層說「這頁上有什麼」—— 跟 screen reader 讀的是同一棵樹 —— 所以 Chromium 畫得出來的，webu 就能以文字畫出來。
-
 ## Demo
 
 ![demo](docs/demo.gif)
