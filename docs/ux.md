@@ -58,7 +58,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 
 | item operation | panel operation |
 |---|---|
-| Enter 切換到此分頁、`[w] Close`（該分頁有下載進行中 → 先 confirm）、`[c] Clone`、`[r] Reload`、`[y] Yank url` | `[T] New tab`（開 goto popup）、`[X] Close others`、`[U] Undo close` |
+| Enter 切換到此分頁、`[c] Close`（該分頁有下載進行中 → 先 confirm；修訂 2026-09-21：原 `[w]`，w 是 window 的字母、終端機沒有 window，改成 `[2]` 的 `C` 的小寫）、`[o] Open in new tab`（同一頁再開一個；原 `[c] Clone`，`c` 讓給 Close、`d` 是導覽鍵，`o` 與 Downloads 列的 `o` 同義：這一列的 URL 開新分頁）、`[r] Reload`、`[y] Yank url` | `[T] New tab`（開 goto popup）、`[X] Close others`、`[U] Undo close` |
 
 **`[2]` 一般模式，item operation 依 role**（無 hotkey，menu-only）
 
@@ -80,7 +80,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 **`[2]` 一般模式，panel operation**：`[R] Reload`、`[T]ab`（新分頁，與 `[1]` 的 `[T]` 一模一樣；修訂 2026-09-20）、`[P] Previous`、`[N] Next`、
 `[/] Search`（進 visual mode）、`[v]isual mode`（修訂 2026-09-20：原 `[V] View source` 搬進 DevTools › Source，`V` 讓給 visual mode；
 2026-09-21：再改小寫 `v`，`V` 還給家族的 splash 彩蛋——mode 不是 panel operation，這是這一區唯一的小寫）、`[L]ocation`（修訂 2026-09-21：原 `UR[L]`，label 改 Location、hint 改「a URL or a search; this page's own is offered」；2026-09-20 從 `[U]` 改來，對應 Chrome 的 Cmd+L；全域鍵，任何面板都能按，見 §7）、`[A]dd bookmark`（修訂 2026-09-20：原 `[A] Add to…` picker 二選一，Shortcuts 拿掉後只剩 Bookmarks，直接加）、`[O] Outline`、`[I]nspect`（DevTools；修訂 2026-09-20：原 `[D]`，`D` 讓給 header 的 Downloads，`I` 對應 Chrome 的 Cmd+Opt+I）、
-`[Z] Zoom`、`[Y] Yank page url`、`[C]lose`（關掉 `[2]` 正在顯示的分頁；`[1]` 的小寫 `w` 關的是游標列；
+`[Z] Zoom`、`[Y] Yank page url`、`[C]lose`（關掉 `[2]` 正在顯示的分頁；`[1]` 的小寫 `c` 關的是游標列；
 修訂 2026-09-21：原 `[W] Close`，`W` 讓給 header 的 Web）。
 
 Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡，不在 header、不在 §A.2
@@ -239,7 +239,7 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 | 層 | 鍵 |
 |---|---|
 | 全域 | `W` `B` `H` `D` `S`、`q`、`?`、`V`（彩蛋）；只在 `[W]eb`：`P` `N` `L`、`/`、`v`、`Tab`、`1`–`2` |
-| `[1]` item | `w` `c` `r` `y` |
+| `[1]` item | `c` `o` `r` `y` |
 | `[1]` panel | `T` `X` `U` |
 | `[2]` item | **無**（menu-only） |
 | `[2]` panel | `R` `T` `A` `O` `I` `Z` `Y` `C`（`v` 是全域的 visual mode，`L` 是全域的 location；`T` 與 `[1]` 同義；`C` 原是 `W`，修訂 2026-09-21） |
@@ -250,7 +250,7 @@ Enter 開 option 清單（menu），從 AX tree 的 option 節點列出，選完
 | DevTools | `x` `y` / `C` `/`；`h/l` 切分頁 |
 | 選取模式 | `hjkl` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
 
-撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊；小寫 `v`（visual mode）與 `[1]` 的 `w c r y`、Bookmarks 的 `a m x y`、Downloads 的 `o x y` 無重疊，visual mode 內的 `v`（開始選取）在模式裡、不同時可按；`V`（彩蛋）與各面板大寫無重疊（Bookmarks screen 的 `F` 是該 screen 的，與全域不撞）（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
+撞字檢查：全域 `W B H D S P N L` 與各面板大寫 `R U A O I Z V Y C T X F` 無重疊；小寫 `v`（visual mode）與 `[1]` 的 `c o r y`、Bookmarks 的 `a m x y`、Downloads 的 `o x y` 無重疊，visual mode 內的 `v`（開始選取）在模式裡、不同時可按；`V`（彩蛋）與各面板大寫無重疊（Bookmarks screen 的 `F` 是該 screen 的，與全域不撞）（修訂 2026-09-21：`W` `S` 進全域，page panel 的 close 改 `C`；screen 上的 `C` clear 與 page 的 `C`lose 在不同 screen，不會同時可按）。`D` 與導覽 `d` 只差大小寫，
 sshu 的 `[D]isconnect` 同例；`L` 與導覽 `l`（沿列右移）同例；`I` 與 DevTools Console 的 `i`（insert）在不同 surface。
 DevTools 原本的 `D` 讓給 header 的 Downloads（修訂 2026-09-20），改成 `[I]nspect`。`U` 只剩 `[1]` 的 undo close
 （修訂 2026-09-20：原本 `[2]` 也用 `U` 開 goto、同字依面板不同義；goto 改成全域 `L` 後不再同字）。Bookmarks 的新目錄用 `F`
@@ -271,7 +271,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 
 | 動作 | 為什麼 |
 |---|---|
-| `[1]` `w` 關分頁，該分頁有下載進行中 | 會中斷下載 |
+| `[1]` `c` 關分頁，該分頁有下載進行中 | 會中斷下載 |
 | `q` 離開，有下載進行中 | 同上；沒有下載直接走 |
 | Bookmark delete | 破壞性（Downloads 的 remove 不問：檔案還在，只是清列） |
 | History clear、Clear site data | 破壞性 |
@@ -330,7 +330,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 `W` Web · `B` Bookmarks · `H` History · `D` Downloads · `S` Settings · `P` 上一頁 · `N` 下一頁 · `L` location · `q` quit · `/` 搜尋（進 visual mode）· `v` visual mode
 
 ### `[1]` Tabs
-`w` close · `c` clone · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
+`c` close · `o` open in new tab · `r` reload · `y` yank url · `T` new · `X` close others · `U` undo close
 
 ### `[2]` Page
 `R` reload · `T` new tab · `A` add bookmark · `O` outline · `I` inspect（DevTools：network / storage / console / source）· `Z` zoom · `Y` yank page url · `C` close this tab

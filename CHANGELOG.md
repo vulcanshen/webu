@@ -11,6 +11,9 @@
   — and opens on Enter again. An item with no Enter action yet says so.
   The item's other operations — Open in new tab, Submit, Clear, Yank —
   are in the Space menu, no longer behind Enter.
+- **`[1] Tabs` closes on `c`, not `w`.** A terminal has no window for a
+  `w` to close, and the page panel's close is `C` already. The clone row
+  becomes `[o] Open in new tab`, the same `o` as a download's source.
 
 ### Fixed
 

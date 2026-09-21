@@ -202,9 +202,9 @@ func TestUndoCloseAndQuitConfirm(t *testing.T) {
 	d := startAt(t, b, "file://"+abs, store.Config{})
 	d.until("page B", d.loaded("Page B"))
 	d.key("1")
-	d.key("w")
+	d.key("c")
 	if len(d.m.tabs) != 0 || len(d.m.closed) != 1 {
-		t.Fatalf("after w: %d tabs, %d closed", len(d.m.tabs), len(d.m.closed))
+		t.Fatalf("after c: %d tabs, %d closed", len(d.m.tabs), len(d.m.closed))
 	}
 	d.key("U")
 	d.until("page B is back", d.loaded("Page B"))

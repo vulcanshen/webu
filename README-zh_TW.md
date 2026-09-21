@@ -147,7 +147,7 @@ restore_session: true
 
 ### `[1]` Tabs —— 小寫是游標那一列，大寫是整個面板
 
-`Enter` 切到該分頁 · `w` 關閉 · `c` clone · `r` 重載 · `y` yank url · `T` 新分頁 · `X` 關掉其他 · `U` 復原關閉
+`Enter` 切到該分頁 · `c` 關閉 · `o` 同頁再開一個 · `r` 重載 · `y` yank url · `T` 新分頁 · `X` 關掉其他 · `U` 復原關閉
 
 ### `[2]` Page
 

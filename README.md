@@ -148,7 +148,7 @@ Every letter hotkey below is also a row in that surface's `Space` menu. The brac
 
 ### `[1]` Tabs — lower case is the row, upper case is the panel
 
-`Enter` switch to the tab · `w` close · `c` clone · `r` reload · `y` yank url · `T` new tab · `X` close others · `U` undo close
+`Enter` switch to the tab · `c` close · `o` open in new tab · `r` reload · `y` yank url · `T` new tab · `X` close others · `U` undo close
 
 ### `[2]` Page
 
