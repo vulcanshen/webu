@@ -110,11 +110,15 @@ type Node struct {
 	// named so, or so marked in the DOM (Capture.Breadcrumb). A trail
 	// outside any navigation is wrapped in one at build time.
 	Breadcrumb bool
-	Disabled   bool
-	Focusable  bool
-	Expanded   bool // a combobox or disclosure that is open
-	Selected   bool // an Option
-	Header     bool // a Cell that is a column or row header
+	// Skip marks a link the page calls a skip link by class; a link whose
+	// text starts with "skip" and points at an anchor is one regardless
+	// (ui isSkipLink).
+	Skip      bool
+	Disabled  bool
+	Focusable bool
+	Expanded  bool // a combobox or disclosure that is open
+	Selected  bool // an Option
+	Header    bool // a Cell that is a column or row header
 	// Block marks an inline kind that the page laid out as a block — a link
 	// styled display:block, a button on a line of its own. Set from the
 	// captured layout, never from the role.
@@ -244,7 +248,7 @@ func dump(b *strings.Builder, n *Node, depth int) {
 		on   bool
 		name string
 	}{
-		{n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}, {n.Disabled, "disabled"},
+		{n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}, {n.Skip, "skip"}, {n.Disabled, "disabled"},
 		{n.Focusable, "focusable"}, {n.Expanded, "expanded"}, {n.Selected, "selected"},
 		{n.Header, "header"}, {n.Block, "block"},
 	} {

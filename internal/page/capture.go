@@ -61,6 +61,9 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 				}
 				return false
 			}),
+			Skip: attrMarks(docs, strs, func(tag, name, value string) bool {
+				return tag == "a" && name == "class" && strings.Contains(value, "skip")
+			}),
 		}
 		// What the response was: a JSON or plain-text document is drawn as
 		// its text, not as Chrome's viewer for it (ir.Build).

@@ -109,7 +109,7 @@ footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
   是 item，**Enter 直接開合**（修訂 2026-09-21：原本開 item menu 選 Collapse / Expand；Space menu 仍列這兩項）。
   **全部預設展開**（修訂 2026-09-21：原本有 `main` 時 main 之外的預設摺疊，實機看了像頁面壞掉）；收合的畫成
   `▸ banner · 14 items`，Outline 跳進摺疊的 landmark 會先把它打開
-- **page chrome 每個一行入口**（2026-09-21：banner / navigation / breadcrumb / search / complementary / contentinfo，取代原本的「導覽清單一行流式」與這些 landmark 的分隔線）：`▎ icon 字 +N`——icon 分種類（page_layout_header / menu / map_marker_path / search / table_of_contents / page_layout_footer）；字是你在裡面的哪一格（navigation 目前的 tab、breadcrumb 最後一節）或它是什麼（banner 站名、search 框名、其他 landmark 名字或第一個 heading）；左邊直槓（Blue）、文字帶底色（同 code block 的 surface0）；內容不畫，Enter 開 item operation 選單列出裡面的 link / button / 輸入框 / 勾選 / select；search 只有一個框時 Enter 直接開框。main / article / region / form 是內容，維持分隔線 + 可收合
+- **page chrome 每個一行入口**（2026-09-21：banner / navigation / breadcrumb / search / complementary / contentinfo，取代原本的「導覽清單一行流式」與這些 landmark 的分隔線）：`▎ icon 字 +N`——icon 分種類（page_layout_header / menu / map_marker_path / search / table_of_contents / page_layout_footer）；字是你在裡面的哪一格（navigation 目前的 tab、breadcrumb 最後一節）或它是什麼（banner 站名、search 框名、其他 landmark 名字或第一個 heading）；左邊直槓（Blue）、文字帶底色（同 code block 的 surface0）；內容不畫，Enter 開 item operation 選單列出裡面的 link / button / 輸入框 / 勾選 / select；search 只有一個框時 Enter 直接開框；skip link 同款一行、icon skip_next、Enter 跳到內文。main / article / region / form 是內容，維持分隔線 + 可收合
 - **文字欄寬上限**：段落折行寬度 = min(面板寬, `config.yaml` 的 `measure`，預設 100)；表格、code、分隔線仍用整個面板寬
 - **非 HTML 的回應**（修訂 2026-09-20）：JSON / 純文字 / XML / CSV 等依 `document.contentType` 整份畫成一個 code block，
   JSON 自動縮排；不畫 Chrome 自己的 JSON viewer（Pretty-print 表單）

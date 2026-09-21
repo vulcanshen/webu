@@ -292,7 +292,7 @@ func TestNavigationIsOneRow(t *testing.T) {
 		{Kind: ir.Landmark, Role: "contentinfo", Name: "Site footer", ID: 40, Children: []*ir.Node{text("© Acme")}},
 	}}
 	cl := render(chrome, 80)
-	for _, want := range []string{"Acme +3", "Search Acme +2", "Site footer"} {
+	for _, want := range []string{"Acme +2", "Search Acme +2", "Site footer"} {
 		if !strings.Contains(dumpLayout(cl), want) {
 			t.Errorf("missing the entry row %q in:\n%s", want, dumpLayout(cl))
 		}
@@ -449,5 +449,36 @@ func TestTableCellsAreItems(t *testing.T) {
 	}
 	if got := columnHeader(root, tb.lay.items[tb.cursor].node); got != "Site" {
 		t.Errorf("the column's header names the cell: %q", got)
+	}
+}
+
+// TestSkipLinkIsARow: a skip link is chrome — one row of the entry
+// style, an item — and a new page never starts on it: main's first
+// item, else the item after it.
+func TestSkipLinkIsARow(t *testing.T) {
+	skip := link("Skip to main content", "https://x.test/page#main", 1)
+	root := &ir.Node{Kind: ir.Document, URL: "https://x.test/page", Children: []*ir.Node{
+		skip,
+		{Kind: ir.Landmark, Role: "main", ID: 2, Children: []*ir.Node{para(link("First", "https://x.test/first", 3))}},
+	}}
+	tb := &tab{cursor: -1, root: root}
+	tb.relayout(60)
+	l := tb.lay
+	if len(l.rows) == 0 || !strings.Contains(l.rows[0].plain(), "▎") || !strings.Contains(l.rows[0].plain(), "Skip to main content") {
+		t.Errorf("the skip link should be an entry row:\n%s", dumpLayout(l))
+	}
+	if len(l.items) < 1 || l.items[0].node != skip {
+		t.Errorf("the skip link should be the first item:\n%s", dumpLayout(l))
+	}
+	if at := tb.firstItem(); at < 0 || l.items[at].node.Text() != "First" {
+		t.Errorf("a new page starts inside main, not on the skip link: %d", at)
+	}
+	// No main: the item after the link.
+	bare := &ir.Node{Kind: ir.Document, URL: "https://x.test/page", Children: []*ir.Node{
+		link("Skip navigation", "https://x.test/page#content", 1), para(link("Next", "https://x.test/next", 3))}}
+	tb = &tab{cursor: -1, root: bare}
+	tb.relayout(60)
+	if at := tb.firstItem(); at < 0 || tb.lay.items[at].node.Text() != "Next" {
+		t.Errorf("without main, a new page starts after the skip link: %d", at)
 	}
 }

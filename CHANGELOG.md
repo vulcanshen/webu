@@ -42,6 +42,9 @@
   form are the page itself and stay as they were.
 - **A dialog is chrome too** — a cookie banner, a modal: one row with
   its name or its first words, its buttons behind `Enter`.
+- **A skip link is chrome too.** "Skip to main content" is one row of
+  the same style; `Enter` does what it says, the cursor to the content.
+  A new page never starts on it.
 - **A search box offers to search.** `Enter` in the box writes the
   value and asks; `Enter` again presses Enter in the field, `Esc` keeps
   the value unsent. A search box is one by `type=search`, or any box in

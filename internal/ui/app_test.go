@@ -925,10 +925,24 @@ func TestNavigationEntry(t *testing.T) {
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
+	// The page's skip link is a row of the entry style, never where a page
+	// starts, and Enter on it does what it says: the content.
+	if n := d.page().current(); n == nil || n.Kind != ir.Heading {
+		t.Errorf("a new page should start past the skip link, starts on %+v", n)
+	}
+	d.cursorOn(ir.Link, "Skip to content")
+	if !strings.Contains(d.m.View(), "Skip to content") || !isSkipLink(d.page().current()) {
+		t.Errorf("the skip link should be drawn as a row and known as one:\n%s", d.m.View())
+	}
+	d.key("enter")
+	if n := d.page().current(); n == nil || n.Kind != ir.Heading {
+		t.Errorf("Enter on the skip link should land on the content, landed on %+v", n)
+	}
 	// The row names where the user is in it — aria-current — not the
 	// landmark: the tab in the navigation, the last crumb in a breadcrumb
-	// (a trail named so, and one only the DOM's class says is one).
-	v := d.m.View()
+	// (a trail named so, and one only the DOM's class says is one). The
+	// page is taller than the window now, so the layout is what is read.
+	v := dumpLayout(d.page().lay)
 	for _, want := range []string{"Anchor +2", "Page A +1", "Here +1", "Find +2"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("missing the entry row %q in:\n%s", want, v)
@@ -997,7 +1011,7 @@ func TestNavigationEntry(t *testing.T) {
 
 	// A dialog is chrome too: one row with its name, its buttons behind
 	// Enter; the cookie banner's Accept takes it off the page.
-	if v := d.m.View(); !strings.Contains(v, "Cookies +1") {
+	if v := dumpLayout(d.page().lay); !strings.Contains(v, "Cookies +1") {
 		t.Fatalf("the dialog should be one row:\n%s", v)
 	}
 	d.cursorOn(ir.Landmark, "Cookies")
@@ -1007,7 +1021,7 @@ func TestNavigationEntry(t *testing.T) {
 		t.Errorf("the dialog's row should be its button, is %q", got)
 	}
 	d.key("enter")
-	d.until("dialog gone", func() bool { return !strings.Contains(d.m.View(), "Cookies +1") })
+	d.until("dialog gone", func() bool { return !strings.Contains(dumpLayout(d.page().lay), "Cookies +1") })
 
 	// The class-marked trail is a navigation of its own, with its link.
 	d.cursorOn(ir.Landmark, "Root")

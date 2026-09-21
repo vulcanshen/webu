@@ -99,6 +99,7 @@ var (
 	glyphSidebar  = string(rune(0xf0836)) // nf-md-table_of_contents — a complementary's
 	glyphDialog   = string(rune(0xf10ac)) // nf-md-dock_window — a dialog's (a cookie banner, a modal)
 	glyphTable    = string(rune(0xf04eb)) // nf-md-table — a cell's content popup
+	glyphSkip     = string(rune(0xf04ad)) // nf-md-skip_next — a skip link's row
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 

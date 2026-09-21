@@ -254,11 +254,33 @@ func (r *renderer) entryRow(n *ir.Node, id int) {
 	if c := len(entryTargets(n)); c > 0 {
 		label += " +" + itoa(c)
 	}
+	r.entryLine(id, label)
+}
+
+// entryLine is the entry style: the bar, then the label on its ground.
+func (r *renderer) entryLine(id int, label string) {
 	label = truncate(label+" ", max(1, r.width-2))
 	r.emit(row{segs: []seg{
 		{text: "▎", item: id, kind: segNavBar},
 		{text: label, item: id, kind: segNav},
 	}})
+}
+
+// isSkipLink says whether a link is a skip link — the "Skip to main
+// content" an accessible page puts first, for a keyboard to pass the
+// header by: a same-page anchor whose text starts with skip, or which
+// the page's class calls one.
+func isSkipLink(n *ir.Node) bool {
+	if n.Kind != ir.Link || !strings.Contains(n.URL, "#") {
+		return false
+	}
+	return n.Skip || strings.HasPrefix(strings.ToLower(strings.TrimSpace(n.Text())), "skip")
+}
+
+// skipRow draws a skip link in the entry style: chrome, one row, and
+// Enter is what it says (app skipToContent).
+func (r *renderer) skipRow(n *ir.Node, id int) {
+	r.entryLine(id, " "+glyphSkip+" "+oneLine(n.Text()))
 }
 
 // isEntry says whether a landmark is page chrome, drawn as an entry row.
@@ -367,6 +389,9 @@ func entryTargets(n *ir.Node) []entryTarget {
 		for _, c := range x.Children {
 			switch c.Kind {
 			case ir.Link, ir.Button, ir.Textbox, ir.Check, ir.Combobox:
+				if isSkipLink(c) {
+					continue // says nothing an entry's list needs
+				}
 				out = append(out, entryTarget{c, max(0, lists-1)})
 			case ir.List:
 				walk(c, lists+1)
@@ -789,6 +814,13 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Text:
 		r.words(n.Name, item, kind)
 	case ir.Link:
+		if isSkipLink(n) && !r.inCell && r.cellItem < 0 {
+			// Chrome, not a link to follow: one row of the entry style.
+			r.flush()
+			r.skipRow(n, r.newItem(n))
+			r.gap = true
+			return
+		}
 		id := r.itemOf(n)
 		name := n.Name
 		if name == "" {
