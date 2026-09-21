@@ -122,14 +122,14 @@ backendDOMNodeId，找不到落到同序位。
 | 下載 | 第一個 frame 對 browser 執行 `Browser.setDownloadBehavior(allow, downloadPath, eventsEnabled)`；`ListenBrowser` 收 `downloadWillBegin` → toast「downloading <name>」、`downloadProgress completed` → toast「saved <path>」、canceled → error toast。目錄 = `config.yaml` 的 `download_dir`，預設 `paths.Downloads()` = `~/.webu/datas/downloads`（2026-09-21），`MkdirAll` 後才 `setDownloadBehavior`（`pointDownloads`，Settings 改值後再跑一次） |
 | HTTP basic / digest auth | `Prepare` 開 `Fetch.enable(handleAuthRequests)`；**這會讓每個 request 都 pause 一次**，tab 的 listener 收到 `requestPaused` 就在 goroutine 裡 `continueRequest`（Puppeteer 的 `page.authenticate` 同一做法；實測 GitHub repo 頁多花約 0.5 秒、HN 約 0.3 秒）；`authRequired` → `authMsg` → input popup 問帳號、再問密碼（遮罩）→ `continueWithAuth(ProvideCredentials)`；Esc → `CancelAuth`（頁面拿到 401） |
 | 檔案上傳 | `Prepare` 開 `Page.setInterceptFileChooserDialog(true)`；`fileChooserOpened` → `fileMsg` → input popup 問路徑（`~` 展開、多檔以空白分隔、先 stat）→ `DOM.setFileInputFiles(backendNodeId)`；Esc 就是沒選。ui.md §3.3 寫的 sshu filepicker 形式先以路徑輸入代替 |
-| Undo close、離開時下載中 | `[1]` 的 `U` 從 `m.closed`（最多 20 筆）重開；`q` 在 `downloading() > 0` 時先 confirm。`downloadWillBegin` / `downloadProgress`（帶 GUID、bytes、state）餵進 `m.dls`，header 右端數進行中的、`[D]ownloads` screen 列出（`downloads.go`：Enter 系統開啟器、`o` 來源開新分頁、`x` remove（進行中 `Browser.cancelDownload`）、`y` yank path、`C` 清已完成）。`w` 關分頁不問：下載是瀏覽器層事件、無法歸到某個分頁 |
+| Undo close、離開時下載中 | `[1]` 的 `U` 從 `m.closed`（最多 20 筆）重開；`q` 在 `downloading() > 0` 時先 confirm。`downloadWillBegin` / `downloadProgress`（帶 GUID、bytes、state）餵進 `m.dls`，header 右端數進行中的、`[D]ownloads` screen 列出（`downloads.go`：Enter 系統開啟器、`o` 來源開新分頁、`x` remove（進行中 `Browser.cancelDownload`）、`y` yank path、`C` 清已完成）。`c` 關分頁不問：下載是瀏覽器層事件、無法歸到某個分頁 |
 
 ## §A VTP in webu
 
 依 ux.md §A 落地。已實作的入口：footer `space menu   ? help   tab/1-2 panels   q quit`；
 `[2]` 的 **Enter = 滑鼠左鍵在 terminal 的對應**（`enterItem`，定案 2026-09-21；VTP §A.0.K「啟動該項目最直觀的操作、依 app context 而定」：textbox → `editField`（password 遮罩、prompt 寫 password）、select → `chooseOptions`、button / check / media / unsupported → click、link → `askOpenLink` 開 confirm（`confirmOpenLink`，帶 node id）確認後 click、landmark / heading → fold、其他 → message popup「尚未定義」；list screen 的 bookmark / history 列開新分頁、目錄列開合——每種列跨 surface 一致。2026-09-20 的「Enter 開 item 選單」作廢，`optItemMenu` 拿掉，`optionsKey` 只剩 select 與 move picker），
 Space 開完整選單（同一份 item 列 + panel region `[R] [T] [P] [N] [/] [v] [L] [A] [O] [I] [Z] [Y] [C]`）；
-`[1]` 的 `[w] [c] [r] [y]` / `[T] [X] [U]`；header 五個 chip 是 screen（`screen` enum；`switchScreen` / `screenKey` / `listAction`，`W` `B` `H` `D` `S` 全域），list screen 的 Space menu = `listPanel.menuItems`，鍵與 `update` 同一組（2026-09-21）。help popup 列全域鍵。
+`[1]` 的 `[c] [o] [r] [y]` / `[T] [X] [U]`（2026-09-21：close 從 `w` 改 `c`，clone 改 `[o] Open in new tab`）；header 五個 chip 是 screen（`screen` enum；`switchScreen` / `screenKey` / `listAction`，`W` `B` `H` `D` `S` 全域），list screen 的 Space menu = `listPanel.menuItems`，鍵與 `update` 同一組（2026-09-21）。help popup 列全域鍵。
 options popup（`m.options`）以 `optionsKind` 區分兩種內容：item 選單、select 的 option 清單（Choose
 在原浮層內換內容）；Add to… picker 隨 Shortcuts 拿掉，`[A]` 直接加進 Bookmarks。
 
@@ -190,7 +190,7 @@ Space 開 cheatsheet（message popup，`passKeys`：按列出的鍵 = 關掉 pop
 - role 白名單每 role 一份 fixture；`docs/support.md`
 - `[2]` 頁面：URL 列、分隔線、排版、游標、`j/k/u/d/gg/G`、捲動指示與 loading hint
 - Enter = 左鍵的對應（2026-09-21）：textbox 開 input popup（password 遮罩）、select 開 option 清單、button / check / media / unsupported click、link 先 confirm 再開、landmark / heading 開合、其他 notice；item 選單只在 Space
-- `[1]` 分頁：新開 / 切換（綠字）/ 關閉 / clone / reload / yank / close others；`target=_blank` 尚未接 `Target.targetCreated`
+- `[1]` 分頁：新開 / 切換（綠字）/ 關閉（`c`）/ 同頁再開（`o`）/ reload / yank / close others；`target=_blank` 尚未接 `Target.targetCreated`
 - goto popup（全域 `L` / `[1]` `[2]` 的 `T`）：非 URL 當搜尋（預設 Google，2026-09-21 起）；`L` 帶目前 URL 當 placeholder，Tab 接手編輯、Backspace 清掉（`inputPopup.update`）；label 2026-09-21 改成 `[L]ocation`（popup title「Location」）；`bracketHotkey` 仍支援 label 中段加括號（只對字母；數字鍵在 label 裡出現過曾印成 `dir[1]`，2026-09-21 修）
 - `P` / `N` / `R`、Yank url / text / value、Inspect（暫以 toast 呈現）
 - 窄寬只畫焦點側；`TestViewFitsTheTerminal` 檢查四種尺寸每列寬度

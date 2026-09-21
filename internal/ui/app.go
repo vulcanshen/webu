@@ -870,7 +870,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("show")
-		case "w", "c", "r", "y", "T", "X", "U":
+		case "c", "o", "r", "y", "T", "X", "U":
 			return m.dispatch(k)
 		}
 	case panelPage:
@@ -1252,8 +1252,11 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 			items = append(items,
 				menuItem{header: true, label: "item operation"},
 				menuItem{label: "Switch to", key: "enter", hint: "show this tab in [2]"},
-				menuItem{label: "Close", key: "w", hint: "this tab"},
-				menuItem{label: "Clone", key: "c", hint: "the same page, a new tab"},
+				// c, the page panel's C in lower case; it was w, which is a
+				// window's letter, and a terminal has none (2026-09-21).
+				menuItem{label: "Close", key: "c", hint: "this tab"},
+				// o as on a download's row: this row's URL, in a new tab.
+				menuItem{label: "Open in new tab", key: "o", hint: "the same page again"},
 				menuItem{label: "Reload", key: "r", hint: "this tab"},
 				menuItem{label: "Yank url", key: "y", hint: "to the clipboard"},
 				menuItem{separator: true},
@@ -1453,9 +1456,9 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		if m.cur2 >= 0 && m.cur2 < len(m.tabs) {
 			return m.showTab(m.cur2)
 		}
-	case "w":
-		return m.closeTab(m.cur2)
 	case "c":
+		return m.closeTab(m.cur2)
+	case "o":
 		if m.cur2 >= 0 && m.cur2 < len(m.tabs) {
 			return m, m.openTab(m.tabs[m.cur2].url, true)
 		}
