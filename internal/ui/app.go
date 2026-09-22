@@ -731,14 +731,7 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if m.toast.anim.owns() {
 				return m, m.toast.close()
 			}
-			if t := m.shownTab(); t != nil {
-				if t.onPagetab() {
-					t.leavePagetab()
-				} else {
-					t.enterPagetab()
-				}
-			}
-			return m, nil
+			return m.togglePagetab()
 		}
 		return m.closeTop()
 	}
@@ -850,6 +843,25 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		return m, m.help.close()
 	case m.spaceMenu.anim.owns():
 		return m, m.spaceMenu.close()
+	}
+	return m, nil
+}
+
+// togglePagetab moves the hand between the page and the pagetab under
+// the URL — its chrome (pagepanel.pagetabRow). Esc does it, and so does
+// the row the page's Space menu lists for it: a panel operation is
+// disclosed in the menu or it does not exist (ux.md §A.1).
+func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
+	t := m.shownTab()
+	if t == nil {
+		return m, nil
+	}
+	if t.onPagetab() {
+		t.leavePagetab()
+		return m, nil
+	}
+	if !t.enterPagetab() {
+		return m, m.toast.show("this page has no chrome", toastInfo)
 	}
 	return m, nil
 }
@@ -1519,12 +1531,29 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Visual mode", key: "v", hint: "walk the text by character, copy some", disabled: t == nil},
 		menuItem{label: "Location", key: "L", hint: "a URL or a search; this page's own is offered"},
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
+		pagetabItem(t),
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
 		menuItem{label: "Inspect", key: "I", hint: "DevTools: network, storage, console, source", disabled: t == nil},
 		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
 		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil},
 		menuItem{label: "Close", key: "C", hint: "this tab", disabled: t == nil})
 	return items
+}
+
+// pagetabItem is the page's Space menu row for the pagetab: the way onto
+// the page's chrome and back. Esc is the key — a core key, so the hint
+// names it rather than the label carrying a bracketed letter.
+func pagetabItem(t *tab) menuItem {
+	switch {
+	case t == nil || len(t.lay.pagetab) == 0:
+		return menuItem{label: "Page chrome", key: "pagetab",
+			hint: "Esc — this page declares none", disabled: true}
+	case t.onPagetab():
+		return menuItem{label: "Back to the page", key: "pagetab",
+			hint: "Esc — leave the pagetab"}
+	}
+	return menuItem{label: "Page chrome", key: "pagetab",
+		hint: "Esc — the pagetab under the URL"}
 }
 
 // textboxItems is a filled textbox's rows in the Space menu (ux.md §2.2):
@@ -1755,6 +1784,8 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "choose":
 		return m.chooseOptions()
+	case "pagetab":
+		return m.togglePagetab()
 	case "fold":
 		if t != nil {
 			t.toggleFold(m.pageW())
