@@ -446,18 +446,51 @@ func nodeByID(root *ir.Node, id cdp.BackendNodeID) *ir.Node {
 	return found
 }
 
-// drillInto opens a list item to the whole panel: its contents become the
-// page. Enter does it, Esc comes back out.
-func (t *tab) drillInto(n *ir.Node, width, visible int) bool {
-	if n == nil || n.Kind != ir.ListItem || n.ID == 0 {
+// isThing reports whether a node is one of the things the panel opens
+// into: a list item, an article. Each is a single thing on the page
+// however many lines it would take, so it is one row until you go in.
+func isThing(n *ir.Node) bool {
+	if n == nil || n.ID == 0 {
 		return false
 	}
-	t.drill, t.drillTitle = n.ID, oneLine(n.Text())
+	return n.Kind == ir.ListItem || (n.Kind == ir.Landmark && n.Role == "article")
+}
+
+// drillNode is the node the panel is showing: the root, or as far down
+// the drill path as the page still has. A step the page has rebuilt out
+// from under takes the rest of the path with it rather than stranding
+// the view somewhere that no longer exists.
+func (t *tab) drillNode() *ir.Node {
+	n := t.root
+	if n == nil {
+		t.drill = nil
+		return nil
+	}
+	for i, st := range t.drill {
+		c := nodeByID(n, st.id)
+		if c == nil {
+			t.drill = t.drill[:i]
+			return n
+		}
+		n = c
+	}
+	return n
+}
+
+// drillInto opens one of those things to the whole panel: its contents
+// become the page. Enter goes in, Esc comes back out one level, and the
+// path has no bound — a card holds a list whose items hold lists.
+func (t *tab) drillInto(n *ir.Node, width, visible int) bool {
+	if !isThing(n) {
+		return false
+	}
+	title := oneLine(n.Text())
 	if t.cursor >= 0 && t.cursor < len(t.lay.items) {
 		if it := t.lay.items[t.cursor]; it.node == n && it.first < len(t.lay.rows) {
-			t.drillTitle = strings.TrimSpace(t.lay.rows[it.first].plain())
+			title = strings.TrimSpace(t.lay.rows[it.first].plain())
 		}
 	}
+	t.drill = append(t.drill, drillStep{id: n.ID, title: title})
 	t.leavePagetab()
 	t.relayout(width)
 	t.cursor, t.top = t.firstItem(), 0
@@ -465,10 +498,13 @@ func (t *tab) drillInto(n *ir.Node, width, visible int) bool {
 	return true
 }
 
-// leaveDrill comes back out to the page, the cursor on the item just left.
+// leaveDrill comes back out one level, the cursor on the thing just left.
 func (t *tab) leaveDrill(width, visible int) {
-	was := t.drill
-	t.drill, t.drillTitle = 0, ""
+	if len(t.drill) == 0 {
+		return
+	}
+	was := t.drill[len(t.drill)-1].id
+	t.drill = t.drill[:len(t.drill)-1]
 	t.relayout(width)
 	for i, it := range t.lay.items {
 		if it.node.ID == was {
@@ -479,8 +515,16 @@ func (t *tab) leaveDrill(width, visible int) {
 	t.scrollToCursor(visible)
 }
 
-// drilled reports whether the panel is showing one list item's contents.
-func (t *tab) drilled() bool { return t != nil && t.drill != 0 }
+// drilled reports whether the panel is inside something.
+func (t *tab) drilled() bool { return t != nil && len(t.drill) > 0 }
+
+// drillTitle is what the header row says: the thing you are inside.
+func (t *tab) drillTitle() string {
+	if len(t.drill) == 0 {
+		return ""
+	}
+	return t.drill[len(t.drill)-1].title
+}
 
 // moveSection walks the section list. It does not wrap, and k off the top
 // goes up onto the pagetab: the list stands where the page stands, so it
