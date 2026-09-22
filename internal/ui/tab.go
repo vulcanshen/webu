@@ -71,16 +71,16 @@ type tab struct {
 	// drill is the list item opened to the whole panel — Enter on one,
 	// Esc back out. A list item is one thing, so it is one row until you
 	// go into it (render.firstLine, user 2026-09-22).
-	drill  cdp.BackendNodeID
+	drill cdp.BackendNodeID
 	// drillTitle is that item's first line as it read when it was opened:
 	// what the panel's header row says while you are inside it.
 	drillTitle string
-	secs   []section
-	shape  pageShape
-	flat   bool
-	read   bool
-	sec    int
-	secTop int
+	secs       []section
+	shape      pageShape
+	flat       bool
+	read       bool
+	sec        int
+	secTop     int
 
 	// gen guards captures: a result from before the latest navigation is
 	// thrown away rather than drawn over the newer page.
