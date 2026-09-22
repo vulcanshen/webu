@@ -44,7 +44,8 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 		if err != nil {
 			return err
 		}
-		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs), Hidden: hiddenMap(docs),
+		boxes, hidden := layoutMaps(docs)
+		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs), Boxes: boxes, Hidden: hidden,
 			// What the AX tree does not say, the DOM does (ir.Build).
 			Protected: attrMarks(docs, strs, func(tag, name, value string) bool {
 				return tag == "input" && name == "type" && value == "password"
@@ -91,10 +92,10 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 //
 // A node with no box at all is not hidden, it is unmeasured: the layout
 // tree only lists what was laid out, and absent data is not evidence.
-func hiddenMap(docs []*domsnapshot.DocumentSnapshot) map[cdp.BackendNodeID]bool {
-	out := map[cdp.BackendNodeID]bool{}
+func layoutMaps(docs []*domsnapshot.DocumentSnapshot) (map[cdp.BackendNodeID]ir.Box, map[cdp.BackendNodeID]bool) {
+	boxes, hidden := map[cdp.BackendNodeID]ir.Box{}, map[cdp.BackendNodeID]bool{}
 	if len(docs) == 0 || docs[0].Nodes == nil || docs[0].Layout == nil {
-		return out
+		return boxes, hidden
 	}
 	ids := docs[0].Nodes.BackendNodeID
 	lay := docs[0].Layout
@@ -103,11 +104,17 @@ func hiddenMap(docs []*domsnapshot.DocumentSnapshot) map[cdp.BackendNodeID]bool 
 			continue
 		}
 		// Rectangle is [x, y, width, height].
-		if b := lay.Bounds[j]; len(b) == 4 && b[2] <= 1 && b[3] <= 1 {
-			out[ids[ni]] = true
+		b := lay.Bounds[j]
+		if len(b) != 4 {
+			continue
 		}
+		if b[2] <= 1 && b[3] <= 1 {
+			hidden[ids[ni]] = true
+			continue
+		}
+		boxes[ids[ni]] = ir.Box{X: b[0], Y: b[1], W: b[2], H: b[3]}
 	}
-	return out
+	return boxes, hidden
 }
 
 // attrMarks reads the snapshot's node table for the elements pick says

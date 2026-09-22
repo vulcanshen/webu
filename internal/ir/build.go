@@ -32,6 +32,12 @@ type Capture struct {
 	// to: Top Bar · Sidebar · Main Content"); a link's text says it too
 	// (ui). A block is wrapped in a navigation of its own at build time.
 	Skip map[cdp.BackendNodeID]bool `json:"skip,omitempty"`
+	// Boxes is where each element was laid out: x, y, width, height, in
+	// page coordinates. It is the only thing that says a block sits
+	// BESIDE another rather than under it, and where a page's top and
+	// bottom bands are — which is how webu tells a page's parts apart
+	// without reading a single tag attribute (ui.splitParts).
+	Boxes map[cdp.BackendNodeID]Box `json:"boxes,omitempty"`
 	// Hidden marks the elements laid out at a point — a box of 1×1 or
 	// less. That is how a page writes text for a screen reader and no
 	// one else: position:absolute, width:1px, height:1px, clipped. A
@@ -49,6 +55,29 @@ type Capture struct {
 	// ContentType is document.contentType: what the response was. Empty
 	// in the role fixtures, which are all HTML.
 	ContentType string `json:"contentType,omitempty"`
+}
+
+// Box is a laid-out rectangle in page coordinates.
+type Box struct {
+	X, Y, W, H float64
+}
+
+// Area is how much of the page it covers.
+func (b Box) Area() float64 { return b.W * b.H }
+
+// Union is the smallest box holding both; a zero box contributes nothing,
+// so a part's box can be built up from the descendants that have one.
+func (b Box) Union(o Box) Box {
+	if b.W <= 0 || b.H <= 0 {
+		return o
+	}
+	if o.W <= 0 || o.H <= 0 {
+		return b
+	}
+	x, y := min(b.X, o.X), min(b.Y, o.Y)
+	return Box{X: x, Y: y,
+		W: max(b.X+b.W, o.X+o.W) - x,
+		H: max(b.Y+b.H, o.Y+o.H) - y}
 }
 
 // textDocument says whether a content type is a document Chromium shows

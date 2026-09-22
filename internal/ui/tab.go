@@ -45,6 +45,9 @@ type tab struct {
 	// land the cursor (jumpToAnchor).
 	anchors map[string]cdp.BackendNodeID
 	parents map[cdp.BackendNodeID]cdp.BackendNodeID
+	// boxes is where the page laid each element out. It is what tells a
+	// page's parts apart — beside, above, below (parts.splitParts).
+	boxes map[cdp.BackendNodeID]ir.Box
 	// pending: restored from the last session but not loaded yet — it loads
 	// when it is switched to (ux.md §6).
 	pending bool
@@ -484,7 +487,7 @@ func (t *tab) apply(msg pageMsg, width int) {
 		wasBarID, wasBarKind = c.nodes[0].ID, c.kind
 	}
 	t.root = ir.Build(msg.cap)
-	t.anchors, t.parents = msg.cap.Anchors, msg.cap.Parents
+	t.anchors, t.parents, t.boxes = msg.cap.Anchors, msg.cap.Parents, msg.cap.Boxes
 	t.relayout(width)
 	if fresh {
 		// A different page: it opens where it declares it starts. A
