@@ -887,3 +887,54 @@ func TestTheHandStaysOnThePagetab(t *testing.T) {
 		t.Error("a page with no chrome has no capsule to hold the hand")
 	}
 }
+
+// A node with no text of its own carries everything in its name, and
+// authors write those as "Label: value" because a screen reader has
+// nothing else to go on — Jira's cards say "Priority: Highest",
+// "Assignee: vulcanshen". The label is drawn dim and the value in the
+// ink of what it is, so a row of icons reads as the fields it is
+// (2026-09-22).
+func TestAMetadataNameIsAField(t *testing.T) {
+	img := func(name string, id int) *ir.Node {
+		return &ir.Node{Kind: ir.Media, Role: "image", Name: name, ID: cdp.BackendNodeID(id)}
+	}
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		para(img("Priority: Highest", 1)),
+		para(img("A photograph of a cat", 2)),
+		para(img("Chart: revenue, by quarter", 3)),
+	}}
+	l := render(root, 60)
+	kinds := map[string]segKind{}
+	for _, r := range l.rows {
+		for _, g := range r.segs {
+			if w := strings.TrimSpace(g.text); w != "" {
+				kinds[w] = g.kind
+			}
+		}
+	}
+	if kinds["Priority"] != segDim {
+		t.Errorf("the label should be dim, is kind %d", kinds["Priority"])
+	}
+	if kinds["Highest"] != segPlain {
+		t.Errorf("the value should read as the text it is, is kind %d", kinds["Highest"])
+	}
+	// A name that is simply a name stays one.
+	if !strings.Contains(dumpLayout(l), "A photograph of a cat") {
+		t.Errorf("an ordinary alt is left alone:\n%s", dumpLayout(l))
+	}
+	// A label is short and is not a sentence.
+	for _, name := range []string{
+		"Note: this is a long sentence that happens to have a colon in it",
+		"Well, here: a value",
+	} {
+		if _, _, ok := labelled(name); ok && strings.HasPrefix(name, "Well") {
+			t.Errorf("%q: a label with a comma in it is prose", name)
+		}
+	}
+	if _, _, ok := labelled("A label longer than twenty four chars: v"); ok {
+		t.Error("a long label is prose, not a field")
+	}
+	if _, _, ok := labelled("Chart: revenue, by quarter"); !ok {
+		t.Error("a comma in the VALUE is fine; only the label must be plain")
+	}
+}

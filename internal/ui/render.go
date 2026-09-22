@@ -1226,6 +1226,17 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		r.words(oneLine(n.Value), id, segInput)
 	case ir.Media:
 		id := r.itemOf(n)
+		g := mediaGlyph(n)
+		if label, value, ok := labelled(oneLine(n.Name)); ok {
+			// The name is all this node has, and it is a field: an icon
+			// whose alt reads "Priority: Highest" is carrying a value,
+			// not describing a picture.
+			r.add(atom{text: g + " ", item: id, kind: segMedia})
+			r.add(atom{text: label, item: id, kind: segDim})
+			r.add(atom{text: "  ", item: id, kind: segDim, space: true})
+			r.words(value, id, segPlain)
+			break
+		}
 		r.add(atom{text: mediaText(n), item: id, kind: segMedia})
 	case ir.Code:
 		if strings.Contains(n.Text(), "\n") && !r.inCell {
@@ -1456,22 +1467,49 @@ func checkText(n *ir.Node) string {
 }
 
 func mediaText(n *ir.Node) string {
-	g := glyphImage
-	switch n.Role {
-	case "Video":
-		g = glyphVideo
-	case "Audio":
-		g = glyphAudio
-	case "Iframe":
-		g = glyphFrame
-	case "Canvas":
-		g = glyphCanvas
-	}
 	name := oneLine(n.Name)
 	if name == "" {
 		name = "no alt"
 	}
-	return g + " " + name
+	return mediaGlyph(n) + " " + name
+}
+
+func mediaGlyph(n *ir.Node) string {
+	switch n.Role {
+	case "Video":
+		return glyphVideo
+	case "Audio":
+		return glyphAudio
+	case "Iframe":
+		return glyphFrame
+	case "Canvas":
+		return glyphCanvas
+	}
+	return glyphImage
+}
+
+// labelled splits a name shaped "Label: value" — the label dim, the value
+// in the ink of whatever it is (2026-09-22).
+//
+// This is only ever asked of a node that has no text of its own, so its
+// NAME is the whole of what it carries: an icon, an empty group. Authors
+// write those as "Priority: Highest", "Assignee: vulcanshen", "Due date:
+// Sep 8, 2026" because a screen reader has nothing else to go on — the
+// label is deliberate, not a coincidence of punctuation. Prose is never
+// put through this: a paragraph that begins "Note: " is a sentence.
+//
+// A label is short and is not itself a sentence. Anything else is a name
+// that happens to contain a colon, and is left alone.
+func labelled(name string) (string, string, bool) {
+	i := strings.Index(name, ": ")
+	if i <= 0 || i > 24 {
+		return "", "", false
+	}
+	label, value := name[:i], strings.TrimSpace(name[i+2:])
+	if value == "" || strings.ContainsAny(label, ".,;!?") {
+		return "", "", false
+	}
+	return label, value, true
 }
 
 // oneLine folds a value into one line for a field or a chip: the first line,
