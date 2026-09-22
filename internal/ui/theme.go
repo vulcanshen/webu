@@ -99,18 +99,44 @@ var (
 	// told by ground, not by foreground (revised 2026-09-21).
 	pageTableBg     = lipgloss.Color("#313244") // surface0
 	pageTableHeadBg = lipgloss.Color("#45475a") // surface1
-	// A heading's ground. h1 wears this and h6 the crust, the four
-	// between them interpolated (headingBg): the document's own outline
-	// drawn as weight, not as six colours to learn.
-	pageHeadTop = lipgloss.Color("#585b70") // surface2
+	// The line a hierarchy is drawn with — the tree's own strokes, which
+	// carry no meaning of their own and must not compete with the names
+	// hanging off them. A step above the greys a border uses: a rail is
+	// one column of thin stroke, so what reads as quiet on a panel's
+	// edge reads as absent here.
+	pageTree = lipgloss.Color("#6c7086") // overlay0
 )
 
-// headingBg is the ground a heading of this level sits on: a lerp from
-// pageHeadTop at h1 to the crust at h6 — the mechanism the VTP gives for
-// spacing N steps between two anchors (§2.5). Levels outside 1-6 clamp.
-func headingBg(level int) lipgloss.Color {
-	level = clamp(level, 1, 6)
-	return lerpHex(string(pageHeadTop), crustHex, float64(level-1)/5)
+// levelInk is the colour a name wears for how deep it sits: seven bright
+// hues in rainbow order, cycled, so depth eight starts over rather than
+// running out of colours (user, 2026-09-22).
+//
+// This replaced a grey ground per level (headingBg, v0.2.1). A ground
+// says depth by weight, which means six shades of one grey to tell apart
+// — and it left the whole outline reading as a stack of bands. Depth is
+// drawn on the ink instead, and the shape of the hierarchy is drawn by
+// the tree that carries it.
+//
+// Reusing green, yellow and red here does not collide with the app's
+// reserved bands (VTP §2.3) — that is exactly what the two palettes are
+// for. These never appear outside a page's own structure, and nothing in
+// panel [2]'s content takes part in the app's elevation.
+var levelInk = []lipgloss.Color{
+	lipgloss.Color("#f38ba8"), // red
+	lipgloss.Color("#fab387"), // peach
+	lipgloss.Color("#f9e2af"), // yellow
+	lipgloss.Color("#a6e3a1"), // green
+	lipgloss.Color("#89dceb"), // sky
+	lipgloss.Color("#89b4fa"), // blue
+	lipgloss.Color("#cba6f7"), // mauve
+}
+
+// levelColor is the ink for a depth, counting from 1.
+func levelColor(depth int) lipgloss.Color {
+	if depth < 1 {
+		depth = 1
+	}
+	return levelInk[(depth-1)%len(levelInk)]
 }
 
 // lerpHex mixes two "#rrggbb" colours channel by channel; t is 0 for a,

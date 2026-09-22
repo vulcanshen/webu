@@ -96,9 +96,9 @@ type row struct {
 	// table: a row of a data table, on the table's ground; header marks
 	// the header row, on the deeper one (2026-09-21).
 	table, header bool
-	// heading: the level of the heading this row belongs to, 1-6, which
-	// is the ground it sits on (theme.headingBg, 2026-09-22). Zero for
-	// every other row.
+	// heading: how deep the heading this row belongs to sits, counting
+	// from 1, which is the ink it is drawn in (theme.levelColor). Zero
+	// for every other row.
 	heading int
 }
 
@@ -147,8 +147,7 @@ type capsule struct {
 type pagetabKind uint8
 
 const (
-	pagetabSkip    pagetabKind = iota // skip links, and blocks of them
-	pagetabHeader                     // banner
+	pagetabHeader  pagetabKind = iota // banner
 	pagetabNav                        // navigation, breadcrumb
 	pagetabSearch                     // search
 	pagetabSidebar                    // complementary
@@ -163,8 +162,6 @@ const (
 // "(Top)", "PRODUCTS", and the site's name is the URL row's.
 func (k pagetabKind) word() string {
 	switch k {
-	case pagetabSkip:
-		return "skip"
 	case pagetabHeader:
 		return "header"
 	case pagetabNav:
@@ -184,8 +181,6 @@ func (k pagetabKind) word() string {
 // pagetabKindOf is the capsule a piece of chrome goes to.
 func pagetabKindOf(n *ir.Node) pagetabKind {
 	switch {
-	case n.Kind == ir.Link || n.Skip:
-		return pagetabSkip
 	case n.Role == "banner":
 		return pagetabHeader
 	case n.Role == "navigation":
@@ -217,7 +212,7 @@ func buildPagetab(chrome, other []*ir.Node) []capsule {
 		}
 	}
 	var out []capsule
-	for _, k := range []pagetabKind{pagetabSkip, pagetabHeader, pagetabNav, pagetabSearch, pagetabSidebar, pagetabFooter} {
+	for _, k := range []pagetabKind{pagetabHeader, pagetabNav, pagetabSearch, pagetabSidebar, pagetabFooter} {
 		if ns := byKind[k]; len(ns) > 0 {
 			out = append(out, newCapsule(k, ns))
 		}
@@ -300,8 +295,6 @@ func capsuleHint(c capsule, pageURL string) string {
 	switch {
 	case c.kind == pagetabOther:
 		parts = append(parts, "outside main, in no landmark")
-	case c.kind == pagetabSkip:
-		parts = append(parts, plural(len(c.nodes), "skip link"))
 	case len(c.nodes) == 1:
 		s := first.Role
 		if name := oneLine(first.Name); name != "" {
@@ -483,7 +476,12 @@ type renderer struct {
 	// to while the cell is drawn: the cell is the one stop, the links in
 	// it are behind it (table, 2026-09-21). -1 outside a cell.
 	cellItem int
-	// head is the level of the heading being gathered, which emit stamps
+	// heads is the stack of heading levels open above the one being
+	// gathered: its size is the depth, which is what the outline is drawn
+	// by (theme.levelColor). A page that goes h1 → h3 → h4 nests three
+	// deep — the shape of a hierarchy is the shape, not the tag names.
+	heads []int
+	// head is the DEPTH of the heading being gathered, which emit stamps
 	// onto its rows; 0 outside one.
 	head int
 	// attr is the markup the run being gathered sits inside — <strong>,
@@ -557,6 +555,16 @@ func (r *renderer) landmarkRule(n *ir.Node, id int, folded bool) {
 // items, since a row of links invites walking sideways and a terminal
 // has no width to spare for one. Since 2026-09-22 it is a capsule on
 // the pagetab under the URL rather than a row of the page (capsule).
+
+// depthOf opens a heading of this level and says how deep it sits: every
+// heading at or below it is closed first, the way an outline nests.
+func (r *renderer) depthOf(level int) int {
+	for len(r.heads) > 0 && r.heads[len(r.heads)-1] >= level {
+		r.heads = r.heads[:len(r.heads)-1]
+	}
+	r.heads = append(r.heads, level)
+	return len(r.heads)
+}
 
 // isSkipLink says whether a link is a skip link — the "Skip to main
 // content" an accessible page puts first, for a keyboard to pass the
@@ -810,6 +818,14 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			r.children(n, depth)
 		}
 	case ir.Landmark:
+		if n.Skip {
+			// A block of skip links — "Skip to:" over a list of anchors
+			// — which ir.Build wraps in a navigation of its own. Dropped
+			// with the bare skip links (user, 2026-09-22): without a kind
+			// of its own it would fold into "nav" and put the page's
+			// anchors among its real navigation.
+			return
+		}
 		if isEntry(n) {
 			// Chrome, not content: a capsule on the pagetab under the URL,
 			// and what it holds is its item operations, not items
@@ -851,7 +867,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		}
 		// A heading that is an item collapses on Enter, like a landmark's
 		// row: the row keeps the heading and says what it hides.
-		r.head = clamp(n.Level, 1, 6)
+		r.head = r.depthOf(clamp(n.Level, 1, 6))
 		folded := id >= 0 && r.fold[n.ID]
 		if folded {
 			r.items[id].folded = true
@@ -1043,27 +1059,14 @@ func (r *renderer) page(n *ir.Node, depth int) {
 			r.page(c, depth+1)
 		default:
 			// A skip link out here — Wikipedia's "Jump to content" — is
-			// the skip capsule's; what is left is other only when there
-			// is something to it, not a blank or the skip link alone.
-			r.chrome = append(r.chrome, skipLinksIn(c)...)
+			// dropped with the rest of them; what is left is other only
+			// when there is something to it, not a blank or the skip
+			// link alone.
 			if visibleBeyondSkips(c) {
 				r.other = append(r.other, c)
 			}
 		}
 	}
-}
-
-// skipLinksIn is every skip link under n, n itself included.
-func skipLinksIn(n *ir.Node) []*ir.Node {
-	var out []*ir.Node
-	n.Walk(func(x *ir.Node) bool {
-		if isSkipLink(x) {
-			out = append(out, x)
-			return false
-		}
-		return true
-	})
-	return out
 }
 
 // visibleBeyondSkips says whether n has anything to show besides skip
@@ -1238,8 +1241,12 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		r.attr = saved
 	case ir.Link:
 		if isSkipLink(n) && !r.inCell && r.cellItem < 0 {
-			// Chrome, not a link to follow: the pagetab's skip capsule.
-			r.chrome = append(r.chrome, n)
+			// Dropped, not drawn and not filed anywhere (user,
+			// 2026-09-22). A skip link exists to jump a screen reader
+			// past the navigation to the content — and webu has already
+			// taken the navigation off the page and started the cursor
+			// at main. It is furniture for a problem this browser does
+			// not have.
 			return
 		}
 		id := r.itemOf(n)

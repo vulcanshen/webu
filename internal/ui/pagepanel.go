@@ -165,10 +165,13 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 					style = codeStyles[segCode]
 				}
 				b.WriteString(withAttr(style, s.attr).Render(text))
-			case row.heading > 0:
-				// The page's own outline, drawn as weight: h1 on the
-				// brightest ground, h6 on the crust (theme.headingBg).
-				b.WriteString(withAttr(styles[s.kind].Background(headingBg(row.heading)), s.attr).Render(text))
+			case row.heading > 0 && !t.loading:
+				// The page's own outline, drawn on the ink: one bright hue
+				// per depth, cycling (theme.levelColor). It used to be a
+				// grey ground per level, which made every heading a band
+				// and asked the eye to rank six greys (v0.2.1, replaced
+				// 2026-09-22).
+				b.WriteString(withAttr(styles[s.kind].Foreground(levelColor(row.heading)), s.attr).Render(text))
 			case row.table:
 				bg := pageTableBg
 				if row.header {
@@ -183,13 +186,6 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 		case row.code:
 			span := min(innerW, max(used, t.textWidth()))
 			b.WriteString(codePad.Render(strings.Repeat(" ", max(0, span-used))))
-			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
-		case row.heading > 0:
-			// The ground runs to the text width, so a heading is a band
-			// rather than a tinted word.
-			span := min(innerW, max(used, t.textWidth()))
-			pad := lipgloss.NewStyle().Background(headingBg(row.heading))
-			b.WriteString(pad.Render(strings.Repeat(" ", max(0, span-used))))
 			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
 		default:
 			b.WriteString(strings.Repeat(" ", max(0, innerW-used)))

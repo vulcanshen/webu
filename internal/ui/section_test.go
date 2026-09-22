@@ -370,3 +370,46 @@ func TestBorderFillsAsYouRead(t *testing.T) {
 		t.Errorf("a section that fits has no progress, got %d", got)
 	}
 }
+
+// The list is drawn the way a file system is: connectors carry the shape,
+// a rail continues past a row only while that branch still has rows to
+// come, and the last child of a branch takes an elbow. No ordinals — a
+// tree does not number its files (user, 2026-09-22).
+func TestSectionTreeStems(t *testing.T) {
+	root := doc(
+		hd(1, "Title"), para(text("lede")),
+		hd(2, "First"), para(text("a")),
+		hd(3, "Inner one"), para(text("b")),
+		hd(3, "Inner two"), para(text("c")),
+		hd(2, "Last"), para(text("d")),
+	)
+	secs := sectionsOf(root, render(root, 60), "")
+	got := treeStems(secs)
+	want := []string{
+		" ",       // Title: the root hangs off the page, no stem
+		" ├─ ",    // First, with Last still to come at its depth
+		" │  ├─ ", // Inner one, under a branch that continues
+		" │  └─ ", // Inner two, the last of its branch
+		" └─ ",    // Last
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("%q: stem %q, want %q", secs[i].title, got[i], want[i])
+		}
+	}
+	// Depth, not level: the ink follows the nesting.
+	for i, d := range []int{1, 2, 3, 3, 2} {
+		if secs[i].depth != d {
+			t.Errorf("%q: depth %d, want %d", secs[i].title, secs[i].depth, d)
+		}
+	}
+	// A page that skips a level still nests by one.
+	skipped := doc(hd(1, "Title"), para(text("a")), hd(4, "Deep"), para(text("b")), hd(4, "Deep two"), para(text("c")))
+	ss := sectionsOf(skipped, render(skipped, 60), "")
+	if ss[1].depth != 2 {
+		t.Errorf("h1 then h4 nests two deep, got %d", ss[1].depth)
+	}
+	if levelColor(ss[0].depth) == levelColor(ss[1].depth) {
+		t.Error("two depths should not share an ink")
+	}
+}

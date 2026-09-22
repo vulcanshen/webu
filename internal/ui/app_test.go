@@ -945,21 +945,24 @@ func TestNavigationEntry(t *testing.T) {
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
 	// The page's chrome is on the pagetab under the URL, off the page, one
-	// capsule per kind in the pagetab's order: the skip link and the skip
-	// block are one "skip", the three navigations one "nav", then the
-	// search, then the dialog by its name. The page starts on its
-	// content.
+	// capsule per kind in the pagetab's order: the three navigations one
+	// "nav", then the search, the footer, then the dialog by its name. The page starts
+	// on its content. The skip link and the skip block are on no capsule
+	// at all — they are dropped (user, 2026-09-22).
 	if n := d.page().current(); n == nil || n.Kind != ir.Heading || d.page().onPagetab() {
 		t.Errorf("a new page should start on its content, starts on %+v", n)
 	}
 	v := dumpLayout(d.page().lay)
-	for _, want := range []string{"skip +3", "nav +4", "search +2", "Cookies +1"} {
+	for _, want := range []string{"nav +4", "search +2", "footer +2", "Cookies +1"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("missing the capsule %q in:\n%s", want, v)
 		}
 	}
 	if l := d.page().lay; len(l.pagetab) != 4 || strings.Contains(v, "▎") {
 		t.Errorf("four capsules and nothing of the chrome on the page:\n%s", v)
+	}
+	if strings.Contains(strings.ToLower(v), "skip") {
+		t.Errorf("a skip link is dropped, not filed anywhere:\n%s", v)
 	}
 	for _, it := range d.page().lay.items {
 		if it.node.Kind == ir.Link && strings.Contains(it.node.Text(), "B via nav") {
@@ -969,8 +972,8 @@ func TestNavigationEntry(t *testing.T) {
 	// Esc goes up onto the pagetab, Esc again comes back; so do k from the
 	// top of the page and j; h/l walk the capsules.
 	d.key("esc")
-	if n := d.page().current(); !d.page().onPagetab() || n == nil || !isSkipLink(n) {
-		t.Errorf("Esc should put the hand on the first capsule, is on %+v", n)
+	if n := d.page().current(); !d.page().onPagetab() || n == nil || n.Role != "navigation" {
+		t.Errorf("Esc should put the hand on the first capsule, nav, is on %+v", n)
 	}
 	d.key("esc")
 	if n := d.page().current(); d.page().onPagetab() || n == nil || n.Kind != ir.Heading {
@@ -981,9 +984,10 @@ func TestNavigationEntry(t *testing.T) {
 		t.Error("k from the top of the page should go up onto the pagetab")
 	}
 	d.key("l")
-	if n := d.page().current(); n == nil || n.Role != "navigation" {
-		t.Errorf("l should walk to the next capsule, nav, is on %+v", n)
+	if n := d.page().current(); n == nil || n.Role != "search" {
+		t.Errorf("l should walk to the next capsule, search, is on %+v", n)
 	}
+	d.pagetabOn("nav")
 	if !strings.Contains(d.m.View(), "3 navigations") || !strings.Contains(d.m.View(), "at Anchor") {
 		t.Errorf("the panel's hint should say what the capsule is and where the user is in it:\n%s", d.m.View())
 	}
@@ -991,32 +995,8 @@ func TestNavigationEntry(t *testing.T) {
 	if n := d.page().current(); d.page().onPagetab() || n == nil || n.Kind != ir.Heading {
 		t.Errorf("j should leave the pagetab for the item the hand left, is on %+v", n)
 	}
-	// The skip capsule's Enter lists the skip link and, under its own
-	// header, the block's anchors. The link does what it says: the
-	// content. An anchor lands the cursor on what it names, the form
+	// A link into the page lands the cursor on what it names, the form
 	// here, without following anything.
-	d.pagetabOn("skip")
-	d.key("enter")
-	d.until("the skip list", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
-	if got := d.m.options.items[d.m.options.cursor].label; got != "Skip to content" {
-		t.Errorf("the first row should be the skip link, is %q", got)
-	}
-	d.key("enter")
-	if n := d.page().current(); n == nil || n.Kind != ir.Heading || d.page().onPagetab() {
-		t.Errorf("the skip link should land on the content, landed on %+v", n)
-	}
-	d.pagetabOn("skip")
-	d.key("enter")
-	d.until("the skip list again", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
-	d.key("j")
-	if got := d.m.options.items[d.m.options.cursor].label; got != "Form" {
-		t.Errorf("the row after the link should be the block's first anchor, is %q", got)
-	}
-	d.key("enter")
-	if n := d.page().current(); n == nil || n.Kind != ir.Landmark || n.Role != "form" || d.m.confirm.isActive() || d.page().onPagetab() {
-		t.Errorf("Form should land the cursor on the form, no confirm; landed on %+v", n)
-	}
-	// So does any link into the page: a table of contents entry.
 	d.cursorOn(ir.Link, "to the form")
 	d.key("enter")
 	if n := d.page().current(); n == nil || n.Kind != ir.Landmark || n.Role != "form" || d.m.confirm.isActive() {
@@ -1134,9 +1114,9 @@ func TestNavigationEntry(t *testing.T) {
 	}
 	more := " +" + itoa(hidden) + " "
 	if !strings.Contains(d.m.View(), more) {
-		t.Errorf("the pagetab should end in %q:\n%s", more, d.m.View())
+		t.Errorf("the pagetab should end in %q (fit %d of %d):\n%s", more, l.fit, len(l.pagetab), d.m.View())
 	}
-	d.pagetabOn("skip")
+	d.pagetabOn("nav")
 	d.key("h")
 	if !d.page().onMore() {
 		t.Errorf("h from the first capsule should wrap onto the +N: pagetab %d", d.page().pagetab)
