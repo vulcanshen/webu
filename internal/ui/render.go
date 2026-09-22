@@ -100,6 +100,11 @@ type row struct {
 	// from 1, which is the ink it is drawn in (theme.levelColor). Zero
 	// for every other row.
 	heading int
+	// box: the row is part of a framed block — a form — and which part;
+	// boxW is how wide that block is. The frame is drawn by the panel,
+	// the way a code block's ground is (pagepanel.pageRows).
+	box  boxPart
+	boxW int
 }
 
 // plain is the row's text with no styling — what tests and the search read.
@@ -110,6 +115,16 @@ func (r row) plain() string {
 	}
 	return b.String()
 }
+
+// boxPart is which part of a framed block a row is.
+type boxPart uint8
+
+const (
+	boxNone boxPart = iota
+	boxTop
+	boxSide
+	boxBottom
+)
 
 type item struct {
 	node        *ir.Node
@@ -451,7 +466,11 @@ type renderer struct {
 	// formLabel is the width of the label column while a form is being
 	// drawn, 0 outside one (render.formLabelW).
 	formLabel int
-	root      *ir.Node
+	// boxed counts the framed blocks being drawn around the current row,
+	// boxW how wide the innermost one is.
+	boxed int
+	boxW  int
+	root  *ir.Node
 	// A collapsed heading (2026-09-21) hides its section: everything after
 	// it up to the next heading of its level or higher, or the end of the
 	// landmark it is in. suppress is on while that is being skipped;
@@ -610,11 +629,48 @@ func (r *renderer) formChildren(n *ir.Node, depth int) {
 		r.children(n, depth)
 		return
 	}
-	saved := r.formLabel
-	r.formLabel = formLabelW(n, r.textW)
+	// A form is a box, frame and all — sshu's form popup, drawn into the
+	// page instead of over it (user, 2026-09-22). The frame is what says
+	// where the form starts and stops: a run of aligned rows says they
+	// line up, and a box says they belong to each other.
+	r.flush()
+	savedW, savedIndent, savedLabel, savedBox := r.textW, r.indent, r.formLabel, r.boxW
+	label := formLabelW(n, savedW)
+	// As wide as the form needs and no wider. A box across the whole
+	// terminal reads as a banner; sshu's is the width of its own rows.
+	r.boxW = min(savedW, boxEdge*2+boxPad*2+label+2+formValueW)
+	// The wrap width counts the indent, which is the LEFT pad already —
+	// subtracting both pads took two cells off every row and wrapped the
+	// bed the box had just been sized to hold.
+	r.textW = max(12, r.boxW-boxEdge*2-boxPad)
+	r.indent += strings.Repeat(" ", boxPad)
+	// The column the box was sized for, not one recomputed against the
+	// narrower inside: recomputing truncated the very label the box had
+	// just been made wide enough to hold.
+	r.formLabel = label
+	r.emit(row{box: boxTop, boxW: r.boxW,
+		segs: []seg{{text: oneLine(n.Name), item: -1, kind: segDim}}})
+	r.boxed++
 	r.children(n, depth)
-	r.formLabel = saved
+	r.flush()
+	r.boxed--
+	r.emit(row{box: boxBottom, boxW: r.boxW})
+	r.textW, r.indent, r.formLabel, r.boxW = savedW, savedIndent, savedLabel, savedBox
+	r.gap = true
 }
+
+const (
+	// boxPad is how far a framed block's content sits from its frame,
+	// boxEdge the frame itself, formSlot the bed a value sits on.
+	boxPad   = 2
+	boxEdge  = 1
+	formSlot = 40
+)
+
+// formValueW is the whole value column: the field's glyph, a space, and
+// the bed. The box is sized by it and the bed is cut to it, so the two
+// cannot disagree and wrap the row they were measured for.
+var formValueW = dispW(glyphInput) + 1 + formSlot
 
 // formLabelW is how wide a form's label column is: the widest name any
 // of its controls has, within reason. Beyond a third of the text width
@@ -663,16 +719,10 @@ func (r *renderer) formField(n *ir.Node, id int, value func()) {
 	if n.Disabled {
 		k = segDim
 	}
-	r.add(atom{text: formIndent, item: -1, kind: segDim})
 	r.add(atom{text: padRight(label, r.formLabel) + "  ", item: -1, kind: k})
 	value()
 	r.flush()
 }
-
-// formIndent sets a form's rows in from the page's own left edge, so the
-// block reads as one thing rather than as a run of paragraphs that happen
-// to line up.
-const formIndent = "  "
 
 // isSkipLink says whether a link is a skip link — the "Skip to main
 // content" an accessible page puts first, for a keyboard to pass the
@@ -1357,7 +1407,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 			// Not a space atom: a run of spaces marked as space is
 			// trimmed off the head of a line, which is right for flow
 			// and wrong for a column.
-			r.add(atom{text: formIndent + strings.Repeat(" ", r.formLabel+2), item: -1, kind: segDim})
+			r.add(atom{text: strings.Repeat(" ", r.formLabel+2), item: -1, kind: segDim})
 		}
 		r.add(atom{text: glyphButton + " ", item: id, kind: k})
 		r.words(oneLine(nameOr(n.Name, n.Value)), id, k)
@@ -1375,7 +1425,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 				// there: dim, so it is the floor and not the furniture
 				// (user, 2026-09-22 — mauve underscores were the loudest
 				// thing on the page).
-				lead, v, trail := fieldSlot(n, min(48, r.textW-r.formLabel-6))
+				lead, v, trail := fieldSlot(n, min(formSlot, r.textW-r.formLabel-2-dispW(glyphInput)-1))
 				r.add(atom{text: lead, item: id, kind: segDim})
 				if v != "" {
 					r.add(atom{text: v, item: id, kind: segInput})
@@ -2073,6 +2123,9 @@ func (r *renderer) emit(rw row) {
 	}
 	if r.head > 0 {
 		rw.heading = r.head
+	}
+	if r.boxed > 0 && rw.box == boxNone {
+		rw.box, rw.boxW = boxSide, r.boxW
 	}
 	at := len(r.rows)
 	r.rows = append(r.rows, rw)
