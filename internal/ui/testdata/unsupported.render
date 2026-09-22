@@ -19,8 +19,8 @@ Caption
 • 󱊨 Menu button
 
 󰮦 meter Meter󰮦 ColorWell Colour 󰮦 Date Date 󰘎 Year Year
-_____0______ / 󰘎 Month Month _____0______ / 󰘎 Day Day
-_____0______ 󱊨 Show date picker Show date picker 󱊨 File
+ 0           / 󰘎 Month Month  0           / 󰘎 Day Day
+ 0           󱊨 Show date picker Show date picker 󱊨 File
 -- items --
 0 unsupported "Volume" rows 0-0
 1 unsupported "Range" rows 1-1

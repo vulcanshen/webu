@@ -285,6 +285,7 @@ func segStyles() map[segKind]lipgloss.Style {
 		segLink:        lipgloss.NewStyle().Foreground(pageClick).Underline(true),
 		segButton:      lipgloss.NewStyle().Foreground(pageClick),
 		segInput:       lipgloss.NewStyle().Foreground(pageInput),
+		segFieldBed:    lipgloss.NewStyle().Foreground(pageInput).Background(pageInputBg),
 		segCheck:       lipgloss.NewStyle().Foreground(pageInput),
 		segMedia:       lipgloss.NewStyle().Foreground(pageMedia),
 		segCode:        lipgloss.NewStyle().Foreground(pageCode),

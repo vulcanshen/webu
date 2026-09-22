@@ -1,10 +1,10 @@
-󰘎 Empty ____________ 󰘎 Filled __some text__ 󰘎 Search
-___query____ 󰘎 Password ____••••____ 󰘎 Email ___a@b.c____ 󰘎 
-Number _____42_____ 󰘎 Read only ___fixed____ 󰘎 Required
-____________ 󰘎 Disabled ____nope____ 󰘎 Placeholder only
-____________ 󰘎 Labelled by aria ____________ 󰘎 Area
-__line one…__ 󰘎 Empty area ____________
-󰘎 Editable div __typed here__
+󰘎 Empty              󰘎 Filled  some text   󰘎 Search
+ query       󰘎 Password  ••••        󰘎 Email  a@b.c       󰘎 
+Number  42          󰘎 Read only  fixed       󰘎 Required
+             󰘎 Disabled  nope        󰘎 Placeholder only
+             󰘎 Labelled by aria              󰘎 Area
+ line one…   󰘎 Empty area             
+󰘎 Editable div  typed here 
 -- items --
 0 textbox "Empty" rows 0-0
 1 textbox "Filled" rows 0-0

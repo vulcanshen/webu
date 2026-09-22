@@ -99,6 +99,13 @@ var (
 	// Fill it in: a text field, a check box, a radio, a select. The
 	// input group, which is one concept however many controls it has.
 	pageInput = lipgloss.Color("#cba6f7") // mauve
+	// The bed a value sits on. It was a run of underscores and the user
+	// took it out twice: a dashed line is a drawing of a field, and a
+	// terminal has a better one — the ground, which is how a code block
+	// and a table already say "this is a thing, not prose" (2026-09-22).
+	// An empty field is an empty bar, which is what an empty field looks
+	// like everywhere else.
+	pageInputBg = lipgloss.Color("#313244") // surface0
 	// Code, inline and block, keys included: one colour for one concept.
 	// A block sits on a ground so it reads as a block.
 	pageCode   = lipgloss.Color("#f5c2e7") // pink
