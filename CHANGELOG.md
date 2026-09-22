@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.1] — 2026-09-22
 
 ### Added
 
@@ -47,6 +47,12 @@
   inside a heading or a table cell keeps both. `<del>` and `<ins>` had
   no entry in the role table at all until now, so struck-out text
   arrived wearing the "unsupported" glyph.
+- **A menu row whose key is a core key names it.** `[Enter] Switch to`,
+  `[Enter] Open in new tab`, `[Esc] Page chrome`, `[/] Search`,
+  `[/] Filter`. A letter is bracketed where it stands in the label and a
+  core key has no letter to bracket, so those rows were leaving their
+  key to the hint or to nothing at all — and a panel operation nobody
+  can find is not disclosed.
 
 ## [0.2.0] — 2026-09-22
 
