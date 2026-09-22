@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"strconv"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
@@ -34,6 +36,12 @@ type section struct {
 	title string
 	// first, last are the section's rows in the layout, inclusive.
 	first, last int
+	// body is the first row of what the section SAYS — past the landmark
+	// rules that open it, past its own heading, past the blank under it.
+	// Reading one section draws from here: the heading is the panel's
+	// own header row while it is open, and printing it again under
+	// itself was the page saying its name three times (2026-09-22).
+	body int
 	// what is inside, for the list's "is this worth opening" column
 	tables, codes, media int
 	// prose is how many of its rows carry text that is not a link, and
@@ -129,6 +137,7 @@ func sectionsOf(root *ir.Node, lay layout, pageURL string) []section {
 	}
 	for i := range out {
 		count(&out[i], lay)
+		out[i].body = bodyStart(out[i], lay)
 	}
 	out = pruneNav(out)
 	// Depth is taken after the pruning, so a navigation column that left
@@ -215,6 +224,27 @@ func headingTitle(n *ir.Node, pageURL string) string {
 		}
 	}
 	return name
+}
+
+// bodyStart is where a section's own words begin: past the landmark
+// rules it opens with, past its heading row, past one blank under it.
+func bodyStart(s section, lay layout) int {
+	at := s.first
+	for at <= s.last && at < len(lay.rows) && isLandmarkRule(lay.rows[at]) {
+		at++
+	}
+	if s.node != nil && at <= s.last && at < len(lay.rows) {
+		at++ // the heading itself
+	}
+	for at <= s.last && at < len(lay.rows) && strings.TrimSpace(lay.rows[at].plain()) == "" {
+		at++
+	}
+	if at > s.last {
+		// A section that is nothing but its heading: it still has to
+		// show something, so it shows that.
+		return s.first
+	}
+	return at
 }
 
 // scopeStart is the first row the content occupies: main's, or the page's.
@@ -328,6 +358,26 @@ func sectionAt(secs []section, r int) int {
 	return 0
 }
 
+// sectionAnchor is the fragment for the open section, "#emulators", when
+// the page gave its heading an id — the reverse of the anchor table the
+// capture carries. Empty otherwise, and empty while the whole page is
+// shown: the address is the page's own then.
+func (t *tab) sectionAnchor() string {
+	if !t.read || t.sec >= len(t.secs) {
+		return ""
+	}
+	n := t.secs[t.sec].node
+	if n == nil || n.ID == 0 || strings.Contains(t.url, "#") {
+		return ""
+	}
+	for name, id := range t.anchors {
+		if id == n.ID {
+			return "#" + name
+		}
+	}
+	return ""
+}
+
 // sectionHint is what the panel's bottom border says while a page is being
 // read as sections: which one of how many, its name, and — inside one — how
 // far down it you are. It is the position sense a sheet of terminal text
@@ -355,6 +405,31 @@ func (t *tab) readPct(visible int) int {
 		return -1
 	}
 	return clamp((t.top-s.first+visible)*100/s.lines(), 0, 100)
+}
+
+// sectionGiven is the go chord's box answered: a section's number puts
+// the hand on it. A number outside the list, or anything that is not one,
+// keeps the box open and says why — the same shape the Settings box uses
+// for a value it cannot take.
+func (m AppModel) sectionGiven(t *tab, value string) (tea.Model, tea.Cmd) {
+	if t == nil || len(t.secs) == 0 {
+		return m, m.input.close()
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil {
+		return m, m.toast.show("a section's number, 1 to "+itoa(len(t.secs)), toastInfo)
+	}
+	if n < 1 || n > len(t.secs) {
+		return m, m.toast.show("this page has sections 1 to "+itoa(len(t.secs)), toastInfo)
+	}
+	t.sec = n - 1
+	t.clampSecTop(m.pageVisible())
+	if t.read {
+		// Reading one already: the number opens that one instead of
+		// dropping back to the list to choose it.
+		t.openSection(m.pageVisible())
+	}
+	return m, m.input.close()
 }
 
 // moveSection walks the section list. It does not wrap, and k off the top

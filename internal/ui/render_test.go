@@ -838,3 +838,48 @@ func TestABlockLabelIsNotPrintedTwice(t *testing.T) {
 		t.Errorf("a row an item is on is never dropped:\n%s", dumpLayout(h))
 	}
 }
+
+// The hand parked on the pagetab has to survive a recapture. It was
+// matched only on the node behind the capsule, and "other" holds whatever
+// lies outside main in no landmark — nodes whose ids Chromium reassigns
+// when the page rebuilds that part of its DOM. So a hand on the last
+// capsule of a page that keeps settling fell back into the page, which
+// reads as Esc undoing itself (user, 2026-09-22).
+func TestTheHandStaysOnThePagetab(t *testing.T) {
+	build := func(id int) *ir.Node {
+		return &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+			{Kind: ir.Landmark, Role: "navigation", ID: 2, Children: []*ir.Node{link("Home", "/", 3)}},
+			// Outside main, in no landmark: the "other" capsule, whose
+			// id moves when the page rebuilds it.
+			para(text("a promo"), link("Buy", "/buy", id)),
+			{Kind: ir.Landmark, Role: "main", ID: 9, Children: []*ir.Node{para(text("body"))}},
+		}}
+	}
+	tb := &tab{cursor: -1, root: build(100)}
+	tb.relayout(80)
+	last := len(tb.lay.pagetab) - 1
+	if last < 1 {
+		t.Fatalf("want a nav and an other capsule, got %d", len(tb.lay.pagetab))
+	}
+	tb.focusPagetab(last)
+	kind := tb.lay.pagetab[last].kind
+
+	// The same page again, that part of its DOM rebuilt under new ids.
+	tb.apply(pageMsg{url: "https://x.test/p", cap: ir.Capture{}}, 80)
+	tb.root = build(777)
+	tb.relayout(80)
+	tb.focusCapsuleLike(0, kind, last)
+	if !tb.onPagetab() {
+		t.Fatal("the hand fell back into the page")
+	}
+	if got := tb.lay.pagetab[tb.pagetabIndex()].kind; got != kind {
+		t.Errorf("the hand moved to kind %v, want %v", got, kind)
+	}
+	// And with nothing to go back to, it does leave.
+	empty := &tab{cursor: -1, root: &ir.Node{Kind: ir.Document, Children: []*ir.Node{para(text("bare"))}}}
+	empty.relayout(80)
+	empty.focusCapsuleLike(0, kind, 0)
+	if empty.onPagetab() {
+		t.Error("a page with no chrome has no capsule to hold the hand")
+	}
+}
