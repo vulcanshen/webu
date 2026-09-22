@@ -646,7 +646,7 @@ func (r *renderer) formChildren(n *ir.Node, depth int) {
 	savedBox, savedStack, savedIn := r.boxW, r.formStack, r.inForm
 	// As wide as the form needs and no wider. A box across the whole
 	// terminal reads as a banner; sshu's is the width of its own rows.
-	want, value := formLabelW(n, savedW), formValueW(n)
+	want, value := formLabelW(n), formValueW(n)
 	r.boxW = min(savedW, boxEdge*2+boxPad*2+want+2+value)
 	// The wrap width counts the indent, which is the LEFT pad already —
 	// subtracting both pads took two cells off every row and wrapped the
@@ -674,10 +674,8 @@ const (
 	boxEdge  = 1
 	formSlot = 40
 	// formValueMin is the narrowest a value column may be and still hold
-	// something; formLabelMin the narrowest a label may be and still be
-	// a word.
+	// something.
 	formValueMin = 8
-	formLabelMin = 8
 )
 
 // fitForm settles the label column against the room there actually is,
@@ -690,13 +688,13 @@ const (
 // then none at all, at which point the value goes on its own line under
 // its label rather than beside it.
 func fitForm(want, value, avail int) (int, bool) {
+	if want == 0 {
+		// No control in this form has a name: there is no column, and
+		// nothing to stack a value under either.
+		return 0, false
+	}
 	if want+2+value <= avail {
 		return want, false
-	}
-	// The label gives way before the value does: a label cut short still
-	// reads, a value cut short is a different value.
-	if avail-2-value >= formLabelMin {
-		return avail - 2 - value, false
 	}
 	return 0, true
 }
@@ -720,11 +718,14 @@ func formValueW(form *ir.Node) int {
 }
 
 // formLabelW is how wide a form's label column is: the widest name any
-// of its controls has, within reason. Beyond a third of the text width
-// the labels would leave no room for the values they name, and a label
-// that is really a sentence is better truncated than allowed to push
-// every value off the row.
-func formLabelW(form *ir.Node, textW int) int {
+// of its controls has, whole.
+//
+// It is never cut. A field in a form shows in full or it does not show
+// (user, 2026-09-22) — a label with its end missing is a field you
+// cannot be sure you have identified, and being unsure which box the
+// password goes in is worse than reading two lines. When the whole label
+// will not sit beside its value, the row stacks instead (fitForm).
+func formLabelW(form *ir.Node) int {
 	w := 0
 	form.Walk(func(n *ir.Node) bool {
 		switch n.Kind {
@@ -741,7 +742,7 @@ func formLabelW(form *ir.Node, textW int) int {
 		// way a loose field is.
 		return 0
 	}
-	return clamp(w+2, 1, max(8, min(32, textW/3))) // +2 for the required mark
+	return w + 2 // room for the required mark
 }
 
 // formField draws one control inside a form: its name in the label
@@ -754,14 +755,10 @@ func (r *renderer) formField(n *ir.Node, id int, value func()) {
 	// A required field says so on its label, the way every form on paper
 	// and screen has said it. The page says it in ink webu does not read,
 	// so without this the asterisk simply went missing.
+	// Never cut: the column was made wide enough for the longest of them,
+	// and when it could not be, the row stacks and the label wraps like
+	// any other text (fitForm).
 	label := oneLine(n.Name)
-	if !r.formStack {
-		// Cut to the column. Stacked there is no column to cut to: the
-		// label has the row, and a long one wraps like any other text
-		// rather than losing its end to an ellipsis (user, 2026-09-22 —
-		// a terminal's width is not ours to choose).
-		label = truncate(label, max(1, r.formLabel-2))
-	}
 	if n.Required {
 		label += " *"
 	}

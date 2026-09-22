@@ -1091,7 +1091,7 @@ func TestAFormWithNoLabelsKeepsItsShape(t *testing.T) {
 				it.col, dumpLayout(l))
 		}
 	}
-	if formLabelW(form, 80) != 0 {
+	if formLabelW(form) != 0 {
 		t.Error("no names, no column")
 	}
 	// The frame is still drawn: the rows belong to each other whether or
@@ -1188,10 +1188,16 @@ func TestAFormGivesWayAsItNarrows(t *testing.T) {
 		if boxW > w {
 			t.Errorf("at %d cells the box is %d wide", w, boxW)
 		}
-		// The label survives in full once there is no column to cut it
-		// to: stacked, it wraps like any other text.
-		if v := dumpLayout(l); w <= 30 && !strings.Contains(v, "Password") {
-			t.Errorf("at %d cells a label went missing:\n%s", w, v)
+		// The label is never cut, at any width: a field in a form shows
+		// in full or it does not show. Beside its value while that fits,
+		// stacked above it when it does not.
+		if v := dumpLayout(l); strings.Contains(v, "…") {
+			t.Errorf("at %d cells a label lost its end:\n%s", w, v)
+		}
+		for _, want := range []string{"Username or email", "address", "Password"} {
+			if !strings.Contains(dumpLayout(l), want) {
+				t.Errorf("at %d cells %q went missing:\n%s", w, want, dumpLayout(l))
+			}
 		}
 	}
 	// Wide, the label and its value share a row; narrow, they do not.
