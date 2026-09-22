@@ -889,11 +889,14 @@ func (m AppModel) quit() (tea.Model, tea.Cmd) {
 // focused panel's own.
 func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	k := msg.String()
-	// The gg chord: g then g.
+	// The g chords: g then g is the top, g then o is a section's number.
 	if m.pendingG {
 		m.pendingG = false
-		if k == "g" {
+		switch k {
+		case "g":
 			k = "gg"
+		case "o":
+			k = "go"
 		}
 	} else if k == "g" {
 		m.pendingG = true
@@ -963,7 +966,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
-		case "n", "p":
+		case "n", "p", "go":
 			return m.dispatch(k)
 		case "R", "T", "Y", "A", "O", "Z", "I", "C":
 			return m.dispatch(k)
@@ -1541,6 +1544,8 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
 		pagetabItem(t),
 		sectionsItem(t),
+		menuItem{label: "[go] Go to section", key: "go", hint: "by its number",
+			disabled: t == nil || len(t.secs) == 0},
 		menuItem{label: "[n] Next section", key: "n", hint: "the one after this, at the same depth",
 			disabled: t == nil || !t.read},
 		menuItem{label: "[p] Previous section", key: "p", hint: "the one before this, at the same depth",
@@ -1844,6 +1849,15 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 			return m, m.toast.show("no section that way", toastInfo)
 		}
 		return m, nil
+	case "go":
+		// The section's own number, typed. A number earns its column only
+		// when a key takes you to it (user, 2026-09-22); this is that key.
+		if t == nil || len(t.secs) == 0 {
+			return m, m.toast.show("this page has no sections to go to", toastInfo)
+		}
+		return m, m.input.ask(inputPopup{title: "Go to section", glyph: glyphList,
+			prompt: "number", accept: "go", action: inputSection,
+			placeholder: "1-" + itoa(len(t.secs))}, m.layer())
 	case "sections":
 		// The page as one sheet, or cut into sections: the way out when
 		// the cut is wrong for this page, and the way in when a page was
@@ -2266,6 +2280,8 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.bookmarkTitleGiven(value)
 	case inputRename:
 		return m, m.renameGiven(value)
+	case inputSection:
+		return m.sectionGiven(t, value)
 	case inputEval:
 		// The prompt stays; the expression and, when it comes, its result
 		// go to the console list behind it.

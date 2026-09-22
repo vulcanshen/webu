@@ -146,9 +146,17 @@ func TestReadingOneSection(t *testing.T) {
 	}
 	tb.sec = 1 // "First"
 	tb.openSection(10)
+	// The window is the section's BODY: its heading is the panel's own
+	// header row while it is open, not the first line under itself.
 	lo, hi := tb.rowRange()
-	if lo != tb.secs[1].first || hi != tb.secs[1].last {
-		t.Errorf("reading shows rows %d-%d, the section is %d-%d", lo, hi, tb.secs[1].first, tb.secs[1].last)
+	if lo != tb.secs[1].body || hi != tb.secs[1].last {
+		t.Errorf("reading shows rows %d-%d, the section's body is %d-%d", lo, hi, tb.secs[1].body, tb.secs[1].last)
+	}
+	if tb.secs[1].body <= tb.secs[1].first {
+		t.Errorf("the body should start past the heading row")
+	}
+	if strings.Contains(strings.Join(rowText(tb.lay, tb.secs[1])[tb.secs[1].body-tb.secs[1].first:], "\n"), "# First") {
+		t.Errorf("the heading should not be drawn inside its own section")
 	}
 	// n from an h2 goes to the next h2, stepping over the h3 between them.
 	if !tb.stepSection(1, 10) {
@@ -371,11 +379,10 @@ func TestBorderFillsAsYouRead(t *testing.T) {
 	}
 }
 
-// The list is drawn the way a file system is: connectors carry the shape,
-// a rail continues past a row only while that branch still has rows to
-// come, and the last child of a branch takes an elbow. No ordinals — a
-// tree does not number its files (user, 2026-09-22).
-func TestSectionTreeStems(t *testing.T) {
+// Depth is the nesting, not the tag: a page that skips a level still
+// nests by one, and the ink follows the nesting so two depths never share
+// a colour until the cycle comes round.
+func TestSectionDepth(t *testing.T) {
 	root := doc(
 		hd(1, "Title"), para(text("lede")),
 		hd(2, "First"), para(text("a")),
@@ -384,20 +391,6 @@ func TestSectionTreeStems(t *testing.T) {
 		hd(2, "Last"), para(text("d")),
 	)
 	secs := sectionsOf(root, render(root, 60), "")
-	got := treeStems(secs)
-	want := []string{
-		" ",       // Title: the root hangs off the page, no stem
-		" ├─ ",    // First, with Last still to come at its depth
-		" │  ├─ ", // Inner one, under a branch that continues
-		" │  └─ ", // Inner two, the last of its branch
-		" └─ ",    // Last
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("%q: stem %q, want %q", secs[i].title, got[i], want[i])
-		}
-	}
-	// Depth, not level: the ink follows the nesting.
 	for i, d := range []int{1, 2, 3, 3, 2} {
 		if secs[i].depth != d {
 			t.Errorf("%q: depth %d, want %d", secs[i].title, secs[i].depth, d)
@@ -411,5 +404,39 @@ func TestSectionTreeStems(t *testing.T) {
 	}
 	if levelColor(ss[0].depth) == levelColor(ss[1].depth) {
 		t.Error("two depths should not share an ink")
+	}
+	if levelColor(len(levelInk)+1) != levelColor(1) {
+		t.Error("the cycle should come round rather than run off the end")
+	}
+}
+
+// The ordinals came back with the key that uses them: `go`, a number,
+// Enter. A number outside the list, or anything that is not one, keeps
+// the box open and says the range.
+func TestGoToSectionByNumber(t *testing.T) {
+	root := doc(hd(1, "Title"), para(text("lede")),
+		hd(2, "One"), para(text("a")), hd(2, "Two"), para(text("b")), hd(2, "Three"), para(text("c")))
+	tb := &tab{root: root, cursor: -1}
+	tb.relayout(60)
+	m := AppModel{w: 100, h: 30}
+
+	if _, _ = m.sectionGiven(tb, "3"); tb.sec != 2 {
+		t.Errorf("go 3 lands on section 3 (index 2), landed on %d", tb.sec)
+	}
+	for _, bad := range []string{"0", "99", "", "two"} {
+		was := tb.sec
+		if _, _ = m.sectionGiven(tb, bad); tb.sec != was {
+			t.Errorf("%q should move nothing, moved to %d", bad, tb.sec)
+		}
+	}
+	// Reading one already: the number opens that one rather than dropping
+	// back to the list to choose it.
+	tb.sec = 0
+	tb.openSection(10)
+	if _, _ = m.sectionGiven(tb, "2"); !tb.read || tb.sec != 1 {
+		t.Errorf("from inside a section the number opens the next, read=%v sec=%d", tb.read, tb.sec)
+	}
+	if lo, _ := tb.rowRange(); lo != tb.secs[1].body {
+		t.Errorf("the window should follow to the section opened")
 	}
 }

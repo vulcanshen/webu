@@ -99,12 +99,6 @@ var (
 	// told by ground, not by foreground (revised 2026-09-21).
 	pageTableBg     = lipgloss.Color("#313244") // surface0
 	pageTableHeadBg = lipgloss.Color("#45475a") // surface1
-	// The line a hierarchy is drawn with — the tree's own strokes, which
-	// carry no meaning of their own and must not compete with the names
-	// hanging off them. A step above the greys a border uses: a rail is
-	// one column of thin stroke, so what reads as quiet on a panel's
-	// edge reads as absent here.
-	pageTree = lipgloss.Color("#6c7086") // overlay0
 )
 
 // levelInk is the colour a name wears for how deep it sits: five hues,
@@ -121,15 +115,24 @@ var (
 // means something is wrong, in this app and everywhere else, and a top
 // level heading is not an error. The cycle starts at peach and runs warm
 // to cool, which also keeps the two halves of a deep outline apart at a
-// glance. Nothing here takes part in the app's reserved bands — that is
-// what the two palettes are for; these appear only inside a page's own
-// structure.
+// glance.
+//
+// Sapphire and lavender were in it next and came out: those two are
+// already spoken for inside a page — pageLink and pageField — and a
+// heading that wears a link's colour in the same prose a link appears in
+// is a collision, not a palette. Pink is spoken for the same way
+// (pageCode) and stayed out. Flamingo is a code block's numbers, which
+// only ever appear on the code ground, so it never meets a heading on
+// equal footing; teal was unused.
+//
+// None of these take part in the app's reserved bands — that is what the
+// two palettes are for; they appear only inside a page's own structure.
 var levelInk = []lipgloss.Color{
 	lipgloss.Color("#fab387"), // peach
 	lipgloss.Color("#f9e2af"), // yellow
 	lipgloss.Color("#a6e3a1"), // green
-	lipgloss.Color("#74c7ec"), // sapphire
-	lipgloss.Color("#b4befe"), // lavender
+	lipgloss.Color("#94e2d5"), // teal
+	lipgloss.Color("#f2cdcd"), // flamingo
 }
 
 // levelColor is the ink for a depth, counting from 1.

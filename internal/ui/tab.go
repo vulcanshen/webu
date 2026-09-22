@@ -399,8 +399,10 @@ func (t *tab) apply(msg pageMsg, width int) {
 	}
 	wasBar, wasMore := t.onPagetab(), t.onMore()
 	var wasBarID cdp.BackendNodeID
-	if n := t.current(); wasBar && n != nil {
-		wasBarID = n.ID
+	wasBarKind, wasBarIdx := pagetabOther, t.pagetabIndex()
+	if wasBar && !wasMore && wasBarIdx >= 0 && wasBarIdx < len(t.lay.pagetab) {
+		c := t.lay.pagetab[wasBarIdx]
+		wasBarID, wasBarKind = c.nodes[0].ID, c.kind
 	}
 	t.root = ir.Build(msg.cap)
 	t.anchors, t.parents = msg.cap.Anchors, msg.cap.Parents
@@ -430,20 +432,55 @@ func (t *tab) apply(msg pageMsg, width int) {
 		t.cursor = clamp(wasIdx, 0, len(t.lay.items)-1)
 	}
 	if wasBar {
-		// The hand stays on the same capsule through a redraw, by the
-		// node behind it; on the "+N" while there still is one.
+		// The hand stays on the pagetab through a redraw. By the node
+		// behind the capsule first; failing that by its KIND, which is a
+		// closed vocabulary and the same on every capture; failing that
+		// by the slot it was in.
+		//
+		// The node alone was not enough: "other" holds whatever lies
+		// outside main in no landmark, whose ids Chromium reassigns when
+		// the page rebuilds that part of its DOM — so a hand parked on
+		// the last capsule of a page that keeps settling fell back into
+		// the page, which reads as Esc undoing itself (user, 2026-09-22).
 		t.leavePagetab()
-		for i, c := range t.lay.pagetab {
-			if wasBarID != 0 && c.nodes[0].ID == wasBarID {
-				t.focusPagetab(i)
-				break
-			}
-		}
-		if wasMore && t.lay.fit < len(t.lay.pagetab) {
+		switch {
+		case wasMore && t.lay.fit < len(t.lay.pagetab):
 			t.focusMore()
+		case wasMore:
+			// The "+N" is gone — everything fits now. The hand takes the
+			// last capsule rather than the page.
+			if n := len(t.lay.pagetab); n > 0 {
+				t.focusPagetab(n - 1)
+			}
+		default:
+			t.focusCapsuleLike(wasBarID, wasBarKind, wasBarIdx)
 		}
 	}
 	t.scrollToCursor(0)
+}
+
+// focusCapsuleLike puts the hand back on the capsule it was on, by the
+// node behind it, then by its kind, then by its place — and leaves it in
+// the page only when the pagetab is now empty.
+func (t *tab) focusCapsuleLike(id cdp.BackendNodeID, kind pagetabKind, at int) {
+	if len(t.lay.pagetab) == 0 {
+		return
+	}
+	if id != 0 {
+		for i, c := range t.lay.pagetab {
+			if c.nodes[0].ID == id {
+				t.focusPagetab(i)
+				return
+			}
+		}
+	}
+	for i, c := range t.lay.pagetab {
+		if c.kind == kind {
+			t.focusPagetab(i)
+			return
+		}
+	}
+	t.focusPagetab(clamp(at, 0, len(t.lay.pagetab)-1))
 }
 
 // firstItem is where the page starts: the first item inside main — main
@@ -614,7 +651,7 @@ func (t *tab) listing() bool {
 func (t *tab) rowRange() (int, int) {
 	if t.read && t.sec < len(t.secs) {
 		s := t.secs[t.sec]
-		return s.first, min(s.last, len(t.lay.rows)-1)
+		return s.body, min(s.last, len(t.lay.rows)-1)
 	}
 	return 0, len(t.lay.rows) - 1
 }

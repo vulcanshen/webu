@@ -59,8 +59,11 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 			icon = spinnerFrame()
 		}
 		blue := lipgloss.NewStyle().Foreground(urlColor)
-		url := blue.Render(fitURL(t.url, innerW-3))
-		out = append(out, blue.Render(" "+icon+" ")+url+strings.Repeat(" ", max(0, innerW-3-dispW(fitURL(t.url, innerW-3)))))
+		// While a section is open the URL wears its anchor: a section is
+		// a place, and the address bar is where a place is named.
+		shown := fitURL(t.url+t.sectionAnchor(), innerW-3)
+		out = append(out, blue.Render(" "+icon+" ")+blue.Render(shown)+
+			strings.Repeat(" ", max(0, innerW-3-dispW(shown))))
 	}
 	out = append(out, m.pagetabRow(t, innerW))
 	rest := innerH - pageHeaderRows
@@ -333,6 +336,9 @@ func panelFrameFilled(innerW int, body []string, title, legend string, tone bord
 // rule when the page has no chrome.
 func (m AppModel) pagetabRow(t *tab, innerW int) string {
 	dim := lipgloss.NewStyle().Foreground(dimColor)
+	if t.read && t.sec < len(t.secs) {
+		return m.sectionHeadRow(t, innerW)
+	}
 	slots := t.pagetabSlots()
 	if len(slots) == 0 {
 		return dim.Render(strings.Repeat("─", innerW))
@@ -358,6 +364,32 @@ func (m AppModel) pagetabRow(t *tab, innerW int) string {
 	labels = withLead(labels)
 	chain := pagetabChain(labels, active, m.focus == panelPage, t.loading)
 	return chain + dim.Render(strings.Repeat("─", max(0, innerW-chainW(labels))))
+}
+
+// sectionHeadRow is the pagetab's row while one section is open: the
+// menu glyph alone, then which section of how many and its name (user's
+// proposal, 2026-09-22).
+//
+// Panel [2] is three screens now, not one — an index, a document, the
+// whole sheet — and chrome identical across all three wastes the
+// strongest signal the panel has. While a section is open the chrome
+// that matters is which piece you are in, so the row says that; the
+// pagetab shrinks to the handle that still reaches it, and Esc still
+// goes up. It also lets the section's own heading come off the page
+// below, where it was the third printing of the same name.
+func (m AppModel) sectionHeadRow(t *tab, innerW int) string {
+	dim := lipgloss.NewStyle().Foreground(dimColor)
+	s := t.secs[t.sec]
+	lead := pagetabChain([]string{glyphMenu}, -1, m.focus == panelPage, t.loading)
+	at := " " + itoa(t.sec+1) + "/" + itoa(len(t.secs)) + "  "
+	ink, count := lipgloss.NewStyle().Foreground(levelColor(s.depth)).Bold(true), dim
+	if t.loading {
+		ink, count = dim, dim
+	}
+	used := chainW([]string{glyphMenu}) + dispW(at)
+	name := truncate(s.title, max(1, innerW-used-2))
+	return lead + count.Render(at) + ink.Render(name) +
+		dim.Render(" "+strings.Repeat("─", max(0, innerW-used-dispW(name)-1)))
 }
 
 // chainW is the width of a chain of labels: two caps, a space either
