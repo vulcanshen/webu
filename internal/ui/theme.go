@@ -39,7 +39,10 @@ var (
 	// (revised 2026-09-21; it was mauve text).
 	tableBg       = lipgloss.Color("#313244") // surface0
 	tableHeaderBg = lipgloss.Color("#45475a") // surface1
-	// a table's header cells: mauve, bold.
+	// mauve. It named a table's header cells until those went to a ground
+	// of their own (2026-09-21); what wears it now is a key inside a code
+	// block, and the pagetab's segments — the page's own chrome, told
+	// apart from the page's text without a ground of its own (2026-09-22).
 	headerColor = lipgloss.Color("#cba6f7") // mauve
 	// visual mode's swept text: lavender under it, the band the family
 	// gives to "the thing you are changing" (an input under edit) — and a

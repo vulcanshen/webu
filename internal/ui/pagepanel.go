@@ -290,12 +290,18 @@ func chainW(labels []string) int {
 // together, a slanted seam between neighbours, round cap. Loose chips
 // with a rule between them read as a row of buttons; a chain reads as
 // one object — which the page's chrome is (2026-09-22). At most one
-// segment is lit: the one the hand is on, in the hand's own colour, or
-// the unfocused register when the keys are in the other panel; all of
-// it dim while the page is on its way.
+// segment is lit: the one the hand is on, in the hand's own colour —
+// the same hand as the page's cursor, in another place — or the
+// unfocused register when the keys are in the other panel; all of it
+// dim while the page is on its way.
+//
+// The segments are mauve on the canvas (2026-09-22): the ground stays
+// the page's, so the chain does not read as a band across the panel,
+// and the ink says at a glance that this row is the page's chrome
+// rather than its first line of text.
 func pagetabChain(labels []string, active int, focused, dimmed bool) string {
 	lit, unlit := handColor, lipgloss.Color(baseHex)
-	ink := textColor
+	ink := headerColor
 	switch {
 	case dimmed:
 		lit, ink = borderDim, dimColor
