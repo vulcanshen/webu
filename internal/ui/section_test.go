@@ -333,3 +333,40 @@ func TestHeadingTitleDropsItsOwnAnchor(t *testing.T) {
 		t.Errorf("a heading that is one link keeps it: got %q", got)
 	}
 }
+
+// The panel's bottom border reads to how far through the open section the
+// reader is — a progress bar that costs no row, the same one the header
+// rule draws for a download. A section that fits on screen draws none.
+func TestBorderFillsAsYouRead(t *testing.T) {
+	kids := []*ir.Node{hd(1, "Title"), para(text("lede"))}
+	for i := 0; i < 3; i++ {
+		kids = append(kids, hd(2, "Part "+itoa(i)))
+		for j := 0; j < 40; j++ {
+			kids = append(kids, para(text("line "+itoa(j))))
+		}
+	}
+	root := doc(kids...)
+	tb := &tab{root: root, cursor: -1}
+	tb.relayout(60)
+	tb.sec, tb.read = 1, true
+	tb.top = tb.secs[1].first
+
+	if got := tb.readPct(20); got <= 0 || got >= 100 {
+		t.Fatalf("at the top of a long section the reader is part way in: %d%%", got)
+	}
+	frame := panelFrameFilled(60, []string{}, "[2] Page", "1/4", toneFocus, tb.readPct(20))
+	last := frame[strings.LastIndex(frame, "\n"):]
+	if !strings.Contains(last, "━") {
+		t.Errorf("the border should fill: %q", last)
+	}
+	// Scrolled to the end, it is full.
+	tb.top = tb.secs[1].last
+	if got := tb.readPct(20); got != 100 {
+		t.Errorf("at the end of a section the border is full, got %d%%", got)
+	}
+	// A section that fits reports nothing to fill.
+	tb.sec, tb.top = 0, tb.secs[0].first
+	if got := tb.readPct(200); got != -1 {
+		t.Errorf("a section that fits has no progress, got %d", got)
+	}
+}
