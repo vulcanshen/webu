@@ -129,7 +129,9 @@ func (d *driver) act() {
 func (d *driver) loaded(title string) func() bool {
 	return func() bool {
 		t := d.page()
-		return t != nil && !t.loading && t.root != nil && t.title == title
+		// working, not loading: a page is loaded when webu has stopped
+		// looking at it, which is one look after the first (tab.settling).
+		return t != nil && !t.working() && t.root != nil && t.title == title
 	}
 }
 
