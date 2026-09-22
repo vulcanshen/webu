@@ -1398,12 +1398,6 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 			items = append(items, menuItem{label: "Collapse", key: "fold", hint: "one line, out of the way"})
 		}
 	case ir.Link:
-		if isSkipLink(n) {
-			items = append(items,
-				menuItem{label: "Skip", key: "skip", hint: "to the content, as it says"},
-				menuItem{label: "Yank link url", key: "yankurl", hint: oneLine(n.URL)})
-			break
-		}
 		items = append(items,
 			menuItem{label: "Open", key: "click", hint: "click it"},
 			menuItem{label: "Open in new tab", key: "newtab", hint: "and switch to it"},
@@ -1488,11 +1482,6 @@ func capsuleMenuItems(c capsule) []menuItem {
 	at := 0
 	several := len(c.nodes) > 1
 	for i, n := range c.nodes {
-		if n.Kind == ir.Link {
-			items = append(items, targetRow(entryTarget{n, 0}, at))
-			at++
-			continue
-		}
 		ts := entryTargets(n)
 		if several && len(ts) > 0 {
 			name := oneLine(n.Name)
@@ -1881,10 +1870,6 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 			t.toggleFold(m.pageW())
 			t.scrollToCursor(m.pageVisible())
 		}
-	case "skip":
-		if t != nil {
-			return m.skipToContent(t)
-		}
 	case "newtab":
 		if n := t.current(); n != nil && n.URL != "" {
 			return m, m.openTab(n.URL, true)
@@ -2007,36 +1992,15 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 		return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
 	case ir.Link:
 		// A link into the page lands the cursor, no confirm: nothing is
-		// left. A skip link with no anchor to land on is the content.
+		// left.
 		if frag := sameFragment(t.url, n.URL); frag != "" && t.jumpToAnchor(frag, m.pageVisible()) {
 			return m, nil
-		}
-		if isSkipLink(n) {
-			return m.skipToContent(t)
 		}
 		return m, m.askOpenLink(n)
 	}
 	return m, m.message.show(glyphInfo, "Enter", []string{
 		"Nothing is defined for Enter on this item yet.",
 		"Space lists what can be done with it."}, false, m.layer())
-}
-
-// skipToContent is Enter on a skip link, which means exactly this: the
-// cursor to the first item of the content — main's first, else the one
-// after the link — and the page scrolled to it. The link is never
-// followed: its target is an anchor, and webu has nothing to scroll.
-func (m AppModel) skipToContent(t *tab) (tea.Model, tea.Cmd) {
-	at := t.firstItem()
-	if t.onPagetab() {
-		t.leavePagetab()
-	} else if at <= t.cursor && t.cursor+1 < len(t.lay.items) {
-		at = t.cursor + 1
-	}
-	if at >= 0 {
-		t.cursor = at
-		t.scrollToCursor(m.pageVisible())
-	}
-	return m, nil
 }
 
 // enterCell is Enter on a data table's cell, drawn cut to its column
@@ -2088,15 +2052,13 @@ func (m AppModel) openItemMenuAt(n *ir.Node, layer int) (tea.Model, tea.Cmd) {
 
 // enterCapsule is Enter on a capsule: its list, the item operations of
 // what it holds — except where one thing is the obvious operation: a
-// search with one box opens the box, a skip capsule with one target
-// goes where it says, and a capsule with nothing to open shows its text.
+// search with one box opens the box, and a capsule with nothing to open
+// shows its text.
 func (m AppModel) enterCapsule(t *tab, c capsule) (tea.Model, tea.Cmd) {
 	ts := capsuleTargets(c)
 	switch {
 	case len(ts) == 0:
 		return m, m.showCapsule(c)
-	case c.kind == pagetabSkip && len(ts) == 1:
-		return m.actOn(t, ts[0].node, false)
 	case c.kind == pagetabSearch:
 		var boxes []*ir.Node
 		for _, x := range ts {
@@ -2153,10 +2115,6 @@ func (m AppModel) actOn(t *tab, x *ir.Node, search bool) (tea.Model, tea.Cmd) {
 	case ir.Link:
 		if frag := sameFragment(t.url, x.URL); frag != "" && t.jumpToAnchor(frag, m.pageVisible()) {
 			return m, nil
-		}
-		if isSkipLink(x) {
-			// Nothing to land on: the content, as the link means.
-			return m.skipToContent(t)
 		}
 	}
 	id := x.ID

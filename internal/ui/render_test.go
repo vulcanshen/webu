@@ -476,7 +476,12 @@ func TestTableCellsAreItems(t *testing.T) {
 // TestSkipLinkIsARow: a skip link is chrome — one row of the entry
 // style, an item — and a new page never starts on it: main's first
 // item, else the item after it.
-func TestSkipLinkIsACapsule(t *testing.T) {
+// A skip link is dropped: not drawn, not an item, and on no capsule
+// (user, 2026-09-22). It exists to jump a screen reader past the
+// navigation to the content — and webu has already taken the navigation
+// off the page and starts the cursor at main. It is furniture for a
+// problem this browser does not have.
+func TestSkipLinkIsDropped(t *testing.T) {
 	skip := link("Skip to main content", "https://x.test/page#main", 1)
 	root := &ir.Node{Kind: ir.Document, URL: "https://x.test/page", Children: []*ir.Node{
 		skip,
@@ -485,8 +490,8 @@ func TestSkipLinkIsACapsule(t *testing.T) {
 	tb := &tab{cursor: -1, root: root}
 	tb.relayout(60)
 	l := tb.lay
-	if len(l.pagetab) != 1 || l.pagetab[0].nodes[0] != skip || !strings.Contains(l.pagetab[0].label, "skip +1") {
-		t.Errorf("the skip link should be the pagetab's skip capsule:\n%s", dumpLayout(l))
+	if len(l.pagetab) != 0 {
+		t.Errorf("a skip link is on no capsule:\n%s", dumpLayout(l))
 	}
 	if len(l.items) != 1 || l.items[0].node.Text() != "First" {
 		t.Errorf("the skip link should leave the page no item, and main has no rule:\n%s", dumpLayout(l))
@@ -681,14 +686,14 @@ func TestOtherGoesToThePagetab(t *testing.T) {
 	if at := tb.firstItem(); at != 0 {
 		t.Errorf("a new page starts on main's first item: %d", at)
 	}
-	// Outside main, a skip link is the skip capsule's, and blank text is
-	// nothing: no "other" for either.
+	// Outside main, a skip link is dropped and blank text is nothing: no
+	// capsule for either, and no row.
 	tidy := &ir.Node{Kind: ir.Document, URL: "https://x.test/page", Children: []*ir.Node{
 		link("Jump to content", "https://x.test/page#main", 1), text(" \n "),
 		{Kind: ir.Landmark, Role: "main", ID: 2, Children: []*ir.Node{para(link("First", "https://x.test/1", 3))}},
 	}}
-	if l := render(tidy, 60); len(l.pagetab) != 1 || l.pagetab[0].kind != pagetabSkip || !strings.Contains(l.pagetab[0].label, "skip +1") {
-		t.Errorf("a skip link outside main is the skip capsule, blank text no capsule at all:\n%s", dumpLayout(l))
+	if l := render(tidy, 60); len(l.pagetab) != 0 || strings.Contains(dumpLayout(l), "Jump to") {
+		t.Errorf("a skip link is furniture for a problem webu does not have:\n%s", dumpLayout(l))
 	}
 	// No main: nothing is other.
 	bare := &ir.Node{Kind: ir.Document, Children: []*ir.Node{para(text("promo")), para(link("First", "u", 3))}}
@@ -767,31 +772,26 @@ func TestHeadingGround(t *testing.T) {
 			got[w] = r.heading
 		}
 	}
-	for word, level := range map[string]int{"# one": 1, "### three": 3, "###### six": 6, "prose": 0} {
-		if got[word] != level {
-			t.Errorf("%q should carry level %d, carries %d", word, level, got[word])
+	// The row carries the heading's DEPTH, not its level: h1 then h3 then
+	// h6 nests three deep, because a hierarchy's shape is the shape.
+	for word, depth := range map[string]int{"# one": 1, "### three": 2, "###### six": 3, "prose": 0} {
+		if got[word] != depth {
+			t.Errorf("%q should carry depth %d, carries %d", word, depth, got[word])
 		}
 	}
-	// Six distinct grounds, darkening, the last one at the crust.
+	// Seven distinct inks, cycling rather than running out.
 	seen := map[string]bool{}
-	var last int
-	for level := 1; level <= 6; level++ {
-		bg := string(headingBg(level))
-		if seen[bg] {
-			t.Errorf("h%d repeats a ground: %s", level, bg)
+	for depth := 1; depth <= len(levelInk); depth++ {
+		ink := string(levelColor(depth))
+		if seen[ink] {
+			t.Errorf("depth %d repeats an ink: %s", depth, ink)
 		}
-		seen[bg] = true
-		r, _, _ := hexRGB(bg)
-		if level > 1 && r >= last {
-			t.Errorf("h%d should be darker than h%d: %s", level, level-1, bg)
-		}
-		last = r
+		seen[ink] = true
 	}
-	if r, _, _ := hexRGB(string(headingBg(6))); r > 0x20 {
-		t.Errorf("h6 should sit near the crust, is %s", headingBg(6))
+	if levelColor(len(levelInk)+1) != levelColor(1) {
+		t.Error("the eighth level should start the cycle over, not run off the end")
 	}
-	// Out of range clamps rather than running off the ramp.
-	if headingBg(0) != headingBg(1) || headingBg(9) != headingBg(6) {
-		t.Error("a level outside 1-6 should clamp")
+	if levelColor(0) != levelColor(1) {
+		t.Error("a depth below one should clamp")
 	}
 }

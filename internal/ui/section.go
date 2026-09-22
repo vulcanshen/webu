@@ -26,6 +26,11 @@ type section struct {
 	// the first one, which belongs to nobody.
 	node  *ir.Node
 	level int // 1-6; 0 for that leading run
+	// depth is how deep the section nests, counting from 1 — what the
+	// tree draws and what the ink says (theme.levelColor). It is not the
+	// level: a page that goes h1 → h3 → h4 nests three deep, because the
+	// shape of a hierarchy is the shape, not the tag names.
+	depth int
 	title string
 	// first, last are the section's rows in the layout, inclusive.
 	first, last int
@@ -125,7 +130,21 @@ func sectionsOf(root *ir.Node, lay layout, pageURL string) []section {
 	for i := range out {
 		count(&out[i], lay)
 	}
-	return pruneNav(out)
+	out = pruneNav(out)
+	// Depth is taken after the pruning, so a navigation column that left
+	// the list does not leave a step in it either.
+	for i := range out {
+		out[i].depth = 1
+	}
+	var stack []int
+	for i := range out {
+		for len(stack) > 0 && stack[len(stack)-1] >= out[i].level {
+			stack = stack[:len(stack)-1]
+		}
+		stack = append(stack, out[i].level)
+		out[i].depth = len(stack)
+	}
+	return out
 }
 
 // pruneNav drops the sections that are navigation columns rather than
@@ -184,7 +203,7 @@ func pruneNav(secs []section) []section {
 func headingTitle(n *ir.Node, pageURL string) string {
 	name := oneLine(nameOr(n.Name, n.Text()))
 	for _, c := range n.Children {
-		if c.Kind != ir.Link || !sameDoc(c.URL, pageURL) {
+		if c.Kind != ir.Link || sameFragment(pageURL, c.URL) == "" {
 			continue
 		}
 		tail := oneLine(nameOr(c.Name, c.Text()))
@@ -196,24 +215,6 @@ func headingTitle(n *ir.Node, pageURL string) string {
 		}
 	}
 	return name
-}
-
-// sameDoc reports whether a link points into the page it is on. Chromium
-// hands the AX tree resolved URLs, so a bare href="#x" arrives as the whole
-// address with a fragment on it.
-func sameDoc(u, pageURL string) bool {
-	i := strings.IndexByte(u, '#')
-	if i < 0 {
-		return false
-	}
-	base := u[:i]
-	if base == "" {
-		return true
-	}
-	if j := strings.IndexByte(pageURL, '#'); j >= 0 {
-		pageURL = pageURL[:j]
-	}
-	return base == pageURL
 }
 
 // scopeStart is the first row the content occupies: main's, or the page's.

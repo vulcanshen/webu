@@ -7,14 +7,22 @@ import (
 )
 
 // The section list: a document's outline as the screen itself, not as a
-// popup over it (section.go). One row per heading — number, title indented
-// by level, what it holds, how long it is — and Enter opens one to the whole
-// panel.
+// popup over it (section.go).
 //
-// The ground is the one a heading wears in the page (theme.headingBg), so a
-// level reads the same in the list as it does when you are inside it: h1 on
-// the brightest, h6 on the crust. Indent says the same thing a second way,
-// for a terminal with the colours flattened.
+// It is drawn the way a file system is drawn — tree(1), a file manager —
+// because that is what it is: a hierarchy you walk, where every row has a
+// parent and some rows have children. That idiom brings its own answers
+// for free. The shape is carried by the connectors, not by indentation
+// alone, so a deep row still says what it hangs off. And a row needs no
+// ordinal: `tree` does not number its files, because the thing you do with
+// a row is walk to it or filter for it, never recite its index (user,
+// 2026-09-22 — numbers earn a column only if a key jumps to them, and the
+// digits are the panel switches).
+//
+// Depth is on the ink: one bright hue per level, cycling through seven so
+// it never runs out (theme.levelColor). The connectors are one quiet
+// colour of their own — they are the skeleton, and a skeleton that
+// competes with the names on it is drawn wrong.
 
 // glyphCode marks a section holding a code block. Read out of the Nerd Font
 // cmap, never remembered (theme.go's rule).
@@ -25,51 +33,83 @@ func (m AppModel) sectionRows(t *tab, innerW, innerH int) []string {
 	if innerH <= 0 {
 		return nil
 	}
-	num := lipgloss.NewStyle().Foreground(pageDim)
-	title := lipgloss.NewStyle().Foreground(pageText)
+	tree := lipgloss.NewStyle().Foreground(pageTree)
 	meta := lipgloss.NewStyle().Foreground(pageDim)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	if m.focus != panelPage || t.onPagetab() {
 		cur = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim)
 	}
-	numW := len(itoa(len(t.secs)))
+	stems := treeStems(t.secs)
 	out := make([]string, 0, innerH)
 	end := min(len(t.secs), t.secTop+innerH)
 	for i := t.secTop; i < end; i++ {
 		s := t.secs[i]
 		on := i == t.sec
-		// The columns, right to left: the tail is fixed, the title takes
-		// what is left of the row.
-		tail := sectionTail(s)
-		head := "  " + padLeft(itoa(i+1), numW) + "  " + strings.Repeat("  ", max(0, s.level-1))
-		room := innerW - dispW(head) - dispW(tail) - 2
+		stem, tail := stems[i], sectionTail(s)
+		room := innerW - dispW(stem) - dispW(tail) - 2
 		if room < 8 {
-			// No room for the tail: the title is the only thing that matters.
-			tail, room = "", innerW-dispW(head)-1
+			// No room for the tail: the name is the only thing that matters.
+			tail, room = "", innerW-dispW(stem)-1
 		}
 		name := truncate(s.title, max(1, room))
-		gap := max(0, innerW-dispW(head)-dispW(name)-dispW(tail))
+		gap := max(0, innerW-dispW(stem)-dispW(name)-dispW(tail))
 
-		var b strings.Builder
-		switch {
-		case on:
-			b.WriteString(cur.Render(head + name + strings.Repeat(" ", gap) + tail))
-		default:
-			bg := lipgloss.NewStyle()
-			if s.level > 0 {
-				bg = bg.Background(headingBg(s.level))
-			}
-			b.WriteString(bg.Inherit(num).Render(head))
-			b.WriteString(bg.Inherit(title).Render(name))
-			b.WriteString(bg.Render(strings.Repeat(" ", gap)))
-			b.WriteString(bg.Inherit(meta).Render(tail))
+		if on {
+			out = append(out, cur.Render(stem+name+strings.Repeat(" ", gap)+tail))
+			continue
 		}
-		out = append(out, b.String())
+		out = append(out, tree.Render(stem)+
+			lipgloss.NewStyle().Foreground(levelColor(s.depth)).Render(name)+
+			strings.Repeat(" ", gap)+meta.Render(tail))
 	}
 	for len(out) < innerH {
 		out = append(out, strings.Repeat(" ", innerW))
 	}
 	return out
+}
+
+// treeStems is the connector drawn in front of each row: for every level
+// above it, a rail if that ancestor still has rows to come, blank if it
+// does not; then the branch itself, a tee or an elbow depending on whether
+// anything follows at its own depth. The same shape tree(1) draws.
+//
+// The root level takes no connector — a page's top-level sections hang off
+// the page, and drawing a stem for that would be drawing the panel.
+func treeStems(secs []section) []string {
+	out := make([]string, len(secs))
+	for i, s := range secs {
+		var b strings.Builder
+		for d := 2; d < s.depth; d++ {
+			if hasMoreAt(secs, i, d) {
+				b.WriteString("│  ")
+			} else {
+				b.WriteString("   ")
+			}
+		}
+		if s.depth > 1 {
+			if hasMoreAt(secs, i, s.depth) {
+				b.WriteString("├─ ")
+			} else {
+				b.WriteString("└─ ")
+			}
+		}
+		out[i] = " " + b.String()
+	}
+	return out
+}
+
+// hasMoreAt reports whether another row at depth d follows row i before
+// the branch they share ends — whether the rail continues past this row.
+func hasMoreAt(secs []section, i, d int) bool {
+	for j := i + 1; j < len(secs); j++ {
+		switch {
+		case secs[j].depth < d:
+			return false
+		case secs[j].depth == d:
+			return true
+		}
+	}
+	return false
 }
 
 // sectionTail is the right-hand column: what the section holds, then how
