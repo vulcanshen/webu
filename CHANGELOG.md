@@ -1,56 +1,57 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0] — 2026-09-22
 
 ### Changed
 
-- **The page's chrome is on the pagetab under the URL, not in the page.**
-  Skip links, banner, navigation, breadcrumb, search, sidebar, footer,
-  dialog — the entries that were one row each at the top of the page —
-  are capsules on the rule between the URL and the page, so the page
-  itself starts at its content and main needs no rule of its own. One
-  segment per kind, in a fixed order — `skip`, `header`, `nav`,
-  `search`, `sidebar`, `footer`, then each dialog by its name — every
-  navigation on the page behind the one `nav`, and, when the page has a
-  main, whatever lies outside it in no landmark (a promo strip, a cookie
-  banner that is a plain div) behind `other`. They are drawn as one
-  powerline chain, the way the header draws its screens, a menu glyph at
-  its head and each segment reading `word +N`: the word is the kind's, the count what is inside;
-  where you are in a navigation is the panel's hint while the hand is
-  on it. The ones the
-  width leaves out sit behind a `+N`, whose Enter lists them and puts
-  the one chosen under the hand. `Esc` goes up onto the pagetab and back,
-  `k` from the top of the page goes up too, `h`/`l` walk it and wrap,
-  `j` comes back down; Enter on a segment is its list — each navigation
-  under its name, the current link marked — Space its menu, as before;
-  a segment with nothing to open shows its text. The Outline still
-  reaches them.
-- **An article's own header and footer are its lines**, not an
-  "unsupported" row: this Chromium names them `sectionheader` and
-  `sectionfooter`. A "Jump to content" link is a skip link too.
-- **A column of bare links flows like words.** A page that puts one link
-  per line — a sidebar of them, a menu — was costing a row each: a
-  hundred and twenty rows of one word each on w3schools before the
-  content began. A run of two or more such links now flows, several to
-  a row, the way a paragraph's links do. The row each was CSS, not
-  structure, and webu does not do CSS layout. Nothing is hidden and
-  nothing is guessed — a run of links that is content flows too, and
-  reads the same.
-- **The page panel says when it is fetching.** The globe beside the URL
-  fills round while a page is on its way and comes back to rest when it
-  lands, so a slow site reads as working rather than as stuck; the glyph
-  now wears the same blue as the URL, the two being one thing — where
-  you are. The frames come from the same Nerd Font set as the globe, so
-  the row keeps its width and the shape stays square. A link chosen from the pagetab shows it like any other.
+- **The page's chrome is on the pagetab under the URL, not in the
+  page.** Skip links, banner, navigation, breadcrumb, search, sidebar,
+  footer and dialog — the entries that were one row each at the top of
+  the page — are now segments of a chain on the rule between the URL
+  and the page, so the page itself starts at its content and main needs
+  no rule of its own. One segment per kind, in a fixed order — `skip`,
+  `header`, `nav`, `search`, `sidebar`, `footer`, then each dialog by
+  its name — every navigation on the page behind the one `nav`, and,
+  when the page has a main, whatever lies outside it in no landmark (a
+  promo strip, a cookie banner that is a plain div) behind `other`.
+  They are drawn as one powerline chain, the way the header draws its
+  screens, a menu glyph at its head and each segment reading `word +N`:
+  the word is the kind's, the count what is inside. Where you are in a
+  navigation is the panel's hint while the hand is on it. The segments
+  the width leaves out sit behind a `+N`, whose Enter lists them and
+  puts the one chosen under the hand. `Esc` goes up onto the pagetab
+  and back and the page's Space menu carries that row too, `k` from the
+  top of the page goes up as well, `h`/`l` walk it and wrap, `j` comes
+  back down; Enter on a segment is its list — each
+  navigation under its name, the current link marked — and Space is its
+  menu, as before. A segment with nothing to open shows its text, and
+  the Outline still reaches them all.
+- **A column of bare links flows like words.** A page that puts one
+  link per line — a sidebar of them, a menu — was costing a row each: a
+  hundred and twenty rows of one word before the content began, on a
+  documentation site that declares no landmarks at all. A run of two or
+  more such links now flows, several to a row, the way a paragraph's
+  links do. The row each was CSS, not structure, and webu does not do
+  CSS layout. Nothing is hidden and nothing is guessed: a run of links
+  that is content flows too, and reads the same.
+- **A page opens where its reading starts.** The window scrolls to
+  main, not only the cursor; a page that declares no main opens on its
+  first heading, which is what the page is about, and everything above
+  it stays one `k` away.
 - **An anchor scrolls to its target.** Following a link into the page —
   from the pagetab, a table of contents, a skip link — puts the target
   on the first row of the window rather than merely somewhere on it,
-  which looked like nothing had happened when the target was on screen
-  already.
-- **A page opens where its reading starts.** The window scrolls to main,
-  not only the cursor; a page that declares no main opens on its first
-  heading, which is what the page is about, and everything above it
-  stays one `k` away.
+  which looked like nothing had happened whenever the target was on
+  screen already.
+- **The page panel says when it is fetching.** The globe beside the URL
+  fills round while a page is on its way and comes back to rest when it
+  lands, so a slow site reads as working rather than as stuck. The
+  glyph wears the same blue as the URL, the two being one thing — where
+  you are — and its frames come from the same Nerd Font set, so the row
+  keeps its width and the shape stays square.
+- **An article's own header and footer are its lines**, not an
+  "unsupported" row: this Chromium names them `sectionheader` and
+  `sectionfooter`. A "Jump to content" link is a skip link too.
 
 ## [0.1.1] — 2026-09-21
 
