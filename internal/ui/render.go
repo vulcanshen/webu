@@ -223,9 +223,10 @@ func (c capsule) title() string {
 }
 
 // capsuleText is a capsule's label: its title and +N for how much is
-// behind it. Never the landmark's name: that is the hint's. No glyph —
-// the capsules are one chain, and every one of them is a list, so a
-// glyph on each said nothing and cost three cells (2026-09-22).
+// behind it. Never the landmark's name: that is the hint's. No glyph of
+// its own — the capsules are one chain, and every one of them is a
+// list, so a glyph on each said nothing and cost three cells; the menu
+// glyph is said once, at the chain's head (withLead, 2026-09-22).
 func capsuleText(c capsule) string {
 	label := c.title()
 	if n := len(capsuleTargets(c)); n > 0 {
@@ -322,18 +323,30 @@ func fitPagetab(pagetab []capsule, width int) int {
 	for _, c := range pagetab {
 		labels = append(labels, c.label)
 	}
-	if len(labels) == 0 || chainW(labels) <= width-1 {
+	if len(labels) == 0 || chainW(withLead(labels)) <= width-1 {
 		return len(pagetab)
 	}
 	for k := len(pagetab) - 1; k >= 0; k-- {
 		labels = labels[:k]
 		labels = append(labels, "+"+itoa(len(pagetab)-k))
-		if chainW(labels) <= width-1 {
+		if chainW(withLead(labels)) <= width-1 {
 			return k
 		}
 		labels = labels[:k]
 	}
 	return 0
+}
+
+// withLead puts the menu glyph on the chain's first segment. The
+// pagetab is one menu, so it says so once, at its head, rather than on
+// every segment (user, 2026-09-22).
+func withLead(labels []string) []string {
+	if len(labels) == 0 {
+		return labels
+	}
+	out := append([]string(nil), labels...)
+	out[0] = glyphMenu + " " + out[0]
+	return out
 }
 
 // itemAt is the first item whose span includes row, or -1.
