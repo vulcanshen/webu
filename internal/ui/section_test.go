@@ -478,3 +478,66 @@ func TestMovementDoesNotChangeScreen(t *testing.T) {
 		t.Error("k in a section of pure prose left it")
 	}
 }
+
+// A list item is one thing: one row, its first line, and Enter to go into
+// it (user, 2026-09-22). The rule is the same whatever is in it — a
+// bullet that already fits on one line simply looks the way it always
+// did — and inside, the item's contents ARE the page, so the cursor and
+// the scrolling work against them with no second set of rules.
+func TestAListItemIsOneThing(t *testing.T) {
+	card := func(key, summary string, id int) *ir.Node {
+		return &ir.Node{Kind: ir.ListItem, ID: cdp.BackendNodeID(id), Children: []*ir.Node{
+			para(link(key, "https://x.test/"+key, id+100)),
+			para(text(summary)),
+			para(text("Priority: Highest")),
+		}}
+	}
+	root := doc(&ir.Node{Kind: ir.List, Children: []*ir.Node{
+		card("AIS-1", "the first card", 10),
+		card("AIS-2", "the second card", 20),
+	}})
+	tb := &tab{root: root, cursor: -1}
+	tb.relayout(60)
+
+	if n := len(tb.lay.items); n != 2 {
+		t.Fatalf("two cards, two items; got %d:\n%s", n, dumpLayout(tb.lay))
+	}
+	v := dumpLayout(tb.lay)
+	if !strings.Contains(v, "AIS-1") || strings.Contains(v, "the first card") {
+		t.Errorf("a shut card shows its first line and no more:\n%s", v)
+	}
+
+	// Enter goes in, and the panel becomes that card.
+	if !tb.drillInto(tb.lay.items[0].node, 60, 20) {
+		t.Fatal("Enter on a list item should go into it")
+	}
+	if !tb.drilled() {
+		t.Fatal("inside a list item")
+	}
+	in := dumpLayout(tb.lay)
+	for _, want := range []string{"AIS-1", "the first card", "Priority"} {
+		if !strings.Contains(in, want) {
+			t.Errorf("inside, the whole card is the page; %q missing:\n%s", want, in)
+		}
+	}
+	if strings.Contains(in, "AIS-2") {
+		t.Errorf("the OTHER card is not on this page:\n%s", in)
+	}
+	if tb.drillTitle == "" || !strings.Contains(tb.drillTitle, "AIS-1") {
+		t.Errorf("the header row says what you are inside, says %q", tb.drillTitle)
+	}
+	// Esc comes back out, onto the card it left.
+	tb.leaveDrill(60, 20)
+	if tb.drilled() {
+		t.Error("Esc comes back out")
+	}
+	if tb.cursor < 0 || tb.lay.items[tb.cursor].node.ID != 10 {
+		t.Errorf("back out, the cursor is on the card just left: %d", tb.cursor)
+	}
+	// A card the page has rebuilt under a new id does not strand the view.
+	tb.drill = 999
+	tb.relayout(60)
+	if tb.drilled() {
+		t.Error("a card that is gone lets the page back")
+	}
+}

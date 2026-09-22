@@ -68,6 +68,13 @@ type tab struct {
 	// was drawn before; read is whether a section is open to the whole
 	// panel, sec is which one, and secTop scrolls the list when it is
 	// longer than the panel.
+	// drill is the list item opened to the whole panel — Enter on one,
+	// Esc back out. A list item is one thing, so it is one row until you
+	// go into it (render.firstLine, user 2026-09-22).
+	drill  cdp.BackendNodeID
+	// drillTitle is that item's first line as it read when it was opened:
+	// what the panel's header row says while you are inside it.
+	drillTitle string
 	secs   []section
 	shape  pageShape
 	flat   bool
@@ -645,7 +652,20 @@ func (t *tab) relayout(width int) {
 	if t.root == nil {
 		return
 	}
-	t.lay = renderWith(t.root, renderOpts{width: max(1, width), measure: t.measure, fold: t.fold})
+	// Inside a list item the panel IS that item: its contents are the
+	// page, so the cursor, the scrolling and the row window all work
+	// against them without a second set of rules (user, 2026-09-22).
+	root := t.root
+	if t.drill != 0 {
+		n := nodeByID(t.root, t.drill)
+		if n == nil {
+			t.drill, t.drillTitle = 0, ""
+		} else {
+			root = &ir.Node{Kind: ir.Document, Children: n.Children}
+		}
+	}
+	t.lay = renderWith(root, renderOpts{width: max(1, width), measure: t.measure,
+		fold: t.fold, drill: t.drill})
 	t.layW = width
 	// The pagetab may have lost the capsule the hand was on, or its "+N".
 	if i := t.pagetabIndex(); i >= len(t.lay.pagetab) || (t.onMore() && t.lay.fit >= len(t.lay.pagetab)) {
@@ -704,7 +724,7 @@ func (t *tab) clampSecTop(visible int) {
 // listing reports whether the panel is showing the section list rather than
 // the page: a document that is not currently open at one of its sections.
 func (t *tab) listing() bool {
-	return t != nil && t.shape == shapeDoc && !t.flat && !t.read && len(t.secs) > 0
+	return t != nil && !t.drilled() && t.shape == shapeDoc && !t.flat && !t.read && len(t.secs) > 0
 }
 
 // rowRange is the stretch of the layout the panel may show: the open

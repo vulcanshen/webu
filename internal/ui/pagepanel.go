@@ -343,6 +343,9 @@ func panelFrameFilled(innerW int, body []string, title, legend string, tone bord
 // rule when the page has no chrome.
 func (m AppModel) pagetabRow(t *tab, innerW int) string {
 	dim := lipgloss.NewStyle().Foreground(dimColor)
+	if t.drilled() {
+		return m.insideRow(t, t.drillTitle, pageClick, innerW)
+	}
 	if t.read && t.sec < len(t.secs) {
 		return m.sectionHeadRow(t, innerW)
 	}
@@ -385,17 +388,26 @@ func (m AppModel) pagetabRow(t *tab, innerW int) string {
 // goes up. It also lets the section's own heading come off the page
 // below, where it was the third printing of the same name.
 func (m AppModel) sectionHeadRow(t *tab, innerW int) string {
-	dim := lipgloss.NewStyle().Foreground(dimColor)
 	s := t.secs[t.sec]
+	at := itoa(t.sec+1) + "/" + itoa(len(t.secs)) + "  "
+	return m.insideRow(t, s.title, levelColor(s.depth), innerW, at)
+}
+
+// insideRow is the row under the URL while the panel is showing one piece
+// of the page rather than the page: the menu glyph alone, then what you
+// are inside. Panel [2] is several screens now, and chrome identical
+// across all of them wastes the strongest signal it has.
+func (m AppModel) insideRow(t *tab, title string, ink lipgloss.Color, innerW int, before ...string) string {
+	dim := lipgloss.NewStyle().Foreground(dimColor)
 	lead := pagetabChain([]string{glyphMenu}, -1, m.focus == panelPage, t.loading)
-	at := " " + itoa(t.sec+1) + "/" + itoa(len(t.secs)) + "  "
-	ink, count := lipgloss.NewStyle().Foreground(levelColor(s.depth)).Bold(true), dim
+	at := " " + strings.Join(before, "")
+	nameStyle, atStyle := lipgloss.NewStyle().Foreground(ink).Bold(true), dim
 	if t.loading {
-		ink, count = dim, dim
+		nameStyle = dim
 	}
 	used := chainW([]string{glyphMenu}) + dispW(at)
-	name := truncate(s.title, max(1, innerW-used-2))
-	return lead + count.Render(at) + ink.Render(name) +
+	name := truncate(title, max(1, innerW-used-2))
+	return lead + atStyle.Render(at) + nameStyle.Render(name) +
 		dim.Render(" "+strings.Repeat("─", max(0, innerW-used-dispW(name)-1)))
 }
 
