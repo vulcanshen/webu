@@ -289,18 +289,18 @@ func chainW(labels []string) int {
 // header draws its screens (chrome.tabChain): round cap, segments run
 // together, a slanted seam between neighbours, round cap. Loose chips
 // with a rule between them read as a row of buttons; a chain reads as
-// one object — which the page's chrome is (2026-09-22). At most one
-// segment is lit: the one the hand is on, in the hand's own colour —
-// the same hand as the page's cursor, in another place — or the
-// unfocused register when the keys are in the other panel; all of it
-// dim while the page is on its way.
+// one object — which the page's chrome is (2026-09-22).
 //
-// The segments are mauve on the canvas (2026-09-22): the ground stays
-// the page's, so the chain does not read as a band across the panel,
-// and the ink says at a glance that this row is the page's chrome
-// rather than its first line of text.
+// The whole chain is mauve (2026-09-22): the ground stays the page's,
+// so it does not read as a band across the panel, and the ink says at a
+// glance that this row is the page's chrome rather than its first line
+// of text. At most one segment is lit — the one the hand is on — and it
+// is the same mauve, filled, with the canvas for ink: the row wears one
+// colour whether the hand is on it or not, rather than borrowing the
+// page cursor's. Unfocused it drops to the register an unfocused chip
+// wears; all of it dims while the page is on its way.
 func pagetabChain(labels []string, active int, focused, dimmed bool) string {
-	lit, unlit := handColor, lipgloss.Color(baseHex)
+	lit, unlit := headerColor, lipgloss.Color(baseHex)
 	ink := headerColor
 	switch {
 	case dimmed:
