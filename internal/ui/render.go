@@ -83,37 +83,246 @@ type layout struct {
 	// marks is the first row of every landmark and heading, for the
 	// outline to jump to (ui.md §3.1).
 	marks map[*ir.Node]int
-	// bar is the page's chrome — banner, navigation, breadcrumb, search,
+	// tray is the page's chrome — banner, navigation, breadcrumb, search,
 	// sidebar, footer, dialog, skip link — as capsules on the rule under
-	// the URL (pagepanel.barRow), in reading order, off the page's rows
+	// the URL (pagepanel.trayRow), in reading order, off the page's rows
 	// (2026-09-22). fit is how many of them the width holds; the rest
 	// are behind a "+N".
-	bar []capsule
-	fit int
+	tray []capsule
+	fit  int
 }
 
-// capsule is one piece of chrome on the bar: the node, and its label —
-// a glyph for its kind, a word for where the user is in it, +N for how
-// much is behind it (capsuleText).
+// capsule is one kind of chrome on the tray: the landmarks of that kind
+// — a page's every navigation is one capsule — and its label: the menu
+// glyph, the kind's word, +N for how much is behind it (capsuleText).
 type capsule struct {
-	node  *ir.Node
+	kind  trayKind
+	nodes []*ir.Node
 	label string
 }
 
-// fitBar is how many capsules the bar holds at width: every one when
+// trayKind is a capsule's kind, in the tray's fixed order: the position
+// tells the kind before the word does (2026-09-22).
+type trayKind uint8
+
+const (
+	traySkip    trayKind = iota // skip links, and blocks of them
+	trayHeader                  // banner
+	trayNav                     // navigation, breadcrumb
+	traySearch                  // search
+	traySidebar                 // complementary
+	trayFooter                  // contentinfo
+	trayDialog                  // dialog, alertdialog — one capsule each, named
+	trayOther                   // outside main, in no landmark
+)
+
+// word is the kind's word on its capsule: fixed, so a capsule reads the
+// same on every site. Where the user is in it went to the hint
+// (capsuleHint): on real pages the word for that was "Homepage",
+// "(Top)", "PRODUCTS", and the site's name is the URL row's.
+func (k trayKind) word() string {
+	switch k {
+	case traySkip:
+		return "skip"
+	case trayHeader:
+		return "header"
+	case trayNav:
+		return "nav"
+	case traySearch:
+		return "search"
+	case traySidebar:
+		return "sidebar"
+	case trayFooter:
+		return "footer"
+	case trayDialog:
+		return "dialog"
+	}
+	return "other"
+}
+
+// trayKindOf is the capsule a piece of chrome goes to.
+func trayKindOf(n *ir.Node) trayKind {
+	switch {
+	case n.Kind == ir.Link || n.Skip:
+		return traySkip
+	case n.Role == "banner":
+		return trayHeader
+	case n.Role == "navigation":
+		return trayNav
+	case n.Role == "search":
+		return traySearch
+	case n.Role == "complementary":
+		return traySidebar
+	case n.Role == "contentinfo":
+		return trayFooter
+	case n.Role == "dialog", n.Role == "alertdialog":
+		return trayDialog
+	}
+	return trayOther
+}
+
+// buildTray sorts the page's chrome into capsules: one per kind, in the
+// tray's fixed order, a page's every navigation behind one "nav"; a
+// dialog is its own, named — it is one thing the page wants; what lies
+// outside main and in no landmark is "other".
+func buildTray(chrome, other []*ir.Node) []capsule {
+	byKind := map[trayKind][]*ir.Node{}
+	var dialogs []*ir.Node
+	for _, n := range chrome {
+		if k := trayKindOf(n); k == trayDialog {
+			dialogs = append(dialogs, n)
+		} else {
+			byKind[k] = append(byKind[k], n)
+		}
+	}
+	var out []capsule
+	for _, k := range []trayKind{traySkip, trayHeader, trayNav, traySearch, traySidebar, trayFooter} {
+		if ns := byKind[k]; len(ns) > 0 {
+			out = append(out, newCapsule(k, ns))
+		}
+	}
+	for _, d := range dialogs {
+		out = append(out, newCapsule(trayDialog, []*ir.Node{d}))
+	}
+	if len(other) > 0 {
+		out = append(out, newCapsule(trayOther, []*ir.Node{{Kind: ir.Landmark, Role: "other", Children: other}}))
+	}
+	return out
+}
+
+// roleNoun is a landmark role as a word to count by: "2 sidebars".
+func roleNoun(role string) string {
+	switch role {
+	case "banner":
+		return "header"
+	case "complementary":
+		return "sidebar"
+	case "contentinfo":
+		return "footer"
+	case "search":
+		return "search landmark"
+	}
+	return role
+}
+
+func newCapsule(k trayKind, ns []*ir.Node) capsule {
+	c := capsule{kind: k, nodes: ns}
+	c.label = capsuleText(c)
+	return c
+}
+
+// title is the capsule's word — a dialog's name, since the name says
+// what it wants: "Cookies", "Sign in".
+func (c capsule) title() string {
+	if c.kind == trayDialog {
+		if name := entryLabel(c.nodes[0], ""); name != "" {
+			return name
+		}
+	}
+	return c.kind.word()
+}
+
+// capsuleText is a capsule's label: the menu glyph — every capsule is a
+// list, so one glyph says so — its title, and +N for how much is
+// behind it. Never the landmark's name: that is the hint's.
+func capsuleText(c capsule) string {
+	label := glyphMenu + " " + c.title()
+	if n := len(capsuleTargets(c)); n > 0 {
+		label += " +" + itoa(n)
+	}
+	return label
+}
+
+// capsuleTargets is what a capsule holds, in reading order across its
+// landmarks: a skip link is its own target, a landmark's are inside it.
+func capsuleTargets(c capsule) []entryTarget {
+	var out []entryTarget
+	for _, n := range c.nodes {
+		if n.Kind == ir.Link {
+			out = append(out, entryTarget{n, 0})
+			continue
+		}
+		out = append(out, entryTargets(n)...)
+	}
+	return out
+}
+
+// capsuleHint is what the panel's bottom border says while the hand is
+// on a capsule: what it is — the landmark's role and name, or how many
+// of the kind — where the user is in it when a navigation says so
+// (entryCurrent), and how much is inside.
+func capsuleHint(c capsule, pageURL string) string {
+	var parts []string
+	first := c.nodes[0]
+	switch {
+	case c.kind == trayOther:
+		parts = append(parts, "outside main, in no landmark")
+	case c.kind == traySkip:
+		parts = append(parts, plural(len(c.nodes), "skip link"))
+	case len(c.nodes) == 1:
+		s := first.Role
+		if name := oneLine(first.Name); name != "" {
+			s += " " + truncate(name, 30)
+		}
+		parts = append(parts, s)
+	default:
+		parts = append(parts, plural(len(c.nodes), roleNoun(first.Role)))
+	}
+	if c.kind == trayNav {
+		for _, n := range c.nodes {
+			if w := entryCurrent(n, pageURL); w != "" && w != oneLine(n.Name) {
+				parts = append(parts, "at "+truncate(w, 30))
+				break
+			}
+		}
+	}
+	if n := len(capsuleTargets(c)); n > 0 {
+		parts = append(parts, itoa(n)+" inside")
+	}
+	return strings.Join(parts, " · ")
+}
+
+// mainOf is the page's main landmark, or nil.
+func mainOf(root *ir.Node) *ir.Node {
+	if root == nil {
+		return nil
+	}
+	var main *ir.Node
+	root.Walk(func(x *ir.Node) bool {
+		if main == nil && x.Kind == ir.Landmark && x.Role == "main" {
+			main = x
+		}
+		return main == nil
+	})
+	return main
+}
+
+// holdsLandmark says whether a landmark is somewhere under n.
+func holdsLandmark(n *ir.Node) bool {
+	found := false
+	n.Walk(func(x *ir.Node) bool {
+		if x != n && x.Kind == ir.Landmark {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// fitTray is how many capsules the tray holds at width: every one when
 // they all fit, else as many as leave room for the "+N" that stands for
-// the rest. The bar is a menu, not a line to scroll (ux.md §A.0.K).
-func fitBar(bar []capsule, width int) int {
+// the rest. The tray is a menu, not a line to scroll (ux.md §A.0.K).
+func fitTray(tray []capsule, width int) int {
 	used := 1
-	for _, c := range bar {
+	for _, c := range tray {
 		used += capsuleW(c.label) + 1
 	}
 	if used <= width {
-		return len(bar)
+		return len(tray)
 	}
-	for k := len(bar) - 1; k >= 0; k-- {
-		used = 1 + capsuleW("+"+itoa(len(bar)-k)) + 1
-		for _, c := range bar[:k] {
+	for k := len(tray) - 1; k >= 0; k-- {
+		used = 1 + capsuleW("+"+itoa(len(tray)-k)) + 1
+		for _, c := range tray[:k] {
 			used += capsuleW(c.label) + 1
 		}
 		if used <= width {
@@ -197,10 +406,14 @@ type renderer struct {
 	textW int // where flow wraps: width, or the measure when narrower
 	rows  []row
 	items []item
-	bar   []capsule // the page's chrome, off the rows (layout.bar)
-	flow  []atom
-	fold  map[cdp.BackendNodeID]bool
-	root  *ir.Node
+	// chrome is the page's chrome in reading order, off the rows, and
+	// other what lies outside main in no landmark when the page has a
+	// main: both go to the tray (buildTray).
+	chrome, other []*ir.Node
+	hasMain       bool
+	flow          []atom
+	fold          map[cdp.BackendNodeID]bool
+	root          *ir.Node
 	// A collapsed heading (2026-09-21) hides its section: everything after
 	// it up to the next heading of its level or higher, or the end of the
 	// landmark it is in. suppress is on while that is being skipped;
@@ -233,13 +446,15 @@ func render(root *ir.Node, width int) layout {
 }
 
 func renderWith(root *ir.Node, o renderOpts) layout {
-	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold, root: root, marks: map[*ir.Node]int{}, cellItem: -1}
+	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold, root: root, marks: map[*ir.Node]int{}, cellItem: -1,
+		hasMain: mainOf(root) != nil}
 	if o.measure > 0 && o.measure < r.width {
 		r.textW = o.measure
 	}
 	r.block(root, 0)
 	r.flush()
-	return layout{rows: r.rows, items: r.items, marks: r.marks, bar: r.bar, fit: fitBar(r.bar, r.width)}
+	tray := buildTray(r.chrome, r.other)
+	return layout{rows: r.rows, items: r.items, marks: r.marks, tray: tray, fit: fitTray(tray, r.width)}
 }
 
 // folded says whether a landmark is drawn shut: only when the user shut it.
@@ -274,51 +489,26 @@ func (r *renderer) landmarkRule(n *ir.Node, id int, folded bool) {
 	}})
 }
 
-// capsuleText is the label of a piece of page chrome — a banner, a
-// navigation or breadcrumb, a search, a sidebar, a footer, a dialog: an
-// entry, not a region (ux.md §A.0.K, 2026-09-21), and since 2026-09-22
-// a capsule on the bar under the URL rather than a row of the page. A
-// glyph for its kind and a word for where the user is in it, never the
-// landmark's role. What it holds is its item operations, not items: a
-// row of links invites walking sideways, and a terminal has no width to
-// spare for one. +N says how much is behind it.
-func capsuleText(n *ir.Node, pageURL string) string {
-	label := entryIcon(n)
-	if word := entryLabel(n, pageURL); word != "" {
-		label += " " + word
-	}
-	if c := len(entryTargets(n)); c > 0 {
-		label += " +" + itoa(c)
-	}
-	return label
-}
-
-// pageURL is the page's own URL, for the word on a navigation's capsule.
-func (r *renderer) pageURL() string {
-	if r.root != nil {
-		return r.root.URL
-	}
-	return ""
-}
+// A piece of page chrome — a banner, a navigation or breadcrumb, a
+// search, a sidebar, a footer, a dialog — is an entry, not a region
+// (ux.md §A.0.K, 2026-09-21): what it holds is its item operations, not
+// items, since a row of links invites walking sideways and a terminal
+// has no width to spare for one. Since 2026-09-22 it is a capsule on
+// the tray under the URL rather than a row of the page (capsule).
 
 // isSkipLink says whether a link is a skip link — the "Skip to main
 // content" an accessible page puts first, for a keyboard to pass the
-// header by: a same-page anchor whose text starts with skip, or which
-// the page's class calls one.
+// header by: a same-page anchor whose text starts with skip or jump to
+// (Wikipedia's "Jump to content"), or which the page's class calls one.
 func isSkipLink(n *ir.Node) bool {
 	if n.Kind != ir.Link || !strings.Contains(n.URL, "#") {
 		return false
 	}
-	return n.Skip || strings.HasPrefix(strings.ToLower(strings.TrimSpace(n.Text())), "skip")
+	text := strings.ToLower(strings.TrimSpace(n.Text()))
+	return n.Skip || strings.HasPrefix(text, "skip") || strings.HasPrefix(text, "jump to")
 }
 
-// skipText is a skip link's capsule: chrome, on the bar, and Enter is
-// what it says (app skipToContent).
-func skipText(n *ir.Node) string {
-	return glyphSkip + " " + oneLine(n.Text())
-}
-
-// isEntry says whether a landmark is page chrome, a capsule on the bar.
+// isEntry says whether a landmark is page chrome, a capsule on the tray.
 // main, article, region and form are the page itself and stay regions.
 func isEntry(n *ir.Node) bool {
 	if n.Kind != ir.Landmark {
@@ -352,11 +542,12 @@ func entryIcon(n *ir.Node) string {
 	return glyphFooter
 }
 
-// entryLabel is the word on an entry row: where the user is in a
+// entryLabel is the word for a piece of chrome: where the user is in a
 // navigation (entryCurrent); the site, for a banner — its first link
 // that is not a skip link, the logo's name; the box, for a search; else
-// the landmark's own name, else its first heading, else nothing — the
-// glyph says what it is.
+// the landmark's own name, else its first heading, else nothing. Since
+// 2026-09-22 a capsule's word is its kind's (trayKind.word) and this is
+// the hint's (capsuleHint) — and a dialog's title (capsule.title).
 func entryLabel(n *ir.Node, pageURL string) string {
 	if n.Skip {
 		return oneLine(n.Name) // "Skip to": what it is, there is no "where"
@@ -551,17 +742,31 @@ func (r *renderer) block(n *ir.Node, depth int) {
 	}
 	switch n.Kind {
 	case ir.Document:
-		r.children(n, depth)
+		if r.hasMain {
+			r.page(n, depth)
+		} else {
+			r.children(n, depth)
+		}
 	case ir.Landmark:
 		if isEntry(n) {
-			// Chrome, not content: a capsule on the bar under the URL,
+			// Chrome, not content: a capsule on the tray under the URL,
 			// and what it holds is its item operations, not items
 			// (ux.md §A.0.K; off the page's rows since 2026-09-22).
-			r.bar = append(r.bar, capsule{n, capsuleText(n, r.pageURL())})
+			r.chrome = append(r.chrome, n)
 			return
 		}
 		r.flush()
 		r.markNext = append(r.markNext, n)
+		if n.Role == "main" {
+			// The page itself: no rule, no item. With the chrome on the
+			// tray, main is where the page starts (2026-09-22).
+			r.lmDepth++
+			r.children(n, depth)
+			r.flush()
+			r.leaveLandmark()
+			r.gap = true
+			return
+		}
 		folded := r.folded(n)
 		id := r.newItem(n)
 		r.items[id].folded = folded
@@ -705,6 +910,59 @@ func (r *renderer) children(n *ir.Node, depth int) {
 			r.inline(c, -1, segPlain)
 		}
 	}
+}
+
+// page walks the document when it has a main: landmarks are drawn, or
+// go to the tray; a wrapper that holds one is walked through; anything
+// else — outside main, in no landmark: a promo strip, a cookie banner
+// that is a plain div — goes to the tray's "other" capsule rather than
+// above the content (2026-09-22).
+func (r *renderer) page(n *ir.Node, depth int) {
+	for _, c := range n.Children {
+		switch {
+		case c.Kind == ir.Landmark:
+			r.block(c, depth+1)
+		case holdsLandmark(c):
+			r.page(c, depth+1)
+		default:
+			// A skip link out here — Wikipedia's "Jump to content" — is
+			// the skip capsule's; what is left is other only when there
+			// is something to it, not a blank or the skip link alone.
+			r.chrome = append(r.chrome, skipLinksIn(c)...)
+			if visibleBeyondSkips(c) {
+				r.other = append(r.other, c)
+			}
+		}
+	}
+}
+
+// skipLinksIn is every skip link under n, n itself included.
+func skipLinksIn(n *ir.Node) []*ir.Node {
+	var out []*ir.Node
+	n.Walk(func(x *ir.Node) bool {
+		if isSkipLink(x) {
+			out = append(out, x)
+			return false
+		}
+		return true
+	})
+	return out
+}
+
+// visibleBeyondSkips says whether n has anything to show besides skip
+// links: a word of text, or a target.
+func visibleBeyondSkips(n *ir.Node) bool {
+	found := false
+	n.Walk(func(x *ir.Node) bool {
+		switch {
+		case found, isSkipLink(x):
+			return false
+		case x.Kind == ir.Text && strings.TrimSpace(x.Name) != "", x.IsItem():
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 // leaveLandmark is the end of a landmark's children: a collapsed
@@ -856,8 +1114,8 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		r.words(n.Name, item, kind)
 	case ir.Link:
 		if isSkipLink(n) && !r.inCell && r.cellItem < 0 {
-			// Chrome, not a link to follow: a capsule on the bar.
-			r.bar = append(r.bar, capsule{n, skipText(n)})
+			// Chrome, not a link to follow: the tray's skip capsule.
+			r.chrome = append(r.chrome, n)
 			return
 		}
 		id := r.itemOf(n)

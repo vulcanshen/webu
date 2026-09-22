@@ -4,16 +4,28 @@
 
 ### Changed
 
-- **The page's chrome is on the bar under the URL, not in the page.**
-  Banner, navigation, breadcrumb, search, sidebar, footer, dialog and
-  skip link — the entries that were one row each at the top of the
-  page — are capsules on the rule between the URL and the page, in
-  reading order, so the page itself starts at its content. Each still
-  reads `glyph word +N`; the ones the width leaves out sit behind a
-  `+N`, whose Enter lists them and puts the one chosen under the hand.
-  `k` from the top of the page goes up onto the bar, `h`/`l` walk it
-  and wrap, `j` comes back down; Enter on a capsule is its list, Space
-  its menu, as before. The Outline still reaches them.
+- **The page's chrome is on the tray under the URL, not in the page.**
+  Skip links, banner, navigation, breadcrumb, search, sidebar, footer,
+  dialog — the entries that were one row each at the top of the page —
+  are capsules on the rule between the URL and the page, so the page
+  itself starts at its content and main needs no rule of its own. One
+  capsule per kind, in a fixed order — `skip`, `header`, `nav`,
+  `search`, `sidebar`, `footer`, then each dialog by its name — every
+  navigation on the page behind the one `nav`, and, when the page has a
+  main, whatever lies outside it in no landmark (a promo strip, a cookie
+  banner that is a plain div) behind `other`. Each reads `󰍜 word +N`:
+  the word is the kind's, the count what is inside; where you are in a
+  navigation is the panel's hint while the hand is on it. The ones the
+  width leaves out sit behind a `+N`, whose Enter lists them and puts
+  the one chosen under the hand. `Esc` goes up onto the tray and back,
+  `k` from the top of the page goes up too, `h`/`l` walk it and wrap,
+  `j` comes back down; Enter on a capsule is its list — each navigation
+  under its name, the current link marked — Space its menu, as before;
+  a capsule with nothing to open shows its text. The Outline still
+  reaches them.
+- **An article's own header and footer are its lines**, not an
+  "unsupported" row: this Chromium names them `sectionheader` and
+  `sectionfooter`. A "Jump to content" link is a skip link too.
 
 ## [0.1.1] — 2026-09-21
 
