@@ -420,8 +420,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					"Continue anyway, for this tab, for as long as it is open?"},
 				accept: "continue", warn: true, action: confirmCert, tabID: t.id}, m.layer())
 		}
-		if i == m.shown && msg.err == nil && t.cursor >= 0 {
-			id := t.current().ID
+		if n := t.current(); i == m.shown && msg.err == nil && n != nil {
+			id := n.ID
 			return m, t.act(func(ctx context.Context) error { return page.Reveal(ctx, id) })
 		}
 		return m, nil
@@ -577,6 +577,7 @@ func (m *AppModel) enterSelect(typing bool) tea.Cmd {
 		return m.toast.show("no page to select from", toastInfo)
 	}
 	m.focus = panelPage
+	t.leaveBar()
 	m.sel.enter(t, typing)
 	return nil
 }
@@ -594,6 +595,7 @@ func (m *AppModel) leaveSelect() {
 	}
 	if i := t.lay.nearestItem(m.sel.row); i >= 0 {
 		t.cursor = i
+		t.leaveBar()
 	}
 	if t.frozen != nil {
 		msg := *t.frozen
@@ -1301,9 +1303,10 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 type optionsKind int
 
 const (
-	optItemMenu optionsKind = iota // an item's operations on their own: what an entry row holds (Enter on it)
+	optItemMenu optionsKind = iota // an item's operations on their own: what a capsule holds (Enter on it)
 	optSelect                      // a <select>'s options, keyed by index
 	optMoveTo                      // a bookmark's folder, keyed by index (bookmarks.go)
+	optBarMore                     // the capsules behind the bar's "+N", keyed bar:i (openBarMore)
 )
 
 // itemMenuItems is an item's operations by role (menu-only, no letters —
@@ -1411,7 +1414,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 	t := m.shownTab()
 	if n := t.current(); t != nil && n != nil {
 		items = append(items, menuItem{header: true, label: "item operation"})
-		items = append(items, itemMenuItems(n, t.lay.items[t.cursor].folded)...)
+		items = append(items, itemMenuItems(n, t.curFolded())...)
 		items = append(items,
 			menuItem{separator: true},
 			menuItem{header: true, label: "panel operation"})
@@ -1480,6 +1483,18 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(closeCmd, m.moveBookmark(m.moveRef, idx))
 	}
+	if m.optionsKind == optBarMore {
+		// A capsule from behind the bar's "+N": the hand goes to it — it
+		// takes the bar's last slot meanwhile — and its list opens in
+		// place of this one, on this one's layer.
+		t := m.shownTab()
+		i, err := strconv.Atoi(strings.TrimPrefix(key, "bar:"))
+		if t == nil || err != nil || i < 0 || i >= len(t.lay.bar) {
+			return m, m.options.close()
+		}
+		t.focusBar(i)
+		return m.openItemMenuAt(t.lay.bar[i].node, m.options.layer)
+	}
 	n := m.optionsFor
 	t := m.shownTab()
 	if t == nil {
@@ -1537,8 +1552,8 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	if strings.HasPrefix(key, "entry:") {
-		// Something inside an entry row, or a table cell, by its place in
-		// the row's operation list (itemMenuItems).
+		// Something inside a capsule, or a table cell, by its place in
+		// its operation list (itemMenuItems).
 		if n := t.current(); t != nil && n != nil && !m.busy() {
 			i, err := strconv.Atoi(strings.TrimPrefix(key, "entry:"))
 			if ts := entryTargets(n); err == nil && i >= 0 && i < len(ts) {
@@ -1718,6 +1733,9 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 //     Space menu still lists what it can do
 func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	t := m.shownTab()
+	if t != nil && t.onMore() {
+		return m.openBarMore(t)
+	}
 	n := t.current()
 	if t == nil || n == nil {
 		return m, nil
@@ -1788,7 +1806,9 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 // followed: its target is an anchor, and webu has nothing to scroll.
 func (m AppModel) skipToContent(t *tab) (tea.Model, tea.Cmd) {
 	at := t.firstItem()
-	if at <= t.cursor && t.cursor+1 < len(t.lay.items) {
+	if t.onBar() {
+		t.leaveBar()
+	} else if at <= t.cursor && t.cursor+1 < len(t.lay.items) {
 		at = t.cursor + 1
 	}
 	if at >= 0 {
@@ -1826,13 +1846,33 @@ func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
 }
 
 // openItemMenu is Enter on an item whose own operation IS its operation
-// list — an entry row, whose rows are what it holds. The same rows the
+// list — a capsule, whose rows are what it holds. The same rows the
 // Space menu's item half shows, on their own (ux.md §A.0.K).
 func (m AppModel) openItemMenu(n *ir.Node) (tea.Model, tea.Cmd) {
+	return m.openItemMenuAt(n, m.layer())
+}
+
+// openItemMenuAt is openItemMenu on a given layer: the one the list
+// replaces, when it opens in place of another (openBarMore).
+func (m AppModel) openItemMenuAt(n *ir.Node, layer int) (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	m.optionsFor, m.optionsKind = n, optItemMenu
-	m.options.setItems(itemMenuItems(n, t.lay.items[t.cursor].folded),
-		truncate(oneLine(nameOr(n.Name, n.Role)), 40), m.layer())
+	m.options.setItems(itemMenuItems(n, t.curFolded()),
+		truncate(oneLine(nameOr(n.Name, n.Role)), 40), layer)
+	return m, m.options.open()
+}
+
+// openBarMore is Enter on the bar's "+N": the capsules the width left
+// out, one row each. Choosing one puts the hand on it — it takes the
+// bar's last slot meanwhile — and opens its list (optionsKey).
+func (m AppModel) openBarMore(t *tab) (tea.Model, tea.Cmd) {
+	var items []menuItem
+	for i := t.lay.fit; i < len(t.lay.bar); i++ {
+		c := t.lay.bar[i]
+		items = append(items, menuItem{label: c.label, key: "bar:" + itoa(i), hint: c.node.Role})
+	}
+	m.optionsFor, m.optionsKind = nil, optBarMore
+	m.options.setItems(items, "more", m.layer())
 	return m, m.options.open()
 }
 

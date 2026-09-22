@@ -68,7 +68,13 @@ func (m *AppModel) openOutline() tea.Cmd {
 	m.outline.setItems(items, "Outline", m.layer())
 	// Open on the entry nearest the cursor, so the popup says where you
 	// are before it says where you could go.
-	if n := t.current(); n != nil {
+	if t.onBar() {
+		for i, e := range m.outlineFor {
+			if e.node == t.current() {
+				m.outline.cursor = i
+			}
+		}
+	} else if n := t.current(); n != nil {
 		if row := t.lay.items[t.cursor].first; row >= 0 {
 			for i, e := range m.outlineFor {
 				if r, ok := t.lay.marks[e.node]; ok && r <= row {
@@ -92,9 +98,14 @@ func (m AppModel) outlineKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if err != nil || i < 0 || i >= len(m.outlineFor) || t == nil {
 		return m, closeCmd
 	}
-	// A heading inside a folded landmark has no row yet: open the way to it.
-	t.reveal(m.outlineFor[i].node, m.pageW())
-	t.jumpTo(m.outlineFor[i].node, m.pageVisible())
+	if c := t.capsuleOf(m.outlineFor[i].node); c >= 0 {
+		// Chrome: on the bar, not in the page.
+		t.focusBar(c)
+	} else {
+		// A heading inside a folded landmark has no row yet: open the way to it.
+		t.reveal(m.outlineFor[i].node, m.pageW())
+		t.jumpTo(m.outlineFor[i].node, m.pageVisible())
+	}
 	m.focus = panelPage
 	return m, closeCmd
 }
@@ -107,6 +118,7 @@ func (t *tab) jumpTo(n *ir.Node, visible int) {
 	if !ok {
 		return
 	}
+	t.leaveBar()
 	t.cursor = -1
 	for i, it := range t.lay.items {
 		if it.node == n || it.first >= row {

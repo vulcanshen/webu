@@ -18,9 +18,9 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `RootWebArea` | document | — | the page; its name is the title |
 | `StaticText` | text | — | a run of text |
 | `Video` | media | click | placeholder; menu: yank url |
-| `alertdialog` | landmark | — | page chrome: a dialog, one row; its buttons behind Enter |
+| `alertdialog` | landmark | — | page chrome: a dialog, a capsule on the bar under the URL; its buttons behind Enter |
 | `article` | landmark | — | landmark region, enters the outline |
-| `banner` | landmark | — | page chrome: one row, an entry; what it holds is behind Enter |
+| `banner` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `blockquote` | quote | — | indented quotation |
 | `button` | button | click | [ name ]; Enter presses |
 | `cell` | cell | — | one table cell |
@@ -28,10 +28,10 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `code` | code | — | monospace; a block when it spans lines |
 | `columnheader` | cell | — | a header cell |
 | `combobox` | combobox | choose | name [value]; Enter lists the options |
-| `complementary` | landmark | — | page chrome: one row, an entry; what it holds is behind Enter |
-| `contentinfo` | landmark | — | page chrome: one row, an entry; what it holds is behind Enter |
+| `complementary` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
+| `contentinfo` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `definition` | quote | — | <dd>: indented under its term |
-| `dialog` | landmark | — | page chrome: a dialog, one row; its buttons behind Enter |
+| `dialog` | landmark | — | page chrome: a dialog, a capsule on the bar under the URL; its buttons behind Enter |
 | `figure` | group | — | a figure: its image and caption, on their own lines |
 | `form` | landmark | — | landmark region, enters the outline |
 | `grid` | table | — | columns aligned, widths shrunk to fit |
@@ -44,14 +44,14 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `list` | list | — | the container of list items |
 | `listitem` | listitem | — | one item, with the marker Chromium drew |
 | `main` | landmark | — | landmark region, enters the outline |
-| `navigation` | landmark | — | page chrome: one row, an entry; what it holds is behind Enter |
+| `navigation` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `option` | option | — | one choice of a combobox |
 | `paragraph` | paragraph | — | a block of text, wrapped to width |
 | `radio` | check | click | (o) name; Enter selects |
 | `region` | landmark | — | landmark region, enters the outline |
 | `row` | row | — | one table row |
 | `rowheader` | cell | — | a header cell |
-| `search` | landmark | — | page chrome: one row, an entry; what it holds is behind Enter |
+| `search` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `searchbox` | textbox | edit | name ____value____; Enter edits in a popup |
 | `separator` | separator | — | a horizontal rule |
 | `spinbutton` | textbox | edit | a number field; edits like a textbox |

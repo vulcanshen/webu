@@ -10,7 +10,8 @@ import (
 // the URL, the second a rule, and the rest is the laid-out IR with the
 // cursor on one item.
 
-// pageHeaderRows is the URL row and the rule under it.
+// pageHeaderRows is the URL row and the rule under it, which carries
+// the page's chrome as capsules (barRow).
 const pageHeaderRows = 2
 
 // pageBody draws panel [2]'s inside at innerW × innerH.
@@ -36,7 +37,7 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		url := lipgloss.NewStyle().Foreground(urlColor).Render(fitURL(t.url, innerW-3))
 		out = append(out, dim.Render(" "+icon+" ")+url+strings.Repeat(" ", max(0, innerW-3-dispW(fitURL(t.url, innerW-3)))))
 	}
-	out = append(out, dim.Render(strings.Repeat("─", innerW)))
+	out = append(out, m.barRow(t, innerW))
 	rest := innerH - pageHeaderRows
 	switch {
 	case m.sel.on && t.root != nil:
@@ -122,7 +123,7 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 			}
 			used += dispW(text)
 			switch {
-			case s.item >= 0 && s.item == t.cursor && m.focus == panelPage:
+			case s.item >= 0 && s.item == t.cursor && m.focus == panelPage && !t.onBar():
 				b.WriteString(cur.Render(text))
 			case s.item >= 0 && s.item == t.cursor:
 				b.WriteString(curOff.Render(text))
@@ -172,8 +173,6 @@ func segStyles() map[segKind]lipgloss.Style {
 		segCode:        lipgloss.NewStyle().Foreground(codeColor),
 		segUnsupported: lipgloss.NewStyle().Foreground(dimColor),
 		segLandmark:    lipgloss.NewStyle().Foreground(dimColor).Bold(true),
-		segNavBar:      lipgloss.NewStyle().Foreground(focusColor),
-		segNav:         lipgloss.NewStyle().Foreground(textColor).Background(codeBg),
 		segTableHeader: lipgloss.NewStyle().Foreground(textColor).Bold(true), // the header row's ground tells it apart (pagepanel)
 	}
 }
@@ -233,4 +232,65 @@ func panelFrameLegend(innerW int, body []string, title, legend string, tone bord
 	}
 	lines[len(lines)-1] = bs.Render("╰"+strings.Repeat("─", innerW-lw-1)) + legend + bs.Render("─╯")
 	return strings.Join(lines, "\n")
+}
+
+// barRow is the rule under the URL, and on it the page's chrome as
+// capsules (ux.md §A.0.K, 2026-09-22): a banner, each navigation and
+// breadcrumb, a search, a sidebar, a footer, a dialog, a skip link — a
+// glyph for the kind, a word for where the user is in it, +N for what
+// is behind it — in reading order, and a "+N" for the ones the width
+// left out. Off the page, so the page starts at its content. The hand
+// comes up here on k from the page's top, walks them on h/l, goes back
+// down on j; Enter on one is its list, Space its menu (tab.moveItem).
+// A bare rule when the page has no chrome.
+func (m AppModel) barRow(t *tab, innerW int) string {
+	dim := lipgloss.NewStyle().Foreground(dimColor)
+	if len(t.lay.bar) == 0 {
+		return dim.Render(strings.Repeat("─", innerW))
+	}
+	var b strings.Builder
+	b.WriteString(dim.Render("─"))
+	used := 1
+	for _, s := range t.barSlots() {
+		label := "+" + itoa(len(t.lay.bar)-t.lay.fit)
+		if s >= 0 {
+			label = t.lay.bar[s].label
+		}
+		if used+capsuleW(label)+1 > innerW {
+			// Only the one under the hand is worth cutting to fit: a
+			// capsule brought in from behind the +N can be wider than
+			// the slot it took.
+			if s != t.barSlot() || innerW-used-5 < 1 {
+				break
+			}
+			label = truncate(label, innerW-used-5)
+		}
+		lit := s == t.barSlot() && !m.sel.on
+		b.WriteString(capsuleChip(label, lit, m.focus == panelPage, t.loading, s == barMore))
+		b.WriteString(dim.Render("─"))
+		used += capsuleW(label) + 1
+	}
+	b.WriteString(dim.Render(strings.Repeat("─", max(0, innerW-used))))
+	return b.String()
+}
+
+// capsuleChip draws one capsule of the bar: round caps around the label
+// on its ground — surface0 at rest, dim text for the "+N"; the hand's
+// colour under the hand, or the unfocused register when the keys are in
+// the other panel; all dim while the page is on its way.
+func capsuleChip(label string, lit, focused, dimmed, more bool) string {
+	fill, ink := codeBg, textColor
+	switch {
+	case dimmed:
+		ink = dimColor
+	case lit && focused:
+		fill, ink = handColor, lipgloss.Color(baseHex)
+	case lit:
+		fill, ink = borderDim, lipgloss.Color(baseHex)
+	case more:
+		ink = dimColor
+	}
+	cap := lipgloss.NewStyle().Foreground(fill)
+	body := lipgloss.NewStyle().Foreground(ink).Background(fill)
+	return cap.Render(capLeft) + body.Render(" "+label+" ") + cap.Render(capRight)
 }
