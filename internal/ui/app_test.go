@@ -949,38 +949,42 @@ func TestPageParts(t *testing.T) {
 	}
 
 	// Esc puts the hand on the part being shown — which is where the eye
-	// already is — and h/l walk the others without changing what is on
-	// screen.
+	// already is — and h/l show each part as they reach it: moving IS
+	// choosing, so there is no second key to press (user, 2026-09-23).
 	d.key("esc")
 	if !p.onPagetab() || p.parts[p.pagetabIndex()].kind != partMain {
 		t.Errorf("Esc goes to the part on screen: %d", p.pagetabIndex())
 	}
 	d.key("l")
-	if p.at != partMain {
-		t.Error("walking the pagetab does not change what is shown")
-	}
-	if p.parts[p.pagetabIndex()].kind == partMain {
-		t.Error("l moves the hand")
-	}
-
-	// Enter shows the part the hand is on, and the panel becomes it.
 	want := p.parts[p.pagetabIndex()].kind
-	d.key("enter")
-	if p.at != want || p.onPagetab() {
-		t.Errorf("Enter shows the part and comes back down: at=%s onPagetab=%v", p.at.word(), p.onPagetab())
+	if want == partMain {
+		t.Fatal("l moves the hand")
+	}
+	if p.at != want {
+		t.Errorf("l shows what it moves to: hand on %s, showing %s", want.word(), p.at.word())
 	}
 	if v := dumpLayout(p.lay); strings.Contains(v, "The body itself") {
-		t.Errorf("the panel should be showing %s:\n%s", want.word(), v)
+		t.Errorf("the panel should already be showing %s:\n%s", want.word(), v)
 	}
 
-	// Esc again, back to the body, and the page is whole again.
+	// Enter is the confirmation: it leaves the part where it is and takes
+	// the hand back to the page.
+	d.key("enter")
+	if p.at != want || p.onPagetab() {
+		t.Errorf("Enter keeps the part and comes back down: at=%s onPagetab=%v", p.at.word(), p.onPagetab())
+	}
+
+	// Esc again, walk back round to the body, and the page is whole.
 	d.key("esc")
 	for p.parts[p.pagetabIndex()].kind != partMain {
 		d.key("l")
 	}
-	d.key("enter")
 	if !strings.Contains(dumpLayout(p.lay), "The body itself") {
 		t.Errorf("back on the body:\n%s", dumpLayout(p.lay))
+	}
+	d.key("enter")
+	if p.onPagetab() || p.at != partMain {
+		t.Errorf("and Enter stays on it: at=%s onPagetab=%v", p.at.word(), p.onPagetab())
 	}
 }
 

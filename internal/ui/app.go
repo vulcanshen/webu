@@ -1547,7 +1547,7 @@ func pagetabItem(t *tab) menuItem {
 			hint: "this page is all one part", disabled: true}
 	case t.onPagetab():
 		return menuItem{label: "[Esc] Back to the page", key: "pagetab",
-			hint: "leave the pagetab"}
+			hint: "h/l show a part, Enter stays on it"}
 	}
 	return menuItem{label: "[Esc] Page parts", key: "pagetab",
 		hint: "header, body, others, footer"}
@@ -1909,10 +1909,12 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	if t != nil {
-		if i := t.pagetabIndex(); i >= 0 && i < len(t.parts) {
-			// A tab on the pagetab: Enter shows that part, the way Enter
-			// on panel [1] shows a browser tab.
-			t.showPart(t.parts[i].kind, m.pageW(), m.pageVisible())
+		if t.onPagetab() {
+			// The pagetab: h and l have been showing each part as they
+			// reached it, so the part under the hand is already the one
+			// on screen. Enter is the word for "yes, this one" — it takes
+			// the hand back down to the page (user, 2026-09-23).
+			t.leavePagetab()
 			return m, nil
 		}
 		if t.listing() {

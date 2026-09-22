@@ -216,12 +216,13 @@ func (t *tab) partIndex(k partKind) int {
 	return 0
 }
 
-// showPart switches the panel to a part and puts the hand back in the
-// page, at its start — the way opening anything else does.
+// showPart switches the panel to a part, at its start — the way opening
+// anything else does. Where the hand is is not its business: on the
+// pagetab the hand stays up there and shows each part as it reaches it
+// (tab.stepPagetab).
 func (t *tab) showPart(k partKind, width, visible int) {
 	t.at = k
 	t.drill = nil
-	t.leavePagetab()
 	t.relayout(width)
 	t.cursor, t.top = t.firstItem(), 0
 	if t.cursor >= 0 {
@@ -231,24 +232,19 @@ func (t *tab) showPart(k partKind, width, visible int) {
 }
 
 // partHint is what the panel's bottom border says while the hand is on
-// the pagetab: how much is in the part under it, and — since the hand can
-// be on a part that is not the one on screen — whether Enter would change
-// anything.
+// the pagetab: how much is in the part under it. It no longer says
+// whether that part is the one on screen, because it always is now — the
+// hand and the panel move together (pagepanel.partChain).
 func partHint(t *tab) string {
 	i := t.pagetabIndex()
 	if i < 0 || i >= len(t.parts) {
 		return ""
 	}
-	p := t.parts[i]
 	n := 0
-	for _, node := range p.nodes {
+	for _, node := range t.parts[i].nodes {
 		n += countItems(node)
 	}
-	hint := plural(n, "item")
-	if p.kind == t.at {
-		hint += " · showing"
-	}
-	return hint
+	return plural(n, "item") + " · Enter to stay"
 }
 
 // withLead puts the menu glyph on the chain's first segment. The pagetab
