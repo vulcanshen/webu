@@ -43,12 +43,12 @@ type tab struct {
 	layW   int
 	cursor int // index into lay.items; -1 when the page has none
 	top    int // first page row on screen
-	// bar is where the hand is when it is on the bar under the URL
-	// rather than in the page (pagepanel.barRow): 0 in the page, i+1 on
-	// capsule i of lay.bar, barMore on the "+N" that stands for the
+	// tray is where the hand is when it is on the tray under the URL
+	// rather than in the page (pagepanel.trayRow): 0 in the page, i+1 on
+	// capsule i of lay.tray, trayMore on the "+N" that stands for the
 	// capsules the width left out. Zero in the page, so a tab starts
 	// there. The cursor keeps its place meanwhile: j comes back to it.
-	bar int
+	tray int
 
 	// gen guards captures: a result from before the latest navigation is
 	// thrown away rather than drawn over the newer page.
@@ -383,7 +383,7 @@ func (t *tab) apply(msg pageMsg, width int) {
 	if t.cursor >= 0 && t.cursor < len(t.lay.items) {
 		wasID = int64(t.lay.items[t.cursor].node.ID)
 	}
-	wasBar, wasMore := t.onBar(), t.onMore()
+	wasBar, wasMore := t.onTray(), t.onMore()
 	var wasBarID cdp.BackendNodeID
 	if n := t.current(); wasBar && n != nil {
 		wasBarID = n.ID
@@ -393,7 +393,7 @@ func (t *tab) apply(msg pageMsg, width int) {
 	t.relayout(width)
 	if fresh {
 		t.cursor, t.top = t.firstItem(), 0
-		t.leaveBar()
+		t.leaveTray()
 		return
 	}
 	t.cursor = -1
@@ -409,14 +409,14 @@ func (t *tab) apply(msg pageMsg, width int) {
 	if wasBar {
 		// The hand stays on the same capsule through a redraw, by the
 		// node behind it; on the "+N" while there still is one.
-		t.leaveBar()
-		for i, c := range t.lay.bar {
-			if wasBarID != 0 && c.node.ID == wasBarID {
-				t.focusBar(i)
+		t.leaveTray()
+		for i, c := range t.lay.tray {
+			if wasBarID != 0 && c.nodes[0].ID == wasBarID {
+				t.focusTray(i)
 				break
 			}
 		}
-		if wasMore && t.lay.fit < len(t.lay.bar) {
+		if wasMore && t.lay.fit < len(t.lay.tray) {
 			t.focusMore()
 		}
 	}
@@ -425,24 +425,34 @@ func (t *tab) apply(msg pageMsg, width int) {
 
 // firstItem is where the cursor starts on a new page: the first item
 // inside main, else the first item at all, else -1. The chrome is on
-// the bar, not in the page, so a page starts at its content.
+// the tray, not in the page, so a page starts at its content.
+// firstItem is where the cursor starts on a new page: the first item
+// inside main — main has no rule of its own, so by its row (marks) —
+// else the first item at all, else -1. The chrome is on the tray, not
+// in the page, so a page starts at its content.
+// firstItem is where the cursor starts on a new page: the first item
+// inside main — main has no rule of its own, so by its row (marks) —
+// else the first item at all, else -1. The chrome is on the tray, not
+// in the page, so a page starts at its content.
 func (t *tab) firstItem() int {
 	if len(t.lay.items) == 0 {
 		return -1
 	}
-	at := 0
-	for i, it := range t.lay.items {
-		if it.node.Kind == ir.Landmark && it.node.Role == "main" {
-			for j := i + 1; j < len(t.lay.items); j++ {
-				if t.lay.items[j].node.Kind != ir.Landmark {
-					at = j
-					break
+	if main := mainOf(t.root); main != nil {
+		if row, ok := t.lay.marks[main]; ok {
+			for i, it := range t.lay.items {
+				if it.first >= row && it.node.Kind != ir.Landmark {
+					return i
 				}
 			}
-			break
+			for i, it := range t.lay.items {
+				if it.first >= row {
+					return i
+				}
+			}
 		}
 	}
-	return at
+	return 0
 }
 
 // jumpToAnchor puts the cursor on the element a fragment names when it
@@ -461,7 +471,7 @@ func (t *tab) jumpToAnchor(frag string, visible int) bool {
 		for hop := 0; id != 0 && hop < 256; hop++ {
 			if id == target {
 				t.cursor = i
-				t.leaveBar()
+				t.leaveTray()
 				t.scrollToCursor(visible)
 				return true
 			}
@@ -478,7 +488,7 @@ func (t *tab) jumpToAnchor(frag string, visible int) bool {
 	for id, hop := t.parents[target], 0; id != 0 && hop < 256; id, hop = t.parents[id], hop+1 {
 		if i, ok := byID[id]; ok {
 			t.cursor = i
-			t.leaveBar()
+			t.leaveTray()
 			t.scrollToCursor(visible)
 			return true
 		}
@@ -492,9 +502,9 @@ func (t *tab) relayout(width int) {
 	}
 	t.lay = renderWith(t.root, renderOpts{width: max(1, width), measure: t.measure, fold: t.fold})
 	t.layW = width
-	// The bar may have lost the capsule the hand was on, or its "+N".
-	if i := t.barIndex(); i >= len(t.lay.bar) || (t.onMore() && t.lay.fit >= len(t.lay.bar)) {
-		t.leaveBar()
+	// The tray may have lost the capsule the hand was on, or its "+N".
+	if i := t.trayIndex(); i >= len(t.lay.tray) || (t.onMore() && t.lay.fit >= len(t.lay.tray)) {
+		t.leaveTray()
 	}
 }
 
@@ -511,7 +521,7 @@ func (t *tab) textWidth() int {
 // cursor on it through the re-layout.
 func (t *tab) toggleFold(width int) {
 	n := t.current()
-	if t.onBar() || n == nil || (n.Kind != ir.Landmark && n.Kind != ir.Heading) {
+	if t.onTray() || n == nil || (n.Kind != ir.Landmark && n.Kind != ir.Heading) {
 		return
 	}
 	if t.fold == nil {
@@ -592,93 +602,117 @@ func (t *tab) scrollToCursor(visible int) {
 }
 
 // current is the item under the cursor, or nil.
-// current is what the hand is on: the capsule, on the bar; else the
-// item under the cursor; nil on the bar's "+N", or on nothing.
+// current is what the hand is on: the capsule, on the tray; else the
+// item under the cursor; nil on the tray's "+N", or on nothing.
+// current is what the hand is on: the capsule's first landmark, on the
+// tray; else the item under the cursor; nil on the tray's "+N", or on
+// nothing.
+// current is what the hand is on: the capsule's first landmark, on the
+// tray; else the item under the cursor; nil on the tray's "+N", or on
+// nothing.
 func (t *tab) current() *ir.Node {
 	if t == nil {
 		return nil
 	}
-	if i := t.barIndex(); i >= 0 {
-		if i < len(t.lay.bar) {
-			return t.lay.bar[i].node
-		}
-		return nil
+	if c := t.currentCapsule(); c != nil {
+		return c.nodes[0]
 	}
-	if t.onMore() || t.cursor < 0 || t.cursor >= len(t.lay.items) {
+	if t.onTray() || t.cursor < 0 || t.cursor >= len(t.lay.items) {
 		return nil
 	}
 	return t.lay.items[t.cursor].node
 }
 
-// curFolded is whether the item under the cursor is a landmark drawn
-// shut — never on the bar, whose capsules do not fold.
-func (t *tab) curFolded() bool {
-	return !t.onBar() && t.cursor >= 0 && t.cursor < len(t.lay.items) && t.lay.items[t.cursor].folded
+// currentCapsule is the capsule under the hand, or nil.
+func (t *tab) currentCapsule() *capsule {
+	if i := t.trayIndex(); i >= 0 && i < len(t.lay.tray) {
+		return &t.lay.tray[i]
+	}
+	return nil
 }
 
-// The hand can be on the bar under the URL instead of in the page
-// (pagepanel.barRow). tab.bar encodes where: 0 in the page, i+1 on
-// capsule i, barMore on the "+N" at the bar's end.
-const barMore = -2
+// currentTargets is what Enter's list holds for what the hand is on: a
+// capsule's targets across its landmarks, else an item's inside; and
+// whether they are a search's, whose every box is one.
+func (t *tab) currentTargets() ([]entryTarget, bool) {
+	if c := t.currentCapsule(); c != nil {
+		return capsuleTargets(*c), c.kind == traySearch
+	}
+	if n := t.current(); n != nil {
+		return entryTargets(n), n.Role == "search"
+	}
+	return nil, false
+}
 
-func (t *tab) onBar() bool    { return t.bar != 0 }
-func (t *tab) onMore() bool   { return t.bar == barMore }
-func (t *tab) leaveBar()      { t.bar = 0 }
-func (t *tab) focusBar(i int) { t.bar = i + 1 }
-func (t *tab) focusMore()     { t.bar = barMore }
+// curFolded is whether the item under the cursor is a landmark drawn
+// shut — never on the tray, whose capsules do not fold.
+func (t *tab) curFolded() bool {
+	return !t.onTray() && t.cursor >= 0 && t.cursor < len(t.lay.items) && t.lay.items[t.cursor].folded
+}
 
-// barIndex is the capsule the hand is on, or -1.
-func (t *tab) barIndex() int {
-	if t.bar > 0 {
-		return t.bar - 1
+// The hand can be on the tray under the URL instead of in the page
+// (pagepanel.trayRow). tab.tray encodes where: 0 in the page, i+1 on
+// capsule i, trayMore on the "+N" at the tray's end.
+const trayMore = -2
+
+func (t *tab) onTray() bool    { return t.tray != 0 }
+func (t *tab) onMore() bool    { return t.tray == trayMore }
+func (t *tab) leaveTray()      { t.tray = 0 }
+func (t *tab) focusTray(i int) { t.tray = i + 1 }
+func (t *tab) focusMore()      { t.tray = trayMore }
+
+// trayIndex is the capsule the hand is on, or -1.
+func (t *tab) trayIndex() int {
+	if t.tray > 0 {
+		return t.tray - 1
 	}
 	return -1
 }
 
-// barSlot is the slot the hand is on: a capsule index, barMore, or -1
+// traySlot is the slot the hand is on: a capsule index, trayMore, or -1
 // when the hand is in the page.
-func (t *tab) barSlot() int {
-	if t.bar == barMore {
-		return barMore
+func (t *tab) traySlot() int {
+	if t.tray == trayMore {
+		return trayMore
 	}
-	return t.barIndex()
+	return t.trayIndex()
 }
 
-// focusSlot puts the hand on a slot as barSlots lists them.
+// focusSlot puts the hand on a slot as traySlots lists them.
 func (t *tab) focusSlot(s int) {
-	if s == barMore {
+	if s == trayMore {
 		t.focusMore()
 	} else {
-		t.focusBar(s)
+		t.focusTray(s)
 	}
 }
 
-// barSlots is the bar left to right: the capsules the width holds, and
-// barMore last when it left some out. A capsule chosen from behind the
-// "+N" (app openBarMore) takes the last slot while the hand is on it.
-func (t *tab) barSlots() []int {
-	fit, n := t.lay.fit, len(t.lay.bar)
+// traySlots is the tray left to right: the capsules the width holds, and
+// trayMore last when it left some out. A capsule chosen from behind the
+// "+N" (app openTrayMore) takes the last slot while the hand is on it.
+func (t *tab) traySlots() []int {
+	fit, n := t.lay.fit, len(t.lay.tray)
 	slots := make([]int, 0, fit+1)
 	for i := 0; i < fit; i++ {
 		slots = append(slots, i)
 	}
 	if fit < n {
-		if i := t.barIndex(); i >= fit {
+		if i := t.trayIndex(); i >= fit {
 			if fit > 0 {
 				slots[fit-1] = i
 			} else {
 				slots = append(slots, i)
 			}
 		}
-		slots = append(slots, barMore)
+		slots = append(slots, trayMore)
 	}
 	return slots
 }
 
-// enterBar puts the hand on the bar's first slot; false when the page
+// enterTray puts the hand on the tray's first slot; false when the page
 // has no chrome.
-func (t *tab) enterBar() bool {
-	slots := t.barSlots()
+func (t *tab) enterTray() bool {
+	slots := t.traySlots()
 	if len(slots) == 0 {
 		return false
 	}
@@ -686,17 +720,17 @@ func (t *tab) enterBar() bool {
 	return true
 }
 
-// stepBar walks the hand along the bar's slots, wrapping at either end
+// stepTray walks the hand along the tray's slots, wrapping at either end
 // the way every menu of the family does.
-func (t *tab) stepBar(k string) {
-	slots := t.barSlots()
+func (t *tab) stepTray(k string) {
+	slots := t.traySlots()
 	if len(slots) == 0 {
-		t.leaveBar()
+		t.leaveTray()
 		return
 	}
 	at := 0
 	for i, s := range slots {
-		if s == t.barSlot() {
+		if s == t.traySlot() {
 			at = i
 		}
 	}
@@ -708,11 +742,14 @@ func (t *tab) stepBar(k string) {
 	t.focusSlot(slots[(at+len(slots))%len(slots)])
 }
 
-// capsuleOf is n's index on the bar, or -1 when it is not chrome.
+// capsuleOf is the index of the capsule n is in, or -1 when it is not
+// chrome.
 func (t *tab) capsuleOf(n *ir.Node) int {
-	for i, c := range t.lay.bar {
-		if c.node == n {
-			return i
+	for i, c := range t.lay.tray {
+		for _, x := range c.nodes {
+			if x == n {
+				return i
+			}
 		}
 	}
 	return -1
@@ -726,34 +763,34 @@ func (t *tab) capsuleOf(n *ir.Node) int {
 // with items on them: j/k step to the nearest row that has one, landing on
 // the item closest to the column the cursor was in; h/l walk the items of
 // the row. Nothing wraps — the page has a top and a bottom (ux.md §3) —
-// except that above the top is the bar under the URL, the page's chrome
-// (pagepanel.barRow): k from the top puts the hand on its first capsule,
+// except that above the top is the tray under the URL, the page's chrome
+// (pagepanel.trayRow): k from the top puts the hand on its first capsule,
 // h/l walk the capsules and wrap the way a menu does, j comes back down
 // to the item the hand left, and any other key comes down first and then
 // does what it does.
 func (t *tab) moveItem(k string, visible int) {
-	if t.onBar() {
+	if t.onTray() {
 		switch k {
 		case "h", "left", "l", "right":
-			t.stepBar(k)
+			t.stepTray(k)
 			return
 		case "k", "up":
 			return
 		case "j", "down":
-			t.leaveBar()
+			t.leaveTray()
 			if t.cursor < 0 && len(t.lay.items) > 0 {
 				t.cursor = t.firstItem()
 			}
 			t.scrollToCursor(visible)
 			return
 		}
-		t.leaveBar()
+		t.leaveTray()
 	}
 	n := len(t.lay.items)
 	if n == 0 {
 		// No items: the keys scroll the text instead — and k at the top
-		// goes up onto the bar.
-		if (k == "k" || k == "up") && t.top == 0 && t.enterBar() {
+		// goes up onto the tray.
+		if (k == "k" || k == "up") && t.top == 0 && t.enterTray() {
 			return
 		}
 		t.top = moveScroll(t.top, max(0, len(t.lay.rows)-visible), k, visible)
@@ -766,7 +803,7 @@ func (t *tab) moveItem(k string, visible int) {
 	case "k", "up":
 		if at := t.rowStep(-1); at != t.cursor {
 			t.cursor = at
-		} else if t.enterBar() {
+		} else if t.enterTray() {
 			return
 		}
 	case "l", "right":

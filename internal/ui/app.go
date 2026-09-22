@@ -577,7 +577,7 @@ func (m *AppModel) enterSelect(typing bool) tea.Cmd {
 		return m.toast.show("no page to select from", toastInfo)
 	}
 	m.focus = panelPage
-	t.leaveBar()
+	t.leaveTray()
 	m.sel.enter(t, typing)
 	return nil
 }
@@ -595,7 +595,7 @@ func (m *AppModel) leaveSelect() {
 	}
 	if i := t.lay.nearestItem(m.sel.row); i >= 0 {
 		t.cursor = i
-		t.leaveBar()
+		t.leaveTray()
 	}
 	if t.frozen != nil {
 		msg := *t.frozen
@@ -703,6 +703,20 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case m.sel.on:
 			return m.selectKey(msg)
+		case m.focus == panelPage:
+			// Nothing up, no mode on: Esc is the way onto the tray under
+			// the URL — the page's chrome — and back off it (2026-09-22).
+			if m.toast.anim.owns() {
+				return m, m.toast.close()
+			}
+			if t := m.shownTab(); t != nil {
+				if t.onTray() {
+					t.leaveTray()
+				} else {
+					t.enterTray()
+				}
+			}
+			return m, nil
 		}
 		return m.closeTop()
 	}
@@ -895,7 +909,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		t := m.shownTab()
 		if navKeys[k] && t != nil {
 			t.moveItem(k, m.pageVisible())
-			if n := t.current(); n != nil {
+			if n := t.current(); n != nil && n.ID != 0 {
 				id := n.ID
 				return m, t.act(func(ctx context.Context) error { return page.Reveal(ctx, id) })
 			}
@@ -1306,7 +1320,7 @@ const (
 	optItemMenu optionsKind = iota // an item's operations on their own: what a capsule holds (Enter on it)
 	optSelect                      // a <select>'s options, keyed by index
 	optMoveTo                      // a bookmark's folder, keyed by index (bookmarks.go)
-	optBarMore                     // the capsules behind the bar's "+N", keyed bar:i (openBarMore)
+	optTrayMore                    // the capsules behind the tray's "+N", keyed tray:i (openTrayMore)
 )
 
 // itemMenuItems is an item's operations by role (menu-only, no letters —
@@ -1383,26 +1397,73 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 // targetItems is what an entry row or a table cell holds, one row each
 // — a link, a button, a field, a check box, a select — with the nesting
 // of its lists as indent; the key is the target's place (dispatch).
+// targetItems is what a table cell (or a piece of chrome) holds, one row
+// each — a link, a button, a field, a check box, a select — with the
+// nesting of its lists as indent; the key is the target's place
+// (dispatch).
 func targetItems(n *ir.Node) []menuItem {
 	var items []menuItem
 	for i, t := range entryTargets(n) {
-		label := oneLine(t.node.Name)
-		if label == "" {
-			label = oneLine(nameOr(t.node.Text(), t.node.URL))
+		items = append(items, targetRow(t, i))
+	}
+	return items
+}
+
+// targetRow is one target's row: its name, what it is as the hint —
+// and "here" first when it is where the user is (aria-current) — its
+// place as the key.
+func targetRow(t entryTarget, i int) menuItem {
+	label := oneLine(t.node.Name)
+	if label == "" {
+		label = oneLine(nameOr(t.node.Text(), t.node.URL))
+	}
+	hint := oneLine(t.node.URL)
+	switch t.node.Kind {
+	case ir.Button:
+		hint = "button"
+	case ir.Textbox:
+		hint = "a field: type into it"
+	case ir.Check:
+		hint = "check box"
+	case ir.Combobox:
+		hint = "select"
+	}
+	if t.node.Current {
+		hint = "here · " + hint
+	}
+	return menuItem{label: strings.Repeat("  ", t.depth) + truncate(label, 60),
+		key: "entry:" + itoa(i), hint: hint}
+}
+
+// capsuleMenuItems is a capsule's list: what it holds, one row each,
+// and when it holds several landmarks — a page's every navigation — a
+// header row names each before its rows. The keys run across them
+// (capsuleTargets, dispatch).
+func capsuleMenuItems(c capsule) []menuItem {
+	var items []menuItem
+	at := 0
+	several := len(c.nodes) > 1
+	for i, n := range c.nodes {
+		if n.Kind == ir.Link {
+			items = append(items, targetRow(entryTarget{n, 0}, at))
+			at++
+			continue
 		}
-		hint := oneLine(t.node.URL)
-		switch t.node.Kind {
-		case ir.Button:
-			hint = "button"
-		case ir.Textbox:
-			hint = "a field: type into it"
-		case ir.Check:
-			hint = "check box"
-		case ir.Combobox:
-			hint = "select"
+		ts := entryTargets(n)
+		if several && len(ts) > 0 {
+			name := oneLine(n.Name)
+			if name == "" {
+				name = n.Role + " " + itoa(i+1)
+			}
+			items = append(items, menuItem{header: true, label: truncate(name, 40)})
 		}
-		items = append(items, menuItem{label: strings.Repeat("  ", t.depth) + truncate(label, 60),
-			key: "entry:" + itoa(i), hint: hint})
+		for _, x := range ts {
+			items = append(items, targetRow(x, at))
+			at++
+		}
+	}
+	if len(items) == 0 {
+		items = append(items, menuItem{label: "nothing to open in it", key: "entry:none", hint: "no link, button or field inside", disabled: true})
 	}
 	return items
 }
@@ -1412,7 +1473,13 @@ func targetItems(n *ir.Node) []menuItem {
 func (m AppModel) pageMenuItems() []menuItem {
 	var items []menuItem
 	t := m.shownTab()
-	if n := t.current(); t != nil && n != nil {
+	if c := t.currentCapsule(); t != nil && c != nil {
+		items = append(items, menuItem{header: true, label: "item operation"})
+		items = append(items, capsuleMenuItems(*c)...)
+		items = append(items,
+			menuItem{separator: true},
+			menuItem{header: true, label: "panel operation"})
+	} else if n := t.current(); t != nil && n != nil {
 		items = append(items, menuItem{header: true, label: "item operation"})
 		items = append(items, itemMenuItems(n, t.curFolded())...)
 		items = append(items,
@@ -1483,17 +1550,17 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(closeCmd, m.moveBookmark(m.moveRef, idx))
 	}
-	if m.optionsKind == optBarMore {
-		// A capsule from behind the bar's "+N": the hand goes to it — it
-		// takes the bar's last slot meanwhile — and its list opens in
+	if m.optionsKind == optTrayMore {
+		// A capsule from behind the tray's "+N": the hand goes to it — it
+		// takes the tray's last slot meanwhile — and its list opens in
 		// place of this one, on this one's layer.
 		t := m.shownTab()
-		i, err := strconv.Atoi(strings.TrimPrefix(key, "bar:"))
-		if t == nil || err != nil || i < 0 || i >= len(t.lay.bar) {
+		i, err := strconv.Atoi(strings.TrimPrefix(key, "tray:"))
+		if t == nil || err != nil || i < 0 || i >= len(t.lay.tray) {
 			return m, m.options.close()
 		}
-		t.focusBar(i)
-		return m.openItemMenuAt(t.lay.bar[i].node, m.options.layer)
+		t.focusTray(i)
+		return m.openItemMenuAt(t.lay.tray[i].nodes[0], m.options.layer)
 	}
 	n := m.optionsFor
 	t := m.shownTab()
@@ -1553,11 +1620,11 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	}
 	if strings.HasPrefix(key, "entry:") {
 		// Something inside a capsule, or a table cell, by its place in
-		// its operation list (itemMenuItems).
-		if n := t.current(); t != nil && n != nil && !m.busy() {
+		// its operation list (capsuleMenuItems, targetItems).
+		if t != nil && !m.busy() {
 			i, err := strconv.Atoi(strings.TrimPrefix(key, "entry:"))
-			if ts := entryTargets(n); err == nil && i >= 0 && i < len(ts) {
-				return m.actOn(t, ts[i].node, n.Role == "search")
+			if ts, search := t.currentTargets(); err == nil && i >= 0 && i < len(ts) {
+				return m.actOn(t, ts[i].node, search)
 			}
 		}
 		return m, nil
@@ -1733,8 +1800,13 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 //     Space menu still lists what it can do
 func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	t := m.shownTab()
-	if t != nil && t.onMore() {
-		return m.openBarMore(t)
+	if t != nil {
+		if t.onMore() {
+			return m.openTrayMore(t)
+		}
+		if c := t.currentCapsule(); c != nil {
+			return m.enterCapsule(t, *c)
+		}
 	}
 	n := t.current()
 	if t == nil || n == nil {
@@ -1806,8 +1878,8 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 // followed: its target is an anchor, and webu has nothing to scroll.
 func (m AppModel) skipToContent(t *tab) (tea.Model, tea.Cmd) {
 	at := t.firstItem()
-	if t.onBar() {
-		t.leaveBar()
+	if t.onTray() {
+		t.leaveTray()
 	} else if at <= t.cursor && t.cursor+1 < len(t.lay.items) {
 		at = t.cursor + 1
 	}
@@ -1853,25 +1925,68 @@ func (m AppModel) openItemMenu(n *ir.Node) (tea.Model, tea.Cmd) {
 }
 
 // openItemMenuAt is openItemMenu on a given layer: the one the list
-// replaces, when it opens in place of another (openBarMore).
+// replaces, when it opens in place of another (openTrayMore).
 func (m AppModel) openItemMenuAt(n *ir.Node, layer int) (tea.Model, tea.Cmd) {
 	t := m.shownTab()
+	items, title := itemMenuItems(n, t.curFolded()), truncate(oneLine(nameOr(n.Name, n.Role)), 40)
+	if c := t.currentCapsule(); c != nil {
+		items, title = capsuleMenuItems(*c), c.title()
+	}
 	m.optionsFor, m.optionsKind = n, optItemMenu
-	m.options.setItems(itemMenuItems(n, t.curFolded()),
-		truncate(oneLine(nameOr(n.Name, n.Role)), 40), layer)
+	m.options.setItems(items, title, layer)
 	return m, m.options.open()
 }
 
-// openBarMore is Enter on the bar's "+N": the capsules the width left
-// out, one row each. Choosing one puts the hand on it — it takes the
-// bar's last slot meanwhile — and opens its list (optionsKey).
-func (m AppModel) openBarMore(t *tab) (tea.Model, tea.Cmd) {
-	var items []menuItem
-	for i := t.lay.fit; i < len(t.lay.bar); i++ {
-		c := t.lay.bar[i]
-		items = append(items, menuItem{label: c.label, key: "bar:" + itoa(i), hint: c.node.Role})
+// enterCapsule is Enter on a capsule: its list, the item operations of
+// what it holds — except where one thing is the obvious operation: a
+// search with one box opens the box, a skip capsule with one target
+// goes where it says, and a capsule with nothing to open shows its text.
+func (m AppModel) enterCapsule(t *tab, c capsule) (tea.Model, tea.Cmd) {
+	ts := capsuleTargets(c)
+	switch {
+	case len(ts) == 0:
+		return m, m.showCapsule(c)
+	case c.kind == traySkip && len(ts) == 1:
+		return m.actOn(t, ts[0].node, false)
+	case c.kind == traySearch:
+		var boxes []*ir.Node
+		for _, x := range ts {
+			if x.node.Kind == ir.Textbox {
+				boxes = append(boxes, x.node)
+			}
+		}
+		if len(boxes) == 1 {
+			return m, m.editFieldAs(boxes[0], true)
+		}
 	}
-	m.optionsFor, m.optionsKind = nil, optBarMore
+	return m.openItemMenu(c.nodes[0])
+}
+
+// showCapsule is a capsule with nothing to open — a footer that is one
+// line of text: the text, in a popup that scrolls.
+func (m *AppModel) showCapsule(c capsule) tea.Cmd {
+	var b strings.Builder
+	for _, n := range c.nodes {
+		b.WriteString(strings.TrimSpace(n.Text()))
+		b.WriteString("\n")
+	}
+	text := strings.TrimSpace(b.String())
+	if text == "" {
+		text = "(empty)"
+	}
+	return m.message.show(glyphMenu, c.title(), wrapWords(text, min(72, max(20, m.w-12))), false, m.layer())
+}
+
+// openTrayMore is Enter on the tray's "+N": the capsules the width left
+// out, one row each. Choosing one puts the hand on it — it takes the
+// tray's last slot meanwhile — and opens its list (optionsKey).
+func (m AppModel) openTrayMore(t *tab) (tea.Model, tea.Cmd) {
+	var items []menuItem
+	for i := t.lay.fit; i < len(t.lay.tray); i++ {
+		c := t.lay.tray[i]
+		items = append(items, menuItem{label: c.label, key: "tray:" + itoa(i), hint: truncate(capsuleHint(c, t.url), 40)})
+	}
+	m.optionsFor, m.optionsKind = nil, optTrayMore
 	m.options.setItems(items, "more", m.layer())
 	return m, m.options.open()
 }
@@ -1889,6 +2004,10 @@ func (m AppModel) actOn(t *tab, x *ir.Node, search bool) (tea.Model, tea.Cmd) {
 	case ir.Link:
 		if frag := sameFragment(t.url, x.URL); frag != "" && t.jumpToAnchor(frag, m.pageVisible()) {
 			return m, nil
+		}
+		if isSkipLink(x) {
+			// Nothing to land on: the content, as the link means.
+			return m.skipToContent(t)
 		}
 	}
 	id := x.ID
@@ -2413,6 +2532,11 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 		switch {
 		case t.loading:
 			hint = "loading"
+		case t.onMore():
+			// The hand on the tray: what it is under, and what is inside.
+			hint = plural(len(t.lay.tray)-t.lay.fit, "more capsule")
+		case t.currentCapsule() != nil:
+			hint = truncate(capsuleHint(*t.currentCapsule(), t.url), max(1, innerW-8))
 		case len(t.lay.rows) > innerH-pageHeaderRows:
 			hint = fmt.Sprintf("%d-%d of %d", t.top+1, min(len(t.lay.rows), t.top+innerH-pageHeaderRows), len(t.lay.rows))
 		}

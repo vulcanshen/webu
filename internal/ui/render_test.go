@@ -63,9 +63,9 @@ func TestRenderFixtures(t *testing.T) {
 
 func dumpLayout(l layout) string {
 	var b strings.Builder
-	if len(l.bar) > 0 {
-		fmt.Fprintf(&b, "-- bar (%d of %d fit) --\n", l.fit, len(l.bar))
-		for _, c := range l.bar {
+	if len(l.tray) > 0 {
+		fmt.Fprintf(&b, "-- tray (%d of %d fit) --\n", l.fit, len(l.tray))
+		for _, c := range l.tray {
 			b.WriteString(c.label)
 			b.WriteString("\n")
 		}
@@ -143,21 +143,22 @@ func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 		return b.String()
 	}
 	out := rows()
-	for _, want := range []string{"▸ region Header · 2 items", "▾ main", "body text", "▸ region Footer"} {
+	for _, want := range []string{"▸ region Header · 2 items", "body text", "▸ region Footer"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in\n%s", want, out)
 		}
 	}
 	// A folded landmark's content stays off; so does a navigation's —
-	// it is a capsule on the bar, its links behind Enter.
+	// it is a capsule on the tray, its links behind Enter.
 	if strings.Contains(out, "Home") || strings.Contains(out, "footer") || strings.Contains(out, "Code") {
 		t.Errorf("hidden content is drawn:\n%s", out)
 	}
-	if len(tb.lay.bar) != 1 || !strings.Contains(tb.lay.bar[0].label, "Repository +1") {
-		t.Errorf("the navigation inside main should be a capsule on the bar:\n%s", dumpLayout(tb.lay))
+	if len(tb.lay.tray) != 1 || !strings.Contains(tb.lay.tray[0].label, "nav +1") || strings.Contains(out, "▾ main") {
+		t.Errorf("the navigation inside main should be a capsule on the tray, and main has no rule:\n%s", dumpLayout(tb.lay))
 	}
-	// Items: the three rules on the top level; the navigation is on the bar.
-	if len(tb.lay.items) != 3 || tb.lay.items[0].node.Role != "region" || !tb.lay.items[0].folded {
+	// Items: the two regions' rules; main has none, the navigation is on
+	// the tray.
+	if len(tb.lay.items) != 2 || tb.lay.items[0].node.Role != "region" || !tb.lay.items[0].folded {
 		t.Fatalf("items: %s", out)
 	}
 	tb.cursor = 0
@@ -272,13 +273,17 @@ func TestChromeIsACapsule(t *testing.T) {
 		}}}},
 	}}
 	l := render(root, 80)
-	if len(l.rows) != 0 || len(l.bar) != 1 || !strings.Contains(l.bar[0].label, "Solutions +4") {
-		t.Errorf("the capsule should name the section the page is under, with the count, and leave the page no row:\n%s", dumpLayout(l))
+	if len(l.rows) != 0 || len(l.tray) != 1 || !strings.Contains(l.tray[0].label, "nav +4") {
+		t.Errorf("the capsule should be the kind's word with the count, and leave the page no row:\n%s", dumpLayout(l))
+	}
+	// Where the user is — the section the page is under — is the hint's.
+	if h := capsuleHint(l.tray[0], root.URL); !strings.Contains(h, "navigation Main") || !strings.Contains(h, "at Solutions") || !strings.Contains(h, "4 inside") {
+		t.Errorf("the hint should say what it is, where the user is in it, and how much is inside: %q", h)
 	}
 	// The page's own word wins over the URL.
 	root.Children[0].Children[0].Children[2].Children[0].Current = true
-	if l := render(root, 80); !strings.Contains(l.bar[0].label, "Resources +4") {
-		t.Errorf("aria-current should name the capsule:\n%s", dumpLayout(l))
+	if l := render(root, 80); !strings.Contains(capsuleHint(l.tray[0], root.URL), "at Resources") {
+		t.Errorf("aria-current should name where the user is: %q", capsuleHint(l.tray[0], root.URL))
 	}
 	// A breadcrumb's row is its last crumb, link or not.
 	trail := &ir.Node{Kind: ir.Document, URL: "https://x.test/lib/a", Children: []*ir.Node{
@@ -288,12 +293,12 @@ func TestChromeIsACapsule(t *testing.T) {
 			{Kind: ir.ListItem, Children: []*ir.Node{text("Article A")}},
 		}}}},
 	}}
-	if l := render(trail, 80); len(l.bar) != 1 || !strings.Contains(l.bar[0].label, "Article A +2") {
-		t.Errorf("a breadcrumb's capsule should be its last crumb:\n%s", dumpLayout(l))
+	if l := render(trail, 80); len(l.tray) != 1 || !strings.Contains(capsuleHint(l.tray[0], trail.URL), "at Article A") {
+		t.Errorf("a breadcrumb's hint should be its last crumb: %q", capsuleHint(l.tray[0], trail.URL))
 	}
-	// The rest of the chrome is the same capsule: a banner's word is the
-	// site (its first real link, a skip link passed over), a search's its
-	// box, a footer's its name; a field counts among what is behind it.
+	// The rest of the chrome: one capsule per kind, the kind's word, a
+	// field counting among what is behind it; the skip link is its own
+	// capsule, first.
 	chrome := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		{Kind: ir.Landmark, Role: "banner", ID: 20, Children: []*ir.Node{
 			link("Skip to content", "https://x.test/page#main", 21), link("Acme", "https://x.test/", 22), link("Sign in", "https://x.test/login", 23)}},
@@ -301,14 +306,19 @@ func TestChromeIsACapsule(t *testing.T) {
 			{Kind: ir.Textbox, Role: "searchbox", Name: "Search Acme", ID: 31}, {Kind: ir.Button, Role: "button", Name: "Go", ID: 32}}},
 		{Kind: ir.Landmark, Role: "contentinfo", Name: "Site footer", ID: 40, Children: []*ir.Node{text("© Acme")}},
 	}}
+	// The skip link inside the banner is chrome inside chrome: not a
+	// capsule, and not among the header's rows either.
 	cl := render(chrome, 80)
-	for _, want := range []string{"Acme +2", "Search Acme +2", "Site footer"} {
+	for _, want := range []string{"header +2", "search +2", "footer\n"} {
 		if !strings.Contains(dumpLayout(cl), want) {
 			t.Errorf("missing the capsule %q in:\n%s", want, dumpLayout(cl))
 		}
 	}
-	if len(cl.bar) != 3 || len(cl.items) != 0 {
-		t.Errorf("three capsules, and no item on the page:\n%s", dumpLayout(cl))
+	if len(cl.tray) != 3 || cl.tray[0].kind != trayHeader || cl.tray[2].kind != trayFooter || len(cl.items) != 0 {
+		t.Errorf("three capsules in the tray's order, and no item on the page:\n%s", dumpLayout(cl))
+	}
+	if h := capsuleHint(cl.tray[2], ""); h != "contentinfo Site footer" {
+		t.Errorf("a footer's hint is its role and name: %q", h)
 	}
 	if len(l.items) != 0 {
 		t.Errorf("a navigation should leave the page no item:\n%s", dumpLayout(l))
@@ -474,11 +484,11 @@ func TestSkipLinkIsACapsule(t *testing.T) {
 	tb := &tab{cursor: -1, root: root}
 	tb.relayout(60)
 	l := tb.lay
-	if len(l.bar) != 1 || l.bar[0].node != skip || !strings.Contains(l.bar[0].label, "Skip to main content") {
-		t.Errorf("the skip link should be a capsule on the bar:\n%s", dumpLayout(l))
+	if len(l.tray) != 1 || l.tray[0].nodes[0] != skip || !strings.Contains(l.tray[0].label, "skip +1") {
+		t.Errorf("the skip link should be the tray's skip capsule:\n%s", dumpLayout(l))
 	}
-	if len(l.items) != 2 || l.items[1].node.Text() != "First" {
-		t.Errorf("the skip link should leave the page no item:\n%s", dumpLayout(l))
+	if len(l.items) != 1 || l.items[0].node.Text() != "First" {
+		t.Errorf("the skip link should leave the page no item, and main has no rule:\n%s", dumpLayout(l))
 	}
 	if at := tb.firstItem(); at < 0 || l.items[at].node.Text() != "First" {
 		t.Errorf("a new page starts inside main: %d", at)
@@ -493,11 +503,11 @@ func TestSkipLinkIsACapsule(t *testing.T) {
 	}
 }
 
-// TestBarHand: k from the top of the page puts the hand on the bar, h/l
+// TestTrayHand: k from the top of the page puts the hand on the tray, h/l
 // walk it and wrap, j comes back to the item the hand left; a width that
-// holds only some capsules ends the bar in a +N, and a capsule chosen
+// holds only some capsules ends the tray in a +N, and a capsule chosen
 // from behind it takes the last slot while the hand is on it.
-func TestBarHand(t *testing.T) {
+func TestTrayHand(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, URL: "https://x.test/", Children: []*ir.Node{
 		{Kind: ir.Landmark, Role: "banner", ID: 1, Children: []*ir.Node{link("Acme", "https://x.test/", 2)}},
 		{Kind: ir.Landmark, Role: "navigation", Name: "Main", ID: 3, Children: []*ir.Node{link("Docs", "https://x.test/docs", 4)}},
@@ -507,17 +517,17 @@ func TestBarHand(t *testing.T) {
 	}}
 	tb := &tab{cursor: -1, root: root}
 	tb.relayout(80)
-	if len(tb.lay.bar) != 4 || tb.lay.fit != 4 || tb.onBar() {
+	if len(tb.lay.tray) != 4 || tb.lay.fit != 4 || tb.onTray() {
 		t.Fatalf("four capsules, all fitting, and the hand in the page:\n%s", dumpLayout(tb.lay))
 	}
-	tb.cursor = 0 // main's rule, the top row of the page
+	tb.cursor = 0 // First, the top row of the page (main has no rule)
 	tb.moveItem("k", 20)
-	if !tb.onBar() || tb.current() != root.Children[0] {
+	if !tb.onTray() || tb.current() != root.Children[0] {
 		t.Errorf("k from the top of the page should put the hand on the first capsule, is on %+v", tb.current())
 	}
 	tb.moveItem("k", 20)
 	if tb.current() != root.Children[0] {
-		t.Errorf("k on the bar should stay: %+v", tb.current())
+		t.Errorf("k on the tray should stay: %+v", tb.current())
 	}
 	tb.moveItem("h", 20)
 	if tb.current() != root.Children[4] {
@@ -529,8 +539,8 @@ func TestBarHand(t *testing.T) {
 		t.Errorf("l should walk on, wrapping at the end, is on %+v", tb.current())
 	}
 	tb.moveItem("j", 20)
-	if tb.onBar() || tb.cursor != 0 {
-		t.Errorf("j should leave the bar for the item the hand left: bar %d cursor %d", tb.bar, tb.cursor)
+	if tb.onTray() || tb.cursor != 0 {
+		t.Errorf("j should leave the tray for the item the hand left: tray %d cursor %d", tb.tray, tb.cursor)
 	}
 	// 40 cells hold two capsules and a +2.
 	tb.relayout(40)
@@ -540,23 +550,23 @@ func TestBarHand(t *testing.T) {
 	tb.moveItem("k", 20)
 	tb.moveItem("h", 20)
 	if !tb.onMore() || tb.current() != nil {
-		t.Errorf("h from the first capsule should wrap onto the +N, which stands for no node: bar %d", tb.bar)
+		t.Errorf("h from the first capsule should wrap onto the +N, which stands for no node: tray %d", tb.tray)
 	}
-	tb.focusBar(3) // chosen from behind the +N
-	if slots := tb.barSlots(); len(slots) != 3 || slots[0] != 0 || slots[1] != 3 || slots[2] != barMore {
+	tb.focusTray(3) // chosen from behind the +N
+	if slots := tb.traySlots(); len(slots) != 3 || slots[0] != 0 || slots[1] != 3 || slots[2] != trayMore {
 		t.Errorf("a capsule chosen from behind +N should take the last slot: %v", slots)
 	}
 	tb.moveItem("l", 20)
 	if !tb.onMore() {
-		t.Errorf("l from the last slot should be the +N: bar %d", tb.bar)
+		t.Errorf("l from the last slot should be the +N: tray %d", tb.tray)
 	}
 	tb.moveItem("l", 20)
 	if tb.current() != root.Children[0] {
 		t.Errorf("l from the +N should wrap to the first capsule, is on %+v", tb.current())
 	}
 	tb.moveItem("G", 20)
-	if tb.onBar() || tb.cursor != len(tb.lay.items)-1 {
-		t.Errorf("G from the bar should come down and go to the end: bar %d cursor %d", tb.bar, tb.cursor)
+	if tb.onTray() || tb.cursor != len(tb.lay.items)-1 {
+		t.Errorf("G from the tray should come down and go to the end: tray %d cursor %d", tb.tray, tb.cursor)
 	}
 }
 
@@ -584,5 +594,51 @@ func TestJumpToAnchor(t *testing.T) {
 	tb.cursor = 0
 	if tb.jumpToAnchor("plain", 20) || tb.jumpToAnchor("missing", 20) || tb.cursor != 0 {
 		t.Errorf("nothing to stop on is no jump: cursor %d", tb.cursor)
+	}
+}
+
+// TestOtherGoesToTheTray: with a main on the page, what lies outside it
+// in no landmark — a promo strip above main — is the tray's "other"
+// capsule, not rows above the content; a wrapper around main is walked
+// through; a page with no main keeps everything.
+func TestOtherGoesToTheTray(t *testing.T) {
+	root := &ir.Node{Kind: ir.Document, URL: "https://x.test/", Children: []*ir.Node{
+		{Kind: ir.Group, Block: true, Children: []*ir.Node{
+			para(text("Learn from our partner "), link("Scrimba", "https://s.test/", 1)),
+			{Kind: ir.Landmark, Role: "main", ID: 2, Children: []*ir.Node{para(link("First", "https://x.test/1", 3))}},
+		}},
+		para(text("© 2026")),
+	}}
+	tb := &tab{cursor: -1, root: root}
+	tb.relayout(60)
+	l := tb.lay
+	if len(l.tray) != 1 || l.tray[0].kind != trayOther || !strings.Contains(l.tray[0].label, "other +1") {
+		t.Fatalf("the promo and the copyright should be one other capsule:\n%s", dumpLayout(l))
+	}
+	if len(l.items) != 1 || l.items[0].node.Text() != "First" || len(l.rows) != 1 {
+		t.Errorf("the page should be main alone:\n%s", dumpLayout(l))
+	}
+	if h := capsuleHint(l.tray[0], ""); !strings.Contains(h, "outside main") || !strings.Contains(h, "1 inside") {
+		t.Errorf("hint: %q", h)
+	}
+	if ts := capsuleTargets(l.tray[0]); len(ts) != 1 || ts[0].node.Text() != "Scrimba" {
+		t.Errorf("targets: %+v", ts)
+	}
+	if at := tb.firstItem(); at != 0 {
+		t.Errorf("a new page starts on main's first item: %d", at)
+	}
+	// Outside main, a skip link is the skip capsule's, and blank text is
+	// nothing: no "other" for either.
+	tidy := &ir.Node{Kind: ir.Document, URL: "https://x.test/page", Children: []*ir.Node{
+		link("Jump to content", "https://x.test/page#main", 1), text(" \n "),
+		{Kind: ir.Landmark, Role: "main", ID: 2, Children: []*ir.Node{para(link("First", "https://x.test/1", 3))}},
+	}}
+	if l := render(tidy, 60); len(l.tray) != 1 || l.tray[0].kind != traySkip || !strings.Contains(l.tray[0].label, "skip +1") {
+		t.Errorf("a skip link outside main is the skip capsule, blank text no capsule at all:\n%s", dumpLayout(l))
+	}
+	// No main: nothing is other.
+	bare := &ir.Node{Kind: ir.Document, Children: []*ir.Node{para(text("promo")), para(link("First", "u", 3))}}
+	if l := render(bare, 60); len(l.tray) != 0 || len(l.items) != 1 || !strings.Contains(dumpLayout(l), "promo") {
+		t.Errorf("without main the page keeps everything:\n%s", dumpLayout(l))
 	}
 }

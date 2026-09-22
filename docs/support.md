@@ -53,6 +53,8 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `rowheader` | cell | — | a header cell |
 | `search` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `searchbox` | textbox | edit | name ____value____; Enter edits in a popup |
+| `sectionfooter` | group | — | an article's or section's footer: its lines, in place |
+| `sectionheader` | group | — | an article's or section's header: its lines, in place |
 | `separator` | separator | — | a horizontal rule |
 | `spinbutton` | textbox | edit | a number field; edits like a textbox |
 | `switch` | check | click | [x] name; Enter toggles |

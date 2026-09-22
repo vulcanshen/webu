@@ -115,10 +115,14 @@ var Roles = map[string]Spec{
 	"code":       {Kind: Code, Display: "monospace; a block when it spans lines"},
 	"blockquote": {Kind: Quote, Display: "indented quotation"},
 
-	"group":      {Kind: Group, Display: "a plain container kept for its line break"},
-	"figure":     {Kind: Group, Display: "a figure: its image and caption, on their own lines"},
-	"Figcaption": {Transparent: true, Display: "the caption text flows into the figure"},
-	"Legend":     {Transparent: true, Display: "a fieldset's title flows into the group"},
+	"group": {Kind: Group, Display: "a plain container kept for its line break"},
+	// A header or footer inside an article or section (this Chromium's
+	// names for them): the article's own lines, in place, not chrome.
+	"sectionheader": {Kind: Group, Display: "an article's or section's header: its lines, in place"},
+	"sectionfooter": {Kind: Group, Display: "an article's or section's footer: its lines, in place"},
+	"figure":        {Kind: Group, Display: "a figure: its image and caption, on their own lines"},
+	"Figcaption":    {Transparent: true, Display: "the caption text flows into the figure"},
+	"Legend":        {Transparent: true, Display: "a fieldset's title flows into the group"},
 
 	"generic":       {Transparent: true, Display: "div / span: invisible; a block one keeps its line break"},
 	"none":          {Transparent: true, Display: "invisible"},

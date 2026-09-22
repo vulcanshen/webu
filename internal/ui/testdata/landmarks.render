@@ -1,10 +1,9 @@
--- bar (5 of 5 fit) --
-󰛼 Home +1
- Primary +2
- Find +1
-󰠶
-󰛻
- ▾ main ────────────────────────────────────────────────────
+-- tray (3 of 5 fit) --
+ header +1
+ nav +2
+ search +1
+ sidebar
+ footer
 # Main heading
 
  ▾ article ─────────────────────────────────────────────────
@@ -20,10 +19,9 @@ An unnamed section is not a region.
  ▾ form ────────────────────────────────────────────────────
 󰘎 Q ____________
 -- items --
-0 landmark "Main heading…" rows 0-0
-1 heading "Main heading" rows 1-1
-2 landmark "An article…" rows 3-3
-3 heading "An article" rows 4-4
-4 landmark "Section text." rows 8-8
-5 landmark "Q Q" rows 13-13
-6 textbox "Q" rows 14-14
+0 heading "Main heading" rows 0-0
+1 landmark "An article…" rows 2-2
+2 heading "An article" rows 3-3
+3 landmark "Section text." rows 7-7
+4 landmark "Q Q" rows 12-12
+5 textbox "Q" rows 13-13

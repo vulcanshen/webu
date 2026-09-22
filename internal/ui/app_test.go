@@ -141,25 +141,25 @@ func (d *driver) cursorOn(kind ir.Kind, want string) {
 	for i, it := range t.lay.items {
 		if it.node.Kind == kind && strings.Contains(it.node.Text()+it.node.Name, want) {
 			t.cursor = i
-			t.leaveBar()
+			t.leaveTray()
 			return
 		}
 	}
 	d.t.Fatalf("no %s item containing %q in\n%s", kind, want, dumpLayout(t.lay))
 }
 
-// barOn puts the hand on the capsule whose label contains want. One the
+// trayOn puts the hand on the capsule whose label contains want. One the
 // width left out is behind the +N, and reaching it that way is a test
 // of its own — so that is a fail here.
-func (d *driver) barOn(want string) {
+func (d *driver) trayOn(want string) {
 	d.t.Helper()
 	t := d.page()
-	for i, c := range t.lay.bar {
+	for i, c := range t.lay.tray {
 		if strings.Contains(c.label, want) {
 			if i >= t.lay.fit {
 				d.t.Fatalf("capsule %q is behind the +N at this width:\n%s", want, dumpLayout(t.lay))
 			}
-			t.focusBar(i)
+			t.focusTray(i)
 			return
 		}
 	}
@@ -942,53 +942,78 @@ func TestNavigationEntry(t *testing.T) {
 	abs, _ := filepath.Abs("testdata/nav.html")
 	d := newDriver(t, New(b, "file://"+abs))
 	defer d.m.Close()
-	d.send(tea.WindowSizeMsg{Width: 150, Height: 30})
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
-	// The page's chrome is on the bar under the URL, off the page: the
-	// page starts on its content, and the skip link is a capsule whose
-	// Enter does what it says — the content.
-	if n := d.page().current(); n == nil || n.Kind != ir.Heading || d.page().onBar() {
+	// The page's chrome is on the tray under the URL, off the page, one
+	// capsule per kind in the tray's order: the skip link and the skip
+	// block are one "skip", the three navigations one "nav", then the
+	// search, then the dialog by its name. The page starts on its
+	// content.
+	if n := d.page().current(); n == nil || n.Kind != ir.Heading || d.page().onTray() {
 		t.Errorf("a new page should start on its content, starts on %+v", n)
 	}
-	if v := dumpLayout(d.page().lay); strings.Contains(v, "▎") {
-		t.Errorf("nothing of the chrome should be a row of the page:\n%s", v)
+	v := dumpLayout(d.page().lay)
+	for _, want := range []string{"skip +3", "nav +4", "search +2", "Cookies +1"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("missing the capsule %q in:\n%s", want, v)
+		}
 	}
-	d.barOn("Skip to content")
-	if !strings.Contains(d.m.View(), "Skip to content") || !isSkipLink(d.page().current()) {
-		t.Errorf("the skip link should be a capsule on the bar and known as one:\n%s", d.m.View())
+	if l := d.page().lay; len(l.tray) != 4 || strings.Contains(v, "▎") {
+		t.Errorf("four capsules and nothing of the chrome on the page:\n%s", v)
 	}
-	d.key("enter")
-	if n := d.page().current(); n == nil || n.Kind != ir.Heading || d.page().onBar() {
-		t.Errorf("Enter on the skip link should land on the content, landed on %+v", n)
+	for _, it := range d.page().lay.items {
+		if it.node.Kind == ir.Link && strings.Contains(it.node.Text(), "B via nav") {
+			t.Error("a navigation's links should not be items of the page")
+		}
 	}
-	// k from the top of the page goes up onto the bar, l walks it, j
-	// comes back to the item the hand left.
+	// Esc goes up onto the tray, Esc again comes back; so do k from the
+	// top of the page and j; h/l walk the capsules.
+	d.key("esc")
+	if n := d.page().current(); !d.page().onTray() || n == nil || !isSkipLink(n) {
+		t.Errorf("Esc should put the hand on the first capsule, is on %+v", n)
+	}
+	d.key("esc")
+	if n := d.page().current(); d.page().onTray() || n == nil || n.Kind != ir.Heading {
+		t.Errorf("Esc on the tray should come back to the item the hand left, is on %+v", n)
+	}
 	d.key("k")
-	if n := d.page().current(); !d.page().onBar() || n == nil || !isSkipLink(n) {
-		t.Errorf("k from the top of the page should put the hand on the first capsule, is on %+v", n)
+	if !d.page().onTray() {
+		t.Error("k from the top of the page should go up onto the tray")
 	}
 	d.key("l")
-	if n := d.page().current(); n == nil || n.Kind != ir.Landmark || !n.Skip {
-		t.Errorf("l should walk to the next capsule, the skip block, is on %+v", n)
+	if n := d.page().current(); n == nil || n.Role != "navigation" {
+		t.Errorf("l should walk to the next capsule, nav, is on %+v", n)
+	}
+	if !strings.Contains(d.m.View(), "3 navigations") || !strings.Contains(d.m.View(), "at Anchor") {
+		t.Errorf("the panel's hint should say what the capsule is and where the user is in it:\n%s", d.m.View())
 	}
 	d.key("j")
-	if n := d.page().current(); d.page().onBar() || n == nil || n.Kind != ir.Heading {
-		t.Errorf("j should leave the bar for the item the hand left, is on %+v", n)
+	if n := d.page().current(); d.page().onTray() || n == nil || n.Kind != ir.Heading {
+		t.Errorf("j should leave the tray for the item the hand left, is on %+v", n)
 	}
-	// A block of skip links — "Skip to:" and a list of anchors — is one
-	// capsule of its own; Enter lists them, and one lands the cursor on
-	// what its anchor names, the form here, without following anything.
-	if !strings.Contains(dumpLayout(d.page().lay), "Skip to +2") {
-		t.Errorf("the skip block should be one capsule with its count:\n%s", dumpLayout(d.page().lay))
-	}
-	d.barOn("Skip to +2")
+	// The skip capsule's Enter lists the skip link and, under its own
+	// header, the block's anchors. The link does what it says: the
+	// content. An anchor lands the cursor on what it names, the form
+	// here, without following anything.
+	d.trayOn("skip")
 	d.key("enter")
-	d.until("the skip block's list", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	d.until("the skip list", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	if got := d.m.options.items[d.m.options.cursor].label; got != "Skip to content" {
+		t.Errorf("the first row should be the skip link, is %q", got)
+	}
+	d.key("enter")
+	if n := d.page().current(); n == nil || n.Kind != ir.Heading || d.page().onTray() {
+		t.Errorf("the skip link should land on the content, landed on %+v", n)
+	}
+	d.trayOn("skip")
+	d.key("enter")
+	d.until("the skip list again", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
+	d.key("j")
 	if got := d.m.options.items[d.m.options.cursor].label; got != "Form" {
-		t.Errorf("the first row should be the first target, is %q", got)
+		t.Errorf("the row after the link should be the block's first anchor, is %q", got)
 	}
 	d.key("enter")
-	if n := d.page().current(); n == nil || n.Kind != ir.Landmark || n.Role != "form" || d.m.confirm.isActive() || d.page().onBar() {
+	if n := d.page().current(); n == nil || n.Kind != ir.Landmark || n.Role != "form" || d.m.confirm.isActive() || d.page().onTray() {
 		t.Errorf("Form should land the cursor on the form, no confirm; landed on %+v", n)
 	}
 	// So does any link into the page: a table of contents entry.
@@ -997,26 +1022,26 @@ func TestNavigationEntry(t *testing.T) {
 	if n := d.page().current(); n == nil || n.Kind != ir.Landmark || n.Role != "form" || d.m.confirm.isActive() {
 		t.Errorf("a link into the page should land the cursor, no confirm; landed on %+v", n)
 	}
-	// A capsule names where the user is in it — aria-current — not the
-	// landmark: the tab in the navigation, the last crumb in a breadcrumb
-	// (a trail named so, and one only the DOM's class says is one).
-	v := dumpLayout(d.page().lay)
-	for _, want := range []string{"Anchor +2", "Page A +1", "Here +1", "Find +2"} {
-		if !strings.Contains(v, want) {
-			t.Errorf("missing the capsule %q in:\n%s", want, v)
-		}
-	}
-	for _, it := range d.page().lay.items {
-		if it.node.Kind == ir.Link && strings.Contains(it.node.Text(), "B via nav") {
-			t.Error("a navigation's links should not be items of the page")
-		}
-	}
 
-	d.barOn("Anchor +2")
+	// The nav capsule's list: each navigation under its name — the
+	// class-marked trail among them — and the rows run across them.
+	d.trayOn("nav")
 	d.key("enter")
 	d.until("its links", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
 	if got := d.m.options.items[d.m.options.cursor].label; got != "B via nav" {
 		t.Errorf("the first row should be the first link, is %q", got)
+	}
+	headers, root := 0, false
+	for _, it := range d.m.options.items {
+		if it.header {
+			headers++
+		}
+		if it.label == "Root" {
+			root = true
+		}
+	}
+	if headers != 3 || !root {
+		t.Errorf("three navigations, each under a header, the trail's Root among the rows: %+v", d.m.options.items)
 	}
 	d.key("esc")
 	d.until("list gone", func() bool { return !d.m.options.isActive() })
@@ -1025,12 +1050,12 @@ func TestNavigationEntry(t *testing.T) {
 	d.until("space menu", func() bool { return d.m.spaceMenu.isInteractive() })
 	found := false
 	for _, it := range d.m.spaceMenu.items {
-		if it.label == "Anchor" && it.key == "entry:1" {
+		if it.label == "Anchor" && it.key == "entry:1" && strings.HasPrefix(it.hint, "here") {
 			found = true
 		}
 	}
 	if !found {
-		t.Error("the Space menu should list the navigation's links as its item operations")
+		t.Error("the Space menu should list the navigations' links as its item operations, the current one marked")
 	}
 	d.key("esc")
 	d.until("space menu gone", func() bool { return !d.m.spaceMenu.isActive() })
@@ -1038,7 +1063,7 @@ func TestNavigationEntry(t *testing.T) {
 	// A search with one box: Enter is the box itself; what is typed lands
 	// in the page's field — behind the capsule, not an item — and is
 	// offered to the page's Enter at once; Enter on that submits.
-	d.barOn("Find +2")
+	d.trayOn("search")
 	d.key("enter")
 	d.until("the search box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
 	d.key("webu")
@@ -1067,28 +1092,28 @@ func TestNavigationEntry(t *testing.T) {
 		t.Error("Esc on the offer should not submit")
 	}
 
-	// Narrower, the bar holds only some of the seven capsules and ends
+	// Narrower, the tray holds only some of the four capsules and ends
 	// in a +N for the rest; the hand wraps onto it from the first, Enter
 	// lists them, and the one chosen takes the last slot and opens its
 	// list: the dialog — a cookie banner, chrome too — whose Accept
 	// takes it off the page.
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.send(tea.WindowSizeMsg{Width: 80, Height: 30})
 	l := d.page().lay
-	hidden := len(l.bar) - l.fit
-	if len(l.bar) != 7 || l.fit == 0 || hidden == 0 {
-		t.Fatalf("at 100 cells some of the seven capsules should be behind a +N: %d of %d fit\n%s", l.fit, len(l.bar), dumpLayout(l))
+	hidden := len(l.tray) - l.fit
+	if len(l.tray) != 4 || l.fit == 0 || hidden == 0 {
+		t.Fatalf("at 80 cells some of the four capsules should be behind a +N: %d of %d fit\n%s", l.fit, len(l.tray), dumpLayout(l))
 	}
 	more := " +" + itoa(hidden) + " "
 	if !strings.Contains(d.m.View(), more) {
-		t.Errorf("the bar should end in %q:\n%s", more, d.m.View())
+		t.Errorf("the tray should end in %q:\n%s", more, d.m.View())
 	}
-	d.barOn("Skip to content")
+	d.trayOn("skip")
 	d.key("h")
 	if !d.page().onMore() {
-		t.Errorf("h from the first capsule should wrap onto the +N: bar %d", d.page().bar)
+		t.Errorf("h from the first capsule should wrap onto the +N: tray %d", d.page().tray)
 	}
 	d.key("enter")
-	d.until("the capsules behind +N", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optBarMore })
+	d.until("the capsules behind +N", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optTrayMore })
 	if len(d.m.options.items) != hidden || !strings.Contains(d.m.options.items[hidden-1].label, "Cookies +1") {
 		t.Fatalf("the list should be the capsules the width left out, the dialog last: %+v", d.m.options.items)
 	}
@@ -1097,27 +1122,17 @@ func TestNavigationEntry(t *testing.T) {
 	}
 	d.key("enter")
 	d.until("its buttons", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
-	if n := d.page().current(); n == nil || n.Role != "dialog" || d.page().barSlots()[l.fit-1] != 6 {
-		t.Errorf("the chosen capsule should be under the hand, in the bar's last slot: %+v %v", n, d.page().barSlots())
+	if n := d.page().current(); n == nil || n.Role != "dialog" || d.page().traySlots()[l.fit-1] != 3 {
+		t.Errorf("the chosen capsule should be under the hand, in the tray's last slot: %+v %v", n, d.page().traySlots())
 	}
 	if got := d.m.options.items[d.m.options.cursor].label; got != "Accept" {
 		t.Errorf("the dialog's row should be its button, is %q", got)
 	}
 	d.key("enter")
 	d.until("dialog gone", func() bool { return !strings.Contains(dumpLayout(d.page().lay), "Cookies +1") })
-	d.send(tea.WindowSizeMsg{Width: 150, Height: 30})
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 
-	// The class-marked trail is a navigation of its own, with its link.
-	d.barOn("Here +1")
-	d.key("enter")
-	d.until("the trail's links", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
-	if got := d.m.options.items[d.m.options.cursor].label; got != "Root" {
-		t.Errorf("the trail's first row should be its link, is %q", got)
-	}
-	d.key("esc")
-	d.until("trail list gone", func() bool { return !d.m.options.isActive() })
-
-	d.barOn("Anchor +2")
+	d.trayOn("nav")
 	d.key("enter")
 	d.until("its links again", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
 	d.key("enter")
