@@ -936,14 +936,8 @@ func (t *tab) moveItem(k string, visible int) {
 		// Nothing to stop on — an empty page, or a section that is all
 		// prose: the keys scroll the text instead, and k at the top goes
 		// up onto the pagetab.
-		if (k == "k" || k == "up") && t.top <= lo {
-			if t.read {
-				t.closeSection()
-				return
-			}
-			if t.enterPagetab() {
-				return
-			}
+		if (k == "k" || k == "up") && t.top <= lo && !t.read && t.enterPagetab() {
+			return
 		}
 		t.top = clamp(moveScroll(t.top-lo, max(0, hi-lo+1-visible), k, visible)+lo, lo, max(lo, hi))
 		return
@@ -953,14 +947,14 @@ func (t *tab) moveItem(k string, visible int) {
 	case "j", "down":
 		t.cursor = t.rowStep(1)
 	case "k", "up":
-		// Off the top of what is being read: back to the section list if
-		// a section is open, else up onto the pagetab.
+		// Off the top: up onto the pagetab, which is the row above the
+		// page. Inside an open section it stops — a movement key moves
+		// the cursor and does not change which screen you are on; Esc is
+		// the one move up (user, 2026-09-22, the same objection as l
+		// opening a section).
 		if at := t.rowStep(-1); at != t.cursor && at >= first {
 			t.cursor = at
-		} else if t.read {
-			t.closeSection()
-			return
-		} else if t.enterPagetab() {
+		} else if !t.read && t.enterPagetab() {
 			return
 		}
 	case "l", "right":
