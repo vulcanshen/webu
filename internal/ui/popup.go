@@ -264,6 +264,10 @@ func hotkeyIndex(keys []string, pressed string) int {
 // bracket wraps it in place; otherwise it is prefixed. Core-key actions (Enter,
 // Esc) never get brackets — their key goes in the hint column instead, so the
 // bracket keeps meaning exactly one thing.
+// A row whose key is a CORE key — Enter, Esc, "/" — carries it in the
+// label itself ("[Enter] Switch to", "[Esc] Page chrome"), because there
+// is no letter of the label to bracket in place and a panel operation
+// nobody can find is not disclosed (ux.md §A.1, 2026-09-22).
 func bracketHotkey(label, key string) string {
 	if len(key) != 1 {
 		return label

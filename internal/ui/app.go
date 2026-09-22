@@ -1324,7 +1324,7 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 		if len(m.tabs) > 0 {
 			items = append(items,
 				menuItem{header: true, label: "item operation"},
-				menuItem{label: "Switch to", key: "enter", hint: "show this tab in [2]"},
+				menuItem{label: "[Enter] Switch to", key: "enter", hint: "show this tab in [2]"},
 				// c, the page panel's C in lower case; it was w, which is a
 				// window's letter, and a terminal has none (2026-09-21).
 				menuItem{label: "Close", key: "c", hint: "this tab"},
@@ -1527,7 +1527,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Tab", key: "T", hint: "a new one, at a URL"},
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
-		menuItem{label: "Search", key: "/", hint: "find text on the page", disabled: t == nil},
+		menuItem{label: "[/] Search", key: "/", hint: "find text on the page", disabled: t == nil},
 		menuItem{label: "Visual mode", key: "v", hint: "walk the text by character, copy some", disabled: t == nil},
 		menuItem{label: "Location", key: "L", hint: "a URL or a search; this page's own is offered"},
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
