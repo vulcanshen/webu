@@ -750,8 +750,9 @@ func (t *tab) pagetabSlots() []int {
 	return slots
 }
 
-// enterPagetab puts the hand on the pagetab's first slot; false when the page
-// has no chrome.
+// enterPagetab puts the hand on the pagetab's first slot; false when the
+// page has no chrome, which is what the menu row says instead of moving
+// nothing (app pagetabItem).
 func (t *tab) enterPagetab() bool {
 	slots := t.pagetabSlots()
 	if len(slots) == 0 {

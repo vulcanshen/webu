@@ -1048,17 +1048,45 @@ func TestNavigationEntry(t *testing.T) {
 
 	d.key(" ")
 	d.until("space menu", func() bool { return d.m.spaceMenu.isInteractive() })
-	found := false
+	found, back := false, false
 	for _, it := range d.m.spaceMenu.items {
 		if it.label == "Anchor" && it.key == "entry:1" && strings.HasPrefix(it.hint, "here") {
 			found = true
+		}
+		// The hand is on the pagetab here, so the menu offers the way back.
+		if it.key == "pagetab" && it.label == "Back to the page" && strings.Contains(it.hint, "Esc") {
+			back = true
 		}
 	}
 	if !found {
 		t.Error("the Space menu should list the navigations' links as its item operations, the current one marked")
 	}
+	if !back {
+		t.Error("the Space menu should disclose the way off the pagetab")
+	}
 	d.key("esc")
 	d.until("space menu gone", func() bool { return !d.m.spaceMenu.isActive() })
+
+	// And from the page, the way onto it — the same row, the same key,
+	// which does what Esc does.
+	d.cursorOn(ir.Textbox, "Look")
+	d.key(" ")
+	d.until("space menu again", func() bool { return d.m.spaceMenu.isInteractive() })
+	var row menuItem
+	for _, it := range d.m.spaceMenu.items {
+		if it.key == "pagetab" {
+			row = it
+		}
+	}
+	if row.label != "Page chrome" || !strings.Contains(row.hint, "Esc") || row.disabled {
+		t.Errorf("the page's Space menu should offer the pagetab: %+v", row)
+	}
+	d.key("esc")
+	d.until("space menu gone again", func() bool { return !d.m.spaceMenu.isActive() })
+	if mm, _ := d.m.dispatch("pagetab"); !mm.(AppModel).shownTab().onPagetab() {
+		t.Error("the menu row should put the hand on the pagetab")
+	}
+	d.page().leavePagetab()
 
 	// A search with one box: Enter is the box itself; what is typed lands
 	// in the page's field — behind the capsule, not an item — and is
