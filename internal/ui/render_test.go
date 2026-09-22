@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -971,5 +972,39 @@ func TestAnEmptyArrivalIsStillLoading(t *testing.T) {
 	tb.blankUntil, tb.errText = time.Now().Add(time.Minute), "net::ERR_FAILED"
 	if tb.stillComing() {
 		t.Error("a page that failed is not still coming")
+	}
+}
+
+// Two states, not one. A click on the page says the page is loading — the
+// spinner turns, the page dims — but the keyboard stays live: a settle is
+// 300ms and a dead keyboard for 300ms after every press is worse than the
+// problem. Only a NAVIGATION swallows the keys that would stack another
+// one on it (user, 2026-09-22).
+func TestPressingIsNotNavigating(t *testing.T) {
+	tb := &tab{cursor: -1, id: 1}
+	_ = tb.press(func(context.Context) error { return nil })
+	if !tb.loading {
+		t.Error("a press says the page is working")
+	}
+	if tb.navigating {
+		t.Error("a press is not a navigation and must not swallow the next key")
+	}
+	m := AppModel{tabs: []*tab{tb}, shown: 0}
+	if m.busy() {
+		t.Error("busy is a navigation in flight, not any action")
+	}
+	tb.loading, tb.navigating = false, false
+	_ = tb.load("https://x.test/")
+	if !tb.loading || !tb.navigating {
+		t.Error("a load is both")
+	}
+	if !m.busy() {
+		t.Error("a navigation swallows what would stack on it")
+	}
+	// And webu's own work says nothing at all.
+	tb.loading, tb.navigating = false, false
+	_ = tb.act(func(context.Context) error { return nil })
+	if tb.loading || tb.navigating {
+		t.Error("a reveal webu does for itself is quiet, or its settle would reveal again forever")
 	}
 }

@@ -27,7 +27,18 @@ type tab struct {
 	cancel context.CancelFunc
 
 	url, title string
+	// loading says a fetch is in flight, which is what the spinner and
+	// the dimmed page are about. navigating says that fetch is a
+	// NAVIGATION — a load, a back, a forward — which is the only thing
+	// that swallows the keys behind it (AppModel.busy).
+	//
+	// They were one field until pressing something on the page began to
+	// say it was busy: the swallow is right for "P pressed three times
+	// while the first back is still answering", and wrong for a click,
+	// which is local and fast and whose settle should not leave the
+	// keyboard dead for 300ms (2026-09-22).
 	loading    bool
+	navigating bool
 	errText    string // a navigation Chromium refused: DNS, connection, certificate
 	// anchors and parents come off the capture's DOM snapshot: every
 	// element id, and every node's parent, so a link into the page can
@@ -306,7 +317,7 @@ func (t *tab) close() {
 // lands.
 func (t *tab) load(url string) tea.Cmd {
 	t.gen++
-	t.loading, t.pending, t.errText = true, false, ""
+	t.loading, t.navigating, t.pending, t.errText = true, true, false, ""
 	t.blankUntil = time.Now().Add(blankGrace)
 	t.url = url
 	gen, id, ctx := t.gen, t.id, t.ctx
@@ -340,7 +351,7 @@ type navFailMsg struct {
 // pressed before the first has answered (ux.md §6).
 func (t *tab) navigate(what string, fn func(context.Context) error) tea.Cmd {
 	t.gen++
-	t.loading, t.errText = true, ""
+	t.loading, t.navigating, t.errText = true, true, ""
 	gen, id, ctx := t.gen, t.id, t.ctx
 	return func() tea.Msg {
 		if err := fn(ctx); err != nil {
@@ -366,6 +377,24 @@ func (t *tab) settle(after time.Duration) tea.Cmd {
 }
 
 // act runs one CDP action on the tab and then settles.
+// press is act for something the USER asked for, which also says the page
+// is busy until the recapture lands.
+//
+// The page answers a click in its own time and webu has to look again
+// before it knows what changed. Until this said so, Enter on a disclosure
+// sat silent for a settle — so the user pressed it again, and the second
+// press shut what the first had opened (user, 2026-09-22). Saying it also
+// swallows that second press (AppModel.busy).
+//
+// Not every action is one of these. webu reveals the cursor's node after
+// every capture, on its own; if that said the page was busy it would
+// schedule a settle, whose capture would reveal again, forever. Work webu
+// does for itself is quiet — act.
+func (t *tab) press(fn func(context.Context) error) tea.Cmd {
+	t.loading = true
+	return t.act(fn)
+}
+
 func (t *tab) act(fn func(context.Context) error) tea.Cmd {
 	ctx := t.ctx
 	do := func() tea.Msg {
@@ -397,7 +426,7 @@ func capture(ctx context.Context, id, gen int) tea.Msg {
 // the cursor kept on the node it was on (function.md §4) — by ID first, and
 // when the page rebuilt its DOM and the IDs are new, by the nearest item.
 func (t *tab) apply(msg pageMsg, width int) {
-	t.loading = false
+	t.loading, t.navigating = false, false
 	if msg.err != nil {
 		t.errText = msg.err.Error()
 		t.root, t.lay = nil, layout{}
