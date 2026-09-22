@@ -252,7 +252,7 @@ func (m listPanel) menuItems() []menuItem {
 			{separator: true},
 			{header: true, label: "panel operation"},
 			{label: "Clear done", key: "C", hint: "the finished and cancelled rows"},
-			{label: "Filter", key: "/", hint: "type to narrow the list"},
+			{label: "[/] Filter", key: "/", hint: "type to narrow the list"},
 		}
 	case listHistory:
 		return []menuItem{
@@ -263,7 +263,7 @@ func (m listPanel) menuItems() []menuItem {
 			{separator: true},
 			{header: true, label: "panel operation"},
 			{label: "Clear", key: "C", hint: "every visit ever recorded"},
-			{label: "Filter", key: "/", hint: "type to narrow the list"},
+			{label: "[/] Filter", key: "/", hint: "type to narrow the list"},
 		}
 	}
 	// Bookmarks: what the cursor is on decides the item half — a folder
@@ -272,11 +272,11 @@ func (m listPanel) menuItems() []menuItem {
 	e, _, ok := m.current()
 	switch {
 	case ok && e.isFolder && e.folded:
-		items = append(items, menuItem{label: "Expand", key: "enter", hint: "show what is inside"})
+		items = append(items, menuItem{label: "[Enter] Expand", key: "enter", hint: "show what is inside"})
 	case ok && e.isFolder:
-		items = append(items, menuItem{label: "Collapse", key: "enter", hint: "one row, out of the way"})
+		items = append(items, menuItem{label: "[Enter] Collapse", key: "enter", hint: "one row, out of the way"})
 	default:
-		items = append(items, menuItem{label: "Open in new tab", key: "enter", hint: "and switch to it"})
+		items = append(items, menuItem{label: "[Enter] Open in new tab", key: "enter", hint: "and switch to it"})
 	}
 	items = append(items, menuItem{label: "Add", key: "a", hint: "a bookmark here: its URL, then its title"})
 	if ok && e.isFolder {
@@ -295,7 +295,7 @@ func (m listPanel) menuItems() []menuItem {
 		menuItem{header: true, label: "panel operation"},
 		menuItem{label: "Add folder", key: "A", hint: "here; a path like a/b/c makes each level"},
 		menuItem{label: "Import", key: "I", hint: "a browser's bookmarks export (HTML), into a folder of its own"},
-		menuItem{label: "Filter", key: "/", hint: "type to narrow the list"})
+		menuItem{label: "[/] Filter", key: "/", hint: "type to narrow the list"})
 }
 
 // hintPairs is the border legend: bright the key, dim what it does (§4.4).
