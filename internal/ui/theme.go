@@ -1,14 +1,38 @@
 package ui
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Colour anchors (catppuccin-mocha) — ui.md §4 / VTP §B. Assigned once,
-// derived everywhere. Each band is reserved: nothing borrows another's, or
-// the user has to learn which meaning a colour carries where.
+// webu has TWO palettes, not one (2026-09-22, the user's call).
+//
+// The APP palette is webu's own chrome — panels, borders, the header
+// chain, the pagetab, the cursor, menus, popups, the footer. It obeys
+// the VTP in full: a few anchors, lightness as the z-axis, one reserved
+// band per meaning, override colours outside the hierarchy.
+//
+// The PAGE palette is the document's own structure — headings, links,
+// code, tables, quotes, fields. A web page is a structured document with
+// a visual language of its own; webu does not read its CSS, but it still
+// has to draw that structure, and drawing it out of the app's reserved
+// bands is what kept forcing a choice between the two: a table header
+// wanted mauve and so did a code key, a highlight wanted lavender and so
+// did the selection. So the page's colours are a closed set of their
+// own. They appear only inside panel [2]'s content, they take no part in
+// webu's z-axis — a page is always at one depth, the canvas — and their
+// bands are reserved among themselves alone. Where a page colour and an
+// app colour share a hex today, that is two independent decisions
+// landing on the same shade, not one band used twice.
+//
+// Anchors are catppuccin-mocha (ui.md §4 / VTP §B): assigned once,
+// derived everywhere.
+
+// ---- App palette: webu's own chrome.
 var (
 	// structural — panel chrome and the KEY half of every legend (§4.4).
 	focusColor = lipgloss.Color("#89b4fa") // blue
@@ -28,21 +52,6 @@ var (
 	liveColor = lipgloss.Color("#a6e3a1") // green
 	// selection mode's frame (ux.md §1).
 	selectColor = lipgloss.Color("#f9e2af") // yellow
-	// a link in the page. ui.md §4 left this band open ("pick one unused,
-	// draw it, then decide"); teal is the anchor nothing else in the family
-	// has claimed. Unique to links across the whole app; underlined too, so
-	// a link is a link on a terminal with the colours flattened.
-	linkColor = lipgloss.Color("#74c7ec") // sapphire (chosen 2026-09-20; was teal)
-	// code, inline and block. Not peach: peach is the override band for
-	// "worth catching" (console warnings, 4xx rows), and code is not a
-	// warning. A block sits on surface0 so it reads as a block.
-	codeColor = lipgloss.Color("#f5c2e7") // pink
-	codeBg    = lipgloss.Color("#313244") // surface0
-	// A data table sits on a ground of its own, its header row on a
-	// deeper one: the header is told by ground, not by foreground
-	// (revised 2026-09-21; it was mauve text).
-	tableBg       = lipgloss.Color("#313244") // surface0
-	tableHeaderBg = lipgloss.Color("#45475a") // surface1
 	// mauve. It named a table's header cells until those went to a ground
 	// of their own (2026-09-21); what wears it now is a key inside a code
 	// block, and the pagetab's segments — the page's own chrome, told
@@ -65,6 +74,71 @@ const (
 	baseHex  = "#1e1e2e" // canvas; also dark text on a bright chip
 	crustHex = "#11111b" // recessed background of an inactive capsule
 )
+
+// ---- Page palette: the document's own structure, inside panel [2].
+//
+// Nothing here derives from the app palette and nothing there derives
+// from here. A page is drawn at one depth, so this set encodes KIND —
+// heading, link, code, table, field — rather than elevation.
+var (
+	pageText = lipgloss.Color("#cdd6f4") // text: the page's prose
+	// A placeholder, a marker, a role webu cannot draw: present,
+	// secondary, never competing with the prose.
+	pageDim = lipgloss.Color("#6c7086") // overlay0
+	// A link. Underlined as well as coloured, so a link is still a link
+	// on a terminal with its colours flattened.
+	pageLink = lipgloss.Color("#74c7ec") // sapphire
+	// A field's bed — the underscores a value sits on.
+	pageField = lipgloss.Color("#b4befe") // lavender
+	// Code, inline and block; a block sits on a ground so it reads as a
+	// block, and a key inside one is told apart by hue.
+	pageCode   = lipgloss.Color("#f5c2e7") // pink
+	pageCodeBg = lipgloss.Color("#313244") // surface0
+	pageKey    = lipgloss.Color("#cba6f7") // mauve
+	// A data table's ground, its header row one step up: the header is
+	// told by ground, not by foreground (revised 2026-09-21).
+	pageTableBg     = lipgloss.Color("#313244") // surface0
+	pageTableHeadBg = lipgloss.Color("#45475a") // surface1
+	// A heading's ground. h1 wears this and h6 the crust, the four
+	// between them interpolated (headingBg): the document's own outline
+	// drawn as weight, not as six colours to learn.
+	pageHeadTop = lipgloss.Color("#585b70") // surface2
+)
+
+// headingBg is the ground a heading of this level sits on: a lerp from
+// pageHeadTop at h1 to the crust at h6 — the mechanism the VTP gives for
+// spacing N steps between two anchors (§2.5). Levels outside 1-6 clamp.
+func headingBg(level int) lipgloss.Color {
+	level = clamp(level, 1, 6)
+	return lerpHex(string(pageHeadTop), crustHex, float64(level-1)/5)
+}
+
+// lerpHex mixes two "#rrggbb" colours channel by channel; t is 0 for a,
+// 1 for b, clamped either side.
+func lerpHex(a, b string, t float64) lipgloss.Color {
+	if t < 0 {
+		t = 0
+	}
+	if t > 1 {
+		t = 1
+	}
+	ar, ag, ab := hexRGB(a)
+	br, bg, bb := hexRGB(b)
+	mix := func(x, y int) int { return x + int(float64(y-x)*t+0.5) }
+	return lipgloss.Color(fmt.Sprintf("#%02x%02x%02x", mix(ar, br), mix(ag, bg), mix(ab, bb)))
+}
+
+func hexRGB(s string) (int, int, int) {
+	s = strings.TrimPrefix(s, "#")
+	if len(s) != 6 {
+		return 0, 0, 0
+	}
+	v, err := strconv.ParseInt(s, 16, 64)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return int(v >> 16 & 0xff), int(v >> 8 & 0xff), int(v & 0xff)
+}
 
 // spinnerFrames stands in for the web glyph in panel [2]'s URL row while
 // the page is on its way (2026-09-22). A page being fetched used to be
