@@ -29,8 +29,12 @@ import (
 type partKind uint8
 
 const (
-	partHeader partKind = iota
-	partMain
+	// The body is FIRST so that it is the zero value: a page opens on
+	// its body (user, 2026-09-22), and a tab that has never been told
+	// otherwise is on it. The order they are drawn in is not this one —
+	// that is the order of the page, and splitParts lists it.
+	partMain partKind = iota
+	partHeader
 	partOthers
 	partFooter
 )
@@ -68,7 +72,10 @@ type part struct {
 // leaves them out of the accessibility tree, and what it keeps webu
 // dissolves (ir.Build). Reasoning about this in HTML was reasoning about
 // a problem we do not have (user, 2026-09-23).
-func splitParts(root *ir.Node, boxes map[cdp.BackendNodeID]ir.Box) []part {
+//
+// Some pages have no parts at all, and say so by returning none: the
+// pagetab does not appear and the panel is the whole page.
+func splitParts(root *ir.Node, boxes map[cdp.BackendNodeID]ir.Box, view ir.Box) []part {
 	if root == nil || len(boxes) == 0 {
 		return nil
 	}
@@ -85,11 +92,32 @@ func splitParts(root *ir.Node, boxes map[cdp.BackendNodeID]ir.Box) []part {
 	if len(blocks) == 0 {
 		return nil
 	}
-	anchor := 0
+	anchor, ink := 0, 0.0
 	for i, b := range blocks {
+		ink += b.box.Area()
 		if b.box.Area() > blocks[anchor].box.Area() {
 			anchor = i
 		}
+	}
+	// Two ways a page has no parts, and either is enough.
+	//
+	// It fits the window. The four parts exist so the reader does not
+	// wade through chrome to reach the content, and there is no wading on
+	// a page that arrives whole — a heading and a paragraph have a
+	// biggest block by arithmetic and a body by nothing.
+	//
+	// Or nothing dominates it. A plain document is a stack of paragraphs,
+	// every one as wide as the page and shorter than it; cut that stack
+	// anywhere and the cut is webu's, not the page's.
+	var page ir.Box
+	for _, b := range blocks {
+		page = page.Union(b.box)
+	}
+	if view.H > 0 && page.H <= view.H {
+		return nil
+	}
+	if blocks[anchor].box.Area() < ink*bodyShare {
+		return nil
 	}
 	main := blocks[anchor].box
 
@@ -140,9 +168,96 @@ func boxOf(n *ir.Node, boxes map[cdp.BackendNodeID]ir.Box) ir.Box {
 	return b
 }
 
+// bodyShare is how much of a page's laid-out area the body has to be
+// before webu believes in it. Measured, not chosen: the biggest block is
+// 94% of Wikipedia, 90% of Hacker News and 70% of MDN — and 16% of a
+// page with no structure at all, where the blocks are fifteen paragraphs
+// of much the same size. A quarter sits in the gap (2026-09-23).
+const bodyShare = 0.25
+
 // beside reports whether a sits level with b but not over it: their rows
 // overlap and their columns do not.
 func beside(a, b ir.Box) bool {
 	return a.Y < b.Y+b.H && b.Y < a.Y+a.H && // level with it
 		(a.X+a.W <= b.X || b.X+b.W <= a.X) // and out of its way
+}
+
+// activePart is the part the panel is showing, or nil when the page has
+// none to show.
+func (t *tab) activePart() *part {
+	for i := range t.parts {
+		if t.parts[i].kind == t.at {
+			return &t.parts[i]
+		}
+	}
+	// The part the tab was on is gone — a page that used to have a side
+	// menu and does not any more. The body always exists when anything
+	// does, so it is where the hand lands.
+	for i := range t.parts {
+		if t.parts[i].kind == partMain {
+			t.at = partMain
+			return &t.parts[i]
+		}
+	}
+	if len(t.parts) > 0 {
+		t.at = t.parts[0].kind
+		return &t.parts[0]
+	}
+	return nil
+}
+
+// partIndex is where a part sits on the pagetab, or 0.
+func (t *tab) partIndex(k partKind) int {
+	for i, p := range t.parts {
+		if p.kind == k {
+			return i
+		}
+	}
+	return 0
+}
+
+// showPart switches the panel to a part and puts the hand back in the
+// page, at its start — the way opening anything else does.
+func (t *tab) showPart(k partKind, width, visible int) {
+	t.at = k
+	t.drill = nil
+	t.leavePagetab()
+	t.relayout(width)
+	t.cursor, t.top = t.firstItem(), 0
+	if t.cursor >= 0 {
+		t.top = clamp(t.lay.items[t.cursor].first, 0, max(0, len(t.lay.rows)-1))
+	}
+	t.scrollToCursor(visible)
+}
+
+// partHint is what the panel's bottom border says while the hand is on
+// the pagetab: how much is in the part under it, and — since the hand can
+// be on a part that is not the one on screen — whether Enter would change
+// anything.
+func partHint(t *tab) string {
+	i := t.pagetabIndex()
+	if i < 0 || i >= len(t.parts) {
+		return ""
+	}
+	p := t.parts[i]
+	n := 0
+	for _, node := range p.nodes {
+		n += countItems(node)
+	}
+	hint := plural(n, "item")
+	if p.kind == t.at {
+		hint += " · showing"
+	}
+	return hint
+}
+
+// withLead puts the menu glyph on the chain's first segment. The pagetab
+// is one strip, so it says so once, at its head (user, 2026-09-22).
+func withLead(labels []string) []string {
+	if len(labels) == 0 {
+		return labels
+	}
+	out := append([]string(nil), labels...)
+	out[0] = glyphMenu + " " + out[0]
+	return out
 }

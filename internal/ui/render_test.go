@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
@@ -66,13 +67,6 @@ func TestRenderFixtures(t *testing.T) {
 
 func dumpLayout(l layout) string {
 	var b strings.Builder
-	if len(l.pagetab) > 0 {
-		fmt.Fprintf(&b, "-- pagetab (%d of %d fit) --\n", l.fit, len(l.pagetab))
-		for _, c := range l.pagetab {
-			b.WriteString(c.label)
-			b.WriteString("\n")
-		}
-	}
 	for _, r := range l.rows {
 		b.WriteString(r.plain())
 		b.WriteString("\n")
@@ -151,17 +145,21 @@ func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 			t.Errorf("missing %q in\n%s", want, out)
 		}
 	}
-	// A folded landmark's content stays off; so does a navigation's —
-	// it is a capsule on the pagetab, its links behind Enter.
-	if strings.Contains(out, "Home") || strings.Contains(out, "footer") || strings.Contains(out, "Code") {
+	// A folded landmark's content stays off. An unfolded navigation's
+	// does not: it is content like everything else, drawn where the page
+	// put it (2026-09-23).
+	if strings.Contains(out, "Home") || strings.Contains(out, "footer") {
 		t.Errorf("hidden content is drawn:\n%s", out)
 	}
-	if len(tb.lay.pagetab) != 1 || !strings.Contains(tb.lay.pagetab[0].label, "nav +1") || strings.Contains(out, "▾ main") {
-		t.Errorf("the navigation inside main should be a capsule on the pagetab, and main has no rule:\n%s", dumpLayout(tb.lay))
+	if !strings.Contains(out, "Code") {
+		t.Errorf("a navigation nobody folded is on the page:\n%s", out)
 	}
-	// Items: the two regions' rules; main has none, the navigation is on
-	// the pagetab.
-	if len(tb.lay.items) != 2 || tb.lay.items[0].node.Role != "region" || !tb.lay.items[0].folded {
+	if strings.Contains(out, "▾ main") {
+		t.Errorf("main has no rule of its own:\n%s", dumpLayout(tb.lay))
+	}
+	// Items: the two regions' rules, the navigation's rule and the link
+	// under it. Main has none — an unnamed landmark draws none.
+	if len(tb.lay.items) != 4 || tb.lay.items[0].node.Role != "region" || !tb.lay.items[0].folded {
 		t.Fatalf("items: %s", out)
 	}
 	tb.cursor = 0
@@ -256,79 +254,6 @@ func TestHeadingCollapsesItsSection(t *testing.T) {
 	tb.reveal(root.Children[0].Children[4], 60) // B
 	if out := dumpLayout(tb.lay); !strings.Contains(out, "B") || tb.fold[2] {
 		t.Errorf("reveal should expand the heading over B:\n%s", out)
-	}
-}
-
-// TestNavigationIsOneRow: a navigation landmark is an entry — one row
-// naming where the user is in it and how many links are behind it, none
-// of them items — and navTargets is what Enter lists, the nesting of its
-// lists as depth. Where the user is: aria-current first, else the link
-// whose URL is the page's or its longest prefix; a breadcrumb's last
-// crumb.
-func TestChromeIsACapsule(t *testing.T) {
-	root := &ir.Node{Kind: ir.Document, URL: "https://x.test/docs/api", Children: []*ir.Node{
-		{Kind: ir.Landmark, Role: "navigation", Name: "Main", ID: 1, Children: []*ir.Node{{Kind: ir.List, Children: []*ir.Node{
-			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Platform", "https://x.test/platform", 2)}},
-			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Solutions", "https://x.test/docs", 3), {Kind: ir.List, Children: []*ir.Node{
-				{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Enterprise", "https://x.test/docs/enterprise", 5)}},
-			}}}},
-			{Kind: ir.ListItem, Marker: "• ", Children: []*ir.Node{link("Resources", "https://x.test/resources", 4)}},
-		}}}},
-	}}
-	l := render(root, 80)
-	if len(l.rows) != 0 || len(l.pagetab) != 1 || !strings.Contains(l.pagetab[0].label, "nav +4") {
-		t.Errorf("the capsule should be the kind's word with the count, and leave the page no row:\n%s", dumpLayout(l))
-	}
-	// Where the user is — the section the page is under — is the hint's.
-	if h := capsuleHint(l.pagetab[0], root.URL); !strings.Contains(h, "navigation Main") || !strings.Contains(h, "at Solutions") || !strings.Contains(h, "4 inside") {
-		t.Errorf("the hint should say what it is, where the user is in it, and how much is inside: %q", h)
-	}
-	// The page's own word wins over the URL.
-	root.Children[0].Children[0].Children[2].Children[0].Current = true
-	if l := render(root, 80); !strings.Contains(capsuleHint(l.pagetab[0], root.URL), "at Resources") {
-		t.Errorf("aria-current should name where the user is: %q", capsuleHint(l.pagetab[0], root.URL))
-	}
-	// A breadcrumb's row is its last crumb, link or not.
-	trail := &ir.Node{Kind: ir.Document, URL: "https://x.test/lib/a", Children: []*ir.Node{
-		{Kind: ir.Landmark, Role: "navigation", Name: "Breadcrumb", Breadcrumb: true, ID: 9, Children: []*ir.Node{{Kind: ir.List, Children: []*ir.Node{
-			{Kind: ir.ListItem, Children: []*ir.Node{link("Home", "https://x.test/", 10)}},
-			{Kind: ir.ListItem, Children: []*ir.Node{link("Library", "https://x.test/lib", 11)}},
-			{Kind: ir.ListItem, Children: []*ir.Node{text("Article A")}},
-		}}}},
-	}}
-	if l := render(trail, 80); len(l.pagetab) != 1 || !strings.Contains(capsuleHint(l.pagetab[0], trail.URL), "at Article A") {
-		t.Errorf("a breadcrumb's hint should be its last crumb: %q", capsuleHint(l.pagetab[0], trail.URL))
-	}
-	// The rest of the chrome: one capsule per kind, the kind's word, a
-	// field counting among what is behind it; the skip link is its own
-	// capsule, first.
-	chrome := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
-		{Kind: ir.Landmark, Role: "banner", ID: 20, Children: []*ir.Node{
-			link("Skip to content", "https://x.test/page#main", 21), link("Acme", "https://x.test/", 22), link("Sign in", "https://x.test/login", 23)}},
-		{Kind: ir.Landmark, Role: "search", ID: 30, Children: []*ir.Node{
-			{Kind: ir.Textbox, Role: "searchbox", Name: "Search Acme", ID: 31}, {Kind: ir.Button, Role: "button", Name: "Go", ID: 32}}},
-		{Kind: ir.Landmark, Role: "contentinfo", Name: "Site footer", ID: 40, Children: []*ir.Node{text("© Acme")}},
-	}}
-	// The skip link inside the banner is chrome inside chrome: not a
-	// capsule, and not among the header's rows either.
-	cl := render(chrome, 80)
-	for _, want := range []string{"header +2", "search +2", "footer\n"} {
-		if !strings.Contains(dumpLayout(cl), want) {
-			t.Errorf("missing the capsule %q in:\n%s", want, dumpLayout(cl))
-		}
-	}
-	if len(cl.pagetab) != 3 || cl.pagetab[0].kind != pagetabHeader || cl.pagetab[2].kind != pagetabFooter || len(cl.items) != 0 {
-		t.Errorf("three capsules in the pagetab's order, and no item on the page:\n%s", dumpLayout(cl))
-	}
-	if h := capsuleHint(cl.pagetab[2], ""); h != "contentinfo Site footer" {
-		t.Errorf("a footer's hint is its role and name: %q", h)
-	}
-	if len(l.items) != 0 {
-		t.Errorf("a navigation should leave the page no item:\n%s", dumpLayout(l))
-	}
-	ts := entryTargets(root.Children[0])
-	if len(ts) != 4 || ts[0].node.Text() != "Platform" || ts[2].node.Text() != "Enterprise" || ts[2].depth != 1 || ts[3].depth != 0 {
-		t.Errorf("targets: %+v", ts)
 	}
 }
 
@@ -492,8 +417,8 @@ func TestSkipLinkIsDropped(t *testing.T) {
 	tb := &tab{cursor: -1, root: root}
 	tb.relayout(60)
 	l := tb.lay
-	if len(l.pagetab) != 0 {
-		t.Errorf("a skip link is on no capsule:\n%s", dumpLayout(l))
+	if strings.Contains(dumpLayout(l), "Skip") {
+		t.Errorf("a skip link is not drawn:\n%s", dumpLayout(l))
 	}
 	if len(l.items) != 1 || l.items[0].node.Text() != "First" {
 		t.Errorf("the skip link should leave the page no item, and main has no rule:\n%s", dumpLayout(l))
@@ -511,76 +436,59 @@ func TestSkipLinkIsDropped(t *testing.T) {
 	}
 }
 
-// TestPagetabHand: k from the top of the page puts the hand on the pagetab, h/l
-// walk it and wrap, j comes back to the item the hand left; a width that
-// holds only some capsules ends the pagetab in a +N, and a capsule chosen
-// from behind it takes the last slot while the hand is on it.
+// k from the top of the page puts the hand on the pagetab, h/l walk the
+// parts and wrap, j comes back down to the item the hand left.
 func TestPagetabHand(t *testing.T) {
-	root := &ir.Node{Kind: ir.Document, URL: "https://x.test/", Children: []*ir.Node{
-		{Kind: ir.Landmark, Role: "banner", ID: 1, Children: []*ir.Node{link("Acme", "https://x.test/", 2)}},
-		{Kind: ir.Landmark, Role: "navigation", Name: "Main", ID: 3, Children: []*ir.Node{link("Docs", "https://x.test/docs", 4)}},
-		{Kind: ir.Landmark, Role: "search", ID: 5, Children: []*ir.Node{{Kind: ir.Textbox, Role: "searchbox", Name: "Search", ID: 6}}},
-		{Kind: ir.Landmark, Role: "main", ID: 7, Children: []*ir.Node{para(link("First", "https://x.test/1", 8)), para(link("Second", "https://x.test/2", 9))}},
-		{Kind: ir.Landmark, Role: "contentinfo", Name: "Footer", ID: 10, Children: []*ir.Node{text("©")}},
+	box := func(x, y, w, h float64) ir.Box { return ir.Box{X: x, Y: y, W: w, H: h} }
+	lm := func(role string, id int, kids ...*ir.Node) *ir.Node {
+		return &ir.Node{Kind: ir.Landmark, Role: role, ID: cdp.BackendNodeID(id), Children: kids}
+	}
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		lm("banner", 1, para(link("Home", "https://x.test/", 11))),
+		lm("main", 2, para(link("Body", "https://x.test/b", 12))),
+		lm("contentinfo", 3, para(link("Terms", "https://x.test/t", 13))),
 	}}
-	tb := &tab{cursor: -1, root: root}
-	tb.relayout(80)
-	if len(tb.lay.pagetab) != 4 || tb.lay.fit != 4 || tb.onPagetab() {
-		t.Fatalf("four capsules, all fitting, and the hand in the page:\n%s", dumpLayout(tb.lay))
+	tb := &tab{cursor: -1, root: root, boxes: map[cdp.BackendNodeID]ir.Box{
+		1: box(0, 0, 1000, 60), 11: box(0, 0, 100, 20),
+		2: box(0, 60, 1000, 900), 12: box(0, 60, 100, 20),
+		3: box(0, 960, 1000, 60), 13: box(0, 960, 100, 20),
+	}}
+	tb.relayout(60)
+	if len(tb.parts) != 3 || tb.at != partMain || tb.onPagetab() {
+		t.Fatalf("three parts, the body shown, the hand in the page: %+v at=%s", tb.parts, tb.at.word())
 	}
-	tb.cursor = 0 // First, the top row of the page (main has no rule)
-	tb.moveItem("k", 20)
-	if !tb.onPagetab() || tb.current() != root.Children[0] {
-		t.Errorf("k from the top of the page should put the hand on the first capsule, is on %+v", tb.current())
+	tb.cursor = 0
+	tb.moveItem("k", 10)
+	if !tb.onPagetab() || tb.parts[tb.pagetabIndex()].kind != partMain {
+		t.Errorf("k from the top goes to the part on screen: %d", tb.pagetabIndex())
 	}
-	tb.moveItem("k", 20)
-	if tb.current() != root.Children[0] {
-		t.Errorf("k on the pagetab should stay: %+v", tb.current())
+	tb.moveItem("k", 10)
+	if !tb.onPagetab() {
+		t.Error("k on the pagetab stays there")
 	}
-	tb.moveItem("h", 20)
-	if tb.current() != root.Children[4] {
-		t.Errorf("h at the first capsule should wrap to the last, is on %+v", tb.current())
+	tb.moveItem("h", 10)
+	if tb.parts[tb.pagetabIndex()].kind != partHeader {
+		t.Errorf("h wraps round the strip, is on %s", tb.parts[tb.pagetabIndex()].kind.word())
 	}
-	tb.moveItem("l", 20)
-	tb.moveItem("l", 20)
-	if tb.current() != root.Children[1] {
-		t.Errorf("l should walk on, wrapping at the end, is on %+v", tb.current())
-	}
-	tb.moveItem("j", 20)
+	tb.moveItem("j", 10)
 	if tb.onPagetab() || tb.cursor != 0 {
-		t.Errorf("j should leave the pagetab for the item the hand left: pagetab %d cursor %d", tb.pagetab, tb.cursor)
+		t.Errorf("j comes back to the item the hand left: pagetab %d cursor %d", tb.pagetab, tb.cursor)
 	}
-	// 32 cells hold two capsules and a +2.
-	tb.relayout(32)
-	if tb.lay.fit != 2 {
-		t.Fatalf("at 32 cells two capsules should fit, then +2: fit %d", tb.lay.fit)
+	// Walking the strip shows nothing; Enter does.
+	tb.enterPagetab()
+	tb.stepPagetab("h")
+	if tb.at != partMain {
+		t.Error("walking does not change what is shown")
 	}
-	tb.moveItem("k", 20)
-	tb.moveItem("h", 20)
-	if !tb.onMore() || tb.current() != nil {
-		t.Errorf("h from the first capsule should wrap onto the +N, which stands for no node: pagetab %d", tb.pagetab)
+	tb.showPart(tb.parts[tb.pagetabIndex()].kind, 60, 10)
+	if tb.at == partMain || tb.onPagetab() {
+		t.Errorf("Enter shows the part and comes back down: at=%s", tb.at.word())
 	}
-	tb.focusPagetab(3) // chosen from behind the +N
-	if slots := tb.pagetabSlots(); len(slots) != 3 || slots[0] != 0 || slots[1] != 3 || slots[2] != pagetabMore {
-		t.Errorf("a capsule chosen from behind +N should take the last slot: %v", slots)
-	}
-	tb.moveItem("l", 20)
-	if !tb.onMore() {
-		t.Errorf("l from the last slot should be the +N: pagetab %d", tb.pagetab)
-	}
-	tb.moveItem("l", 20)
-	if tb.current() != root.Children[0] {
-		t.Errorf("l from the +N should wrap to the first capsule, is on %+v", tb.current())
-	}
-	tb.moveItem("G", 20)
-	if tb.onPagetab() || tb.cursor != len(tb.lay.items)-1 {
-		t.Errorf("G from the pagetab should come down and go to the end: pagetab %d cursor %d", tb.pagetab, tb.cursor)
+	if v := dumpLayout(tb.lay); strings.Contains(v, "Body") {
+		t.Errorf("the panel is that part alone:\n%s", v)
 	}
 }
 
-// TestJumpToAnchor: a fragment lands the cursor on the element it names
-// when that is an item, else on the first item inside it, else on the
-// item it sits inside, by the DOM's parents; an id the page lacks, or a
 // target with nothing to stop on, is no jump.
 func TestJumpToAnchor(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
@@ -679,32 +587,30 @@ func TestUnnamedContentStaysOnThePage(t *testing.T) {
 	tb := &tab{cursor: -1, root: root}
 	tb.relayout(60)
 	l := tb.lay
-	if len(l.pagetab) != 1 || l.pagetab[0].kind != pagetabNav {
-		t.Fatalf("only a role's word is chrome:\n%s", dumpLayout(l))
-	}
 	v := dumpLayout(l)
 	for _, want := range []string{"shell", "Card one", "Card two", "PROJ-1"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("%q should be on the page:\n%s", want, v)
 		}
 	}
-	// And reachable, not merely drawn.
-	if len(l.items) != 2 {
-		t.Errorf("both cards' links should be items to stop on:\n%s", v)
+	// And reachable, not merely drawn — the sidebar's link with them: a
+	// navigation is content like everything else now that the parts are
+	// geometry rather than roles (2026-09-23).
+	if len(l.items) != 3 {
+		t.Errorf("every link should be an item to stop on:\n%s", v)
 	}
-	// Outside main, a skip link is dropped and blank text is nothing: no
-	// capsule for either, and no row.
+	// A skip link is dropped and blank text is nothing: no row for either.
 	tidy := &ir.Node{Kind: ir.Document, URL: "https://x.test/page", Children: []*ir.Node{
 		link("Jump to content", "https://x.test/page#main", 1), text(" \n "),
 		{Kind: ir.Landmark, Role: "main", ID: 2, Children: []*ir.Node{para(link("First", "https://x.test/1", 3))}},
 	}}
-	if l := render(tidy, 60); len(l.pagetab) != 0 || strings.Contains(dumpLayout(l), "Jump to") {
+	if l := render(tidy, 60); strings.Contains(dumpLayout(l), "Jump to") {
 		t.Errorf("a skip link is furniture for a problem webu does not have:\n%s", dumpLayout(l))
 	}
 	// A page with no main keeps everything, as it always did — and the
 	// two cases are now one code path rather than two.
 	bare := &ir.Node{Kind: ir.Document, Children: []*ir.Node{para(text("promo")), para(link("First", "u", 3))}}
-	if l := render(bare, 60); len(l.pagetab) != 0 || len(l.items) != 1 || !strings.Contains(dumpLayout(l), "promo") {
+	if l := render(bare, 60); len(l.items) != 1 || !strings.Contains(dumpLayout(l), "promo") {
 		t.Errorf("without main the page keeps everything:\n%s", dumpLayout(l))
 	}
 }
@@ -846,56 +752,70 @@ func TestABlockLabelIsNotPrintedTwice(t *testing.T) {
 	}
 }
 
-// The hand parked on the pagetab has to survive a recapture. It was
-// matched only on the node behind the capsule, by an id Chromium
-// reassigns whenever the page rebuilds that part of its DOM — so a hand
-// on the last capsule of a page that keeps settling fell back into the
-// page, which reads as Esc undoing itself (user, 2026-09-22).
+// The hand parked on the pagetab has to survive a recapture. It is on a
+// KIND of part, and the kinds are a closed set — they outlive every node
+// behind them, which the ids do not: a page that keeps settling used to
+// drop the hand back into the page, which reads as Esc undoing itself
+// (user, 2026-09-22).
 func TestTheHandStaysOnThePagetab(t *testing.T) {
-	build := func(id int) *ir.Node {
-		return &ir.Node{Kind: ir.Document, Children: []*ir.Node{
-			{Kind: ir.Landmark, Role: "navigation", ID: 2, Children: []*ir.Node{link("Home", "/", 3)}},
-			// A footer the page rebuilds: its ids move under it.
-			{Kind: ir.Landmark, Role: "contentinfo", ID: cdp.BackendNodeID(id),
-				Children: []*ir.Node{link("Terms", "/t", id+1)}},
-			{Kind: ir.Landmark, Role: "main", ID: 9, Children: []*ir.Node{para(text("body"))}},
-		}}
+	box := func(x, y, w, h float64) ir.Box { return ir.Box{X: x, Y: y, W: w, H: h} }
+	// A page of three bands, the bottom one rebuilt under new ids the way
+	// a page that keeps settling rebuilds its footer.
+	build := func(id int) ir.Capture {
+		return ir.Capture{
+			Nodes: []*accessibility.Node{
+				axNode(1, "RootWebArea", "Page", 1, 2, 9, id),
+				axNode(2, "navigation", "", 2, 3),
+				axNode(3, "link", "Home", 3),
+				axNode(9, "main", "", 9, 10),
+				axNode(10, "paragraph", "", 10),
+				axNode(id, "contentinfo", "", id, id+1),
+				axNode(id+1, "link", "Terms", id+1),
+			},
+			Boxes: map[cdp.BackendNodeID]ir.Box{
+				2: box(0, 0, 1000, 60), 3: box(0, 0, 80, 20),
+				9: box(0, 60, 1000, 900), 10: box(0, 60, 400, 40),
+				cdp.BackendNodeID(id): box(0, 960, 1000, 60), cdp.BackendNodeID(id + 1): box(0, 960, 80, 20),
+			},
+		}
 	}
-	tb := &tab{cursor: -1, root: build(100)}
-	tb.relayout(80)
-	last := len(tb.lay.pagetab) - 1
-	if last < 1 {
-		t.Fatalf("want a nav and an other capsule, got %d", len(tb.lay.pagetab))
+	tb := &tab{cursor: -1}
+	tb.apply(pageMsg{url: "https://x.test/p", title: "Page", cap: build(100)}, 80)
+	tb.lastVisit = "https://x.test/p"
+	if len(tb.parts) != 3 {
+		t.Fatalf("three bands are three parts: %d", len(tb.parts))
 	}
-	tb.focusPagetab(last)
-	kind := tb.lay.pagetab[last].kind
+	tb.focusPagetab(tb.partIndex(partFooter))
 
-	// The same page again, that part of its DOM rebuilt under new ids.
-	tb.apply(pageMsg{url: "https://x.test/p", cap: ir.Capture{}}, 80)
-	tb.root = build(777)
-	tb.relayout(80)
-	tb.focusCapsuleLike(0, kind, last)
+	// The same page again, that part rebuilt under new ids.
+	tb.apply(pageMsg{url: "https://x.test/p", title: "Page", cap: build(777)}, 80)
 	if !tb.onPagetab() {
 		t.Fatal("the hand fell back into the page")
 	}
-	if got := tb.lay.pagetab[tb.pagetabIndex()].kind; got != kind {
-		t.Errorf("the hand moved to kind %v, want %v", got, kind)
-	}
-	// And with nothing to go back to, it does leave.
-	empty := &tab{cursor: -1, root: &ir.Node{Kind: ir.Document, Children: []*ir.Node{para(text("bare"))}}}
-	empty.relayout(80)
-	empty.focusCapsuleLike(0, kind, 0)
-	if empty.onPagetab() {
-		t.Error("a page with no chrome has no capsule to hold the hand")
+	if got := tb.parts[tb.pagetabIndex()].kind; got != partFooter {
+		t.Errorf("the hand moved to %s, want footer", got.word())
 	}
 }
 
-// A node with no text of its own carries everything in its name, and
-// authors write those as "Label: value" because a screen reader has
-// nothing else to go on — Jira's cards say "Priority: Highest",
-// "Assignee: vulcanshen". The label is drawn dim and the value in the
-// ink of what it is, so a row of icons reads as the fields it is
-// (2026-09-22).
+// axNode is the ir tests' helper, here because these tests drive apply,
+// which builds the tree itself.
+func axNode(id int, role, name string, backend int, kids ...int) *accessibility.Node {
+	val := func(s string) *accessibility.Value {
+		raw, _ := json.Marshal(s)
+		return &accessibility.Value{Type: accessibility.ValueTypeString, Value: raw}
+	}
+	n := &accessibility.Node{
+		NodeID:           accessibility.NodeID(itoa(id)),
+		Role:             val(role),
+		Name:             val(name),
+		BackendDOMNodeID: cdp.BackendNodeID(backend),
+	}
+	for _, k := range kids {
+		n.ChildIDs = append(n.ChildIDs, accessibility.NodeID(itoa(k)))
+	}
+	return n
+}
+
 func TestAMetadataNameIsAField(t *testing.T) {
 	img := func(name string, id int) *ir.Node {
 		return &ir.Node{Kind: ir.Media, Role: "image", Name: name, ID: cdp.BackendNodeID(id)}

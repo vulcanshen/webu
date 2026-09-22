@@ -32,6 +32,11 @@ type Capture struct {
 	// to: Top Bar · Sidebar · Main Content"); a link's text says it too
 	// (ui). A block is wrapped in a navigation of its own at build time.
 	Skip map[cdp.BackendNodeID]bool `json:"skip,omitempty"`
+	// Viewport is the window the page was laid out in — not the page's
+	// own size, which Boxes gives. A page shorter than its viewport is
+	// whole: nothing is off screen for the chrome to be in the way of
+	// (ui.splitParts, 2026-09-23). Zero when nothing measured it.
+	Viewport Box `json:"viewport,omitempty"`
 	// Boxes is where each element was laid out: x, y, width, height, in
 	// page coordinates. It is the only thing that says a block sits
 	// BESIDE another rather than under it, and where a page's top and

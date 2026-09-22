@@ -12,6 +12,7 @@ import (
 	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/domsnapshot"
+	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 	"github.com/vulcanshen/webu/internal/ir"
@@ -67,6 +68,13 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 			}),
 		}
 		c.Anchors, c.Parents = anchors(docs, strs)
+		// The window the page was laid out in. A page that fits inside it
+		// has no parts: the four exist so the reader does not wade through
+		// chrome to reach content, and there is no wading on a page that
+		// is already all on screen (ui.splitParts, 2026-09-23).
+		if _, _, _, _, css, _, err := cdppage.GetLayoutMetrics().Do(ctx); err == nil && css != nil {
+			c.Viewport = ir.Box{W: css.ClientWidth, H: css.ClientHeight}
+		}
 		// What the response was: a JSON or plain-text document is drawn as
 		// its text, not as Chrome's viewer for it (ir.Build).
 		if obj, _, err := runtime.Evaluate("document.contentType").WithReturnByValue(true).Do(ctx); err == nil && obj != nil {

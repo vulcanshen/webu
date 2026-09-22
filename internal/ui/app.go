@@ -1380,10 +1380,9 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 type optionsKind int
 
 const (
-	optItemMenu    optionsKind = iota // an item's operations on their own: what a capsule holds (Enter on it)
-	optSelect                         // a <select>'s options, keyed by index
-	optMoveTo                         // a bookmark's folder, keyed by index (bookmarks.go)
-	optPagetabMore                    // the capsules behind the pagetab's "+N", keyed pagetab:i (openPagetabMore)
+	optItemMenu optionsKind = iota // an item's operations on their own
+	optSelect                      // a <select>'s options, keyed by index
+	optMoveTo                      // a bookmark's folder, keyed by index (bookmarks.go)
 )
 
 // itemMenuItems is an item's operations by role (menu-only, no letters —
@@ -1399,15 +1398,6 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 		items = append(items, menuItem{label: "Content", key: "cell:content", hint: "the cell in full"})
 		items = append(items, targetItems(n)...)
 	case ir.Landmark:
-		if isEntry(n) {
-			// What it holds, one row each, the nesting of its lists as
-			// indent: this IS the row's operation list.
-			items = append(items, targetItems(n)...)
-			if len(items) == 0 {
-				items = append(items, menuItem{label: "nothing to open in it", key: "entry:none", hint: "no link, button or field inside", disabled: true})
-			}
-			break
-		}
 		if folded {
 			items = append(items, menuItem{label: "Expand", key: "fold", hint: "show what is inside"})
 		} else {
@@ -1489,46 +1479,12 @@ func targetRow(t entryTarget, i int) menuItem {
 		key: "entry:" + itoa(i), hint: hint}
 }
 
-// capsuleMenuItems is a capsule's list: what it holds, one row each,
-// and when it holds several landmarks — a page's every navigation — a
-// header row names each before its rows. The keys run across them
-// (capsuleTargets, dispatch).
-func capsuleMenuItems(c capsule) []menuItem {
-	var items []menuItem
-	at := 0
-	several := len(c.nodes) > 1
-	for i, n := range c.nodes {
-		ts := entryTargets(n)
-		if several && len(ts) > 0 {
-			name := oneLine(n.Name)
-			if name == "" {
-				name = n.Role + " " + itoa(i+1)
-			}
-			items = append(items, menuItem{header: true, label: truncate(name, 40)})
-		}
-		for _, x := range ts {
-			items = append(items, targetRow(x, at))
-			at++
-		}
-	}
-	if len(items) == 0 {
-		items = append(items, menuItem{label: "nothing to open in it", key: "entry:none", hint: "no link, button or field inside", disabled: true})
-	}
-	return items
-}
-
 // pageMenuItems is panel [2]'s Space menu: the item's operations, then the
 // page's — the whole of what can be done here (ux.md §A.1).
 func (m AppModel) pageMenuItems() []menuItem {
 	var items []menuItem
 	t := m.shownTab()
-	if c := t.currentCapsule(); t != nil && c != nil {
-		items = append(items, menuItem{header: true, label: "item operation"})
-		items = append(items, capsuleMenuItems(*c)...)
-		items = append(items,
-			menuItem{separator: true},
-			menuItem{header: true, label: "panel operation"})
-	} else if t.listing() {
+	if t.listing() {
 		// On the section list the item is a section, and the one thing to
 		// do to it is open it.
 		items = append(items,
@@ -1579,15 +1535,15 @@ func (m AppModel) pageMenuItems() []menuItem {
 // 2026-09-22).
 func pagetabItem(t *tab) menuItem {
 	switch {
-	case t == nil || len(t.lay.pagetab) == 0:
-		return menuItem{label: "[Esc] Page chrome", key: "pagetab",
-			hint: "this page declares none", disabled: true}
+	case t == nil || len(t.parts) < 2:
+		return menuItem{label: "[Esc] Page parts", key: "pagetab",
+			hint: "this page is all one part", disabled: true}
 	case t.onPagetab():
 		return menuItem{label: "[Esc] Back to the page", key: "pagetab",
 			hint: "leave the pagetab"}
 	}
-	return menuItem{label: "[Esc] Page chrome", key: "pagetab",
-		hint: "the pagetab under the URL"}
+	return menuItem{label: "[Esc] Page parts", key: "pagetab",
+		hint: "header, body, others, footer"}
 }
 
 // sectionOpenHint says what opening the section under the list cursor
@@ -1662,18 +1618,7 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(closeCmd, m.moveBookmark(m.moveRef, idx))
 	}
-	if m.optionsKind == optPagetabMore {
-		// A capsule from behind the pagetab's "+N": the hand goes to it — it
-		// takes the pagetab's last slot meanwhile — and its list opens in
-		// place of this one, on this one's layer.
-		t := m.shownTab()
-		i, err := strconv.Atoi(strings.TrimPrefix(key, "pagetab:"))
-		if t == nil || err != nil || i < 0 || i >= len(t.lay.pagetab) {
-			return m, m.options.close()
-		}
-		t.focusPagetab(i)
-		return m.openItemMenuAt(t.lay.pagetab[i].nodes[0], m.options.layer)
-	}
+
 	n := m.optionsFor
 	t := m.shownTab()
 	if t == nil {
@@ -1957,11 +1902,11 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	if t != nil {
-		if t.onMore() {
-			return m.openPagetabMore(t)
-		}
-		if c := t.currentCapsule(); c != nil {
-			return m.enterCapsule(t, *c)
+		if i := t.pagetabIndex(); i >= 0 && i < len(t.parts) {
+			// A tab on the pagetab: Enter shows that part, the way Enter
+			// on panel [1] shows a browser tab.
+			t.showPart(t.parts[i].kind, m.pageW(), m.pageVisible())
+			return m, nil
 		}
 		if t.listing() {
 			// The section list: Enter opens one to the whole panel
@@ -1983,22 +1928,18 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	case ir.Cell:
 		return m.enterCell(t, n)
 	case ir.Landmark:
-		if isEntry(n) {
-			// Chrome: its own operation is its operation list, what it
-			// holds — except a search with one box, whose one obvious
-			// operation is the box (2026-09-21).
-			if n.Role == "search" {
-				var boxes []*ir.Node
-				for _, x := range entryTargets(n) {
-					if x.node.Kind == ir.Textbox {
-						boxes = append(boxes, x.node)
-					}
-				}
-				if len(boxes) == 1 {
-					return m, m.editFieldAs(boxes[0], true)
+		if n.Role == "search" {
+			// A search with one box has one obvious operation: the box
+			// (2026-09-21). It is a landmark like any other otherwise.
+			var boxes []*ir.Node
+			for _, x := range entryTargets(n) {
+				if x.node.Kind == ir.Textbox {
+					boxes = append(boxes, x.node)
 				}
 			}
-			return m.openItemMenu(n)
+			if len(boxes) == 1 {
+				return m, m.editFieldAs(boxes[0], true)
+			}
 		}
 		return m.dispatch("fold")
 	case ir.Heading:
@@ -2075,63 +2016,8 @@ func (m AppModel) openItemMenu(n *ir.Node) (tea.Model, tea.Cmd) {
 func (m AppModel) openItemMenuAt(n *ir.Node, layer int) (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	items, title := itemMenuItems(n, t.curFolded()), truncate(oneLine(nameOr(n.Name, n.Role)), 40)
-	if c := t.currentCapsule(); c != nil {
-		items, title = capsuleMenuItems(*c), c.title()
-	}
 	m.optionsFor, m.optionsKind = n, optItemMenu
 	m.options.setItems(items, title, layer)
-	return m, m.options.open()
-}
-
-// enterCapsule is Enter on a capsule: its list, the item operations of
-// what it holds — except where one thing is the obvious operation: a
-// search with one box opens the box, and a capsule with nothing to open
-// shows its text.
-func (m AppModel) enterCapsule(t *tab, c capsule) (tea.Model, tea.Cmd) {
-	ts := capsuleTargets(c)
-	switch {
-	case len(ts) == 0:
-		return m, m.showCapsule(c)
-	case c.kind == pagetabSearch:
-		var boxes []*ir.Node
-		for _, x := range ts {
-			if x.node.Kind == ir.Textbox {
-				boxes = append(boxes, x.node)
-			}
-		}
-		if len(boxes) == 1 {
-			return m, m.editFieldAs(boxes[0], true)
-		}
-	}
-	return m.openItemMenu(c.nodes[0])
-}
-
-// showCapsule is a capsule with nothing to open — a footer that is one
-// line of text: the text, in a popup that scrolls.
-func (m *AppModel) showCapsule(c capsule) tea.Cmd {
-	var b strings.Builder
-	for _, n := range c.nodes {
-		b.WriteString(strings.TrimSpace(n.Text()))
-		b.WriteString("\n")
-	}
-	text := strings.TrimSpace(b.String())
-	if text == "" {
-		text = "(empty)"
-	}
-	return m.message.show(glyphMenu, c.title(), wrapWords(text, min(72, max(20, m.w-12))), false, m.layer())
-}
-
-// openPagetabMore is Enter on the pagetab's "+N": the capsules the width left
-// out, one row each. Choosing one puts the hand on it — it takes the
-// pagetab's last slot meanwhile — and opens its list (optionsKey).
-func (m AppModel) openPagetabMore(t *tab) (tea.Model, tea.Cmd) {
-	var items []menuItem
-	for i := t.lay.fit; i < len(t.lay.pagetab); i++ {
-		c := t.lay.pagetab[i]
-		items = append(items, menuItem{label: c.label, key: "pagetab:" + itoa(i), hint: truncate(capsuleHint(c, t.url), 40)})
-	}
-	m.optionsFor, m.optionsKind = nil, optPagetabMore
-	m.options.setItems(items, "more", m.layer())
 	return m, m.options.open()
 }
 
@@ -2671,11 +2557,10 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 		switch {
 		case t.loading:
 			hint = "loading"
-		case t.onMore():
-			// The hand on the pagetab: what it is under, and what is inside.
-			hint = plural(len(t.lay.pagetab)-t.lay.fit, "more capsule")
-		case t.currentCapsule() != nil:
-			hint = truncate(capsuleHint(*t.currentCapsule(), t.url), max(1, innerW-8))
+		case t.onPagetab():
+			// The hand on the pagetab: what that part holds, and whether
+			// it is the one being shown.
+			hint = truncate(partHint(t), max(1, innerW-8))
 		case t.listing(), t.read:
 			// Which piece of how many, and what it is called — the one
 			// thing a sheet of text cannot say about itself (section.go).

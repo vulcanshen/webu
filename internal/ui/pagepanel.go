@@ -392,30 +392,18 @@ func (m AppModel) pagetabRow(t *tab, innerW int) string {
 	if t.read && t.sec < len(t.secs) {
 		return m.sectionHeadRow(t, innerW)
 	}
-	slots := t.pagetabSlots()
-	if len(slots) == 0 {
+	if len(t.parts) < 2 {
+		// One part is the whole page: there is nothing to choose between,
+		// so the row is a rule and Esc has nowhere to go.
 		return dim.Render(strings.Repeat("─", innerW))
 	}
-	labels := make([]string, 0, len(slots))
-	active := -1
-	for i, s := range slots {
-		if s == pagetabMore {
-			labels = append(labels, "+"+itoa(len(t.lay.pagetab)-t.lay.fit))
-		} else {
-			labels = append(labels, t.lay.pagetab[s].label)
-		}
-		if s == t.pagetabSlot() && !m.sel.on {
-			active = i
-		}
-	}
-	for len(labels) > 1 && chainW(withLead(labels)) > innerW-1 {
-		labels = labels[:len(labels)-1]
-		if active >= len(labels) {
-			active = len(labels) - 1
-		}
+	labels := make([]string, 0, len(t.parts))
+	for _, p := range t.parts {
+		labels = append(labels, p.kind.word())
 	}
 	labels = withLead(labels)
-	chain := pagetabChain(labels, active, m.focus == panelPage, t.loading)
+	chain := partChain(labels, t.partIndex(t.at)+1, t.pagetabIndex()+1,
+		m.focus == panelPage && !m.sel.on, t.loading)
 	return chain + dim.Render(strings.Repeat("─", max(0, innerW-chainW(labels))))
 }
 
@@ -482,17 +470,29 @@ func chainW(labels []string) int {
 // page cursor's. Unfocused it drops to the register an unfocused chip
 // wears; all of it dims while the page is on its way.
 func pagetabChain(labels []string, active int, focused, dimmed bool) string {
-	lit, unlit := headerColor, lipgloss.Color(baseHex)
-	ink := headerColor
+	return partChain(labels, active+1, 0, focused, dimmed)
+}
+
+// partChain draws the parts as one powerline strip with TWO lit states,
+// because the hand can be on a part that is not the one on screen:
+// showing is rosewater, the hand is lavender, and when they are the same
+// part the hand wins — it is the thing that moves (user, 2026-09-22).
+// Indexes are one-based so zero means neither.
+func partChain(labels []string, showing, hand int, focused, dimmed bool) string {
+	unlit := lipgloss.Color(baseHex)
+	litShow, litHand, ink := headerColor, editColor, headerColor
 	switch {
 	case dimmed:
-		lit, ink = borderDim, dimColor
+		litShow, litHand, ink = borderDim, borderDim, dimColor
 	case !focused:
-		lit = borderDim
+		litShow, litHand = borderDim, borderDim
 	}
 	fill := func(i int) lipgloss.Color {
-		if i == active {
-			return lit
+		switch i + 1 {
+		case hand:
+			return litHand
+		case showing:
+			return litShow
 		}
 		return unlit
 	}
@@ -504,9 +504,9 @@ func pagetabChain(labels []string, active int, focused, dimmed bool) string {
 			b.WriteString(lipgloss.NewStyle().Foreground(fg).Background(bg).Render(div))
 		}
 		seg := " " + lab + " "
-		if i == active {
+		if c := fill(i); c != unlit {
 			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).
-				Background(lit).Bold(true).Render(seg))
+				Background(c).Bold(true).Render(seg))
 			continue
 		}
 		b.WriteString(lipgloss.NewStyle().Foreground(ink).Background(unlit).Render(seg))
