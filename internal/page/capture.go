@@ -44,7 +44,7 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 		if err != nil {
 			return err
 		}
-		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs),
+		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs), Hidden: hiddenMap(docs),
 			// What the AX tree does not say, the DOM does (ir.Build).
 			Protected: attrMarks(docs, strs, func(tag, name, value string) bool {
 				return tag == "input" && name == "type" && value == "password"
@@ -77,6 +77,37 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 		return nil
 	})
 	return c, err
+}
+
+// hiddenMap is every element the page laid out at a point: a box of 1×1
+// or less. That is the sr-only pattern — position:absolute, width:1px,
+// height:1px, clip — which a page uses to write for a screen reader
+// alone: "Show subtasks for AIS-2442 …", the issue key a second time,
+// the summary a third. Chromium folds that text into the accessible
+// names it computes, so the names keep it; only the duplicate rows go.
+//
+// Both sides have to be small. A rule is one pixel tall and the width of
+// the page, and it is not hidden — it is a rule.
+//
+// A node with no box at all is not hidden, it is unmeasured: the layout
+// tree only lists what was laid out, and absent data is not evidence.
+func hiddenMap(docs []*domsnapshot.DocumentSnapshot) map[cdp.BackendNodeID]bool {
+	out := map[cdp.BackendNodeID]bool{}
+	if len(docs) == 0 || docs[0].Nodes == nil || docs[0].Layout == nil {
+		return out
+	}
+	ids := docs[0].Nodes.BackendNodeID
+	lay := docs[0].Layout
+	for j, ni := range lay.NodeIndex {
+		if ni < 0 || int(ni) >= len(ids) || j >= len(lay.Bounds) {
+			continue
+		}
+		// Rectangle is [x, y, width, height].
+		if b := lay.Bounds[j]; len(b) == 4 && b[2] <= 1 && b[3] <= 1 {
+			out[ids[ni]] = true
+		}
+	}
+	return out
 }
 
 // attrMarks reads the snapshot's node table for the elements pick says
