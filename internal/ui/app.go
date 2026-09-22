@@ -860,6 +860,13 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 		t.leavePagetab()
 		return m, nil
 	}
+	// Esc is one move: up a level. Inside a section that is the section
+	// list; on the list, or on a page that has none, it is the chrome
+	// above both (section.go).
+	if t.read {
+		t.closeSection()
+		return m, nil
+	}
 	if !t.enterPagetab() {
 		return m, m.toast.show("this page has no chrome", toastInfo)
 	}
@@ -942,6 +949,10 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case panelPage:
 		t := m.shownTab()
 		if navKeys[k] && t != nil {
+			if t.listing() && !t.onPagetab() {
+				t.moveSection(k, m.pageVisible())
+				return m, nil
+			}
 			t.moveItem(k, m.pageVisible())
 			if n := t.current(); n != nil && n.ID != 0 {
 				id := n.ID
@@ -952,6 +963,8 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch k {
 		case "enter":
 			return m.dispatch("enter")
+		case "n", "p":
+			return m.dispatch(k)
 		case "R", "T", "Y", "A", "O", "Z", "I", "C":
 			return m.dispatch(k)
 		}
@@ -1428,9 +1441,6 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 		menuItem{label: "Inspect", key: "inspect", hint: "role, name, node id"})
 }
 
-// targetItems is what an entry row or a table cell holds, one row each
-// — a link, a button, a field, a check box, a select — with the nesting
-// of its lists as indent; the key is the target's place (dispatch).
 // targetItems is what a table cell (or a piece of chrome) holds, one row
 // each — a link, a button, a field, a check box, a select — with the
 // nesting of its lists as indent; the key is the target's place
@@ -1513,6 +1523,15 @@ func (m AppModel) pageMenuItems() []menuItem {
 		items = append(items,
 			menuItem{separator: true},
 			menuItem{header: true, label: "panel operation"})
+	} else if t.listing() {
+		// On the section list the item is a section, and the one thing to
+		// do to it is open it.
+		items = append(items,
+			menuItem{header: true, label: "item operation"},
+			menuItem{label: "[Enter] Open section", key: "enter",
+				hint: sectionOpenHint(t)},
+			menuItem{separator: true},
+			menuItem{header: true, label: "panel operation"})
 	} else if n := t.current(); t != nil && n != nil {
 		items = append(items, menuItem{header: true, label: "item operation"})
 		items = append(items, itemMenuItems(n, t.curFolded())...)
@@ -1532,6 +1551,11 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Location", key: "L", hint: "a URL or a search; this page's own is offered"},
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
 		pagetabItem(t),
+		sectionsItem(t),
+		menuItem{label: "[n] Next section", key: "n", hint: "the one after this, at the same depth",
+			disabled: t == nil || !t.read},
+		menuItem{label: "[p] Previous section", key: "p", hint: "the one before this, at the same depth",
+			disabled: t == nil || !t.read},
 		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
 		menuItem{label: "Inspect", key: "I", hint: "DevTools: network, storage, console, source", disabled: t == nil},
 		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
@@ -1558,6 +1582,33 @@ func pagetabItem(t *tab) menuItem {
 	}
 	return menuItem{label: "[Esc] Page chrome", key: "pagetab",
 		hint: "the pagetab under the URL"}
+}
+
+// sectionOpenHint says what opening the section under the list cursor
+// will give: its size, so the row is a decision and not a leap.
+func sectionOpenHint(t *tab) string {
+	if t.sec >= len(t.secs) {
+		return ""
+	}
+	s := t.secs[t.sec]
+	return truncate(s.title, 40) + " · " + plural(s.lines(), "line")
+}
+
+// sectionsItem is the page's Space menu row for the cut into sections
+// (section.go): a document is read one section at a time, and this is how
+// that is turned off for a page the cut does not suit — or on for one it
+// was not offered for.
+func sectionsItem(t *tab) menuItem {
+	switch {
+	case t == nil || len(t.secs) == 0:
+		return menuItem{label: "Sections", key: "sections",
+			hint: "this page has no headings to cut on", disabled: true}
+	case t.flat:
+		return menuItem{label: "Sections", key: "sections",
+			hint: "read this page one section at a time"}
+	}
+	return menuItem{label: "One sheet", key: "sections",
+		hint: "read the whole page in one run"}
 }
 
 // textboxItems is a filled textbox's rows in the Space menu (ux.md §2.2):
@@ -1790,6 +1841,35 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		return m.chooseOptions()
 	case "pagetab":
 		return m.togglePagetab()
+	case "n", "p":
+		// The next and previous section at the same depth, without going
+		// back through the list (section.stepSection).
+		if t == nil || !t.read {
+			return m, nil
+		}
+		step := 1
+		if key == "p" {
+			step = -1
+		}
+		if !t.stepSection(step, m.pageVisible()) {
+			return m, m.toast.show("no section that way", toastInfo)
+		}
+		return m, nil
+	case "sections":
+		// The page as one sheet, or cut into sections: the way out when
+		// the cut is wrong for this page, and the way in when a page was
+		// not cut but you want it to be.
+		if t == nil || len(t.secs) == 0 {
+			return m, m.toast.show("this page has no headings to cut on", toastInfo)
+		}
+		t.flat, t.read = !t.flat, false
+		if t.flat {
+			t.scrollToCursor(m.pageVisible())
+			return m, nil
+		}
+		t.sec = sectionAt(t.secs, t.top)
+		t.clampSecTop(m.pageVisible())
+		return m, nil
 	case "yankmd":
 		// The page itself rather than its URL: what webu draws, said in
 		// the form the rest of the family passes around (ir.Markdown).
@@ -1869,6 +1949,12 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 		}
 		if c := t.currentCapsule(); c != nil {
 			return m.enterCapsule(t, *c)
+		}
+		if t.listing() {
+			// The section list: Enter opens one to the whole panel
+			// (section.go).
+			t.openSection(m.pageVisible())
+			return m, nil
 		}
 	}
 	n := t.current()
@@ -2600,6 +2686,10 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 			hint = plural(len(t.lay.pagetab)-t.lay.fit, "more capsule")
 		case t.currentCapsule() != nil:
 			hint = truncate(capsuleHint(*t.currentCapsule(), t.url), max(1, innerW-8))
+		case t.listing(), t.read:
+			// Which piece of how many, and what it is called — the one
+			// thing a sheet of text cannot say about itself (section.go).
+			hint = truncate(t.sectionHint(innerH-pageHeaderRows), max(1, innerW-8))
 		case len(t.lay.rows) > innerH-pageHeaderRows:
 			hint = fmt.Sprintf("%d-%d of %d", t.top+1, min(len(t.lay.rows), t.top+innerH-pageHeaderRows), len(t.lay.rows))
 		}

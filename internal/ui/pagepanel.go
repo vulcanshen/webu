@@ -75,6 +75,10 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 	case t.root == nil:
 		out = append(out, emptyBody(innerW, rest, "nothing here yet",
 			emptyHint("Press R to load it", "R"))...)
+	case t.listing():
+		// A document is its sections before it is a sheet (section.go):
+		// the panel lists them, and Enter gives one the whole panel.
+		out = append(out, m.sectionRows(t, innerW, rest)...)
 	default:
 		out = append(out, m.pageRows(t, innerW, rest)...)
 	}
@@ -133,8 +137,11 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 		}
 	}
 	out := make([]string, 0, innerH)
-	end := min(len(t.lay.rows), t.top+innerH)
-	for i := t.top; i < end; i++ {
+	// While one section is open the panel shows only its rows: the page
+	// does not run on past the end of what is being read (section.go).
+	lo, hi := t.rowRange()
+	end := min(hi+1, t.top+innerH)
+	for i := max(t.top, lo); i < end; i++ {
 		var b strings.Builder
 		used := 0
 		row := t.lay.rows[i]
