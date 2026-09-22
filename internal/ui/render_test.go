@@ -1095,3 +1095,57 @@ func TestAFormWithNoLabelsKeepsItsShape(t *testing.T) {
 		t.Error("no names, no column")
 	}
 }
+
+// A form is a box, frame and all: sshu's form popup drawn INTO the page
+// rather than over it (user, 2026-09-22). A run of aligned rows says they
+// line up; a box says they belong to each other.
+func TestAFormIsABox(t *testing.T) {
+	form := &ir.Node{Kind: ir.Landmark, Role: "form", ID: 1, Children: []*ir.Node{
+		{Kind: ir.Textbox, Name: "User", ID: 2, Focusable: true},
+		{Kind: ir.Textbox, Name: "Password", ID: 3, Focusable: true, Protected: true},
+		{Kind: ir.Button, Role: "button", Name: "Sign in", ID: 4},
+	}}
+	l := render(&ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		para(text("before")), form, para(text("after")),
+	}}, 100)
+
+	var top, side, bottom int
+	w := 0
+	for _, r := range l.rows {
+		switch r.box {
+		case boxTop:
+			top++
+			w = r.boxW
+		case boxSide:
+			side++
+		case boxBottom:
+			bottom++
+		}
+	}
+	if top != 1 || bottom != 1 {
+		t.Fatalf("one frame, opened once and closed once: %d/%d\n%s", top, bottom, dumpLayout(l))
+	}
+	if side < 3 {
+		t.Errorf("every row of the form is inside the frame, got %d:\n%s", side, dumpLayout(l))
+	}
+	// As wide as the form needs and no wider: a box across the whole
+	// terminal reads as a banner.
+	if w <= 0 || w >= 100 {
+		t.Errorf("the box is sized to its rows, is %d of 100", w)
+	}
+	// And nothing outside it is framed.
+	for _, r := range l.rows {
+		if strings.Contains(r.plain(), "before") || strings.Contains(r.plain(), "after") {
+			if r.box != boxNone {
+				t.Errorf("%q is not in the form", r.plain())
+			}
+		}
+	}
+	// The rows fit the frame they were measured for: a bed that wraps is
+	// a box sized wrong.
+	for _, r := range l.rows {
+		if r.box == boxSide && dispW(r.plain()) > w-boxEdge*2 {
+			t.Errorf("row %q is %d wide, the frame holds %d", r.plain(), dispW(r.plain()), w-boxEdge*2)
+		}
+	}
+}

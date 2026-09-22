@@ -146,6 +146,10 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 			codeStyles[k] = lipgloss.NewStyle().Foreground(pageDim).Background(pageCodeBg)
 		}
 	}
+	frame := lipgloss.NewStyle().Foreground(pageDim)
+	if t.loading {
+		frame = lipgloss.NewStyle().Foreground(dimColor)
+	}
 	out := make([]string, 0, innerH)
 	// While one section is open the panel shows only its rows: the page
 	// does not run on past the end of what is being read (section.go).
@@ -155,6 +159,18 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 		var b strings.Builder
 		used := 0
 		row := t.lay.rows[i]
+		// A framed block — a form — is drawn by the panel, because only
+		// the panel knows how wide the row ended up (render.boxPart).
+		span := min(innerW, max(1, row.boxW))
+		if row.box == boxTop || row.box == boxBottom {
+			out = append(out, frame.Render(boxRule(row, span))+
+				strings.Repeat(" ", max(0, innerW-span)))
+			continue
+		}
+		if row.box == boxSide {
+			b.WriteString(frame.Render("│"))
+			used++
+		}
 		for _, s := range row.segs {
 			text := s.text
 			if used+dispW(text) > innerW {
@@ -204,6 +220,10 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 			span := min(innerW, max(used, t.textWidth()))
 			b.WriteString(codePad.Render(strings.Repeat(" ", max(0, span-used))))
 			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
+		case row.box == boxSide:
+			b.WriteString(strings.Repeat(" ", max(0, span-used-1)))
+			b.WriteString(frame.Render("│"))
+			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
 		default:
 			b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
 		}
@@ -213,6 +233,21 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 		out = append(out, strings.Repeat(" ", innerW))
 	}
 	return out
+}
+
+// boxRule is a framed block's top or bottom edge, the name of the block
+// set into the top one when it has one. A form usually has none, and a
+// bare frame says all that is needed: these rows belong to each other.
+func boxRule(r row, span int) string {
+	left, right := "╭", "╮"
+	if r.box == boxBottom {
+		left, right = "╰", "╯"
+	}
+	name := strings.TrimSpace(r.plain())
+	if name != "" {
+		name = " " + truncate(name, max(1, span-6)) + " "
+	}
+	return left + name + strings.Repeat("─", max(0, span-2-dispW(name))) + right
 }
 
 // withAttr puts the page's own markup on top of whatever the run is
