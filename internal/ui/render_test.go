@@ -656,35 +656,39 @@ func TestSpinnerWhileFetching(t *testing.T) {
 	}
 }
 
-// TestOtherGoesToThePagetab: with a main on the page, what lies outside it
-// in no landmark — a promo strip above main — is the pagetab's "other"
-// capsule, not rows above the content; a wrapper around main is walked
-// through; a page with no main keeps everything.
-func TestOtherGoesToThePagetab(t *testing.T) {
+// Content webu cannot name is still content. There used to be an "other"
+// capsule holding whatever lay outside main in no landmark, and it was a
+// guess — nothing had said that was furniture. On a page whose whole
+// application area is an unlabelled div it took the page off the screen
+// and left its text unreachable, a capsule's list naming only links,
+// buttons and fields (user, 2026-09-22). Only a role's word puts
+// something on the pagetab now.
+func TestUnnamedContentStaysOnThePage(t *testing.T) {
+	// The shape of an app shell: a labelled sidebar, and the application
+	// itself in a div nobody labelled.
 	root := &ir.Node{Kind: ir.Document, URL: "https://x.test/", Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "navigation", ID: 1, Children: []*ir.Node{link("Boards", "/b", 2)}},
+		{Kind: ir.Landmark, Role: "main", ID: 3, Children: []*ir.Node{para(text("shell"))}},
 		{Kind: ir.Group, Block: true, Children: []*ir.Node{
-			para(text("Learn from our partner "), link("Scrimba", "https://s.test/", 1)),
-			{Kind: ir.Landmark, Role: "main", ID: 2, Children: []*ir.Node{para(link("First", "https://x.test/1", 3))}},
+			para(text("Card one"), link("PROJ-1", "https://x.test/1", 4)),
+			para(text("Card two"), link("PROJ-2", "https://x.test/2", 5)),
 		}},
-		para(text("© 2026")),
 	}}
 	tb := &tab{cursor: -1, root: root}
 	tb.relayout(60)
 	l := tb.lay
-	if len(l.pagetab) != 1 || l.pagetab[0].kind != pagetabOther || !strings.Contains(l.pagetab[0].label, "other +1") {
-		t.Fatalf("the promo and the copyright should be one other capsule:\n%s", dumpLayout(l))
+	if len(l.pagetab) != 1 || l.pagetab[0].kind != pagetabNav {
+		t.Fatalf("only a role's word is chrome:\n%s", dumpLayout(l))
 	}
-	if len(l.items) != 1 || l.items[0].node.Text() != "First" || len(l.rows) != 1 {
-		t.Errorf("the page should be main alone:\n%s", dumpLayout(l))
+	v := dumpLayout(l)
+	for _, want := range []string{"shell", "Card one", "Card two", "PROJ-1"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("%q should be on the page:\n%s", want, v)
+		}
 	}
-	if h := capsuleHint(l.pagetab[0], ""); !strings.Contains(h, "outside main") || !strings.Contains(h, "1 inside") {
-		t.Errorf("hint: %q", h)
-	}
-	if ts := capsuleTargets(l.pagetab[0]); len(ts) != 1 || ts[0].node.Text() != "Scrimba" {
-		t.Errorf("targets: %+v", ts)
-	}
-	if at := tb.firstItem(); at != 0 {
-		t.Errorf("a new page starts on main's first item: %d", at)
+	// And reachable, not merely drawn.
+	if len(l.items) != 2 {
+		t.Errorf("both cards' links should be items to stop on:\n%s", v)
 	}
 	// Outside main, a skip link is dropped and blank text is nothing: no
 	// capsule for either, and no row.
@@ -695,7 +699,8 @@ func TestOtherGoesToThePagetab(t *testing.T) {
 	if l := render(tidy, 60); len(l.pagetab) != 0 || strings.Contains(dumpLayout(l), "Jump to") {
 		t.Errorf("a skip link is furniture for a problem webu does not have:\n%s", dumpLayout(l))
 	}
-	// No main: nothing is other.
+	// A page with no main keeps everything, as it always did — and the
+	// two cases are now one code path rather than two.
 	bare := &ir.Node{Kind: ir.Document, Children: []*ir.Node{para(text("promo")), para(link("First", "u", 3))}}
 	if l := render(bare, 60); len(l.pagetab) != 0 || len(l.items) != 1 || !strings.Contains(dumpLayout(l), "promo") {
 		t.Errorf("without main the page keeps everything:\n%s", dumpLayout(l))
@@ -840,18 +845,17 @@ func TestABlockLabelIsNotPrintedTwice(t *testing.T) {
 }
 
 // The hand parked on the pagetab has to survive a recapture. It was
-// matched only on the node behind the capsule, and "other" holds whatever
-// lies outside main in no landmark — nodes whose ids Chromium reassigns
-// when the page rebuilds that part of its DOM. So a hand on the last
-// capsule of a page that keeps settling fell back into the page, which
-// reads as Esc undoing itself (user, 2026-09-22).
+// matched only on the node behind the capsule, by an id Chromium
+// reassigns whenever the page rebuilds that part of its DOM — so a hand
+// on the last capsule of a page that keeps settling fell back into the
+// page, which reads as Esc undoing itself (user, 2026-09-22).
 func TestTheHandStaysOnThePagetab(t *testing.T) {
 	build := func(id int) *ir.Node {
 		return &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 			{Kind: ir.Landmark, Role: "navigation", ID: 2, Children: []*ir.Node{link("Home", "/", 3)}},
-			// Outside main, in no landmark: the "other" capsule, whose
-			// id moves when the page rebuilds it.
-			para(text("a promo"), link("Buy", "/buy", id)),
+			// A footer the page rebuilds: its ids move under it.
+			{Kind: ir.Landmark, Role: "contentinfo", ID: cdp.BackendNodeID(id),
+				Children: []*ir.Node{link("Terms", "/t", id+1)}},
 			{Kind: ir.Landmark, Role: "main", ID: 9, Children: []*ir.Node{para(text("body"))}},
 		}}
 	}

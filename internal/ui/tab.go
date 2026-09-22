@@ -399,7 +399,7 @@ func (t *tab) apply(msg pageMsg, width int) {
 	}
 	wasBar, wasMore := t.onPagetab(), t.onMore()
 	var wasBarID cdp.BackendNodeID
-	wasBarKind, wasBarIdx := pagetabOther, t.pagetabIndex()
+	wasBarKind, wasBarIdx := pagetabHeader, t.pagetabIndex()
 	if wasBar && !wasMore && wasBarIdx >= 0 && wasBarIdx < len(t.lay.pagetab) {
 		c := t.lay.pagetab[wasBarIdx]
 		wasBarID, wasBarKind = c.nodes[0].ID, c.kind
