@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
@@ -38,7 +39,7 @@ func TestSectionsCutOnHeadings(t *testing.T) {
 		hd(2, "Second"), para(text("three")),
 	)
 	l := render(root, 40)
-	secs := sectionsOf(root, l)
+	secs := sectionsOf(root, l, "")
 	want := []string{"Title", "First", "Inside", "Second"}
 	if got := titles(secs); strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("sections %v, want %v", got, want)
@@ -68,7 +69,7 @@ func TestSectionsCutOnLinkedHeadings(t *testing.T) {
 	}}
 	root := doc(hd(1, "strings"), para(text("lede")), linked, para(text("body")),
 		hd(2, "func Join"), para(text("body")))
-	secs := sectionsOf(root, render(root, 40))
+	secs := sectionsOf(root, render(root, 40), "")
 	if len(secs) != 3 {
 		t.Fatalf("a linked heading is still a heading: got %v", titles(secs))
 	}
@@ -77,7 +78,7 @@ func TestSectionsCutOnLinkedHeadings(t *testing.T) {
 // Too few headings to be an outline: the page stays the one sheet it was.
 func TestShapeNeedsAnOutline(t *testing.T) {
 	root := doc(hd(1, "Title"), para(text("prose")), hd(2, "One"), para(text("more")))
-	if got := shapeOf(sectionsOf(root, render(root, 40))); got != shapeOne {
+	if got := shapeOf(sectionsOf(root, render(root, 40), "")); got != shapeOne {
 		t.Errorf("two headings is a page with a subtitle, not a document (got shape %d)", got)
 	}
 }
@@ -99,7 +100,7 @@ func TestNavigationColumnsLeaveTheList(t *testing.T) {
 	kids = append(kids, hd(2, "Also Real"), para(text("more prose")))
 	root := doc(kids...)
 	l := render(root, 40)
-	secs := sectionsOf(root, l)
+	secs := sectionsOf(root, l, "")
 	want := []string{"Real Title", "Also Real"}
 	if got := titles(secs); strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("sections %v, want %v", got, want)
@@ -123,7 +124,7 @@ func TestAHeadingOverSubheadingsStays(t *testing.T) {
 		hd(3, "Captions"), para(text("prose")),
 		hd(2, "Examples"), para(text("prose")),
 	)
-	secs := sectionsOf(root, render(root, 40))
+	secs := sectionsOf(root, render(root, 40), "")
 	if got := titles(secs); !strings.Contains(strings.Join(got, "|"), "Accessibility") {
 		t.Errorf("a heading with sections under it is not a link column: got %v", got)
 	}
@@ -233,7 +234,7 @@ func TestSectionsTileAcrossLandmarkRules(t *testing.T) {
 		region("Emulators", hd(2, "Emulators"), para(text("two"))),
 	)
 	l := render(root, 60)
-	secs := sectionsOf(root, l)
+	secs := sectionsOf(root, l, "")
 	if got := titles(secs); strings.Join(got, "|") != "Title|Background|Emulators" {
 		t.Fatalf("sections %v", got)
 	}
@@ -253,5 +254,82 @@ func TestSectionsTileAcrossLandmarkRules(t *testing.T) {
 	}
 	if strings.Contains(strings.Join(rowText(l, secs[0]), "\n"), "region Background") {
 		t.Errorf("the region rule is dangling off the end of the section before it")
+	}
+}
+
+// A settle capture rebuilds the whole tree, so every node is a new
+// pointer. The open section has to be found by the id Chromium gave it,
+// or a page that keeps mutating drags the list back to the top on every
+// redraw — which is what it did.
+func TestSectionSurvivesARecapture(t *testing.T) {
+	build := func() *ir.Node {
+		h := func(level, id int, s string) *ir.Node {
+			return &ir.Node{Kind: ir.Heading, Level: level, Name: s,
+				ID: cdp.BackendNodeID(id), Children: []*ir.Node{text(s)}}
+		}
+		return doc(
+			h(1, 10, "Title"), para(text("lede")),
+			h(2, 20, "First"), para(text("one")),
+			h(2, 30, "Second"), para(text("two")),
+			h(2, 40, "Third"), para(text("three")),
+		)
+	}
+	tb := &tab{root: build(), cursor: -1}
+	tb.relayout(40)
+	tb.sec = 3 // "Third"
+	tb.openSection(10)
+
+	// The same page arriving again: a new tree, the same node ids.
+	tb.root = build()
+	tb.relayout(40)
+	if got := tb.secs[tb.sec].title; got != "Third" {
+		t.Errorf("after a recapture the reader is on %q, want Third", got)
+	}
+	if !tb.read {
+		t.Errorf("a recapture closed the open section")
+	}
+	// And with no ids at all, it holds its index rather than jumping home.
+	plain := doc(hd(1, "Title"), para(text("lede")),
+		hd(2, "First"), para(text("one")), hd(2, "Second"), para(text("two")))
+	tb2 := &tab{root: plain, cursor: -1}
+	tb2.relayout(40)
+	tb2.sec = 2
+	tb2.root = doc(hd(1, "Title"), para(text("lede")),
+		hd(2, "First"), para(text("one")), hd(2, "Second"), para(text("two")))
+	tb2.relayout(40)
+	if tb2.sec != 2 {
+		t.Errorf("without ids the list should hold its place; went to %d", tb2.sec)
+	}
+}
+
+// A documentation page hangs a permalink inside its headings, and
+// Chromium folds it into the accessible name: go.dev's outline read
+// "Prerequisites Go to prerequisites". The list drops that tail — but
+// only when it is a link into this same page, and only off the end.
+func TestHeadingTitleDropsItsOwnAnchor(t *testing.T) {
+	with := func(name string, l *ir.Node) *ir.Node {
+		return &ir.Node{Kind: ir.Heading, Level: 2, Name: name,
+			Children: []*ir.Node{text(name), l}}
+	}
+	cases := []struct{ name, want string }{
+		{"Prerequisites Go to prerequisites", "Prerequisites"},
+		{"Attributes ¶", "Attributes"},
+	}
+	for _, c := range cases {
+		anchor := link(strings.TrimPrefix(c.name, c.want+" "), "https://ex.test/p#x", 5)
+		if got := headingTitle(with(c.name, anchor), "https://ex.test/p"); got != c.want {
+			t.Errorf("headingTitle(%q) = %q, want %q", c.name, got, c.want)
+		}
+	}
+	// A link out of the page is part of the heading, not furniture.
+	out := link("the spec", "https://spec.example/x", 6)
+	if got := headingTitle(with("See the spec", out), "https://ex.test/p"); got != "See the spec" {
+		t.Errorf("a heading ending in an outside link keeps it: got %q", got)
+	}
+	// And a heading that is nothing but its link keeps its name.
+	only := &ir.Node{Kind: ir.Heading, Level: 2, Name: "func Split",
+		Children: []*ir.Node{link("func Split", "https://ex.test/p#Split", 7)}}
+	if got := headingTitle(only, "https://ex.test/p"); got != "func Split" {
+		t.Errorf("a heading that is one link keeps it: got %q", got)
 	}
 }

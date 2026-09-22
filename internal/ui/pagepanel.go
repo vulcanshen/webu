@@ -292,6 +292,15 @@ func panelFrame(innerW int, body []string, title, hint string, tone borderTone) 
 // panelFrameLegend is the same frame with a whole key legend in the bottom
 // border: a screen's operations, listed the way a popup's hint lists them.
 func panelFrameLegend(innerW int, body []string, title, legend string, tone borderTone) string {
+	return panelFrameFilled(innerW, body, title, legend, tone, -1)
+}
+
+// panelFrameFilled is that frame with the border itself reading from left
+// to right up to pct — how far through the open section the reader is
+// (section.go). It is the same trick the header rule plays for a download
+// in flight (chrome.tabRule): a progress bar that costs no row, on the
+// edge that already says where you are. pct below zero draws none.
+func panelFrameFilled(innerW int, body []string, title, legend string, tone borderTone, pct int) string {
 	out := panelChromeTone(innerW, body, title, tone)
 	lines := strings.Split(out, "\n")
 	bs := lipgloss.NewStyle().Foreground(toneColor(tone))
@@ -299,7 +308,14 @@ func panelFrameLegend(innerW int, body []string, title, legend string, tone bord
 	if lw+4 > innerW {
 		return out
 	}
-	lines[len(lines)-1] = bs.Render("╰"+strings.Repeat("─", innerW-lw-1)) + legend + bs.Render("─╯")
+	run := innerW - lw - 1
+	rule := bs.Render(strings.Repeat("─", run))
+	if pct >= 0 {
+		on := clamp(run*pct/100, 0, run)
+		rule = lipgloss.NewStyle().Foreground(toneColor(toneFocus)).Render(strings.Repeat("━", on)) +
+			bs.Render(strings.Repeat("─", run-on))
+	}
+	lines[len(lines)-1] = bs.Render("╰") + rule + legend + bs.Render("─╯")
 	return strings.Join(lines, "\n")
 }
 

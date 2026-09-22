@@ -61,7 +61,7 @@ const shapeDocMin = 3
 // sectionsOf cuts the laid-out page into sections. Only what is drawn is
 // cut: a heading inside a shut landmark has no row and so is no section,
 // and chrome is not here at all — it left for the pagetab.
-func sectionsOf(root *ir.Node, lay layout) []section {
+func sectionsOf(root *ir.Node, lay layout, pageURL string) []section {
 	if root == nil || len(lay.rows) == 0 {
 		return nil
 	}
@@ -117,7 +117,7 @@ func sectionsOf(root *ir.Node, lay layout) []section {
 		out = append(out, section{
 			node:  h.node,
 			level: h.node.Level,
-			title: oneLine(nameOr(h.node.Name, h.node.Text())),
+			title: headingTitle(h.node, pageURL),
 			first: first,
 			last:  last,
 		})
@@ -168,6 +168,52 @@ func pruneNav(secs []section) []section {
 		out = append(out, s)
 	}
 	return out
+}
+
+// headingTitle is a heading said in one line, with its own anchor link
+// taken off the end.
+//
+// A documentation page hangs a permalink inside its headings —
+// <h2>Prerequisites <a href="#prerequisites">Go to prerequisites</a></h2>
+// — and Chromium folds that into the accessible name, so go.dev's outline
+// reads "Prerequisites Go to prerequisites" and MDN's ends in a pilcrow.
+// The link is part of the heading on the page and no part of what it is
+// called, so the list drops it. Only a link into this same page, and only
+// at the end: a heading whose text genuinely ends in a link elsewhere
+// keeps it.
+func headingTitle(n *ir.Node, pageURL string) string {
+	name := oneLine(nameOr(n.Name, n.Text()))
+	for _, c := range n.Children {
+		if c.Kind != ir.Link || !sameDoc(c.URL, pageURL) {
+			continue
+		}
+		tail := oneLine(nameOr(c.Name, c.Text()))
+		if tail == "" || tail == name {
+			continue
+		}
+		if cut := strings.TrimSpace(strings.TrimSuffix(name, tail)); cut != "" {
+			name = cut
+		}
+	}
+	return name
+}
+
+// sameDoc reports whether a link points into the page it is on. Chromium
+// hands the AX tree resolved URLs, so a bare href="#x" arrives as the whole
+// address with a fragment on it.
+func sameDoc(u, pageURL string) bool {
+	i := strings.IndexByte(u, '#')
+	if i < 0 {
+		return false
+	}
+	base := u[:i]
+	if base == "" {
+		return true
+	}
+	if j := strings.IndexByte(pageURL, '#'); j >= 0 {
+		pageURL = pageURL[:j]
+	}
+	return base == pageURL
 }
 
 // scopeStart is the first row the content occupies: main's, or the page's.
@@ -291,16 +337,23 @@ func (t *tab) sectionHint(visible int) string {
 	}
 	s := t.secs[clamp(t.sec, 0, len(t.secs)-1)]
 	at := itoa(t.sec+1) + "/" + itoa(len(t.secs)) + " · " + s.title
-	if !t.read {
-		return at
+	if pct := t.readPct(visible); pct >= 0 {
+		return at + " · " + itoa(pct) + "%"
 	}
-	// How much of the open section is above the fold. A section that fits
-	// on screen has no progress to report.
-	total := s.lines()
-	if total <= visible {
-		return at
+	return at
+}
+
+// readPct is how far through the open section the reader is, or -1 when
+// the section fits on screen and there is no progress to report.
+func (t *tab) readPct(visible int) int {
+	if !t.read || t.sec >= len(t.secs) {
+		return -1
 	}
-	return at + " · " + itoa(min(100, (t.top-s.first+visible)*100/total)) + "%"
+	s := t.secs[t.sec]
+	if s.lines() <= visible {
+		return -1
+	}
+	return clamp((t.top-s.first+visible)*100/s.lines(), 0, 100)
 }
 
 // moveSection walks the section list. It does not wrap, and k off the top
