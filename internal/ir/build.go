@@ -285,6 +285,8 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 			n.Multiline = boolean(p.Value)
 		case accessibility.PropertyNameDisabled:
 			n.Disabled = boolean(p.Value)
+		case accessibility.PropertyNameRequired:
+			n.Required = boolean(p.Value)
 		case accessibility.PropertyNameFocusable:
 			n.Focusable = boolean(p.Value)
 		case accessibility.PropertyNameExpanded:
