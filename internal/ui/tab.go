@@ -76,6 +76,14 @@ type tab struct {
 	// certErr: the last navigation failed on the certificate; certAsked:
 	// the user has been asked about it once already for this page.
 	certErr, certAsked bool
+	// blankUntil is how long a page that arrived empty is still counted
+	// as on its way. page.Navigate waits for <body> to exist, which on an
+	// application is the shell and nothing else — the content comes later,
+	// through the mutation observer. Calling that "loaded" stopped the
+	// spinner over a blank panel and left the user waiting with no sign
+	// that anything was still coming (user, 2026-09-22). The deadline is
+	// what keeps a page that is genuinely empty from spinning forever.
+	blankUntil time.Time
 	// frozen is a capture that arrived while selection mode held the page
 	// still (ux.md §1); applied when the mode ends.
 	frozen *pageMsg
@@ -85,6 +93,29 @@ type tab struct {
 	// id, which survives a recapture; measure is the text width cap.
 	fold    map[cdp.BackendNodeID]bool
 	measure int
+}
+
+// blankGrace is how long a page that keeps arriving empty is still shown
+// as on its way. Long enough for an application to render, short enough
+// that a page which really is blank says so rather than spinning.
+const blankGrace = 8 * time.Second
+
+// stillComing reports whether the capture just applied left the panel
+// with nothing on it and the grace has not run out — in which case the
+// page is not loaded, whatever <body> said.
+func (t *tab) stillComing() bool {
+	if t.errText != "" || t.root == nil {
+		return false
+	}
+	if time.Now().After(t.blankUntil) {
+		return false
+	}
+	for _, r := range t.lay.rows {
+		if strings.TrimSpace(r.plain()) != "" {
+			return false
+		}
+	}
+	return true
 }
 
 // pageMsg is a capture landing: the page as Chromium has it now.
@@ -276,6 +307,7 @@ func (t *tab) close() {
 func (t *tab) load(url string) tea.Cmd {
 	t.gen++
 	t.loading, t.pending, t.errText = true, false, ""
+	t.blankUntil = time.Now().Add(blankGrace)
 	t.url = url
 	gen, id, ctx := t.gen, t.id, t.ctx
 	prepare := !t.prepared

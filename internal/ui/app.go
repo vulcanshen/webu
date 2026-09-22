@@ -421,6 +421,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !fresh {
 			t.scrollToCursor(m.pageVisible())
 		}
+		if t.stillComing() {
+			// An application's shell: <body> exists and nothing is drawn
+			// yet. Keep saying so, and look again — the observer will
+			// also fire, and a second settle costs a redraw.
+			t.loading = true
+			return m, tea.Batch(t.settle(300*time.Millisecond), spinCmd())
+		}
 		m.recordVisit(t)
 		if i == m.shown && t.certErr && !t.certAsked {
 			t.certAsked = true

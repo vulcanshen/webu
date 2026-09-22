@@ -104,9 +104,12 @@ var (
 	pageCode   = lipgloss.Color("#f5c2e7") // pink
 	pageCodeBg = lipgloss.Color("#313244") // surface0
 	// An image, a video, a frame: a marker that something is there which
-	// a terminal cannot show. It is not content and must not read like
-	// it — quieter than a placeholder, one step off the ground.
-	pageMedia = lipgloss.Color("#45475a") // surface1
+	// a terminal cannot show. Secondary, never competing with the prose —
+	// but not invisible either. It was a step darker for a day and that
+	// was too far: on a page where the icons ARE the data, an alt that
+	// says "Priority: Highest" is the only copy of that fact (user,
+	// 2026-09-22).
+	pageMedia = lipgloss.Color("#6c7086") // overlay0
 	// A data table's ground, its header row one step up: the header is
 	// told by ground, not by foreground (revised 2026-09-21).
 	pageTableBg     = lipgloss.Color("#313244") // surface0
