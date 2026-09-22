@@ -148,3 +148,50 @@ func TestSmokeGitHub(t *testing.T) {
 		t.Errorf("no link naming the repository")
 	}
 }
+
+// TestSmokeSections is the section cut against real pages (section.go): a
+// document has to come out as a list of its headings, and one of them has to
+// open to the panel on its own. It prints both so the shape of the screen can
+// be judged by eye.
+func TestSmokeSections(t *testing.T) {
+	b := smokeBrowser(t)
+	for _, url := range []string{
+		"https://www.w3schools.com/html/html_tables.asp",
+		"https://go.dev/doc/tutorial/getting-started",
+		"https://developer.mozilla.org/en-US/docs/Web/HTML/Element/table",
+		"https://en.wikipedia.org/wiki/Terminal_emulator",
+		"https://pkg.go.dev/strings",
+		"https://news.ycombinator.com/",
+	} {
+		t.Run(url, func(t *testing.T) {
+			d := smokeLoad(t, b, url)
+			p := d.page()
+			t.Logf("shape=%d sections=%d listing=%v", p.shape, len(p.secs), p.listing())
+			// Every heading in scope has to reach the list, minus the
+			// navigation columns pruneNav takes out: a heading that is
+			// drawn but never cut on is a bug between the two.
+			scope := mainOf(p.root)
+			drawn := 0
+			p.root.Walk(func(n *ir.Node) bool {
+				if n.Kind == ir.Heading {
+					if _, ok := p.lay.marks[n]; ok && (scope == nil || holds(scope, n)) {
+						drawn++
+					}
+				}
+				return true
+			})
+			t.Logf("headings: %d drawn in scope (main=%v), %d sections", drawn, scope != nil, len(p.secs))
+			for i, s := range p.secs {
+				t.Logf("  %2d  h%d  %-46s %3d lines  %2d prose %2d link  %dt %dc %dm",
+					i+1, s.level, truncate(s.title, 46), s.lines(), s.prose, s.links, s.tables, s.codes, s.media)
+			}
+			t.Logf("SCREEN\n%s", d.m.View())
+			if !p.listing() {
+				return
+			}
+			d.key("j")
+			d.key("enter")
+			t.Logf("OPENED %q\n%s", p.secs[p.sec].title, d.m.View())
+		})
+	}
+}

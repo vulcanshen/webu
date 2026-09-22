@@ -50,6 +50,20 @@ type tab struct {
 	// there. The cursor keeps its place meanwhile: j comes back to it.
 	pagetab int
 
+	// secs is the page cut into sections (section.go) and shape says
+	// whether that cut is used at all: a document gets the section list,
+	// anything else stays the one sheet it always was. flat is the user
+	// overruling that cut for this page — one sheet, the way every page
+	// was drawn before; read is whether a section is open to the whole
+	// panel, sec is which one, and secTop scrolls the list when it is
+	// longer than the panel.
+	secs   []section
+	shape  pageShape
+	flat   bool
+	read   bool
+	sec    int
+	secTop int
+
 	// gen guards captures: a result from before the latest navigation is
 	// thrown away rather than drawn over the newer page.
 	gen int
@@ -392,9 +406,12 @@ func (t *tab) apply(msg pageMsg, width int) {
 	t.anchors, t.parents = msg.cap.Anchors, msg.cap.Parents
 	t.relayout(width)
 	if fresh {
-		// The window opens where the page starts, not at row 0: on a
+		// A different page: it opens where it declares it starts. A
+		// document opens on its section list, everything else on the
+		// page, its window at the first item rather than at row 0 — on a
 		// page with no main those are not the same row, and the top of
 		// such a page is its furniture (2026-09-22).
+		t.flat, t.read, t.sec, t.secTop = false, false, 0, 0
 		t.cursor, t.top = t.firstItem(), 0
 		if t.cursor >= 0 {
 			t.top = clamp(t.lay.items[t.cursor].first, 0, max(0, len(t.lay.rows)-1))
@@ -547,6 +564,63 @@ func (t *tab) relayout(width int) {
 	if i := t.pagetabIndex(); i >= len(t.lay.pagetab) || (t.onMore() && t.lay.fit >= len(t.lay.pagetab)) {
 		t.leavePagetab()
 	}
+	t.recut()
+}
+
+// recut cuts the fresh layout into sections and keeps the reader where it
+// was: rows move when the width changes, the heading does not.
+func (t *tab) recut() {
+	var was *ir.Node
+	if t.sec < len(t.secs) {
+		was = t.secs[t.sec].node
+	}
+	t.secs = sectionsOf(t.root, t.lay)
+	t.shape = shapeOf(t.secs)
+	if t.shape != shapeDoc {
+		t.read = false
+	}
+	t.sec = 0
+	if was != nil {
+		for i, s := range t.secs {
+			if s.node == was {
+				t.sec = i
+				break
+			}
+		}
+	}
+	t.clampSecTop(0)
+}
+
+// clampSecTop keeps the list's cursor on screen; visible is how many rows
+// the panel shows (0: unknown yet).
+func (t *tab) clampSecTop(visible int) {
+	if visible <= 0 {
+		t.secTop = clamp(t.secTop, 0, max(0, len(t.secs)-1))
+		return
+	}
+	if t.sec < t.secTop {
+		t.secTop = t.sec
+	}
+	if t.sec >= t.secTop+visible {
+		t.secTop = t.sec - visible + 1
+	}
+	t.secTop = clamp(t.secTop, 0, max(0, len(t.secs)-1))
+}
+
+// listing reports whether the panel is showing the section list rather than
+// the page: a document that is not currently open at one of its sections.
+func (t *tab) listing() bool {
+	return t != nil && t.shape == shapeDoc && !t.flat && !t.read && len(t.secs) > 0
+}
+
+// rowRange is the stretch of the layout the panel may show: the open
+// section while reading one, the whole page otherwise.
+func (t *tab) rowRange() (int, int) {
+	if t.read && t.sec < len(t.secs) {
+		s := t.secs[t.sec]
+		return s.first, min(s.last, len(t.lay.rows)-1)
+	}
+	return 0, len(t.lay.rows) - 1
 }
 
 // textWidth is how wide text flows in this tab's layout: the measure, or
@@ -628,8 +702,9 @@ func (t *tab) reveal(n *ir.Node, width int) {
 // scrollToCursor keeps the cursor's rows on screen; visible is how many page
 // rows the panel shows (0: unknown yet, keep top).
 func (t *tab) scrollToCursor(visible int) {
+	lo, hi := t.rowRange()
 	if visible <= 0 || t.cursor < 0 || t.cursor >= len(t.lay.items) {
-		t.top = clamp(t.top, 0, max(0, len(t.lay.rows)-1))
+		t.top = clamp(t.top, lo, max(lo, hi))
 		return
 	}
 	it := t.lay.items[t.cursor]
@@ -639,15 +714,9 @@ func (t *tab) scrollToCursor(visible int) {
 	if it.last >= t.top+visible {
 		t.top = it.last - visible + 1
 	}
-	t.top = clamp(t.top, 0, max(0, len(t.lay.rows)-1))
+	t.top = clamp(t.top, lo, max(lo, hi))
 }
 
-// current is the item under the cursor, or nil.
-// current is what the hand is on: the capsule, on the pagetab; else the
-// item under the cursor; nil on the pagetab's "+N", or on nothing.
-// current is what the hand is on: the capsule's first landmark, on the
-// pagetab; else the item under the cursor; nil on the pagetab's "+N", or on
-// nothing.
 // current is what the hand is on: the capsule's first landmark, on the
 // pagetab; else the item under the cursor; nil on the pagetab's "+N", or on
 // nothing.
@@ -800,10 +869,6 @@ func (t *tab) capsuleOf(n *ir.Node) int {
 // moveItem walks the cursor by navigation key. The page is a grid of rows
 // with items on them: j/k step to the nearest row that has one, landing on
 // the item closest to the column the cursor was in; h/l walk the items of
-// the row. Nothing wraps — the page has a top and a bottom (ux.md §3).
-// moveItem walks the cursor by navigation key. The page is a grid of rows
-// with items on them: j/k step to the nearest row that has one, landing on
-// the item closest to the column the cursor was in; h/l walk the items of
 // the row. Nothing wraps — the page has a top and a bottom (ux.md §3) —
 // except that above the top is the pagetab under the URL, the page's chrome
 // (pagepanel.pagetabRow): k from the top puts the hand on its first capsule,
@@ -829,13 +894,25 @@ func (t *tab) moveItem(k string, visible int) {
 		t.leavePagetab()
 	}
 	n := len(t.lay.items)
-	if n == 0 {
-		// No items: the keys scroll the text instead — and k at the top
-		// goes up onto the pagetab.
-		if (k == "k" || k == "up") && t.top == 0 && t.enterPagetab() {
-			return
+	lo, hi := t.rowRange()
+	first, last := 0, n-1
+	if t.read {
+		first, last = t.sectionItems()
+	}
+	if n == 0 || first < 0 {
+		// Nothing to stop on — an empty page, or a section that is all
+		// prose: the keys scroll the text instead, and k at the top goes
+		// up onto the pagetab.
+		if (k == "k" || k == "up") && t.top <= lo {
+			if t.read {
+				t.closeSection()
+				return
+			}
+			if t.enterPagetab() {
+				return
+			}
 		}
-		t.top = moveScroll(t.top, max(0, len(t.lay.rows)-visible), k, visible)
+		t.top = clamp(moveScroll(t.top-lo, max(0, hi-lo+1-visible), k, visible)+lo, lo, max(lo, hi))
 		return
 	}
 	half := max(1, visible/2)
@@ -843,8 +920,13 @@ func (t *tab) moveItem(k string, visible int) {
 	case "j", "down":
 		t.cursor = t.rowStep(1)
 	case "k", "up":
-		if at := t.rowStep(-1); at != t.cursor {
+		// Off the top of what is being read: back to the section list if
+		// a section is open, else up onto the pagetab.
+		if at := t.rowStep(-1); at != t.cursor && at >= first {
 			t.cursor = at
+		} else if t.read {
+			t.closeSection()
+			return
 		} else if t.enterPagetab() {
 			return
 		}
@@ -857,10 +939,11 @@ func (t *tab) moveItem(k string, visible int) {
 	case "u", "ctrl+u":
 		t.cursor = t.itemFromRow(t.lay.items[t.cursor].first-half, -1)
 	case "gg":
-		t.cursor = 0
+		t.cursor = first
 	case "G":
-		t.cursor = n - 1
+		t.cursor = last
 	}
+	t.cursor = clamp(t.cursor, first, last)
 	t.scrollToCursor(visible)
 }
 
