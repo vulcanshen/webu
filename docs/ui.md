@@ -102,7 +102,7 @@ footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
 **單一職責，永遠是頁面。** 邊框 chip 固定 `[2]`，不放模式名、不放頁標題（標題在 `[1]`，
 一個元素一個語意 §B）。
 
-- 第一列：URL（純文字、不可 focus、縮法見 §1.2），前面一個 glyph 說抓取狀態：靜止時是地球（`glyphWeb`）、抓取中換成 braille 轉圈（`spinnerFrames`，2026-09-22 user 定：不然看起來像卡住），glyph 與 URL 同一個藍（結構色帶，兩者是同一件事「你在哪」）；第二列分隔線 = **pagetab**（user 命名 2026-09-22），頁面的 chrome 以一條 powerline 鏈放在這條線上（見下）；之後是 IR 渲染的頁面
+- 第一列：URL（純文字、不可 focus、縮法見 §1.2），前面一個 glyph 說抓取狀態：靜止時是地球（`glyphWeb`）、抓取中換成同一套 Nerd Font 的圓餅填滿動畫（`spinnerFrames` = md circle_slice_1..8，2026-09-22 user 定：不然看起來像卡住；先試過 braille，但 braille 是一格窄長、地球是兩格方塊，開始抓取時整列會跳一格），glyph 與 URL 同一個藍（結構色帶，兩者是同一件事「你在哪」）；第二列分隔線 = **pagetab**（user 命名 2026-09-22），頁面的 chrome 以一條 powerline 鏈放在這條線上（見下）；之後是 IR 渲染的頁面
 - cursor 只停在 item（互動節點 + heading + landmark 的標題列），文字段落是 item 之間的 flow
 - **Heading 收合（2026-09-21）**：是 item 的 heading（裡面沒有 link 等 item 的）Enter 直接 Collapse / Expand，範圍到下一個同級或更高級 heading、或所在 landmark 結束為止；收合列 `▸ # 標題 · N items`；Outline 跳進被收合的區段會先展開。用詞與 landmark 列、Bookmarks 目錄列一致：Collapse / Expand
 - **Landmark（修訂 2026-09-20）**：每個 landmark 以一列帶名字的細線開頭（`▾ navigation Repository ────`），

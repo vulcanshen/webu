@@ -37,10 +37,11 @@
   nothing is guessed — a run of links that is content flows too, and
   reads the same.
 - **The page panel says when it is fetching.** The globe beside the URL
-  turns while a page is on its way and comes back to rest when it lands,
-  so a slow site reads as working rather than as stuck; the glyph now
-  wears the same blue as the URL, the two being one thing — where you
-  are. A link chosen from the pagetab shows it like any other.
+  fills round while a page is on its way and comes back to rest when it
+  lands, so a slow site reads as working rather than as stuck; the glyph
+  now wears the same blue as the URL, the two being one thing — where
+  you are. The frames come from the same Nerd Font set as the globe, so
+  the row keeps its width and the shape stays square. A link chosen from the pagetab shows it like any other.
 - **An anchor scrolls to its target.** Following a link into the page —
   from the pagetab, a table of contents, a skip link — puts the target
   on the first row of the window rather than merely somewhere on it,
