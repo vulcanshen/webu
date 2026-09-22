@@ -32,6 +32,15 @@ type Capture struct {
 	// to: Top Bar · Sidebar · Main Content"); a link's text says it too
 	// (ui). A block is wrapped in a navigation of its own at build time.
 	Skip map[cdp.BackendNodeID]bool `json:"skip,omitempty"`
+	// Hidden marks the elements laid out at a point — a box of 1×1 or
+	// less. That is how a page writes text for a screen reader and no
+	// one else: position:absolute, width:1px, height:1px, clipped. A
+	// reader meets it one line at a time and needs the repetition for
+	// context; webu puts the whole card on screen at once, where the
+	// same text three times is noise. Chromium has already folded it
+	// into the accessible names, so dropping the nodes loses nothing
+	// (page.Capture reads the bounds off the snapshot we already take).
+	Hidden map[cdp.BackendNodeID]bool `json:"hidden,omitempty"`
 	// Anchors is every element id on the page and Parents every node's
 	// parent, off the same snapshot: what a link into the page lands on
 	// (ui tab.jumpToAnchor). Not part of the tree.
@@ -127,6 +136,7 @@ func Build(c Capture) *Node {
 		display:    c.Display,
 		protected:  c.Protected,
 		current:    c.Current,
+		hidden:     c.Hidden,
 		skip:       maps.Clone(c.Skip),
 		breadcrumb: maps.Clone(c.Breadcrumb),
 	}
@@ -149,6 +159,7 @@ type builder struct {
 	display    map[cdp.BackendNodeID]string
 	protected  map[cdp.BackendNodeID]bool
 	current    map[cdp.BackendNodeID]bool
+	hidden     map[cdp.BackendNodeID]bool
 	skip       map[cdp.BackendNodeID]bool
 	breadcrumb map[cdp.BackendNodeID]bool // consumed as trails are wrapped
 	navDepth   int                        // navigation landmarks being entered
@@ -210,6 +221,12 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 		}
 		return []*Node{{Kind: Landmark, Role: "navigation", Name: skipName(kids), Skip: true,
 			ID: ax.BackendDOMNodeID, Children: kids}}
+	}
+	if b.hidden[ax.BackendDOMNodeID] {
+		// Laid out at a point: written for a screen reader, not for a
+		// reader. Its subtree goes with it — the whole run is the
+		// hidden text.
+		return nil
 	}
 	if ax.Ignored {
 		return b.children(ax)

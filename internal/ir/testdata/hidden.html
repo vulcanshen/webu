@@ -1,0 +1,12 @@
+<!doctype html><html><head><title>Hidden</title>
+<style>
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); }
+  .zero { width: 0; height: 0; overflow: hidden; }
+</style></head><body>
+<p><span class="sr">For a screen reader only: </span>The sentence you can see.</p>
+<p><a href="/doc">Open the doc<span class="sr"> (opens in a new window)</span></a></p>
+<div class="zero">A block laid out at nothing.</div>
+<p>Still here.</p>
+<hr>
+<p>A rule is one pixel tall and the width of the page, and it is not hidden.</p>
+</body></html>

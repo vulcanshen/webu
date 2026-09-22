@@ -65,7 +65,7 @@
     "3"
    ],
    "backendDOMNodeId": 1,
-   "frameId": "17A9D871C8CA23D0F7B57C41A77602E9"
+   "frameId": "EB357E3606F0414631067FC9AF4A5A86"
   },
   {
    "nodeId": "3",
@@ -209,5 +209,18 @@
   "5": "block",
   "7": "block",
   "8": "block"
- }
+ },
+ "parents": {
+  "10": 5,
+  "11": 5,
+  "2": 1,
+  "3": 1,
+  "4": 3,
+  "5": 3,
+  "6": 4,
+  "7": 5,
+  "8": 7,
+  "9": 6
+ },
+ "contentType": "text/html"
 }

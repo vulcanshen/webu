@@ -1,0 +1,10 @@
+document "Hidden" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/hidden.html focusable #2
+  paragraph #8
+    text "The sentence you can see." #18
+  paragraph #10
+    link "Open the doc (opens in a new window)" url=file:///doc focusable #11
+  paragraph #14
+    text "Still here." #22
+  separator #15
+  paragraph #16
+    text "A rule is one pixel tall and the width of the page, and it is not hidden." #23
