@@ -467,10 +467,15 @@ type renderer struct {
 	// drawn, 0 outside one (render.formLabelW).
 	formLabel int
 	// boxed counts the framed blocks being drawn around the current row,
-	// boxW how wide the innermost one is.
-	boxed int
-	boxW  int
-	root  *ir.Node
+	// boxW how wide the innermost one is. formStack is set when the
+	// terminal is too narrow to put a value beside its label, and inForm
+	// says a form is being drawn at all — which a label column of zero
+	// cannot say for itself.
+	boxed     int
+	boxW      int
+	formStack bool
+	inForm    bool
+	root      *ir.Node
 	// A collapsed heading (2026-09-21) hides its section: everything after
 	// it up to the next heading of its level or higher, or the end of the
 	// landmark it is in. suppress is on while that is being skipped;
@@ -634,20 +639,19 @@ func (r *renderer) formChildren(n *ir.Node, depth int) {
 	// where the form starts and stops: a run of aligned rows says they
 	// line up, and a box says they belong to each other.
 	r.flush()
-	savedW, savedIndent, savedLabel, savedBox := r.textW, r.indent, r.formLabel, r.boxW
-	label := formLabelW(n, savedW)
+	savedW, savedIndent, savedLabel := r.textW, r.indent, r.formLabel
+	savedBox, savedStack, savedIn := r.boxW, r.formStack, r.inForm
 	// As wide as the form needs and no wider. A box across the whole
 	// terminal reads as a banner; sshu's is the width of its own rows.
-	r.boxW = min(savedW, boxEdge*2+boxPad*2+label+2+formValueW)
+	want := formLabelW(n, savedW)
+	r.boxW = min(savedW, boxEdge*2+boxPad*2+want+2+formValueW)
 	// The wrap width counts the indent, which is the LEFT pad already —
 	// subtracting both pads took two cells off every row and wrapped the
 	// bed the box had just been sized to hold.
 	r.textW = max(12, r.boxW-boxEdge*2-boxPad)
 	r.indent += strings.Repeat(" ", boxPad)
-	// The column the box was sized for, not one recomputed against the
-	// narrower inside: recomputing truncated the very label the box had
-	// just been made wide enough to hold.
-	r.formLabel = label
+	r.formLabel, r.formStack = fitForm(want, r.textW-boxPad)
+	r.inForm = true
 	r.emit(row{box: boxTop, boxW: r.boxW,
 		segs: []seg{{text: oneLine(n.Name), item: -1, kind: segDim}}})
 	r.boxed++
@@ -655,7 +659,8 @@ func (r *renderer) formChildren(n *ir.Node, depth int) {
 	r.flush()
 	r.boxed--
 	r.emit(row{box: boxBottom, boxW: r.boxW})
-	r.textW, r.indent, r.formLabel, r.boxW = savedW, savedIndent, savedLabel, savedBox
+	r.textW, r.indent, r.formLabel = savedW, savedIndent, savedLabel
+	r.boxW, r.formStack, r.inForm = savedBox, savedStack, savedIn
 	r.gap = true
 }
 
@@ -665,7 +670,44 @@ const (
 	boxPad   = 2
 	boxEdge  = 1
 	formSlot = 40
+	// formBedMin is the narrowest a value may be and still read as one;
+	// formLabelMin the narrowest a label may be and still be a word.
+	formBedMin   = 12
+	formLabelMin = 8
 )
+
+// fitForm settles the label column against the room there actually is,
+// and says when there is not enough for one at all.
+//
+// A terminal's width is not ours to choose (user, 2026-09-22): the same
+// form is read at 200 columns and at 60, and a layout that assumes the
+// first truncates the labels and wraps the beds at the second. So the
+// column gives way in order — its full width, then as much as is left,
+// then none at all, at which point the value goes on its own line under
+// its label rather than beside it.
+func fitForm(want, avail int) (int, bool) {
+	lead := dispW(glyphInput) + 1
+	if want+2+lead+formSlot <= avail {
+		return want, false
+	}
+	if want+2+lead+formBedMin <= avail {
+		return want, false
+	}
+	// The label would leave no room for a value worth the name.
+	if avail-2-lead-formBedMin >= formLabelMin {
+		return avail - 2 - lead - formBedMin, false
+	}
+	return 0, true
+}
+
+// formBed is how wide a value's bed is in the room that is left.
+func (r *renderer) formBed() int {
+	used := r.formLabel + 2
+	if r.formStack {
+		used = boxPad
+	}
+	return clamp(r.textW-boxPad-used-dispW(glyphInput)-1, formBedMin, formSlot)
+}
 
 // formValueW is the whole value column: the field's glyph, a space, and
 // the bed. The box is sized by it and the bed is cut to it, so the two
@@ -707,7 +749,14 @@ func (r *renderer) formField(n *ir.Node, id int, value func()) {
 	// A required field says so on its label, the way every form on paper
 	// and screen has said it. The page says it in ink webu does not read,
 	// so without this the asterisk simply went missing.
-	label := truncate(oneLine(n.Name), max(1, r.formLabel-2))
+	label := oneLine(n.Name)
+	if !r.formStack {
+		// Cut to the column. Stacked there is no column to cut to: the
+		// label has the row, and a long one wraps like any other text
+		// rather than losing its end to an ellipsis (user, 2026-09-22 —
+		// a terminal's width is not ours to choose).
+		label = truncate(label, max(1, r.formLabel-2))
+	}
 	if n.Required {
 		label += " *"
 	}
@@ -719,7 +768,20 @@ func (r *renderer) formField(n *ir.Node, id int, value func()) {
 	if n.Disabled {
 		k = segDim
 	}
-	r.add(atom{text: padRight(label, r.formLabel) + "  ", item: -1, kind: k})
+	if r.formStack {
+		// No room for a column: the label takes the row and the value
+		// the next one, indented under it. Still a form, still aligned —
+		// just down the page instead of across it.
+		r.words(label, -1, k)
+		r.flush()
+		r.add(atom{text: "  ", item: -1, kind: segDim})
+		value()
+		r.flush()
+		return
+	}
+	if r.formLabel > 0 {
+		r.add(atom{text: padRight(label, r.formLabel) + "  ", item: -1, kind: k})
+	}
 	value()
 	r.flush()
 }
@@ -1399,7 +1461,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		if n.Disabled {
 			k = segDim
 		}
-		if r.formLabel > 0 {
+		if r.inForm {
 			// A form's own button lines up under the values it acts on,
 			// not under their labels: it answers the column, it does not
 			// name a row of it.
@@ -1414,7 +1476,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Textbox:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
-		if r.formLabel > 0 {
+		if r.inForm {
 			r.formField(n, id, func() {
 				r.add(atom{text: glyphInput + " ", item: id, kind: segInput})
 				// The slot recedes and the value stands in it. sshu's form
@@ -1425,7 +1487,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 				// there: dim, so it is the floor and not the furniture
 				// (user, 2026-09-22 — mauve underscores were the loudest
 				// thing on the page).
-				lead, v, trail := fieldSlot(n, min(formSlot, r.textW-r.formLabel-2-dispW(glyphInput)-1))
+				lead, v, trail := fieldSlot(n, r.formBed())
 				r.add(atom{text: lead, item: id, kind: segDim})
 				if v != "" {
 					r.add(atom{text: v, item: id, kind: segInput})
@@ -1443,7 +1505,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Check:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
-		if r.formLabel > 0 {
+		if r.inForm {
 			// The box alone in the value column: the name is already in
 			// the label column, and saying it twice on one row is the
 			// thing the column was for.
@@ -1457,7 +1519,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Combobox:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
-		if r.formLabel > 0 {
+		if r.inForm {
 			r.formField(n, id, func() {
 				r.add(atom{text: glyphSelect + " ", item: id, kind: segInput})
 				r.words(oneLine(n.Value), id, segInput)
