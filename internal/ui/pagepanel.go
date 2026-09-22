@@ -126,10 +126,10 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	// so the block reads as one thing; the text width is what the block
 	// spans, not the panel, so it does not run under the side of the page.
 	codeStyles := codeStyles()
-	codePad := lipgloss.NewStyle().Background(codeBg)
+	codePad := lipgloss.NewStyle().Background(pageCodeBg)
 	if t.loading {
 		for k := range codeStyles {
-			codeStyles[k] = lipgloss.NewStyle().Foreground(dimColor).Background(codeBg)
+			codeStyles[k] = lipgloss.NewStyle().Foreground(pageDim).Background(pageCodeBg)
 		}
 	}
 	out := make([]string, 0, innerH)
@@ -158,21 +158,33 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 					style = codeStyles[segCode]
 				}
 				b.WriteString(withAttr(style, s.attr).Render(text))
+			case row.heading > 0:
+				// The page's own outline, drawn as weight: h1 on the
+				// brightest ground, h6 on the crust (theme.headingBg).
+				b.WriteString(withAttr(styles[s.kind].Background(headingBg(row.heading)), s.attr).Render(text))
 			case row.table:
-				bg := tableBg
+				bg := pageTableBg
 				if row.header {
-					bg = tableHeaderBg
+					bg = pageTableHeadBg
 				}
 				b.WriteString(withAttr(styles[s.kind].Background(bg), s.attr).Render(text))
 			default:
 				b.WriteString(withAttr(styles[s.kind], s.attr).Render(text))
 			}
 		}
-		if row.code {
+		switch {
+		case row.code:
 			span := min(innerW, max(used, t.textWidth()))
 			b.WriteString(codePad.Render(strings.Repeat(" ", max(0, span-used))))
 			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
-		} else {
+		case row.heading > 0:
+			// The ground runs to the text width, so a heading is a band
+			// rather than a tinted word.
+			span := min(innerW, max(used, t.textWidth()))
+			pad := lipgloss.NewStyle().Background(headingBg(row.heading))
+			b.WriteString(pad.Render(strings.Repeat(" ", max(0, span-used))))
+			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
+		default:
 			b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
 		}
 		out = append(out, b.String())
@@ -212,18 +224,18 @@ func withAttr(st lipgloss.Style, a textAttr) lipgloss.Style {
 // ordinary page and selection mode so the two cannot drift.
 func segStyles() map[segKind]lipgloss.Style {
 	return map[segKind]lipgloss.Style{
-		segPlain:       lipgloss.NewStyle().Foreground(textColor),
-		segDim:         lipgloss.NewStyle().Foreground(dimColor),
-		segHeading:     lipgloss.NewStyle().Foreground(textColor).Bold(true),
-		segLink:        lipgloss.NewStyle().Foreground(linkColor).Underline(true),
-		segButton:      lipgloss.NewStyle().Foreground(textColor).Bold(true),
-		segInput:       lipgloss.NewStyle().Foreground(editColor),
-		segCheck:       lipgloss.NewStyle().Foreground(textColor),
-		segMedia:       lipgloss.NewStyle().Foreground(dimColor),
-		segCode:        lipgloss.NewStyle().Foreground(codeColor),
-		segUnsupported: lipgloss.NewStyle().Foreground(dimColor),
-		segLandmark:    lipgloss.NewStyle().Foreground(dimColor).Bold(true),
-		segTableHeader: lipgloss.NewStyle().Foreground(textColor).Bold(true), // the header row's ground tells it apart (pagepanel)
+		segPlain:       lipgloss.NewStyle().Foreground(pageText),
+		segDim:         lipgloss.NewStyle().Foreground(pageDim),
+		segHeading:     lipgloss.NewStyle().Foreground(pageText).Bold(true),
+		segLink:        lipgloss.NewStyle().Foreground(pageLink).Underline(true),
+		segButton:      lipgloss.NewStyle().Foreground(pageText).Bold(true),
+		segInput:       lipgloss.NewStyle().Foreground(pageField),
+		segCheck:       lipgloss.NewStyle().Foreground(pageText),
+		segMedia:       lipgloss.NewStyle().Foreground(pageDim),
+		segCode:        lipgloss.NewStyle().Foreground(pageCode),
+		segUnsupported: lipgloss.NewStyle().Foreground(pageDim),
+		segLandmark:    lipgloss.NewStyle().Foreground(pageDim).Bold(true),
+		segTableHeader: lipgloss.NewStyle().Foreground(pageText).Bold(true), // the header row's ground tells it apart (pagepanel)
 	}
 }
 
@@ -232,19 +244,19 @@ func segStyles() map[segKind]lipgloss.Style {
 // colour; the rest stay out of the bands the app reserves (green for the
 // shown tab, yellow for visual mode, red and peach for the override).
 func codeStyles() map[segKind]lipgloss.Style {
-	on := func(c lipgloss.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c).Background(codeBg) }
+	on := func(c lipgloss.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c).Background(pageCodeBg) }
 	return map[segKind]lipgloss.Style{
-		segCode:        on(textColor),
-		segCodeKey:     on(headerColor),
-		segCodeString:  on(codeColor),
+		segCode:        on(pageText),
+		segCodeKey:     on(pageKey),
+		segCodeString:  on(pageCode),
 		segCodeNumber:  on(lipgloss.Color("#f2cdcd")), // flamingo
 		segCodeConst:   on(lipgloss.Color("#89dceb")), // sky: true / false / null
 		segCodeKeyword: on(lipgloss.Color("#89dceb")),
-		segCodeComment: on(dimColor).Italic(true),
+		segCodeComment: on(pageDim).Italic(true),
 		segCodePunct:   on(lipgloss.Color("#9399b2")), // overlay2
-		segCodeHeading: on(textColor).Bold(true),
-		segCodeStrong:  on(textColor).Bold(true),
-		segCodeEmph:    on(textColor).Italic(true),
+		segCodeHeading: on(pageText).Bold(true),
+		segCodeStrong:  on(pageText).Bold(true),
+		segCodeEmph:    on(pageText).Italic(true),
 	}
 }
 

@@ -748,3 +748,50 @@ func TestInlineMarkup(t *testing.T) {
 		t.Error("withAttr should put the attribute on the style")
 	}
 }
+
+// TestHeadingGround: a heading's rows carry its level, which is the
+// ground they are painted on — brightest at h1, the crust at h6
+// (theme.headingBg, 2026-09-22). The ramp is the VTP's lerp between two
+// anchors, so the six are distinct and in order.
+func TestHeadingGround(t *testing.T) {
+	head := func(level int, s string) *ir.Node {
+		return &ir.Node{Kind: ir.Heading, Level: level, Children: []*ir.Node{text(s)}}
+	}
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		head(1, "one"), para(text("prose")), head(3, "three"), head(6, "six"),
+	}}
+	l := render(root, 40)
+	got := map[string]int{}
+	for _, r := range l.rows {
+		if w := strings.TrimSpace(r.plain()); w != "" {
+			got[w] = r.heading
+		}
+	}
+	for word, level := range map[string]int{"# one": 1, "### three": 3, "###### six": 6, "prose": 0} {
+		if got[word] != level {
+			t.Errorf("%q should carry level %d, carries %d", word, level, got[word])
+		}
+	}
+	// Six distinct grounds, darkening, the last one at the crust.
+	seen := map[string]bool{}
+	var last int
+	for level := 1; level <= 6; level++ {
+		bg := string(headingBg(level))
+		if seen[bg] {
+			t.Errorf("h%d repeats a ground: %s", level, bg)
+		}
+		seen[bg] = true
+		r, _, _ := hexRGB(bg)
+		if level > 1 && r >= last {
+			t.Errorf("h%d should be darker than h%d: %s", level, level-1, bg)
+		}
+		last = r
+	}
+	if r, _, _ := hexRGB(string(headingBg(6))); r > 0x20 {
+		t.Errorf("h6 should sit near the crust, is %s", headingBg(6))
+	}
+	// Out of range clamps rather than running off the ramp.
+	if headingBg(0) != headingBg(1) || headingBg(9) != headingBg(6) {
+		t.Error("a level outside 1-6 should clamp")
+	}
+}

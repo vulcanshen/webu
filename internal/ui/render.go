@@ -96,6 +96,10 @@ type row struct {
 	// table: a row of a data table, on the table's ground; header marks
 	// the header row, on the deeper one (2026-09-21).
 	table, header bool
+	// heading: the level of the heading this row belongs to, 1-6, which
+	// is the ground it sits on (theme.headingBg, 2026-09-22). Zero for
+	// every other row.
+	heading int
 }
 
 // plain is the row's text with no styling — what tests and the search read.
@@ -479,6 +483,9 @@ type renderer struct {
 	// to while the cell is drawn: the cell is the one stop, the links in
 	// it are behind it (table, 2026-09-21). -1 outside a cell.
 	cellItem int
+	// head is the level of the heading being gathered, which emit stamps
+	// onto its rows; 0 outside one.
+	head int
 	// attr is the markup the run being gathered sits inside — <strong>,
 	// <em>, <del> — which add stamps onto every atom (inline, ir.Span).
 	attr   textAttr
@@ -844,6 +851,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		}
 		// A heading that is an item collapses on Enter, like a landmark's
 		// row: the row keeps the heading and says what it hides.
+		r.head = clamp(n.Level, 1, 6)
 		folded := id >= 0 && r.fold[n.ID]
 		if folded {
 			r.items[id].folded = true
@@ -860,6 +868,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			}
 		}
 		r.flush()
+		r.head = 0
 		r.gap = true
 		if folded {
 			r.suppress, r.foldLevel, r.foldLm = true, n.Level, r.lmDepth
@@ -1836,6 +1845,9 @@ func (r *renderer) emit(rw row) {
 		if len(r.rows) > 0 && r.rows[len(r.rows)-1].plain() != "" {
 			r.rows = append(r.rows, row{})
 		}
+	}
+	if r.head > 0 {
+		rw.heading = r.head
 	}
 	at := len(r.rows)
 	r.rows = append(r.rows, rw)

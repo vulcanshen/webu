@@ -14,6 +14,26 @@
 
 ### Changed
 
+- **Two palettes, not one.** webu's own chrome and the page's content now
+  have separate colour systems. The app palette — panels, borders, the
+  header chain, the pagetab, the cursor, menus — keeps the whole
+  protocol: a few anchors, lightness as depth, one reserved band per
+  meaning. The page palette — headings, links, code, tables, fields — is
+  a closed set of its own that appears only inside the page, takes no
+  part in webu's depth (a page is always at one depth), and reserves its
+  bands among themselves alone. A web page is a structured document with
+  a visual language of its own, and drawing it out of the app's bands
+  kept forcing a choice between the two: a table header wanted mauve and
+  so did a code key, a highlight wanted lavender and so did the
+  selection. Nothing on screen moves for this on its own — the hexes are
+  the ones that were already there — but the two can now be changed
+  without negotiating with each other.
+- **A heading wears a ground that fades by level.** h1 sits on the
+  brightest, h6 on the crust, the four between them interpolated the way
+  a popup's border is interpolated by depth. The ground runs to the text
+  width, so a heading reads as a band rather than as a tinted word, and
+  the `#` marks stay: on a terminal with its colours flattened they are
+  what still says the level.
 - **A page's own markup is drawn with the terminal's.** `<strong>` is
   bold, `<em>` italic, `<del>` struck through, `<ins>` underlined and
   `<mark>` reversed, composed with whatever the run already is — markup
