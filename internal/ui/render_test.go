@@ -1212,11 +1212,11 @@ func TestAFormGivesWayAsItNarrows(t *testing.T) {
 	}
 }
 
-// A value sits on a ground, not on a line of dashes. A dashed bed is a
-// DRAWING of a field, and a terminal has a better one: the ground, which
-// is how a code block and a table already say "this is a thing, not
-// prose" (user, 2026-09-22, having taken the dashes out twice).
-func TestAValueSitsOnAGround(t *testing.T) {
+// A value needs no bed and no dashes: the field's glyph has already said
+// what it is, so all that is left to show is the value and one lit cell
+// for where the next character would go (user, 2026-09-22, having taken
+// the dashes out twice and the ground once).
+func TestAValueIsJustItsValueAndACaret(t *testing.T) {
 	form := &ir.Node{Kind: ir.Landmark, Role: "form", ID: 1, Children: []*ir.Node{
 		{Kind: ir.Textbox, Name: "Empty", ID: 2, Focusable: true},
 		{Kind: ir.Textbox, Name: "Filled", Value: "a value", ID: 3, Focusable: true},
@@ -1224,38 +1224,30 @@ func TestAValueSitsOnAGround(t *testing.T) {
 	}}
 	l := render(&ir.Node{Kind: ir.Document, Children: []*ir.Node{form}}, 100)
 	v := dumpLayout(l)
-	if strings.Contains(v, "___") {
+	if strings.Contains(v, "__") {
 		t.Errorf("no dashes anywhere:\n%s", v)
 	}
-	beds := map[string]string{}
+	carets := 0
 	for _, r := range l.rows {
 		for _, g := range r.segs {
-			if g.kind == segFieldBed {
-				for _, name := range []string{"Empty", "Filled", "Secret"} {
-					if strings.Contains(r.plain(), name) {
-						beds[name] = g.text
-					}
+			if g.kind == segCaret {
+				carets++
+				if dispW(g.text) != 1 {
+					t.Errorf("the caret is one cell, is %d", dispW(g.text))
 				}
 			}
 		}
 	}
-	if len(beds) != 3 {
-		t.Fatalf("every field sits on a ground, got %d:\n%s", len(beds), v)
+	if carets != 3 {
+		t.Errorf("one caret per field, got %d:\n%s", carets, v)
 	}
-	if strings.TrimSpace(beds["Empty"]) != "" {
-		t.Errorf("an empty field is an empty bar, is %q", beds["Empty"])
+	if !strings.Contains(v, "a value") {
+		t.Errorf("a filled field shows its value:\n%s", v)
 	}
-	if !strings.Contains(beds["Filled"], "a value") {
-		t.Errorf("a filled field shows its value, is %q", beds["Filled"])
+	if strings.Contains(v, "hunter2") {
+		t.Errorf("a password is never shown in clear:\n%s", v)
 	}
-	if strings.Contains(beds["Secret"], "hunter2") {
-		t.Errorf("a password is never shown in clear, is %q", beds["Secret"])
-	}
-	// Every bed is the same width, so the fields read as one column.
-	w := dispW(beds["Empty"])
-	for name, bed := range beds {
-		if dispW(bed) != w {
-			t.Errorf("%s's ground is %d wide, %s's is %d", name, dispW(bed), "Empty", w)
-		}
+	if !strings.Contains(v, "•") {
+		t.Errorf("a password shows as dots:\n%s", v)
 	}
 }

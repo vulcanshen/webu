@@ -26,9 +26,9 @@ const (
 	segLink
 	segButton
 	segInput
-	// segFieldBed is the ground a value sits on, which is what says a
-	// value goes here (theme.pageInputBg).
-	segFieldBed
+	// segCaret is the one cell that says a value can be typed here
+	// (theme.pageInputBg).
+	segCaret
 	segCheck
 	segMedia
 	segCode
@@ -646,14 +646,14 @@ func (r *renderer) formChildren(n *ir.Node, depth int) {
 	savedBox, savedStack, savedIn := r.boxW, r.formStack, r.inForm
 	// As wide as the form needs and no wider. A box across the whole
 	// terminal reads as a banner; sshu's is the width of its own rows.
-	want := formLabelW(n, savedW)
-	r.boxW = min(savedW, boxEdge*2+boxPad*2+want+2+formValueW)
+	want, value := formLabelW(n, savedW), formValueW(n)
+	r.boxW = min(savedW, boxEdge*2+boxPad*2+want+2+value)
 	// The wrap width counts the indent, which is the LEFT pad already —
 	// subtracting both pads took two cells off every row and wrapped the
 	// bed the box had just been sized to hold.
 	r.textW = max(12, r.boxW-boxEdge*2-boxPad)
 	r.indent += strings.Repeat(" ", boxPad)
-	r.formLabel, r.formStack = fitForm(want, r.textW-boxPad)
+	r.formLabel, r.formStack = fitForm(want, value, r.textW-boxPad)
 	r.inForm = true
 	r.emit(row{box: boxTop, boxW: r.boxW,
 		segs: []seg{{text: oneLine(n.Name), item: -1, kind: segDim}}})
@@ -673,9 +673,10 @@ const (
 	boxPad   = 2
 	boxEdge  = 1
 	formSlot = 40
-	// formBedMin is the narrowest a value may be and still read as one;
-	// formLabelMin the narrowest a label may be and still be a word.
-	formBedMin   = 12
+	// formValueMin is the narrowest a value column may be and still hold
+	// something; formLabelMin the narrowest a label may be and still be
+	// a word.
+	formValueMin = 8
 	formLabelMin = 8
 )
 
@@ -688,34 +689,35 @@ const (
 // column gives way in order — its full width, then as much as is left,
 // then none at all, at which point the value goes on its own line under
 // its label rather than beside it.
-func fitForm(want, avail int) (int, bool) {
-	lead := dispW(glyphInput) + 1
-	if want+2+lead+formSlot <= avail {
+func fitForm(want, value, avail int) (int, bool) {
+	if want+2+value <= avail {
 		return want, false
 	}
-	if want+2+lead+formBedMin <= avail {
-		return want, false
-	}
-	// The label would leave no room for a value worth the name.
-	if avail-2-lead-formBedMin >= formLabelMin {
-		return avail - 2 - lead - formBedMin, false
+	// The label gives way before the value does: a label cut short still
+	// reads, a value cut short is a different value.
+	if avail-2-value >= formLabelMin {
+		return avail - 2 - value, false
 	}
 	return 0, true
 }
 
-// formBed is how wide a value's bed is in the room that is left.
-func (r *renderer) formBed() int {
-	used := r.formLabel + 2
-	if r.formStack {
-		used = boxPad
-	}
-	return clamp(r.textW-boxPad-used-dispW(glyphInput)-1, formBedMin, formSlot)
+// formValueW is the value column this form needs: the field glyph, a
+// space, the widest value it actually holds, and the caret after it. The
+// box is sized by it, so an empty form is not a sliver and a form full
+// of long values is not cut to pieces.
+func formValueW(form *ir.Node) int {
+	w := 0
+	form.Walk(func(n *ir.Node) bool {
+		switch n.Kind {
+		case ir.Textbox:
+			w = max(w, dispW(fieldValue(n)))
+		case ir.Combobox:
+			w = max(w, dispW(oneLine(n.Value)))
+		}
+		return true
+	})
+	return dispW(glyphInput) + 1 + clamp(w, formValueMin, formSlot) + 1
 }
-
-// formValueW is the whole value column: the field's glyph, a space, and
-// the bed. The box is sized by it and the bed is cut to it, so the two
-// cannot disagree and wrap the row they were measured for.
-var formValueW = dispW(glyphInput) + 1 + formSlot
 
 // formLabelW is how wide a form's label column is: the widest name any
 // of its controls has, within reason. Beyond a third of the text width
@@ -1490,7 +1492,11 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 				// there: dim, so it is the floor and not the furniture
 				// (user, 2026-09-22 — mauve underscores were the loudest
 				// thing on the page).
-				r.add(atom{text: fieldSlot(n, r.formBed()), item: id, kind: segFieldBed})
+				if v := fieldValue(n); v != "" {
+					r.words(v, id, segInput)
+					r.add(atom{text: " ", item: id, kind: segInput, space: true})
+				}
+				r.add(atom{text: " ", item: id, kind: segCaret})
 			})
 			break
 		}
@@ -1499,7 +1505,11 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 			r.words(n.Name, id, segInput)
 			r.add(atom{text: " ", item: id, kind: segInput, space: true})
 		}
-		r.add(atom{text: fieldSlot(n, formBedMin), item: id, kind: segFieldBed})
+		if v := fieldValue(n); v != "" {
+			r.words(v, id, segInput)
+			r.add(atom{text: " ", item: id, kind: segInput, space: true})
+		}
+		r.add(atom{text: " ", item: id, kind: segCaret})
 	case ir.Check:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
@@ -1741,16 +1751,16 @@ func (r *renderer) newItem(n *ir.Node) int {
 	return len(r.items) - 1
 }
 
-// fieldSlot is the value on its bed: the value, then the ground it sits
-// on out to bed cells. One string, drawn on the input ground — an empty
-// field is an empty bar, the way an empty field looks everywhere else.
-func fieldSlot(n *ir.Node, bed int) string {
+// fieldValue is what a textbox shows: its value, masked when it is a
+// password. The glyph in front has already said it is a field, so there
+// is no bed and no dashes — just the value, and one lit cell after it
+// for where the next character would go (render, user 2026-09-22).
+func fieldValue(n *ir.Node) string {
 	v := oneLine(n.Value)
 	if n.Protected && v != "" {
-		v = "••••"
+		v = strings.Repeat("•", min(12, len([]rune(n.Value))))
 	}
-	w := max(max(bed, formBedMin), dispW(v)+2)
-	return " " + v + strings.Repeat(" ", max(1, w-dispW(v)-1))
+	return v
 }
 
 // checkText is the box or the dot, as a glyph: the state IS the glyph,

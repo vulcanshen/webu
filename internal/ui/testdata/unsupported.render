@@ -18,9 +18,9 @@ Clickable div without a role
 Caption
 • 󱊨 Menu button
 
-󰮦 meter Meter󰮦 ColorWell Colour 󰮦 Date Date 󰘎 Year Year
- 0           / 󰘎 Month Month  0           / 󰘎 Day Day
- 0           󱊨 Show date picker Show date picker 󱊨 File
+󰮦 meter Meter󰮦 ColorWell Colour 󰮦 Date Date 󰘎 Year Year 0  
+/ 󰘎 Month Month 0   / 󰘎 Day Day 0   󱊨 Show date picker Show
+date picker 󱊨 File
 -- items --
 0 unsupported "Volume" rows 0-0
 1 unsupported "Range" rows 1-1
@@ -33,8 +33,8 @@ Caption
 8 listitem "Menu button" rows 16-16
 9 unsupported "Colour" rows 18-18
 10 unsupported "Year Year/Month Month/Day DayShow date picker Show date picker" rows 18-19
-11 textbox "Year Year" rows 18-19
+11 textbox "Year Year" rows 18-18
 12 textbox "Month Month" rows 19-19
-13 textbox "Day Day" rows 19-20
-14 button "Show date picker Show date picker" rows 20-20
+13 textbox "Day Day" rows 19-19
+14 button "Show date picker Show date picker" rows 19-20
 15 button "File" rows 20-20
