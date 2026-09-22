@@ -1400,10 +1400,46 @@ func (r *renderer) dropLabel(name string) {
 		}
 	}
 	trailing := strings.Join(parts, " ")
-	if strings.TrimSpace(trailing) != name {
+	if strings.TrimSpace(trailing) == name {
+		r.flow = r.flow[:start]
 		return
 	}
-	r.flow = r.flow[:start]
+	if len(r.flow) == 0 {
+		r.dropLabelRow(name)
+	}
+}
+
+// dropLabelRow is the same for a label the page laid out as a block, so
+// it was flushed to a row of its own before the field arrived. GitHub's
+// sign-in draws its labels that way, and webu printed each of them twice
+// — once as the page's text, once as the field's accessible name, which
+// IS that label.
+//
+// Only the row just emitted, only when it is entirely text no item is on,
+// and only when nothing points at it: a row index is held by the items
+// that span it and by the marks that open on it, and shifting those to
+// save a duplicate is not a trade worth making.
+func (r *renderer) dropLabelRow(name string) {
+	at := len(r.rows) - 1
+	if at < 0 || strings.TrimSpace(r.rows[at].plain()) != name {
+		return
+	}
+	for _, sg := range r.rows[at].segs {
+		if sg.item >= 0 {
+			return
+		}
+	}
+	for _, it := range r.items {
+		if it.first <= at && at <= it.last {
+			return
+		}
+	}
+	for _, mark := range r.marks {
+		if mark == at {
+			return
+		}
+	}
+	r.rows = r.rows[:at]
 }
 
 // linkFallback names a link that has no name (an image with no alt, an

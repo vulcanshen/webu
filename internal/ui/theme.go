@@ -107,9 +107,9 @@ var (
 	pageTree = lipgloss.Color("#6c7086") // overlay0
 )
 
-// levelInk is the colour a name wears for how deep it sits: seven bright
-// hues in rainbow order, cycled, so depth eight starts over rather than
-// running out of colours (user, 2026-09-22).
+// levelInk is the colour a name wears for how deep it sits: five hues,
+// cycled, so a sixth level starts over rather than running out of
+// colours (user, 2026-09-22).
 //
 // This replaced a grey ground per level (headingBg, v0.2.1). A ground
 // says depth by weight, which means six shades of one grey to tell apart
@@ -117,18 +117,19 @@ var (
 // drawn on the ink instead, and the shape of the hierarchy is drawn by
 // the tree that carries it.
 //
-// Reusing green, yellow and red here does not collide with the app's
-// reserved bands (VTP §2.3) — that is exactly what the two palettes are
-// for. These never appear outside a page's own structure, and nothing in
-// panel [2]'s content takes part in the app's elevation.
+// A full rainbow was the first try and red was wrong in it (user): red
+// means something is wrong, in this app and everywhere else, and a top
+// level heading is not an error. The cycle starts at peach and runs warm
+// to cool, which also keeps the two halves of a deep outline apart at a
+// glance. Nothing here takes part in the app's reserved bands — that is
+// what the two palettes are for; these appear only inside a page's own
+// structure.
 var levelInk = []lipgloss.Color{
-	lipgloss.Color("#f38ba8"), // red
 	lipgloss.Color("#fab387"), // peach
 	lipgloss.Color("#f9e2af"), // yellow
 	lipgloss.Color("#a6e3a1"), // green
-	lipgloss.Color("#89dceb"), // sky
-	lipgloss.Color("#89b4fa"), // blue
-	lipgloss.Color("#cba6f7"), // mauve
+	lipgloss.Color("#74c7ec"), // sapphire
+	lipgloss.Color("#b4befe"), // lavender
 }
 
 // levelColor is the ink for a depth, counting from 1.

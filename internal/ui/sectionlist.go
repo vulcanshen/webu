@@ -19,8 +19,9 @@ import (
 // 2026-09-22 — numbers earn a column only if a key jumps to them, and the
 // digits are the panel switches).
 //
-// Depth is on the ink: one bright hue per level, cycling through seven so
-// it never runs out (theme.levelColor). The connectors are one quiet
+// Depth is on the ink: one hue per level, cycled so it never runs out
+// (theme.levelColor) — and the cursor wears that hue too, so a lit row
+// still says how deep it sits. The connectors are one quiet
 // colour of their own — they are the skeleton, and a skeleton that
 // competes with the names on it is drawn wrong.
 
@@ -35,9 +36,18 @@ func (m AppModel) sectionRows(t *tab, innerW, innerH int) []string {
 	}
 	tree := lipgloss.NewStyle().Foreground(pageTree)
 	meta := lipgloss.NewStyle().Foreground(pageDim)
-	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
-	if m.focus != panelPage || t.onPagetab() {
-		cur = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim)
+	// The cursor takes the colour of the level it is on rather than the
+	// page cursor's own grey (user, 2026-09-22): the lit row still says
+	// how deep it sits, which is the one thing a highlight would
+	// otherwise take away. Off focus it drops to the register an
+	// unfocused chip wears, where depth is the border's business.
+	focused := m.focus == panelPage && !t.onPagetab()
+	cur := func(depth int) lipgloss.Style {
+		bg := levelColor(depth)
+		if !focused {
+			bg = borderDim
+		}
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bg).Bold(true)
 	}
 	stems := treeStems(t.secs)
 	out := make([]string, 0, innerH)
@@ -55,7 +65,7 @@ func (m AppModel) sectionRows(t *tab, innerW, innerH int) []string {
 		gap := max(0, innerW-dispW(stem)-dispW(name)-dispW(tail))
 
 		if on {
-			out = append(out, cur.Render(stem+name+strings.Repeat(" ", gap)+tail))
+			out = append(out, cur(s.depth).Render(stem+name+strings.Repeat(" ", gap)+tail))
 			continue
 		}
 		out = append(out, tree.Render(stem)+

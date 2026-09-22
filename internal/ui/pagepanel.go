@@ -156,7 +156,14 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 			used += dispW(text)
 			switch {
 			case s.item >= 0 && s.item == t.cursor && m.focus == panelPage && !t.onPagetab():
-				b.WriteString(withAttr(cur, s.attr).Render(text))
+				// On a heading the cursor wears that level's colour, the
+				// way the section list's does: being under the hand must
+				// not cost a row the one thing it was saying.
+				lit := cur
+				if row.heading > 0 && !t.loading {
+					lit = cur.Background(levelColor(row.heading))
+				}
+				b.WriteString(withAttr(lit, s.attr).Render(text))
 			case s.item >= 0 && s.item == t.cursor:
 				b.WriteString(withAttr(curOff, s.attr).Render(text))
 			case row.code:

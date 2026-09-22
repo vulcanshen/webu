@@ -795,3 +795,46 @@ func TestHeadingGround(t *testing.T) {
 		t.Error("a depth below one should clamp")
 	}
 }
+
+// A label the page laid out as a block was printed twice: once as the
+// page's own text, once as the field's accessible name, which IS that
+// label. dropLabel only looked at the run being gathered, and a block
+// label has already been flushed to a row by the time the field arrives
+// (GitHub's sign-in, 2026-09-22).
+func TestABlockLabelIsNotPrintedTwice(t *testing.T) {
+	field := func(name string, id int) *ir.Node {
+		return &ir.Node{Kind: ir.Textbox, Name: name, ID: cdp.BackendNodeID(id), Focusable: true}
+	}
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "form", ID: 1, Children: []*ir.Node{
+			para(text("Username or email address")), field("Username or email address", 2),
+			para(text("Password")), field("Password", 3),
+		}},
+	}}
+	l := render(root, 60)
+	for _, name := range []string{"Username or email address", "Password"} {
+		n := 0
+		for _, r := range l.rows {
+			if strings.Contains(r.plain(), name) {
+				n++
+			}
+		}
+		if n != 1 {
+			t.Errorf("%q is drawn on %d rows, want 1:\n%s", name, n, dumpLayout(l))
+		}
+	}
+	// A paragraph that merely mentions the name is not a label, and stays.
+	kept := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		para(text("Type your Password below, carefully")), field("Password", 4),
+	}}
+	if k := render(kept, 60); !strings.Contains(dumpLayout(k), "carefully") {
+		t.Errorf("only an exact label is dropped:\n%s", dumpLayout(k))
+	}
+	// Nor is a row anything else points at: an item's row survives.
+	held := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		para(link("Password", "https://x.test/p", 9)), field("Password", 5),
+	}}
+	if h := render(held, 60); len(h.items) != 2 {
+		t.Errorf("a row an item is on is never dropped:\n%s", dumpLayout(h))
+	}
+}
