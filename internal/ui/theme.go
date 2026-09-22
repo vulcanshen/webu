@@ -69,12 +69,19 @@ const (
 // spinnerFrames stands in for the web glyph in panel [2]'s URL row while
 // the page is on its way (2026-09-22). A page being fetched used to be
 // told only by the text dimming, which reads as a hang rather than as
-// work; something has to move. Braille dots, the terminal's own idiom
-// for that, rather than a Nerd Font glyph: one glyph cannot spin.
+// work; something has to move.
+//
+// Braille dots were tried first — the terminal's own idiom for this —
+// and they were wrong here: a braille cell is one column and tall, the
+// web glyph is a Nerd Font one and square across two, so the row jumped
+// a column whenever a fetch began and the shape changed with it. These
+// are the Material Design circle slices, the same set the web glyph
+// comes from: one square cell filling round, in place, at the same size.
+// Codepoints read out of the installed Nerd Font's cmap, never
+// remembered (family rule).
 var spinnerFrames = []string{
-	string(rune(0x280b)), string(rune(0x2819)), string(rune(0x2839)), string(rune(0x2838)),
-	string(rune(0x283c)), string(rune(0x2834)), string(rune(0x2826)), string(rune(0x2827)),
-	string(rune(0x2807)), string(rune(0x280f)),
+	string(rune(0xf0a9e)), string(rune(0xf0a9f)), string(rune(0xf0aa0)), string(rune(0xf0aa1)),
+	string(rune(0xf0aa2)), string(rune(0xf0aa3)), string(rune(0xf0aa4)), string(rune(0xf0aa5)),
 }
 
 // spinStep is how long one frame of it lasts.
