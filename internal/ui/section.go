@@ -435,6 +435,12 @@ func (m AppModel) sectionGiven(t *tab, value string) (tea.Model, tea.Cmd) {
 // moveSection walks the section list. It does not wrap, and k off the top
 // goes up onto the pagetab: the list stands where the page stands, so it
 // answers the page's keys the way the page does (tab.moveItem).
+//
+// h and l do nothing here. In the page they walk the items ALONG a row,
+// and a list row holds one thing; opening a section was briefly on l and
+// that was wrong twice over — Enter is what opens, and a key does not
+// get a second meaning because a surface happens to have room for it
+// (user, 2026-09-22).
 func (t *tab) moveSection(k string, visible int) {
 	if len(t.secs) == 0 {
 		return
@@ -448,9 +454,6 @@ func (t *tab) moveSection(k string, visible int) {
 			return
 		}
 		t.sec--
-	case "l", "right":
-		t.openSection(visible)
-		return
 	case "d", "ctrl+d":
 		t.sec += half
 	case "u", "ctrl+u":
