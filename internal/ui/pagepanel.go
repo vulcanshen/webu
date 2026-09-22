@@ -2,7 +2,9 @@ package ui
 
 import (
 	"strings"
+	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -14,6 +16,27 @@ import (
 // the page's chrome as capsules (pagetabRow).
 const pageHeaderRows = 2
 
+// spinTickMsg asks for a redraw while a page is on its way: the spinner
+// in the URL row reads the clock, so the tick carries nothing and two of
+// them in flight cost a redraw rather than a wrong frame (theme
+// spinnerFrame).
+type spinTickMsg struct{}
+
+func spinCmd() tea.Cmd {
+	return tea.Tick(spinStep, func(time.Time) tea.Msg { return spinTickMsg{} })
+}
+
+// fetching reports whether any tab is on its way somewhere: what keeps
+// the spinner turning.
+func (m AppModel) fetching() bool {
+	for _, t := range m.tabs {
+		if t.loading {
+			return true
+		}
+	}
+	return false
+}
+
 // pageBody draws panel [2]'s inside at innerW × innerH.
 func (m AppModel) pageBody(innerW, innerH int) []string {
 	t := m.shownTab()
@@ -21,21 +44,23 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		return emptyBody(innerW, innerH, "no page",
 			emptyHint("Press L to enter a location, or T for a new tab", "L", "T"))
 	}
-	dim := lipgloss.NewStyle().Foreground(dimColor)
 	out := make([]string, 0, innerH)
 	// The first row is the URL, behind a glyph that says what state the
-	// page is in: at rest, or on its way (the family's live glyph) — or,
-	// while a search is being typed, the query and its count (ux.md
-	// §1.1): the page under it does not move.
+	// page is in: at rest, or turning while it is on its way — or, while
+	// a search is being typed, the query and its count (ux.md §1.1): the
+	// page under it does not move.
 	if st := m.sel.status(); m.sel.on && st != "" {
 		out = append(out, lipgloss.NewStyle().Foreground(selectColor).Render(padRight(" "+st, innerW)))
 	} else {
+		// The glyph says what state the fetch is in and the URL says
+		// where: one pair, one colour (2026-09-22).
 		icon := glyphWeb
 		if t.loading {
-			icon = glyphLive
+			icon = spinnerFrame()
 		}
-		url := lipgloss.NewStyle().Foreground(urlColor).Render(fitURL(t.url, innerW-3))
-		out = append(out, dim.Render(" "+icon+" ")+url+strings.Repeat(" ", max(0, innerW-3-dispW(fitURL(t.url, innerW-3)))))
+		blue := lipgloss.NewStyle().Foreground(urlColor)
+		url := blue.Render(fitURL(t.url, innerW-3))
+		out = append(out, blue.Render(" "+icon+" ")+url+strings.Repeat(" ", max(0, innerW-3-dispW(fitURL(t.url, innerW-3)))))
 	}
 	out = append(out, m.pagetabRow(t, innerW))
 	rest := innerH - pageHeaderRows

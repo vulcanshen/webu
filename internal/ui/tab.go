@@ -503,9 +503,7 @@ func (t *tab) jumpToAnchor(frag string, visible int) bool {
 		id := it.node.ID
 		for hop := 0; id != 0 && hop < 256; hop++ {
 			if id == target {
-				t.cursor = i
-				t.leavePagetab()
-				t.scrollToCursor(visible)
+				t.landOn(i, visible)
 				return true
 			}
 			id = t.parents[id]
@@ -520,13 +518,23 @@ func (t *tab) jumpToAnchor(frag string, visible int) bool {
 	}
 	for id, hop := t.parents[target], 0; id != 0 && hop < 256; id, hop = t.parents[id], hop+1 {
 		if i, ok := byID[id]; ok {
-			t.cursor = i
-			t.leavePagetab()
-			t.scrollToCursor(visible)
+			t.landOn(i, visible)
 			return true
 		}
 	}
 	return false
+}
+
+// landOn is where a link into the page arrives: the hand on the item,
+// off the pagetab it may have been on, and the window scrolled so the
+// item is the first row on screen — what following an anchor does in a
+// browser. Keeping it merely visible (scrollToCursor) left the page
+// looking unmoved when the target was already on screen (2026-09-22).
+func (t *tab) landOn(i, visible int) {
+	t.cursor = i
+	t.leavePagetab()
+	t.top = clamp(t.lay.items[i].first, 0, max(0, len(t.lay.rows)-1))
+	t.scrollToCursor(visible)
 }
 
 func (t *tab) relayout(width int) {
