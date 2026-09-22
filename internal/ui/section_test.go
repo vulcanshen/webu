@@ -440,3 +440,41 @@ func TestGoToSectionByNumber(t *testing.T) {
 		t.Errorf("the window should follow to the section opened")
 	}
 }
+
+// A movement key moves the cursor. It does not change which screen you
+// are on: k at the top of an open section stops there, and Esc is the one
+// move up (user, 2026-09-22 — the same objection as l opening a section).
+func TestMovementDoesNotChangeScreen(t *testing.T) {
+	root := doc(hd(1, "Title"), para(text("lede")),
+		hd(2, "One"), para(text("prose "), link("a", "https://x.test/a", 1)),
+		hd(2, "Two"), para(text("prose "), link("b", "https://x.test/b", 2)),
+		hd(2, "Three"), para(text("prose "), link("c", "https://x.test/c", 3)))
+	tb := &tab{root: root, cursor: -1}
+	tb.relayout(60)
+	tb.sec = 1
+	tb.openSection(10)
+	for _, k := range []string{"k", "up", "k", "h", "l", "gg"} {
+		tb.moveItem(k, 10)
+		if !tb.read {
+			t.Fatalf("%q left the section", k)
+		}
+	}
+	// Esc still does.
+	tb.closeSection()
+	if !tb.listing() {
+		t.Error("Esc leaves the section for the list")
+	}
+	// A section that is all prose has no item to stop on, so the keys
+	// scroll — and that must not leave either.
+	prose := doc(hd(1, "Title"), para(text("lede")),
+		hd(2, "One"), para(text("a")), hd(2, "Two"), para(text("b")), hd(2, "Three"), para(text("c")))
+	tp := &tab{root: prose, cursor: -1}
+	tp.relayout(60)
+	tp.sec = 1
+	tp.openSection(10)
+	tp.cursor = -1
+	tp.moveItem("k", 10)
+	if !tp.read {
+		t.Error("k in a section of pure prose left it")
+	}
+}
