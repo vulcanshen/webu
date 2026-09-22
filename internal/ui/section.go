@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
@@ -431,6 +432,55 @@ func (m AppModel) sectionGiven(t *tab, value string) (tea.Model, tea.Cmd) {
 	}
 	return m, m.input.close()
 }
+
+// nodeByID finds the node Chromium gave this backend id, or nil when the
+// page has rebuilt that part of itself and it is gone.
+func nodeByID(root *ir.Node, id cdp.BackendNodeID) *ir.Node {
+	var found *ir.Node
+	root.Walk(func(n *ir.Node) bool {
+		if n.ID == id {
+			found = n
+		}
+		return found == nil
+	})
+	return found
+}
+
+// drillInto opens a list item to the whole panel: its contents become the
+// page. Enter does it, Esc comes back out.
+func (t *tab) drillInto(n *ir.Node, width, visible int) bool {
+	if n == nil || n.Kind != ir.ListItem || n.ID == 0 {
+		return false
+	}
+	t.drill, t.drillTitle = n.ID, oneLine(n.Text())
+	if t.cursor >= 0 && t.cursor < len(t.lay.items) {
+		if it := t.lay.items[t.cursor]; it.node == n && it.first < len(t.lay.rows) {
+			t.drillTitle = strings.TrimSpace(t.lay.rows[it.first].plain())
+		}
+	}
+	t.leavePagetab()
+	t.relayout(width)
+	t.cursor, t.top = t.firstItem(), 0
+	t.scrollToCursor(visible)
+	return true
+}
+
+// leaveDrill comes back out to the page, the cursor on the item just left.
+func (t *tab) leaveDrill(width, visible int) {
+	was := t.drill
+	t.drill, t.drillTitle = 0, ""
+	t.relayout(width)
+	for i, it := range t.lay.items {
+		if it.node.ID == was {
+			t.cursor = i
+			break
+		}
+	}
+	t.scrollToCursor(visible)
+}
+
+// drilled reports whether the panel is showing one list item's contents.
+func (t *tab) drilled() bool { return t != nil && t.drill != 0 }
 
 // moveSection walks the section list. It does not wrap, and k off the top
 // goes up onto the pagetab: the list stands where the page stands, so it

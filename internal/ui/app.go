@@ -869,9 +869,13 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 		t.leavePagetab()
 		return m, nil
 	}
-	// Esc is one move: up a level. Inside a section that is the section
-	// list; on the list, or on a page that has none, it is the chrome
-	// above both (section.go).
+	// Esc is one move: up a level. Inside a list item that is the page it
+	// was on; inside a section, the section list; on the list, or on a
+	// page with neither, the chrome above both (section.go).
+	if t.drilled() {
+		t.leaveDrill(m.pageW(), m.pageVisible())
+		return m, nil
+	}
 	if t.read {
 		t.closeSection()
 		return m, nil
@@ -1971,6 +1975,11 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	switch n.Kind {
+	case ir.ListItem:
+		// A list item is one thing; Enter is how you go into it
+		// (section.drillInto).
+		t.drillInto(n, m.pageW(), m.pageVisible())
+		return m, nil
 	case ir.Cell:
 		return m.enterCell(t, n)
 	case ir.Landmark:

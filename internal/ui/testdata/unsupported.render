@@ -30,7 +30,7 @@ _____0______ 󱊨 Show date picker Show date picker 󱊨 File
 5 unsupported "Tab B" rows 7-7
 6 unsupported "Leaf" rows 12-12
 7 media "Fig" rows 14-14
-8 button "Menu button" rows 16-16
+8 listitem "Menu button" rows 16-16
 9 unsupported "Colour" rows 18-18
 10 unsupported "Year Year/Month Month/Day DayShow date picker Show date picker" rows 18-19
 11 textbox "Year Year" rows 18-19

@@ -6,8 +6,6 @@
 3. Third
 
 • Outer
-  ◦ Inner one
-  ◦ Inner two
 
   No marker
 
@@ -16,4 +14,11 @@ Term
 
   ARIA item
 -- items --
-0 link "a link" rows 1-1
+0 listitem "Bullet one" rows 0-0
+1 listitem "Bullet two with a link" rows 1-1
+2 listitem "First" rows 3-3
+3 listitem "Second" rows 4-4
+4 listitem "Third" rows 5-5
+5 listitem "Outer…" rows 7-7
+6 listitem "No marker" rows 9-9
+7 listitem "ARIA item" rows 14-14

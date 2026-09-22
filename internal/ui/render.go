@@ -428,6 +428,9 @@ type renderOpts struct {
 	// paragraph across 200 cells cannot be read back to its start. Tables,
 	// code and rules still take the width. 0 is no cap.
 	measure int
+	// drill is the list item opened to the whole panel: it alone draws
+	// its contents, every other one draws its first line (ui tab.drill).
+	drill cdp.BackendNodeID
 	// fold overrides the default folding of landmarks: true folds, false
 	// opens. Absent means the default (renderer.folded).
 	fold map[cdp.BackendNodeID]bool
@@ -443,7 +446,9 @@ type renderer struct {
 	chrome []*ir.Node
 	flow   []atom
 	fold   map[cdp.BackendNodeID]bool
-	root   *ir.Node
+	// drill is the list item opened to the whole panel (renderOpts).
+	drill cdp.BackendNodeID
+	root  *ir.Node
 	// A collapsed heading (2026-09-21) hides its section: everything after
 	// it up to the next heading of its level or higher, or the end of the
 	// landmark it is in. suppress is on while that is being skipped;
@@ -488,7 +493,7 @@ func render(root *ir.Node, width int) layout {
 
 func renderWith(root *ir.Node, o renderOpts) layout {
 	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold,
-		root: root, marks: map[*ir.Node]int{}, cellItem: -1}
+		drill: o.drill, root: root, marks: map[*ir.Node]int{}, cellItem: -1}
 	if o.measure > 0 && o.measure < r.width {
 		r.textW = o.measure
 	}
@@ -545,6 +550,26 @@ func (r *renderer) depthOf(level int) int {
 	}
 	r.heads = append(r.heads, level)
 	return len(r.heads)
+}
+
+// firstLine is what a list item shows when it is shut: the first line it
+// would draw, styled as it would be drawn.
+//
+// Taken by rendering the item on its own and keeping the first row that
+// has anything on it, rather than by flattening the text: a card's
+// flattened text is every field it has run together, and its first LINE
+// is what a reader would call its title.
+func (r *renderer) firstLine(n *ir.Node) []seg {
+	sub := &renderer{width: r.width, textW: r.textW, root: r.root,
+		marks: map[*ir.Node]int{}, cellItem: -1, fold: r.fold}
+	sub.inlineChildren(n, -1, segPlain)
+	sub.flush()
+	for _, row := range sub.rows {
+		if strings.TrimSpace(row.plain()) != "" {
+			return row.segs
+		}
+	}
+	return nil
 }
 
 // isSkipLink says whether a link is a skip link — the "Skip to main
@@ -887,6 +912,22 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		saved := r.indent
 		r.lead = r.indent + marker
 		r.indent += strings.Repeat(" ", dispW(marker))
+		if n.ID != r.drill {
+			// One item, one line: its first line, and Enter for the rest
+			// (user, 2026-09-22). A list item is a THING — a card, a
+			// result, an entry — and a thing that spreads over a dozen
+			// unlabelled lines is a thing you cannot see. The rule is the
+			// same whatever is in it: a bullet that already fits on one
+			// line simply looks the way it always did.
+			id := r.newItem(n)
+			for _, sg := range r.firstLine(n) {
+				sg.item = id
+				r.add(atom{text: sg.text, item: id, kind: sg.kind, attr: sg.attr})
+			}
+			r.flush()
+			r.indent = saved
+			return
+		}
 		r.inlineChildren(n, -1, segPlain)
 		r.flush()
 		r.indent = saved
