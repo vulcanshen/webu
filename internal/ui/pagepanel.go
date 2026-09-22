@@ -240,11 +240,11 @@ func segStyles() map[segKind]lipgloss.Style {
 		segPlain:       lipgloss.NewStyle().Foreground(pageText),
 		segDim:         lipgloss.NewStyle().Foreground(pageDim),
 		segHeading:     lipgloss.NewStyle().Foreground(pageText).Bold(true),
-		segLink:        lipgloss.NewStyle().Foreground(pageLink).Underline(true),
-		segButton:      lipgloss.NewStyle().Foreground(pageText).Bold(true),
-		segInput:       lipgloss.NewStyle().Foreground(pageField),
-		segCheck:       lipgloss.NewStyle().Foreground(pageText),
-		segMedia:       lipgloss.NewStyle().Foreground(pageDim),
+		segLink:        lipgloss.NewStyle().Foreground(pageClick).Underline(true),
+		segButton:      lipgloss.NewStyle().Foreground(pageClick),
+		segInput:       lipgloss.NewStyle().Foreground(pageInput),
+		segCheck:       lipgloss.NewStyle().Foreground(pageInput),
+		segMedia:       lipgloss.NewStyle().Foreground(pageMedia),
 		segCode:        lipgloss.NewStyle().Foreground(pageCode),
 		segUnsupported: lipgloss.NewStyle().Foreground(pageDim),
 		segLandmark:    lipgloss.NewStyle().Foreground(pageDim).Bold(true),
@@ -260,7 +260,7 @@ func codeStyles() map[segKind]lipgloss.Style {
 	on := func(c lipgloss.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c).Background(pageCodeBg) }
 	return map[segKind]lipgloss.Style{
 		segCode:        on(pageText),
-		segCodeKey:     on(pageKey),
+		segCodeKey:     on(pageCode),
 		segCodeString:  on(pageCode),
 		segCodeNumber:  on(lipgloss.Color("#f2cdcd")), // flamingo
 		segCodeConst:   on(lipgloss.Color("#89dceb")), // sky: true / false / null

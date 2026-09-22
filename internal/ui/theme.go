@@ -52,11 +52,11 @@ var (
 	liveColor = lipgloss.Color("#a6e3a1") // green
 	// selection mode's frame (ux.md §1).
 	selectColor = lipgloss.Color("#f9e2af") // yellow
-	// mauve. It named a table's header cells until those went to a ground
-	// of their own (2026-09-21); what wears it now is a key inside a code
-	// block, and the pagetab's segments — the page's own chrome, told
-	// apart from the page's text without a ground of its own (2026-09-22).
-	headerColor = lipgloss.Color("#cba6f7") // mauve
+	// the pagetab's segments — the page's own chrome, told apart from the
+	// page's text without a ground of its own (2026-09-22). It was mauve
+	// until mauve went to the page's input group, which needed a band
+	// more than the pagetab needed that particular one (user).
+	headerColor = lipgloss.Color("#f5e0dc") // rosewater
 	// visual mode's swept text: lavender under it, the band the family
 	// gives to "the thing you are changing" (an input under edit) — and a
 	// selection is that.
@@ -80,21 +80,33 @@ const (
 // Nothing here derives from the app palette and nothing there derives
 // from here. A page is drawn at one depth, so this set encodes KIND —
 // heading, link, code, table, field — rather than elevation.
+// A colour here stands for a CONCEPT, not for an element (user,
+// 2026-09-22). There are more kinds of thing on a page than a palette can
+// hold, and giving each its own hue would be a legend to memorise rather
+// than a language to read. What the reader actually needs to know is what
+// a thing IS FOR: can I press it, do I fill it in, is it code, is it
+// furniture. Elements that answer the same way share a colour and are
+// told apart by their glyph.
 var (
 	pageText = lipgloss.Color("#cdd6f4") // text: the page's prose
 	// A placeholder, a marker, a role webu cannot draw: present,
 	// secondary, never competing with the prose.
 	pageDim = lipgloss.Color("#6c7086") // overlay0
-	// A link. Underlined as well as coloured, so a link is still a link
-	// on a terminal with its colours flattened.
-	pageLink = lipgloss.Color("#74c7ec") // sapphire
-	// A field's bed — the underscores a value sits on.
-	pageField = lipgloss.Color("#b4befe") // lavender
-	// Code, inline and block; a block sits on a ground so it reads as a
-	// block, and a key inside one is told apart by hue.
+	// Press it: a link and a button are one thing to the reader — the
+	// glyph says which, and a link keeps its underline so it is still a
+	// link on a terminal with the colours flattened.
+	pageClick = lipgloss.Color("#74c7ec") // sapphire
+	// Fill it in: a text field, a check box, a radio, a select. The
+	// input group, which is one concept however many controls it has.
+	pageInput = lipgloss.Color("#cba6f7") // mauve
+	// Code, inline and block, keys included: one colour for one concept.
+	// A block sits on a ground so it reads as a block.
 	pageCode   = lipgloss.Color("#f5c2e7") // pink
 	pageCodeBg = lipgloss.Color("#313244") // surface0
-	pageKey    = lipgloss.Color("#cba6f7") // mauve
+	// An image, a video, a frame: a marker that something is there which
+	// a terminal cannot show. It is not content and must not read like
+	// it — quieter than a placeholder, one step off the ground.
+	pageMedia = lipgloss.Color("#45475a") // surface1
 	// A data table's ground, its header row one step up: the header is
 	// told by ground, not by foreground (revised 2026-09-21).
 	pageTableBg     = lipgloss.Color("#313244") // surface0
@@ -117,11 +129,12 @@ var (
 // to cool, which also keeps the two halves of a deep outline apart at a
 // glance.
 //
-// Sapphire and lavender were in it next and came out: those two are
-// already spoken for inside a page — pageLink and pageField — and a
-// heading that wears a link's colour in the same prose a link appears in
-// is a collision, not a palette. Pink is spoken for the same way
-// (pageCode) and stayed out. Flamingo is a code block's numbers, which
+// Sapphire and lavender were in it next and came out: a heading wearing
+// a link's colour, in the same prose a link appears in, is a collision
+// rather than a palette. Sapphire is still spoken for — it is the
+// press-it band. Lavender is free again since the fill-it-in band moved
+// to mauve, and could come back here if five hues ever prove too few.
+// Pink is code and stayed out. Flamingo is a code block's numbers, which
 // only ever appear on the code ground, so it never meets a heading on
 // equal footing; teal was unused.
 //
