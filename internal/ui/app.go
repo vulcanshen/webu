@@ -1543,19 +1543,21 @@ func (m AppModel) pageMenuItems() []menuItem {
 }
 
 // pagetabItem is the page's Space menu row for the pagetab: the way onto
-// the page's chrome and back. Esc is the key — a core key, so the hint
-// names it rather than the label carrying a bracketed letter.
+// the page's chrome and back. Esc is the key, and it is written into the
+// label — bracketHotkey brackets a single letter in place, and a core
+// key has no letter to bracket, so the row says it itself (user,
+// 2026-09-22).
 func pagetabItem(t *tab) menuItem {
 	switch {
 	case t == nil || len(t.lay.pagetab) == 0:
-		return menuItem{label: "Page chrome", key: "pagetab",
-			hint: "Esc — this page declares none", disabled: true}
+		return menuItem{label: "[Esc] Page chrome", key: "pagetab",
+			hint: "this page declares none", disabled: true}
 	case t.onPagetab():
-		return menuItem{label: "Back to the page", key: "pagetab",
-			hint: "Esc — leave the pagetab"}
+		return menuItem{label: "[Esc] Back to the page", key: "pagetab",
+			hint: "leave the pagetab"}
 	}
-	return menuItem{label: "Page chrome", key: "pagetab",
-		hint: "Esc — the pagetab under the URL"}
+	return menuItem{label: "[Esc] Page chrome", key: "pagetab",
+		hint: "the pagetab under the URL"}
 }
 
 // textboxItems is a filled textbox's rows in the Space menu (ux.md §2.2):
