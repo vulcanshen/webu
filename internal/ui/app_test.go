@@ -1053,8 +1053,9 @@ func TestNavigationEntry(t *testing.T) {
 		if it.label == "Anchor" && it.key == "entry:1" && strings.HasPrefix(it.hint, "here") {
 			found = true
 		}
-		// The hand is on the pagetab here, so the menu offers the way back.
-		if it.key == "pagetab" && it.label == "Back to the page" && strings.Contains(it.hint, "Esc") {
+		// The hand is on the pagetab here, so the menu offers the way back,
+		// with the key it takes written into the row.
+		if it.key == "pagetab" && it.label == "[Esc] Back to the page" {
 			back = true
 		}
 	}
@@ -1078,7 +1079,7 @@ func TestNavigationEntry(t *testing.T) {
 			row = it
 		}
 	}
-	if row.label != "Page chrome" || !strings.Contains(row.hint, "Esc") || row.disabled {
+	if row.label != "[Esc] Page chrome" || row.hint == "" || row.disabled {
 		t.Errorf("the page's Space menu should offer the pagetab: %+v", row)
 	}
 	d.key("esc")
