@@ -252,8 +252,21 @@ var (
 	glyphWeb = string(rune(0xf059f)) // nf-md-web
 
 	// Page roles (ux.md §B: one role, one glyph).
+	//
+	// Every one of these leads its text — glyph, space, name — and nothing
+	// is wrapped in brackets any more (user, 2026-09-22). "[ Sign in ]"
+	// reads as text that has brackets in it, and worse, "[]" was doing
+	// three jobs at once: a button's frame, an image's frame, and a check
+	// box's state. One role, one glyph, and the ink says the rest.
 	glyphLink        = string(rune(0xf0337)) // nf-md-link
 	glyphInput       = string(rune(0xf060e)) // nf-md-form_textbox
+	glyphButton      = string(rune(0xf12a8)) // nf-md-gesture_tap_button
+	glyphSelect      = string(rune(0xf1400)) // nf-md-form_dropdown
+	glyphCheckOn     = string(rune(0xf0135)) // nf-md-checkbox_marked_outline
+	glyphCheckOff    = string(rune(0xf0131)) // nf-md-checkbox_blank_outline
+	glyphCheckMixed  = string(rune(0xf06f2)) // nf-md-minus_box_outline
+	glyphRadioOn     = string(rune(0xf043e)) // nf-md-radiobox_marked
+	glyphRadioOff    = string(rune(0xf043d)) // nf-md-radiobox_blank
 	glyphImage       = string(rune(0xf02e9)) // nf-md-image
 	glyphVideo       = string(rune(0xf0567)) // nf-md-video
 	glyphAudio       = string(rune(0xf0387)) // nf-md-music_note

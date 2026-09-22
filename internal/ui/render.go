@@ -1199,7 +1199,8 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		if n.Disabled {
 			k = segDim
 		}
-		r.add(atom{text: "[ " + oneLine(nameOr(n.Name, n.Value)) + " ]", item: id, kind: k})
+		r.add(atom{text: glyphButton + " ", item: id, kind: k})
+		r.words(oneLine(nameOr(n.Name, n.Value)), id, k)
 	case ir.Textbox:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
@@ -1221,7 +1222,8 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 			r.words(n.Name, id, segInput)
 			r.add(atom{text: " ", item: id, kind: segInput, space: true})
 		}
-		r.add(atom{text: "[" + oneLine(n.Value) + " ▾]", item: id, kind: segInput})
+		r.add(atom{text: glyphSelect + " ", item: id, kind: segInput})
+		r.words(oneLine(n.Value), id, segInput)
 	case ir.Media:
 		id := r.itemOf(n)
 		r.add(atom{text: mediaText(n), item: id, kind: segMedia})
@@ -1435,20 +1437,22 @@ func fieldText(n *ir.Node) string {
 	return strings.Repeat("_", pad/2) + v + strings.Repeat("_", pad-pad/2)
 }
 
+// checkText is the box or the dot, as a glyph: the state IS the glyph,
+// so a check box leads its name the way every other control does.
 func checkText(n *ir.Node) string {
 	if n.Role == "radio" {
 		if n.Checked == ir.On {
-			return "(•)"
+			return glyphRadioOn
 		}
-		return "( )"
+		return glyphRadioOff
 	}
 	switch n.Checked {
 	case ir.On:
-		return "[x]"
+		return glyphCheckOn
 	case ir.Mixed:
-		return "[-]"
+		return glyphCheckMixed
 	}
-	return "[ ]"
+	return glyphCheckOff
 }
 
 func mediaText(n *ir.Node) string {
@@ -1467,7 +1471,7 @@ func mediaText(n *ir.Node) string {
 	if name == "" {
 		name = "no alt"
 	}
-	return "[" + g + " " + name + "]"
+	return g + " " + name
 }
 
 // oneLine folds a value into one line for a field or a chip: the first line,

@@ -22,12 +22,12 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `article` | landmark | — | landmark region, enters the outline |
 | `banner` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `blockquote` | quote | — | indented quotation |
-| `button` | button | click | [ name ]; Enter presses |
+| `button` | button | click | tap glyph + name; Enter presses |
 | `cell` | cell | — | one table cell |
-| `checkbox` | check | click | [x] name; Enter toggles |
+| `checkbox` | check | click | box glyph, ticked or not, + name; Enter toggles |
 | `code` | code | — | monospace; a block when it spans lines |
 | `columnheader` | cell | — | a header cell |
-| `combobox` | combobox | choose | name [value]; Enter lists the options |
+| `combobox` | combobox | choose | name + dropdown glyph + value; Enter lists the options |
 | `complementary` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `contentinfo` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `definition` | quote | — | <dd>: indented under its term |
@@ -40,8 +40,8 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `gridcell` | cell | — | one grid cell |
 | `group` | group | — | a plain container kept for its line break |
 | `heading` | heading | click | title with its level; cursor stops here |
-| `image` | media | click | placeholder: glyph, alt or (no alt) |
-| `img` | media | click | placeholder: glyph, alt or (no alt) |
+| `image` | media | click | glyph + alt, or "no alt" |
+| `img` | media | click | glyph + alt, or "no alt" |
 | `insertion` | span | — | <ins>: underlined |
 | `link` | link | click | glyph + name; Enter opens, menu: open in new tab, yank url |
 | `list` | list | — | the container of list items |
@@ -51,7 +51,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `navigation` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `option` | option | — | one choice of a combobox |
 | `paragraph` | paragraph | — | a block of text, wrapped to width |
-| `radio` | check | click | (o) name; Enter selects |
+| `radio` | check | click | dot glyph, filled or not, + name; Enter selects |
 | `region` | landmark | — | landmark region, enters the outline |
 | `row` | row | — | one table row |
 | `rowheader` | cell | — | a header cell |
@@ -62,7 +62,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `separator` | separator | — | a horizontal rule |
 | `spinbutton` | textbox | edit | a number field; edits like a textbox |
 | `strong` | span | — | <strong> / <b>: bold |
-| `switch` | check | click | [x] name; Enter toggles |
+| `switch` | check | click | box glyph, ticked or not, + name; Enter toggles |
 | `table` | table | — | columns aligned, widths shrunk to fit |
 | `term` | group | — | <dt>: on its own line |
 | `textbox` | textbox | edit | name ____value____; Enter edits in a popup |

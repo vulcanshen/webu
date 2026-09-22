@@ -1,14 +1,14 @@
-[ Plain ] [ Disabled ] [ Input button ] [ Submit ] [ Reset ]
-[ Menu open ] [ Pressed ]
-[ ARIA button ]
-[ Icon ] [ Close ]
+󱊨 Plain 󱊨 Disabled 󱊨 Input button 󱊨 Submit 󱊨 Reset 󱊨 Menu
+open 󱊨 Pressed
+󱊨 ARIA button
+󱊨 Icon 󱊨 Close
 -- items --
 0 button "Plain" rows 0-0
 1 button "Disabled" rows 0-0
 2 button "Input button" rows 0-0
 3 button "Submit" rows 0-0
 4 button "Reset" rows 0-0
-5 button "Menu open" rows 1-1
+5 button "Menu open" rows 0-1
 6 button "Pressed" rows 1-1
 7 button "ARIA button" rows 2-2
 8 button "Icon" rows 3-3
