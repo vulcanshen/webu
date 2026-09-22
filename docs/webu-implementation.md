@@ -93,7 +93,7 @@ item，item 記自己跨哪幾列，游標才能把整個 run 反白。決定：
 - **heading 底色**（2026-09-22）：`row.heading` 存層級（`renderer.head` 在 Heading 分支進出、`emit` 蓋上去），`pagepanel` 多一個 `row.heading > 0` 分支（畫每個 seg 的底、並把底鋪到 `textWidth`）；`theme.headingBg(level)` = `lerpHex(pageHeadTop, crustHex, (level-1)/5)`，`hexRGB` 解析 `#rrggbb`
 - **inline 標記**（2026-09-22）：roles `strong` / `emphasis` / `deletion` / `insertion` / `mark` → 新的 `ir.Span`（Role 說是哪一種；`deletion` / `insertion` 原本沒進表、落 Unsupported）；`render.textAttr` 位元欄掛在 `atom` 與 `seg` 上，`renderer.attr` 在 `inline()` 的 `ir.Span` 分支進出、`add()` 一律 OR 上去、`wrap()` 造每個 seg 時帶過去，`pagepanel.withAttr` 疊在 kind 的樣式上（游標列、code、表格四個分支都要）
 - **`ir.Markdown()`**（2026-09-22，`internal/ir/markdown.go`）：block / inline 兩層；`children()` 把連續的 inline 子節點併成一段（label 與它的欄位是一行，跟版面同一條規則）；`mdWrite()` 只在需要時插空格（AX tree 會吃掉元素之間的空白，但作者寫在連結後面的標點要貼著）；`para()` 把 `<br>`（Name 是 `\n` 的 text）轉成 markdown 的硬斷行；清單整份是一個 block（項目之間空行會變成 loose list）；跨行的 code 一律 fenced 成 block；`fixtures_test.go` 同時比對 `.golden`（Dump）與 `.md`（Markdown）；app 的 `yankmd` key 進 page Space menu
-- **measure**：`renderOpts.measure` 只管 `wrap()` 的 `textW`；`store.Config.Measure` 預設 100
+- **measure**：`renderOpts.measure` 只管 `wrap()` 的 `textW`（0 = 不設上限）；`store.Measure` 是具名型別，`ParseMeasure` / `String` / `UnmarshalYAML` / `MarshalYAML` 收發 `full` 與數字兩種寫法，零值就是 full、**預設 full**（2026-09-22）
 - **item 的 col**：`emit` 時記每個 item 在第一列的起始欄位；`tab.rowStep`（j/k 換列、找最近欄位）與
   `tab.alongRow`（h/l 同列）靠它
 - textbox 畫成 `󰛿 name ____value____`，底床至少 12 格；checkbox `[x]`、radio `(•)`、combobox `name [value ▾]`、

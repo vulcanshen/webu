@@ -522,10 +522,10 @@ func TestScreensAndSession(t *testing.T) {
 	if e, _, _ := d.m.lists.current(); !strings.HasPrefix(e.meta, "/tmp/dl  ") {
 		t.Errorf("settings row after save: %+v", e)
 	}
-	// measure takes a number of cells and refuses anything else, keeping
-	// the box open with the reason.
+	// measure takes full or a number of cells and refuses anything else,
+	// keeping the box open with the reason. Full is the default.
 	d.key("j")
-	if e, _, ok := d.m.lists.current(); !ok || e.title != "measure" || !strings.HasPrefix(e.meta, "(default) 100") {
+	if e, _, ok := d.m.lists.current(); !ok || e.title != "measure" || !strings.HasPrefix(e.meta, "(default) full") {
 		t.Fatalf("measure row: %+v %v", e, ok)
 	}
 	d.key("enter")

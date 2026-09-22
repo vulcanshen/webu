@@ -123,7 +123,7 @@ search_engine: https://www.google.com/search?q=
 # 下載落在哪。預設 ~/.webu/datas/downloads。
 download_dir: ~/Downloads
 # 段落折行的欄寬。預設 100。
-measure: 100
+measure: full        # 或一個數字（20 以上）
 # 啟動時是否重新開啟上次離開時的分頁。預設 true；
 # false 則從空白開始，或只開命令列給的網址。
 restore_session: true
