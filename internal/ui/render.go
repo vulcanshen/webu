@@ -153,7 +153,6 @@ const (
 	pagetabSidebar                    // complementary
 	pagetabFooter                     // contentinfo
 	pagetabDialog                     // dialog, alertdialog — one capsule each, named
-	pagetabOther                      // outside main, in no landmark
 )
 
 // word is the kind's word on its capsule: fixed, so a capsule reads the
@@ -172,10 +171,8 @@ func (k pagetabKind) word() string {
 		return "sidebar"
 	case pagetabFooter:
 		return "footer"
-	case pagetabDialog:
-		return "dialog"
 	}
-	return "other"
+	return "dialog"
 }
 
 // pagetabKindOf is the capsule a piece of chrome goes to.
@@ -191,17 +188,23 @@ func pagetabKindOf(n *ir.Node) pagetabKind {
 		return pagetabSidebar
 	case n.Role == "contentinfo":
 		return pagetabFooter
-	case n.Role == "dialog", n.Role == "alertdialog":
-		return pagetabDialog
 	}
-	return pagetabOther
+	return pagetabDialog
 }
 
 // buildPagetab sorts the page's chrome into capsules: one per kind, in the
 // pagetab's fixed order, a page's every navigation behind one "nav"; a
-// dialog is its own, named — it is one thing the page wants; what lies
-// outside main and in no landmark is "other".
-func buildPagetab(chrome, other []*ir.Node) []capsule {
+// dialog is its own, named — it is one thing the page wants.
+//
+// Only what a role CALLS chrome is here. There used to be an "other"
+// capsule as well, holding whatever lay outside main in no landmark, and
+// it was a guess: nothing had said that was furniture, webu had decided
+// it. On a page whose whole application area is an unlabelled div — a
+// Jira board, any app shell — that guess took the entire page off the
+// screen and left its text with no way to reach it at all, since a
+// capsule's list names only links, buttons and fields (user, 2026-09-22).
+// Unidentified is now simply content, drawn where the page put it.
+func buildPagetab(chrome []*ir.Node) []capsule {
 	byKind := map[pagetabKind][]*ir.Node{}
 	var dialogs []*ir.Node
 	for _, n := range chrome {
@@ -219,9 +222,6 @@ func buildPagetab(chrome, other []*ir.Node) []capsule {
 	}
 	for _, d := range dialogs {
 		out = append(out, newCapsule(pagetabDialog, []*ir.Node{d}))
-	}
-	if len(other) > 0 {
-		out = append(out, newCapsule(pagetabOther, []*ir.Node{{Kind: ir.Landmark, Role: "other", Children: other}}))
 	}
 	return out
 }
@@ -293,8 +293,6 @@ func capsuleHint(c capsule, pageURL string) string {
 	var parts []string
 	first := c.nodes[0]
 	switch {
-	case c.kind == pagetabOther:
-		parts = append(parts, "outside main, in no landmark")
 	case len(c.nodes) == 1:
 		s := first.Role
 		if name := oneLine(first.Name); name != "" {
@@ -333,21 +331,6 @@ func mainOf(root *ir.Node) *ir.Node {
 	return main
 }
 
-// holdsLandmark says whether a landmark is somewhere under n.
-func holdsLandmark(n *ir.Node) bool {
-	found := false
-	n.Walk(func(x *ir.Node) bool {
-		if x != n && x.Kind == ir.Landmark {
-			found = true
-		}
-		return !found
-	})
-	return found
-}
-
-// fitPagetab is how many capsules the pagetab holds at width: every one when
-// they all fit, else as many as leave room for the "+N" that stands for
-// the rest. The pagetab is a menu, not a line to scroll (ux.md §A.0.K).
 // fitPagetab is how many capsules the chain holds at width: every one
 // when they all fit, else as many as leave room for the "+N" that
 // stands for the rest. The pagetab is a menu, not a line to scroll
@@ -455,14 +438,12 @@ type renderer struct {
 	textW int // where flow wraps: width, or the measure when narrower
 	rows  []row
 	items []item
-	// chrome is the page's chrome in reading order, off the rows, and
-	// other what lies outside main in no landmark when the page has a
-	// main: both go to the pagetab (buildPagetab).
-	chrome, other []*ir.Node
-	hasMain       bool
-	flow          []atom
-	fold          map[cdp.BackendNodeID]bool
-	root          *ir.Node
+	// chrome is the page's chrome in reading order, off the rows and on
+	// the pagetab instead (buildPagetab).
+	chrome []*ir.Node
+	flow   []atom
+	fold   map[cdp.BackendNodeID]bool
+	root   *ir.Node
 	// A collapsed heading (2026-09-21) hides its section: everything after
 	// it up to the next heading of its level or higher, or the end of the
 	// landmark it is in. suppress is on while that is being skipped;
@@ -506,14 +487,14 @@ func render(root *ir.Node, width int) layout {
 }
 
 func renderWith(root *ir.Node, o renderOpts) layout {
-	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold, root: root, marks: map[*ir.Node]int{}, cellItem: -1,
-		hasMain: mainOf(root) != nil}
+	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold,
+		root: root, marks: map[*ir.Node]int{}, cellItem: -1}
 	if o.measure > 0 && o.measure < r.width {
 		r.textW = o.measure
 	}
 	r.block(root, 0)
 	r.flush()
-	pagetab := buildPagetab(r.chrome, r.other)
+	pagetab := buildPagetab(r.chrome)
 	return layout{rows: r.rows, items: r.items, marks: r.marks, pagetab: pagetab, fit: fitPagetab(pagetab, r.width)}
 }
 
@@ -812,11 +793,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 	}
 	switch n.Kind {
 	case ir.Document:
-		if r.hasMain {
-			r.page(n, depth)
-		} else {
-			r.children(n, depth)
-		}
+		r.children(n, depth)
 	case ir.Landmark:
 		if n.Skip {
 			// A block of skip links — "Skip to:" over a list of anchors
@@ -1043,46 +1020,6 @@ func linkRun(kids []*ir.Node) []bool {
 	}
 	flush()
 	return out
-}
-
-// page walks the document when it has a main: landmarks are drawn, or
-// go to the pagetab; a wrapper that holds one is walked through; anything
-// else — outside main, in no landmark: a promo strip, a cookie banner
-// that is a plain div — goes to the pagetab's "other" capsule rather than
-// above the content (2026-09-22).
-func (r *renderer) page(n *ir.Node, depth int) {
-	for _, c := range n.Children {
-		switch {
-		case c.Kind == ir.Landmark:
-			r.block(c, depth+1)
-		case holdsLandmark(c):
-			r.page(c, depth+1)
-		default:
-			// A skip link out here — Wikipedia's "Jump to content" — is
-			// dropped with the rest of them; what is left is other only
-			// when there is something to it, not a blank or the skip
-			// link alone.
-			if visibleBeyondSkips(c) {
-				r.other = append(r.other, c)
-			}
-		}
-	}
-}
-
-// visibleBeyondSkips says whether n has anything to show besides skip
-// links: a word of text, or a target.
-func visibleBeyondSkips(n *ir.Node) bool {
-	found := false
-	n.Walk(func(x *ir.Node) bool {
-		switch {
-		case found, isSkipLink(x):
-			return false
-		case x.Kind == ir.Text && strings.TrimSpace(x.Name) != "", x.IsItem():
-			found = true
-		}
-		return !found
-	})
-	return found
 }
 
 // leaveLandmark is the end of a landmark's children: a collapsed
