@@ -43,6 +43,7 @@ const (
 	Separator               // <hr>
 	Code                    // code, inline or block — the renderer looks at the text
 	Quote                   // blockquote
+	Span                    // an inline run drawn with a text attribute; Role says which
 	Group                   // a container kept only for its line break (a layout-table row, a block div)
 	Unsupported             // a role the whitelist does not cover: name as text, children kept, glyph on
 )
@@ -50,7 +51,7 @@ const (
 var kindNames = [...]string{
 	"document", "landmark", "heading", "paragraph", "text", "link", "button",
 	"textbox", "check", "combobox", "option", "list", "listitem", "table", "row",
-	"cell", "media", "separator", "code", "quote", "group", "unsupported",
+	"cell", "media", "separator", "code", "quote", "span", "group", "unsupported",
 }
 
 func (k Kind) String() string {

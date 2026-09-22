@@ -75,7 +75,8 @@ func TestFixtures(t *testing.T) {
 			if err := json.Unmarshal(raw, &c); err != nil {
 				t.Fatal(err)
 			}
-			got := ir.Dump(ir.Build(c))
+			tree := ir.Build(c)
+			got := ir.Dump(tree)
 			goldenPath := filepath.Join("testdata", name+".golden")
 			if *update {
 				if err := os.WriteFile(goldenPath, []byte(got), 0o644); err != nil {
@@ -88,6 +89,22 @@ func TestFixtures(t *testing.T) {
 			}
 			if got != string(want) {
 				t.Errorf("IR differs from golden\n--- want\n%s--- got\n%s", want, got)
+			}
+			// The same tree as markdown: the golden a person can read, and
+			// what Yank markdown puts on the clipboard (2026-09-22).
+			md := ir.Markdown(tree)
+			mdPath := filepath.Join("testdata", name+".md")
+			if *update {
+				if err := os.WriteFile(mdPath, []byte(md), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			wantMd, err := os.ReadFile(mdPath)
+			if err != nil {
+				t.Fatalf("%s has no markdown golden yet: run with -update", name)
+			}
+			if md != string(wantMd) {
+				t.Errorf("markdown differs from golden\n--- want\n%s--- got\n%s", wantMd, md)
 			}
 		})
 	}

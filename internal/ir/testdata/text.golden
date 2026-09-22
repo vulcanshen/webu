@@ -1,11 +1,14 @@
 document "text" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/text.html focusable #1
   paragraph #7
     text "Plain paragraph with " #25
-    text "bold" #26
+    span #8
+      text "bold" #26
     text ", " #27
-    text "italic" #28
+    span #9
+      text "italic" #28
     text " and " #29
-    text "marked" #30
+    span #10
+      text "marked" #30
     text " words." #31
   paragraph #11
     text "First line" #32

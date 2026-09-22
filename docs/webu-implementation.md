@@ -89,6 +89,8 @@ item，item 記自己跨哪幾列，游標才能把整個 run 反白。決定：
 - **抓取中的 spinner**（2026-09-22）：`theme.spinnerFrames`（md `circle_slice_1..8`，與 `glyphWeb` 同一個 Nerd Font 區塊所以同寬同方塊感——braille 試過，一格窄長、換上去整列會跳；`spinnerFrame()` 由時鐘算 frame、不累加計數，所以重複的 tick 只多一次重畫、不會跳格）取代 URL 列的 `glyphWeb`；glyph 與 URL 同用 `urlColor`；`spinTickMsg` / `spinCmd()`（`spinStep` 90ms）在 `Update` 的 `tea.KeyMsg`（使用者發動的導覽）與 `pageEventMsg`（頁面自己發動的）兩處武裝，之後靠 `m.fetching()`（任何 tab `loading`）自我續命
 - **錨點落點**（2026-09-22）：`tab.landOn` 取代 `jumpToAnchor` 裡的 `cursor` + `scrollToCursor`，多做 `top = items[i].first`，讓目標成為畫面第一列
 - **起點**（2026-09-22）：`firstItem` = main 的 `marks` 之後第一個非 landmark 的 item → 沒有 main 就找 `Level` 最小的 heading → 都沒有才 0；`apply` 的 fresh 分支把 `top` 設成該 item 的 `first`（原本固定 0，user 實機看了效果不好）
+- **inline 標記**（2026-09-22）：roles `strong` / `emphasis` / `deletion` / `insertion` / `mark` → 新的 `ir.Span`（Role 說是哪一種；`deletion` / `insertion` 原本沒進表、落 Unsupported）；`render.textAttr` 位元欄掛在 `atom` 與 `seg` 上，`renderer.attr` 在 `inline()` 的 `ir.Span` 分支進出、`add()` 一律 OR 上去、`wrap()` 造每個 seg 時帶過去，`pagepanel.withAttr` 疊在 kind 的樣式上（游標列、code、表格四個分支都要）
+- **`ir.Markdown()`**（2026-09-22，`internal/ir/markdown.go`）：block / inline 兩層；`children()` 把連續的 inline 子節點併成一段（label 與它的欄位是一行，跟版面同一條規則）；`mdWrite()` 只在需要時插空格（AX tree 會吃掉元素之間的空白，但作者寫在連結後面的標點要貼著）；`para()` 把 `<br>`（Name 是 `\n` 的 text）轉成 markdown 的硬斷行；清單整份是一個 block（項目之間空行會變成 loose list）；跨行的 code 一律 fenced 成 block；`fixtures_test.go` 同時比對 `.golden`（Dump）與 `.md`（Markdown）；app 的 `yankmd` key 進 page Space menu
 - **measure**：`renderOpts.measure` 只管 `wrap()` 的 `textW`；`store.Config.Measure` 預設 100
 - **item 的 col**：`emit` 時記每個 item 在第一列的起始欄位；`tab.rowStep`（j/k 換列、找最近欄位）與
   `tab.alongRow`（h/l 同列）靠它
