@@ -18,7 +18,7 @@ webu 是 `u`-family 的成員，也是 [這份 TUI 設計原則](https://github.
 
 ![demo](docs/demo.gif)
 
-Hacker News 畫成 item 與文字流，`j`/`k`/`l` 走；`Enter` 在一則新聞上先問要不要開、`Space` 列出整份選單；`L` 是 Chrome 的 Cmd+L，帶著目前的 URL；`B` 是書籤 screen —— 目錄樹，`Enter` 開新分頁；`I` 是 DevTools，走過 Network、Storage、Console；`?` 是 help。
+Hacker News 畫成 item 與文字流，`j`/`k`/`l` 走；`Enter` 在一則新聞上先問要不要開、`Space` 列出整份選單；`L` 是 Chrome 的 Cmd+L，帶著目前的 URL；`B` 是書籤 screen —— 目錄樹，`Enter` 開新分頁，載入時 URL 旁的地球在轉；那一頁有外框，所以 pagetab 填滿了 —— `Esc` 上去、`h`/`l` 走、`Enter` 列出一節裡有什麼 —— 底下的頁面是依層級鋪底色的 heading；`I` 是 DevTools，走過 Network、Storage、Console；`?` 是 help。
 
 ## 五個鍵就能驅動 webu
 
