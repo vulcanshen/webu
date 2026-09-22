@@ -1,9 +1,9 @@
--- tray (3 of 5 fit) --
- header +1
- nav +2
- search +1
- sidebar
- footer
+-- pagetab (5 of 5 fit) --
+header +1
+nav +2
+search +1
+sidebar
+footer
 # Main heading
 
  ▾ article ─────────────────────────────────────────────────

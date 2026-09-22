@@ -68,7 +68,7 @@ func (m *AppModel) openOutline() tea.Cmd {
 	m.outline.setItems(items, "Outline", m.layer())
 	// Open on the entry nearest the cursor, so the popup says where you
 	// are before it says where you could go.
-	if t.onTray() {
+	if t.onPagetab() {
 		for i, e := range m.outlineFor {
 			if e.node == t.current() {
 				m.outline.cursor = i
@@ -99,8 +99,8 @@ func (m AppModel) outlineKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, closeCmd
 	}
 	if c := t.capsuleOf(m.outlineFor[i].node); c >= 0 {
-		// Chrome: on the tray, not in the page.
-		t.focusTray(c)
+		// Chrome: on the pagetab, not in the page.
+		t.focusPagetab(c)
 	} else {
 		// A heading inside a folded landmark has no row yet: open the way to it.
 		t.reveal(m.outlineFor[i].node, m.pageW())
@@ -118,7 +118,7 @@ func (t *tab) jumpTo(n *ir.Node, visible int) {
 	if !ok {
 		return
 	}
-	t.leaveTray()
+	t.leavePagetab()
 	t.cursor = -1
 	for i, it := range t.lay.items {
 		if it.node == n || it.first >= row {

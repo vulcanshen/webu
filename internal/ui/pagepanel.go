@@ -11,7 +11,7 @@ import (
 // cursor on one item.
 
 // pageHeaderRows is the URL row and the rule under it, which carries
-// the page's chrome as capsules (trayRow).
+// the page's chrome as capsules (pagetabRow).
 const pageHeaderRows = 2
 
 // pageBody draws panel [2]'s inside at innerW × innerH.
@@ -37,7 +37,7 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		url := lipgloss.NewStyle().Foreground(urlColor).Render(fitURL(t.url, innerW-3))
 		out = append(out, dim.Render(" "+icon+" ")+url+strings.Repeat(" ", max(0, innerW-3-dispW(fitURL(t.url, innerW-3)))))
 	}
-	out = append(out, m.trayRow(t, innerW))
+	out = append(out, m.pagetabRow(t, innerW))
 	rest := innerH - pageHeaderRows
 	switch {
 	case m.sel.on && t.root != nil:
@@ -123,7 +123,7 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 			}
 			used += dispW(text)
 			switch {
-			case s.item >= 0 && s.item == t.cursor && m.focus == panelPage && !t.onTray():
+			case s.item >= 0 && s.item == t.cursor && m.focus == panelPage && !t.onPagetab():
 				b.WriteString(cur.Render(text))
 			case s.item >= 0 && s.item == t.cursor:
 				b.WriteString(curOff.Render(text))
@@ -234,7 +234,7 @@ func panelFrameLegend(innerW int, body []string, title, legend string, tone bord
 	return strings.Join(lines, "\n")
 }
 
-// trayRow is the tray: the rule under the URL, and on it the page's
+// pagetabRow is the pagetab: the rule under the URL, and on it the page's
 // chrome as capsules (ux.md §A.0.K, 2026-09-22) — one per kind, in a
 // fixed order: skip, header, nav, search, sidebar, footer, each dialog,
 // other; the menu glyph, the kind's word, +N for what is behind it —
@@ -243,54 +243,85 @@ func panelFrameLegend(innerW int, body []string, title, legend string, tone bord
 // the page's top, walks the capsules on h/l, goes back down on j or
 // Esc; Enter on one is its list, Space its menu (tab.moveItem). A bare
 // rule when the page has no chrome.
-func (m AppModel) trayRow(t *tab, innerW int) string {
+func (m AppModel) pagetabRow(t *tab, innerW int) string {
 	dim := lipgloss.NewStyle().Foreground(dimColor)
-	if len(t.lay.tray) == 0 {
+	slots := t.pagetabSlots()
+	if len(slots) == 0 {
 		return dim.Render(strings.Repeat("─", innerW))
 	}
-	var b strings.Builder
-	b.WriteString(dim.Render("─"))
-	used := 1
-	for _, s := range t.traySlots() {
-		label := "+" + itoa(len(t.lay.tray)-t.lay.fit)
-		if s >= 0 {
-			label = t.lay.tray[s].label
+	labels := make([]string, 0, len(slots))
+	active := -1
+	for i, s := range slots {
+		if s == pagetabMore {
+			labels = append(labels, "+"+itoa(len(t.lay.pagetab)-t.lay.fit))
+		} else {
+			labels = append(labels, t.lay.pagetab[s].label)
 		}
-		if used+capsuleW(label)+1 > innerW {
-			// Only the one under the hand is worth cutting to fit: a
-			// capsule brought in from behind the +N can be wider than
-			// the slot it took.
-			if s != t.traySlot() || innerW-used-5 < 1 {
-				break
-			}
-			label = truncate(label, innerW-used-5)
+		if s == t.pagetabSlot() && !m.sel.on {
+			active = i
 		}
-		lit := s == t.traySlot() && !m.sel.on
-		b.WriteString(capsuleChip(label, lit, m.focus == panelPage, t.loading, s == trayMore))
-		b.WriteString(dim.Render("─"))
-		used += capsuleW(label) + 1
 	}
-	b.WriteString(dim.Render(strings.Repeat("─", max(0, innerW-used))))
-	return b.String()
+	for len(labels) > 1 && chainW(labels) > innerW-1 {
+		labels = labels[:len(labels)-1]
+		if active >= len(labels) {
+			active = len(labels) - 1
+		}
+	}
+	chain := pagetabChain(labels, active, m.focus == panelPage, t.loading)
+	return chain + dim.Render(strings.Repeat("─", max(0, innerW-chainW(labels))))
 }
 
-// capsuleChip draws one capsule of the tray: round caps around the label
-// on its ground — surface0 at rest, dim text for the "+N"; the hand's
-// colour under the hand, or the unfocused register when the keys are in
-// the other panel; all dim while the page is on its way.
-func capsuleChip(label string, lit, focused, dimmed, more bool) string {
-	fill, ink := codeBg, textColor
+// chainW is the width of a chain of labels: two caps, a space either
+// side of every label, one divider between neighbours.
+func chainW(labels []string) int {
+	w := 2
+	for i, l := range labels {
+		if i > 0 {
+			w++
+		}
+		w += dispW(l) + 2
+	}
+	return w
+}
+
+// pagetabChain draws the capsules as ONE powerline strip, the way the
+// header draws its screens (chrome.tabChain): round cap, segments run
+// together, a slanted seam between neighbours, round cap. Loose chips
+// with a rule between them read as a row of buttons; a chain reads as
+// one object — which the page's chrome is (2026-09-22). At most one
+// segment is lit: the one the hand is on, in the hand's own colour, or
+// the unfocused register when the keys are in the other panel; all of
+// it dim while the page is on its way.
+func pagetabChain(labels []string, active int, focused, dimmed bool) string {
+	lit, unlit := handColor, lipgloss.Color(baseHex)
+	ink := textColor
 	switch {
 	case dimmed:
-		ink = dimColor
-	case lit && focused:
-		fill, ink = handColor, lipgloss.Color(baseHex)
-	case lit:
-		fill, ink = borderDim, lipgloss.Color(baseHex)
-	case more:
-		ink = dimColor
+		lit, ink = borderDim, dimColor
+	case !focused:
+		lit = borderDim
 	}
-	cap := lipgloss.NewStyle().Foreground(fill)
-	body := lipgloss.NewStyle().Foreground(ink).Background(fill)
-	return cap.Render(capLeft) + body.Render(" "+label+" ") + cap.Render(capRight)
+	fill := func(i int) lipgloss.Color {
+		if i == active {
+			return lit
+		}
+		return unlit
+	}
+	var b strings.Builder
+	b.WriteString(lipgloss.NewStyle().Foreground(fill(0)).Render(capLeft))
+	for i, lab := range labels {
+		if i > 0 {
+			div, fg, bg := divider(fill(i-1), fill(i))
+			b.WriteString(lipgloss.NewStyle().Foreground(fg).Background(bg).Render(div))
+		}
+		seg := " " + lab + " "
+		if i == active {
+			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).
+				Background(lit).Bold(true).Render(seg))
+			continue
+		}
+		b.WriteString(lipgloss.NewStyle().Foreground(ink).Background(unlit).Render(seg))
+	}
+	b.WriteString(lipgloss.NewStyle().Foreground(fill(len(labels) - 1)).Render(capRight))
+	return b.String()
 }
