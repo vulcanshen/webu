@@ -109,6 +109,13 @@ type tab struct {
 	// certErr: the last navigation failed on the certificate; certAsked:
 	// the user has been asked about it once already for this page.
 	certErr, certAsked bool
+	// print is treePrint of the capture on screen, and settlingUntil how
+	// long the next one that differs from it still counts as the page
+	// arriving rather than the page living.
+	print         uint64
+	settlingUntil time.Time
+	// changed says the last capture differed from the one before it.
+	changed bool
 	// blankUntil is how long a page that arrived empty is still counted
 	// as on its way. page.Navigate waits for <body> to exist, which on an
 	// application is the shell and nothing else — the content comes later,
@@ -133,6 +140,12 @@ type tab struct {
 // that a page which really is blank says so rather than spinning.
 const blankGrace = 8 * time.Second
 
+// settleGrace is how long after the user asks for something the page
+// answering differently still means "still coming" rather than "alive".
+// The same eight seconds: they are the same judgement about how long a
+// page is allowed to take before a terminal stops waiting on it.
+const settleGrace = 8 * time.Second
+
 // stillComing reports whether the capture just applied left the panel
 // with nothing on it and the grace has not run out — in which case the
 // page is not loaded, whatever <body> said.
@@ -150,6 +163,34 @@ func (t *tab) stillComing() bool {
 	}
 	return true
 }
+
+// settling reports whether the page is still being built: the capture
+// just applied is not the one before it, and the grace has not run out.
+//
+// A page does not announce that it has finished. Chromium's load event
+// fires on the shell, and everything an application draws arrives after
+// it; page.Navigate waiting for <body> says only that there is a
+// document. What says a page is still coming is that it keeps answering
+// differently — so webu looks again, and goes on saying it is loading,
+// until two looks agree (user, 2026-09-23: "切換頁面，都不知道是切換了
+// 還是卡住了").
+//
+// The grace is what stops a page that never settles — a clock, a ticker,
+// an animation a terminal cannot show anyway — from spinning for as long
+// as it is open.
+func (t *tab) settling() bool {
+	return t.errText == "" && t.changed && time.Now().Before(t.settlingUntil)
+}
+
+// working is the page not being finished, by either measure: a fetch is
+// in flight, or the page is still being built under one that landed.
+//
+// Wider than loading on purpose. loading DIMS the page, because the page
+// on screen is the one being left; a page still filling in is the page
+// you are on and its content is real — dimming it would say the opposite.
+// What both deserve is the spinner: something is happening, and the
+// terminal is not stuck.
+func (t *tab) working() bool { return t.loading || t.settling() }
 
 // drillStep is one level of that path: the node, by the id Chromium gave
 // it, and its first line as it read when it was opened — what the header
@@ -349,6 +390,7 @@ func (t *tab) load(url string) tea.Cmd {
 	t.gen++
 	t.loading, t.navigating, t.pending, t.errText = true, true, false, ""
 	t.blankUntil = time.Now().Add(blankGrace)
+	t.settlingUntil = time.Now().Add(settleGrace)
 	t.url = url
 	gen, id, ctx := t.gen, t.id, t.ctx
 	prepare := !t.prepared
@@ -382,6 +424,8 @@ type navFailMsg struct {
 func (t *tab) navigate(what string, fn func(context.Context) error) tea.Cmd {
 	t.gen++
 	t.loading, t.navigating, t.errText = true, true, ""
+	t.blankUntil = time.Now().Add(blankGrace)
+	t.settlingUntil = time.Now().Add(settleGrace)
 	gen, id, ctx := t.gen, t.id, t.ctx
 	return func() tea.Msg {
 		if err := fn(ctx); err != nil {
@@ -422,6 +466,10 @@ func (t *tab) settle(after time.Duration) tea.Cmd {
 // does for itself is quiet — act.
 func (t *tab) press(fn func(context.Context) error) tea.Cmd {
 	t.loading = true
+	// And for as long as the page keeps changing afterwards: opening a
+	// list item on an application takes as long as a small navigation
+	// does, and said nothing while it did (user, 2026-09-22).
+	t.settlingUntil = time.Now().Add(settleGrace)
 	return t.act(fn)
 }
 
@@ -496,6 +544,9 @@ func (t *tab) apply(msg pageMsg, width int) {
 		wasBarKind = t.parts[i].kind
 	}
 	t.root = ir.Build(msg.cap)
+	was := t.print
+	t.print = treePrint(t.root)
+	t.changed = t.print != was
 	t.anchors, t.parents, t.boxes = msg.cap.Anchors, msg.cap.Parents, msg.cap.Boxes
 	t.viewport = msg.cap.Viewport
 	t.relayout(width)
@@ -1029,4 +1080,42 @@ func (t *tab) itemFromRow(row, dir int) int {
 		}
 	}
 	return 0
+}
+
+// treePrint is a cheap summary of a captured page, so the next capture
+// can be told from this one without keeping either.
+//
+// Structure, roles and text go in; node ids do not. A page that rebuilds
+// a block hands it back under fresh ids without anything the reader can
+// see having changed (render TestTheHandStaysOnThePagetab), and a page
+// that never prints the same twice would spin out its whole grace.
+func treePrint(n *ir.Node) uint64 {
+	const (
+		offset = 14695981039346656037
+		prime  = 1099511628211
+	)
+	h := uint64(offset)
+	eat := func(b byte) { h = (h ^ uint64(b)) * prime }
+	feed := func(s string) {
+		for i := 0; i < len(s); i++ {
+			eat(s[i])
+		}
+		eat(0)
+	}
+	var walk func(*ir.Node)
+	walk = func(x *ir.Node) {
+		if x == nil {
+			return
+		}
+		eat(byte(x.Kind))
+		feed(x.Role)
+		feed(x.Name)
+		feed(x.Value)
+		for _, c := range x.Children {
+			walk(c)
+		}
+		eat('}') // where a node ends, so nesting counts
+	}
+	walk(n)
+	return h
 }

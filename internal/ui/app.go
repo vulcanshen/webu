@@ -433,6 +433,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			t.loading = true
 			return m, tea.Batch(t.settle(300*time.Millisecond), spinCmd())
 		}
+		if t.settling() {
+			// The page is still being built: this look does not agree
+			// with the last one. Look again, and go on saying so — but
+			// without loading's dim, because what is drawn is this page,
+			// not the one being left (tab.working).
+			return m, tea.Batch(t.settle(300*time.Millisecond), spinCmd())
+		}
 		m.recordVisit(t)
 		if i == m.shown && t.certErr && !t.certAsked {
 			t.certAsked = true
@@ -2555,7 +2562,7 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	hint := ""
 	if t := m.shownTab(); t != nil {
 		switch {
-		case t.loading:
+		case t.working():
 			hint = "loading"
 		case t.onPagetab():
 			// The hand on the pagetab: what that part holds, and whether

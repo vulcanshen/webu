@@ -59,7 +59,9 @@ func (m AppModel) tabsBody(innerW, innerH int) []string {
 			title = "(" + itoa(n) + ") " + title
 		}
 		mark := " "
-		if t.loading {
+		if t.working() {
+			// Still filling in counts: a tab in the background that says
+			// nothing looks the same as one that has finished.
 			mark = glyphLive
 		}
 		line := padRight(mark+" "+oneLine(title), innerW)

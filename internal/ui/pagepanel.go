@@ -37,7 +37,7 @@ func spinCmd() tea.Cmd {
 // the spinner turning.
 func (m AppModel) fetching() bool {
 	for _, t := range m.tabs {
-		if t.loading {
+		if t.working() {
 			return true
 		}
 	}
@@ -62,7 +62,7 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		// The glyph says what state the fetch is in and the URL says
 		// where: one pair, one colour (2026-09-22).
 		icon := glyphWeb
-		if t.loading {
+		if t.working() {
 			icon = spinnerFrame()
 		}
 		blue := lipgloss.NewStyle().Foreground(urlColor)
