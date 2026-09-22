@@ -1086,13 +1086,24 @@ func TestAFormWithNoLabelsKeepsItsShape(t *testing.T) {
 	}}
 	l := render(&ir.Node{Kind: ir.Document, Children: []*ir.Node{form}}, 80)
 	for _, it := range l.items {
-		if it.node.Kind == ir.Textbox && it.col > 2 {
-			t.Errorf("with no labels a field starts where it always did, starts at %d:\n%s",
+		if it.node.Kind == ir.Textbox && it.col > boxPad {
+			t.Errorf("with no labels a field sits at the frame, starts at %d:\n%s",
 				it.col, dumpLayout(l))
 		}
 	}
 	if formLabelW(form, 80) != 0 {
 		t.Error("no names, no column")
+	}
+	// The frame is still drawn: the rows belong to each other whether or
+	// not webu can name them.
+	framed := false
+	for _, r := range l.rows {
+		if r.box == boxTop {
+			framed = true
+		}
+	}
+	if !framed {
+		t.Errorf("a form with no labels is still a form:\n%s", dumpLayout(l))
 	}
 }
 
@@ -1147,5 +1158,56 @@ func TestAFormIsABox(t *testing.T) {
 		if r.box == boxSide && dispW(r.plain()) > w-boxEdge*2 {
 			t.Errorf("row %q is %d wide, the frame holds %d", r.plain(), dispW(r.plain()), w-boxEdge*2)
 		}
+	}
+}
+
+// A terminal's width is not ours to choose (user, 2026-09-22): the same
+// form is read at 200 columns and at 60. The label column gives way in
+// order — its full width, then as much as is left, then none at all, at
+// which point the value goes on its own line under its label. Nothing
+// ever spills past the frame it was measured for.
+func TestAFormGivesWayAsItNarrows(t *testing.T) {
+	form := &ir.Node{Kind: ir.Landmark, Role: "form", ID: 1, Children: []*ir.Node{
+		{Kind: ir.Textbox, Name: "Username or email address", Required: true, ID: 2, Focusable: true},
+		{Kind: ir.Textbox, Name: "Password", ID: 3, Focusable: true, Protected: true},
+		{Kind: ir.Button, Role: "button", Name: "Sign in", ID: 4},
+	}}
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{form}}
+	for _, w := range []int{120, 100, 80, 70, 60, 50, 40, 30, 24} {
+		l := render(root, w)
+		var boxW int
+		for _, r := range l.rows {
+			if r.box == boxTop {
+				boxW = r.boxW
+			}
+			if r.box == boxSide && dispW(r.plain()) > boxW-boxEdge*2 {
+				t.Errorf("at %d cells a row runs past its frame: %q is %d, the frame holds %d",
+					w, r.plain(), dispW(r.plain()), boxW-boxEdge*2)
+			}
+		}
+		if boxW > w {
+			t.Errorf("at %d cells the box is %d wide", w, boxW)
+		}
+		// The label survives in full once there is no column to cut it
+		// to: stacked, it wraps like any other text.
+		if v := dumpLayout(l); w <= 30 && !strings.Contains(v, "Password") {
+			t.Errorf("at %d cells a label went missing:\n%s", w, v)
+		}
+	}
+	// Wide, the label and its value share a row; narrow, they do not.
+	wide, narrow := render(root, 120), render(root, 24)
+	rowOf := func(l layout, want string) string {
+		for _, r := range l.rows {
+			if strings.Contains(r.plain(), want) {
+				return r.plain()
+			}
+		}
+		return ""
+	}
+	if !strings.Contains(rowOf(wide, "Password"), "_") {
+		t.Errorf("wide, the value is beside its label: %q", rowOf(wide, "Password"))
+	}
+	if strings.Contains(rowOf(narrow, "Password"), "_") {
+		t.Errorf("narrow, the value is under its label: %q", rowOf(narrow, "Password"))
 	}
 }
