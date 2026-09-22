@@ -148,24 +148,6 @@ func (d *driver) cursorOn(kind ir.Kind, want string) {
 	d.t.Fatalf("no %s item containing %q in\n%s", kind, want, dumpLayout(t.lay))
 }
 
-// pagetabOn puts the hand on the capsule whose label contains want. One the
-// width left out is behind the +N, and reaching it that way is a test
-// of its own — so that is a fail here.
-func (d *driver) pagetabOn(want string) {
-	d.t.Helper()
-	t := d.page()
-	for i, c := range t.lay.pagetab {
-		if strings.Contains(c.label, want) {
-			if i >= t.lay.fit {
-				d.t.Fatalf("capsule %q is behind the +N at this width:\n%s", want, dumpLayout(t.lay))
-			}
-			t.focusPagetab(i)
-			return
-		}
-	}
-	d.t.Fatalf("no capsule containing %q in\n%s", want, dumpLayout(t.lay))
-}
-
 func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir()) // the history log goes to a scratch dir, not the user's
 	t.Setenv("WEBU_DATA", t.TempDir())
@@ -924,10 +906,87 @@ func TestRenameBookmarks(t *testing.T) {
 	}
 }
 
-// TestNavigationEntry: a navigation is one row — an entry with a count,
-// its links not items — and Enter on it lists them, Enter on one opens
-// it; the Space menu lists the same rows as its item operations.
-func TestNavigationEntry(t *testing.T) {
+// TestPageParts: a page is four parts and the pagetab is those parts
+// (user, 2026-09-22). None of it reads a role — the fixture's header,
+// nav, main and footer are placed by WHERE Chromium laid them out, and
+// the same four come out of a page that marks up none of them.
+func TestPageParts(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	exe, ok := browser.Installed()
+	if !ok {
+		t.Skip("pinned Chromium not installed; run webu once")
+	}
+	b, err := browser.Launch(exe, t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	abs, _ := filepath.Abs("testdata/parts.html")
+	d := newDriver(t, New(b, "file://"+abs))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the parts page", d.loaded("Parts"))
+
+	p := d.page()
+	var kinds []string
+	for _, x := range p.parts {
+		kinds = append(kinds, x.kind.word())
+	}
+	if strings.Join(kinds, " ") != "header body others footer" {
+		t.Fatalf("the fixture has all four, in page order: %q", kinds)
+	}
+	if p.at != partMain {
+		t.Errorf("a page opens on its body, opened on %s", p.at.word())
+	}
+	if n := p.current(); n == nil || n.Kind != ir.Heading {
+		t.Errorf("and on the body's first item, is on %+v", n)
+	}
+	if v := dumpLayout(p.lay); !strings.Contains(v, "The body itself") || strings.Contains(v, "Top link") {
+		t.Errorf("the body, and only the body:\n%s", v)
+	}
+
+	// Esc puts the hand on the part being shown — which is where the eye
+	// already is — and h/l walk the others without changing what is on
+	// screen.
+	d.key("esc")
+	if !p.onPagetab() || p.parts[p.pagetabIndex()].kind != partMain {
+		t.Errorf("Esc goes to the part on screen: %d", p.pagetabIndex())
+	}
+	d.key("l")
+	if p.at != partMain {
+		t.Error("walking the pagetab does not change what is shown")
+	}
+	if p.parts[p.pagetabIndex()].kind == partMain {
+		t.Error("l moves the hand")
+	}
+
+	// Enter shows the part the hand is on, and the panel becomes it.
+	want := p.parts[p.pagetabIndex()].kind
+	d.key("enter")
+	if p.at != want || p.onPagetab() {
+		t.Errorf("Enter shows the part and comes back down: at=%s onPagetab=%v", p.at.word(), p.onPagetab())
+	}
+	if v := dumpLayout(p.lay); strings.Contains(v, "The body itself") {
+		t.Errorf("the panel should be showing %s:\n%s", want.word(), v)
+	}
+
+	// Esc again, back to the body, and the page is whole again.
+	d.key("esc")
+	for p.parts[p.pagetabIndex()].kind != partMain {
+		d.key("l")
+	}
+	d.key("enter")
+	if !strings.Contains(dumpLayout(p.lay), "The body itself") {
+		t.Errorf("back on the body:\n%s", dumpLayout(p.lay))
+	}
+}
+
+// A page with no one dominant block has no parts to choose between: the
+// flat fixture is fifteen paragraphs of much the same size, and cutting
+// it anywhere would invent a header. It stays whole, and the pagetab
+// does not appear (2026-09-23).
+func TestAFlatPageIsOnePart(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir())
 	t.Setenv("WEBU_DATA", t.TempDir())
 	exe, ok := browser.Installed()
@@ -944,215 +1003,23 @@ func TestNavigationEntry(t *testing.T) {
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
-	// The page's chrome is on the pagetab under the URL, off the page, one
-	// capsule per kind in the pagetab's order: the three navigations one
-	// "nav", then the search, the footer, then the dialog by its name. The page starts
-	// on its content. The skip link and the skip block are on no capsule
-	// at all — they are dropped (user, 2026-09-22).
-	if n := d.page().current(); n == nil || n.Kind != ir.Heading || d.page().onPagetab() {
-		t.Errorf("a new page should start on its content, starts on %+v", n)
+
+	p := d.page()
+	if len(p.parts) != 0 {
+		t.Errorf("a flat page is not cut up: %d parts", len(p.parts))
 	}
-	v := dumpLayout(d.page().lay)
-	for _, want := range []string{"nav +4", "search +2", "footer +2", "Cookies +1"} {
+	v := dumpLayout(p.lay)
+	for _, want := range []string{"Page A", "Ann Example", "About"} {
 		if !strings.Contains(v, want) {
-			t.Errorf("missing the capsule %q in:\n%s", want, v)
+			t.Errorf("the whole page is on screen, %q is not:\n%s", want, v)
 		}
-	}
-	if l := d.page().lay; len(l.pagetab) != 4 || strings.Contains(v, "▎") {
-		t.Errorf("four capsules and nothing of the chrome on the page:\n%s", v)
-	}
-	if strings.Contains(strings.ToLower(v), "skip") {
-		t.Errorf("a skip link is dropped, not filed anywhere:\n%s", v)
-	}
-	for _, it := range d.page().lay.items {
-		if it.node.Kind == ir.Link && strings.Contains(it.node.Text(), "B via nav") {
-			t.Error("a navigation's links should not be items of the page")
-		}
-	}
-	// Esc goes up onto the pagetab, Esc again comes back; so do k from the
-	// top of the page and j; h/l walk the capsules.
-	d.key("esc")
-	if n := d.page().current(); !d.page().onPagetab() || n == nil || n.Role != "navigation" {
-		t.Errorf("Esc should put the hand on the first capsule, nav, is on %+v", n)
 	}
 	d.key("esc")
-	if n := d.page().current(); d.page().onPagetab() || n == nil || n.Kind != ir.Heading {
-		t.Errorf("Esc on the pagetab should come back to the item the hand left, is on %+v", n)
+	if p.onPagetab() {
+		t.Error("with one part there is nowhere for Esc to go")
 	}
-	d.key("k")
-	if !d.page().onPagetab() {
-		t.Error("k from the top of the page should go up onto the pagetab")
-	}
-	d.key("l")
-	if n := d.page().current(); n == nil || n.Role != "search" {
-		t.Errorf("l should walk to the next capsule, search, is on %+v", n)
-	}
-	d.pagetabOn("nav")
-	if !strings.Contains(d.m.View(), "3 navigations") || !strings.Contains(d.m.View(), "at Anchor") {
-		t.Errorf("the panel's hint should say what the capsule is and where the user is in it:\n%s", d.m.View())
-	}
-	d.key("j")
-	if n := d.page().current(); d.page().onPagetab() || n == nil || n.Kind != ir.Heading {
-		t.Errorf("j should leave the pagetab for the item the hand left, is on %+v", n)
-	}
-	// A link into the page lands the cursor on what it names, without
-	// following anything. The form it names has no name of its own, so it
-	// has no row of its own either (2026-09-22) — landing on it means
-	// landing on the first thing in it.
-	d.cursorOn(ir.Link, "to the form")
-	d.key("enter")
-	if n := d.page().current(); n == nil || n.Kind != ir.Textbox || n.Name != "Name" || d.m.confirm.isActive() {
-		t.Errorf("a link into the page should land the cursor, no confirm; landed on %+v", n)
-	}
-
-	// The nav capsule's list: each navigation under its name — the
-	// class-marked trail among them — and the rows run across them.
-	d.pagetabOn("nav")
-	d.key("enter")
-	d.until("its links", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
-	if got := d.m.options.items[d.m.options.cursor].label; got != "B via nav" {
-		t.Errorf("the first row should be the first link, is %q", got)
-	}
-	headers, root := 0, false
-	for _, it := range d.m.options.items {
-		if it.header {
-			headers++
-		}
-		if it.label == "Root" {
-			root = true
-		}
-	}
-	if headers != 3 || !root {
-		t.Errorf("three navigations, each under a header, the trail's Root among the rows: %+v", d.m.options.items)
-	}
-	d.key("esc")
-	d.until("list gone", func() bool { return !d.m.options.isActive() })
-
-	d.key(" ")
-	d.until("space menu", func() bool { return d.m.spaceMenu.isInteractive() })
-	found, back := false, false
-	for _, it := range d.m.spaceMenu.items {
-		if it.label == "Anchor" && it.key == "entry:1" && strings.HasPrefix(it.hint, "here") {
-			found = true
-		}
-		// The hand is on the pagetab here, so the menu offers the way back,
-		// with the key it takes written into the row.
-		if it.key == "pagetab" && it.label == "[Esc] Back to the page" {
-			back = true
-		}
-	}
-	if !found {
-		t.Error("the Space menu should list the navigations' links as its item operations, the current one marked")
-	}
-	if !back {
-		t.Error("the Space menu should disclose the way off the pagetab")
-	}
-	d.key("esc")
-	d.until("space menu gone", func() bool { return !d.m.spaceMenu.isActive() })
-
-	// And from the page, the way onto it — the same row, the same key,
-	// which does what Esc does.
-	d.cursorOn(ir.Textbox, "Look")
-	d.key(" ")
-	d.until("space menu again", func() bool { return d.m.spaceMenu.isInteractive() })
-	var row menuItem
-	for _, it := range d.m.spaceMenu.items {
-		if it.key == "pagetab" {
-			row = it
-		}
-	}
-	if row.label != "[Esc] Page chrome" || row.hint == "" || row.disabled {
-		t.Errorf("the page's Space menu should offer the pagetab: %+v", row)
-	}
-	d.key("esc")
-	d.until("space menu gone again", func() bool { return !d.m.spaceMenu.isActive() })
-	if mm, _ := d.m.dispatch("pagetab"); !mm.(AppModel).shownTab().onPagetab() {
-		t.Error("the menu row should put the hand on the pagetab")
-	}
-	d.page().leavePagetab()
-
-	// A search with one box: Enter is the box itself; what is typed lands
-	// in the page's field — behind the capsule, not an item — and is
-	// offered to the page's Enter at once; Enter on that submits.
-	d.pagetabOn("search")
-	d.key("enter")
-	d.until("the search box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
-	d.key("webu")
-	d.key("enter")
-	d.until("offered to search", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmSubmitField })
-	if l := d.m.confirm.lines; len(l) == 0 || l[0] != "webu" {
-		t.Errorf("the confirm should show what would be searched: %q", l)
-	}
-	d.key("enter")
-	d.until("searched", func() bool { return strings.Contains(dumpLayout(d.page().lay), "searched:webu") })
-
-	// A search box that is an item (type=search) is the same: the value
-	// is written, the offer made; Esc keeps the value and sends nothing.
-	d.cursorOn(ir.Textbox, "Look")
-	d.key("enter")
-	d.until("the look box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField && d.m.input.search })
-	d.key("abc")
-	d.key("enter")
-	d.until("offered again", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmSubmitField })
-	d.key("esc")
-	d.until("kept, unsent", func() bool {
-		n := d.page().current()
-		return !d.m.confirm.isActive() && n != nil && n.Kind == ir.Textbox && n.Value == "abc"
-	})
-	if strings.Contains(dumpLayout(d.page().lay), "searched:abc") {
-		t.Error("Esc on the offer should not submit")
-	}
-
-	// Narrower, the pagetab holds only some of the four capsules and ends
-	// in a +N for the rest; the hand wraps onto it from the first, Enter
-	// lists them, and the one chosen takes the last slot and opens its
-	// list: the dialog — a cookie banner, chrome too — whose Accept
-	// takes it off the page.
-	d.send(tea.WindowSizeMsg{Width: 46, Height: 30})
-	l := d.page().lay
-	hidden := len(l.pagetab) - l.fit
-	if len(l.pagetab) != 4 || l.fit == 0 || hidden == 0 {
-		t.Fatalf("at 46 cells some of the four capsules should be behind a +N: %d of %d fit\n%s", l.fit, len(l.pagetab), dumpLayout(l))
-	}
-	more := " +" + itoa(hidden) + " "
-	if !strings.Contains(d.m.View(), more) {
-		t.Errorf("the pagetab should end in %q (fit %d of %d):\n%s", more, l.fit, len(l.pagetab), d.m.View())
-	}
-	d.pagetabOn("nav")
-	d.key("h")
-	if !d.page().onMore() {
-		t.Errorf("h from the first capsule should wrap onto the +N: pagetab %d", d.page().pagetab)
-	}
-	d.key("enter")
-	d.until("the capsules behind +N", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optPagetabMore })
-	if len(d.m.options.items) != hidden || !strings.Contains(d.m.options.items[hidden-1].label, "Cookies +1") {
-		t.Fatalf("the list should be the capsules the width left out, the dialog last: %+v", d.m.options.items)
-	}
-	for i := 1; i < hidden; i++ {
-		d.key("j")
-	}
-	d.key("enter")
-	d.until("its buttons", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
-	if n := d.page().current(); n == nil || n.Role != "dialog" || d.page().pagetabSlots()[l.fit-1] != 3 {
-		t.Errorf("the chosen capsule should be under the hand, in the pagetab's last slot: %+v %v", n, d.page().pagetabSlots())
-	}
-	if got := d.m.options.items[d.m.options.cursor].label; got != "Accept" {
-		t.Errorf("the dialog's row should be its button, is %q", got)
-	}
-	d.key("enter")
-	d.until("dialog gone", func() bool { return !strings.Contains(dumpLayout(d.page().lay), "Cookies +1") })
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-
-	d.pagetabOn("nav")
-	d.key("enter")
-	d.until("its links again", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optItemMenu })
-	d.key("enter")
-	d.until("page B", d.loaded("Page B"))
 }
 
-// TestTableCells: a data table's cells are stops; Enter on a text cell
-// is its content in full under the column's header; Enter on a cell that
-// is one link asks to open it, as the link would; l walks the row.
 func TestTableCells(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir())
 	t.Setenv("WEBU_DATA", t.TempDir())

@@ -460,8 +460,8 @@ func isThing(n *ir.Node) bool {
 // the drill path as the page still has. A step the page has rebuilt out
 // from under takes the rest of the path with it rather than stranding
 // the view somewhere that no longer exists.
-func (t *tab) drillNode() *ir.Node {
-	n := t.root
+func (t *tab) drillNode(base *ir.Node) *ir.Node {
+	n := base
 	if n == nil {
 		t.drill = nil
 		return nil

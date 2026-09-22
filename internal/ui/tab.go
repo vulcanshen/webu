@@ -48,6 +48,9 @@ type tab struct {
 	// boxes is where the page laid each element out. It is what tells a
 	// page's parts apart — beside, above, below (parts.splitParts).
 	boxes map[cdp.BackendNodeID]ir.Box
+	// viewport is the window it was laid out in: a page no taller than
+	// that one has no parts at all (parts.splitParts).
+	viewport ir.Box
 	// pending: restored from the last session but not loaded yet — it loads
 	// when it is switched to (ux.md §6).
 	pending bool
@@ -57,6 +60,12 @@ type tab struct {
 	layW   int
 	cursor int // index into lay.items; -1 when the page has none
 	top    int // first page row on screen
+	// parts is the page cut into its four (parts.splitParts) and at is
+	// the one being shown — the panel below the pagetab IS that part,
+	// with the whole of webu's content display applied to it (user,
+	// 2026-09-22). A page opens on its body.
+	parts []part
+	at    partKind
 	// pagetab is where the hand is when it is on the pagetab under the URL
 	// rather than in the page (pagepanel.pagetabRow): 0 in the page, i+1 on
 	// capsule i of lay.pagetab, pagetabMore on the "+N" that stands for the
@@ -479,15 +488,16 @@ func (t *tab) apply(msg pageMsg, width int) {
 	if t.cursor >= 0 && t.cursor < len(t.lay.items) {
 		wasID = int64(t.lay.items[t.cursor].node.ID)
 	}
-	wasBar, wasMore := t.onPagetab(), t.onMore()
-	var wasBarID cdp.BackendNodeID
-	wasBarKind, wasBarIdx := pagetabHeader, t.pagetabIndex()
-	if wasBar && !wasMore && wasBarIdx >= 0 && wasBarIdx < len(t.lay.pagetab) {
-		c := t.lay.pagetab[wasBarIdx]
-		wasBarID, wasBarKind = c.nodes[0].ID, c.kind
+	// The hand on the pagetab is on a KIND of part, and the kinds are a
+	// closed set: they survive a recapture even when every node behind
+	// them is new (2026-09-22).
+	wasBar, wasBarKind := t.onPagetab(), partMain
+	if i := t.pagetabIndex(); wasBar && i >= 0 && i < len(t.parts) {
+		wasBarKind = t.parts[i].kind
 	}
 	t.root = ir.Build(msg.cap)
 	t.anchors, t.parents, t.boxes = msg.cap.Anchors, msg.cap.Parents, msg.cap.Boxes
+	t.viewport = msg.cap.Viewport
 	t.relayout(width)
 	if fresh {
 		// A different page: it opens where it declares it starts. A
@@ -514,55 +524,9 @@ func (t *tab) apply(msg pageMsg, width int) {
 		t.cursor = clamp(wasIdx, 0, len(t.lay.items)-1)
 	}
 	if wasBar {
-		// The hand stays on the pagetab through a redraw. By the node
-		// behind the capsule first; failing that by its KIND, which is a
-		// closed vocabulary and the same on every capture; failing that
-		// by the slot it was in.
-		//
-		// The node alone was not enough: "other" holds whatever lies
-		// outside main in no landmark, whose ids Chromium reassigns when
-		// the page rebuilds that part of its DOM — so a hand parked on
-		// the last capsule of a page that keeps settling fell back into
-		// the page, which reads as Esc undoing itself (user, 2026-09-22).
-		t.leavePagetab()
-		switch {
-		case wasMore && t.lay.fit < len(t.lay.pagetab):
-			t.focusMore()
-		case wasMore:
-			// The "+N" is gone — everything fits now. The hand takes the
-			// last capsule rather than the page.
-			if n := len(t.lay.pagetab); n > 0 {
-				t.focusPagetab(n - 1)
-			}
-		default:
-			t.focusCapsuleLike(wasBarID, wasBarKind, wasBarIdx)
-		}
+		t.focusPagetab(t.partIndex(wasBarKind))
 	}
 	t.scrollToCursor(0)
-}
-
-// focusCapsuleLike puts the hand back on the capsule it was on, by the
-// node behind it, then by its kind, then by its place — and leaves it in
-// the page only when the pagetab is now empty.
-func (t *tab) focusCapsuleLike(id cdp.BackendNodeID, kind pagetabKind, at int) {
-	if len(t.lay.pagetab) == 0 {
-		return
-	}
-	if id != 0 {
-		for i, c := range t.lay.pagetab {
-			if c.nodes[0].ID == id {
-				t.focusPagetab(i)
-				return
-			}
-		}
-	}
-	for i, c := range t.lay.pagetab {
-		if c.kind == kind {
-			t.focusPagetab(i)
-			return
-		}
-	}
-	t.focusPagetab(clamp(at, 0, len(t.lay.pagetab)-1))
 }
 
 // firstItem is where the page starts: the first item inside main — main
@@ -666,19 +630,25 @@ func (t *tab) relayout(width int) {
 	if t.root == nil {
 		return
 	}
-	// Inside a list item the panel IS that item: its contents are the
-	// page, so the cursor, the scrolling and the row window all work
-	// against them without a second set of rules (user, 2026-09-22).
-	root := t.root
-	inside := t.drillNode()
-	if inside != t.root {
+	// The panel shows one PART of the page, and inside a list item it
+	// shows that item: either way its contents are the page, so the
+	// cursor, the scrolling and the row window all work against them
+	// without a second set of rules (user, 2026-09-22).
+	t.parts = splitParts(t.root, t.boxes, t.viewport)
+	base := t.root
+	if p := t.activePart(); p != nil {
+		base = &ir.Node{Kind: ir.Document, Children: p.nodes}
+	}
+	root := base
+	inside := t.drillNode(base)
+	if inside != base {
 		root = &ir.Node{Kind: ir.Document, Children: inside.Children}
 	}
 	t.lay = renderWith(root, renderOpts{width: max(1, width), measure: t.measure,
 		fold: t.fold, drill: inside.ID})
 	t.layW = width
-	// The pagetab may have lost the capsule the hand was on, or its "+N".
-	if i := t.pagetabIndex(); i >= len(t.lay.pagetab) || (t.onMore() && t.lay.fit >= len(t.lay.pagetab)) {
+	// The page may have lost the part the hand was on.
+	if i := t.pagetabIndex(); i >= len(t.parts) {
 		t.leavePagetab()
 	}
 	t.recut()
@@ -841,15 +811,11 @@ func (t *tab) scrollToCursor(visible int) {
 	t.top = clamp(t.top, lo, max(lo, hi))
 }
 
-// current is what the hand is on: the capsule's first landmark, on the
-// pagetab; else the item under the cursor; nil on the pagetab's "+N", or on
-// nothing.
+// current is the item under the cursor, or nil — including while the
+// hand is on the pagetab, where what it is on is a part, not an item.
 func (t *tab) current() *ir.Node {
 	if t == nil {
 		return nil
-	}
-	if c := t.currentCapsule(); c != nil {
-		return c.nodes[0]
 	}
 	if t.onPagetab() || t.cursor < 0 || t.cursor >= len(t.lay.items) {
 		return nil
@@ -857,21 +823,9 @@ func (t *tab) current() *ir.Node {
 	return t.lay.items[t.cursor].node
 }
 
-// currentCapsule is the capsule under the hand, or nil.
-func (t *tab) currentCapsule() *capsule {
-	if i := t.pagetabIndex(); i >= 0 && i < len(t.lay.pagetab) {
-		return &t.lay.pagetab[i]
-	}
-	return nil
-}
-
-// currentTargets is what Enter's list holds for what the hand is on: a
-// capsule's targets across its landmarks, else an item's inside; and
-// whether they are a search's, whose every box is one.
+// currentTargets is what Enter's list holds for the item under the
+// cursor, and whether it is a search's, whose every box is one.
 func (t *tab) currentTargets() ([]entryTarget, bool) {
-	if c := t.currentCapsule(); c != nil {
-		return capsuleTargets(*c), c.kind == pagetabSearch
-	}
 	if n := t.current(); n != nil {
 		return entryTargets(n), n.Role == "search"
 	}
@@ -879,23 +833,19 @@ func (t *tab) currentTargets() ([]entryTarget, bool) {
 }
 
 // curFolded is whether the item under the cursor is a landmark drawn
-// shut — never on the pagetab, whose capsules do not fold.
+// shut — never on the pagetab, whose tabs do not fold.
 func (t *tab) curFolded() bool {
 	return !t.onPagetab() && t.cursor >= 0 && t.cursor < len(t.lay.items) && t.lay.items[t.cursor].folded
 }
 
 // The hand can be on the pagetab under the URL instead of in the page
-// (pagepanel.pagetabRow). tab.pagetab encodes where: 0 in the page, i+1 on
-// capsule i, pagetabMore on the "+N" at the pagetab's end.
-const pagetabMore = -2
-
+// (pagepanel.pagetabRow). tab.pagetab encodes where: 0 in the page, i+1
+// with the hand on part i.
 func (t *tab) onPagetab() bool    { return t.pagetab != 0 }
-func (t *tab) onMore() bool       { return t.pagetab == pagetabMore }
 func (t *tab) leavePagetab()      { t.pagetab = 0 }
 func (t *tab) focusPagetab(i int) { t.pagetab = i + 1 }
-func (t *tab) focusMore()         { t.pagetab = pagetabMore }
 
-// pagetabIndex is the capsule the hand is on, or -1.
+// pagetabIndex is the part the hand is on, or -1.
 func (t *tab) pagetabIndex() int {
 	if t.pagetab > 0 {
 		return t.pagetab - 1
@@ -903,91 +853,33 @@ func (t *tab) pagetabIndex() int {
 	return -1
 }
 
-// pagetabSlot is the slot the hand is on: a capsule index, pagetabMore, or -1
-// when the hand is in the page.
-func (t *tab) pagetabSlot() int {
-	if t.pagetab == pagetabMore {
-		return pagetabMore
-	}
-	return t.pagetabIndex()
-}
-
-// focusSlot puts the hand on a slot as pagetabSlots lists them.
-func (t *tab) focusSlot(s int) {
-	if s == pagetabMore {
-		t.focusMore()
-	} else {
-		t.focusPagetab(s)
-	}
-}
-
-// pagetabSlots is the pagetab left to right: the capsules the width holds, and
-// pagetabMore last when it left some out. A capsule chosen from behind the
-// "+N" (app openPagetabMore) takes the last slot while the hand is on it.
-func (t *tab) pagetabSlots() []int {
-	fit, n := t.lay.fit, len(t.lay.pagetab)
-	slots := make([]int, 0, fit+1)
-	for i := 0; i < fit; i++ {
-		slots = append(slots, i)
-	}
-	if fit < n {
-		if i := t.pagetabIndex(); i >= fit {
-			if fit > 0 {
-				slots[fit-1] = i
-			} else {
-				slots = append(slots, i)
-			}
-		}
-		slots = append(slots, pagetabMore)
-	}
-	return slots
-}
-
-// enterPagetab puts the hand on the pagetab's first slot; false when the
-// page has no chrome, which is what the menu row says instead of moving
-// nothing (app pagetabItem).
+// enterPagetab puts the hand on the part being shown, which is where the
+// user's eye already is. False when the page has only the one part: there
+// is nothing to move between (app pagetabItem says so instead).
 func (t *tab) enterPagetab() bool {
-	slots := t.pagetabSlots()
-	if len(slots) == 0 {
+	if len(t.parts) < 2 {
 		return false
 	}
-	t.focusSlot(slots[0])
+	t.focusPagetab(t.partIndex(t.at))
 	return true
 }
 
-// stepPagetab walks the hand along the pagetab's slots, wrapping at either end
-// the way every menu of the family does.
+// stepPagetab walks the hand along the parts, wrapping at either end the
+// way every menu of the family does. It does NOT switch the part being
+// shown: the hand moves, Enter shows (the same as panel [1]'s tabs).
 func (t *tab) stepPagetab(k string) {
-	slots := t.pagetabSlots()
-	if len(slots) == 0 {
+	n := len(t.parts)
+	if n == 0 {
 		t.leavePagetab()
 		return
 	}
-	at := 0
-	for i, s := range slots {
-		if s == t.pagetabSlot() {
-			at = i
-		}
-	}
+	at := t.pagetabIndex()
 	if k == "h" || k == "left" {
 		at--
 	} else {
 		at++
 	}
-	t.focusSlot(slots[(at+len(slots))%len(slots)])
-}
-
-// capsuleOf is the index of the capsule n is in, or -1 when it is not
-// chrome.
-func (t *tab) capsuleOf(n *ir.Node) int {
-	for i, c := range t.lay.pagetab {
-		for _, x := range c.nodes {
-			if x == n {
-				return i
-			}
-		}
-	}
-	return -1
+	t.focusPagetab((at + n) % n)
 }
 
 // moveItem walks the cursor by navigation key. The page is a grid of rows

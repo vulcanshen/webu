@@ -13,6 +13,9 @@ import (
 // laid the page out into (user, 2026-09-22).
 func TestAPageHasFourParts(t *testing.T) {
 	box := func(x, y, w, h float64) ir.Box { return ir.Box{X: x, Y: y, W: w, H: h} }
+	// The window the page was laid out in: every page below is taller
+	// than it, so every page below scrolls.
+	screen := ir.Box{W: 1000, H: 600}
 	node := func(role string, id int) *ir.Node {
 		return &ir.Node{Kind: ir.Landmark, Role: role, ID: cdp.BackendNodeID(id)}
 	}
@@ -27,7 +30,7 @@ func TestAPageHasFourParts(t *testing.T) {
 		4: box(0, 960, 1000, 80),
 	}
 	got := map[partKind][]string{}
-	for _, p := range splitParts(root, boxes) {
+	for _, p := range splitParts(root, boxes, screen) {
 		for _, n := range p.nodes {
 			got[p.kind] = append(got[p.kind], n.Role)
 		}
@@ -44,7 +47,7 @@ func TestAPageHasFourParts(t *testing.T) {
 	// page chose to place it is not something webu has an opinion about.
 	boxes[2], boxes[3] = box(800, 60, 200, 900), box(0, 60, 800, 900)
 	got = map[partKind][]string{}
-	for _, p := range splitParts(root, boxes) {
+	for _, p := range splitParts(root, boxes, screen) {
 		for _, n := range p.nodes {
 			got[p.kind] = append(got[p.kind], n.Role)
 		}
@@ -53,11 +56,23 @@ func TestAPageHasFourParts(t *testing.T) {
 		t.Errorf("a menu on the right is still beside the body: %v", got)
 	}
 
-	// A page with nothing beside it has three parts, and one with nothing
-	// above or below has one. Only the body is required.
-	plain := &ir.Node{Kind: ir.Document, Children: []*ir.Node{body}}
-	if ps := splitParts(plain, boxes); len(ps) != 1 || ps[0].kind != partMain {
-		t.Errorf("a page that is all body is all body: %+v", ps)
+	// A page that arrives whole has no parts: there is no wading through
+	// chrome to reach content that is already on screen.
+	if ps := splitParts(root, boxes, ir.Box{W: 1000, H: 2000}); ps != nil {
+		t.Errorf("a page inside its window is one page: %+v", ps)
+	}
+
+	// Nor has a page where nothing dominates. A plain document is a stack
+	// of paragraphs, each as wide as the page and shorter than it, and
+	// any line drawn through it is webu's line, not the page's.
+	var flat []*ir.Node
+	stack := map[cdp.BackendNodeID]ir.Box{}
+	for i := 0; i < 40; i++ {
+		flat = append(flat, node("paragraph", 100+i))
+		stack[cdp.BackendNodeID(100+i)] = box(0, float64(30*i), 1000, 28)
+	}
+	if ps := splitParts(&ir.Node{Kind: ir.Document, Children: flat}, stack, screen); ps != nil {
+		t.Errorf("a flat page is not cut up: %+v", ps)
 	}
 }
 
@@ -85,7 +100,7 @@ func TestTheBiggestBlockIsTheBody(t *testing.T) {
 		3: box(0, 650, 1000, 30),
 		4: box(0, 900, 1000, 60),
 	}
-	for _, p := range splitParts(root, boxes) {
+	for _, p := range splitParts(root, boxes, ir.Box{W: 1000, H: 600}) {
 		if p.kind == partMain {
 			if len(p.nodes) != 1 || p.nodes[0] != search {
 				t.Errorf("the body is the box the page exists for, is %+v", p.nodes)

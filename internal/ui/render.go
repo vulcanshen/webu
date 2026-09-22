@@ -142,196 +142,6 @@ type layout struct {
 	// marks is the first row of every landmark and heading, for the
 	// outline to jump to (ui.md §3.1).
 	marks map[*ir.Node]int
-	// pagetab is the page's chrome — banner, navigation, breadcrumb, search,
-	// sidebar, footer, dialog, skip link — as capsules on the rule under
-	// the URL (pagepanel.pagetabRow), in reading order, off the page's rows
-	// (2026-09-22). fit is how many of them the width holds; the rest
-	// are behind a "+N".
-	pagetab []capsule
-	fit     int
-}
-
-// capsule is one kind of chrome on the pagetab: the landmarks of that kind
-// — a page's every navigation is one capsule — and its label: the menu
-// glyph, the kind's word, +N for how much is behind it (capsuleText).
-type capsule struct {
-	kind  pagetabKind
-	nodes []*ir.Node
-	label string
-}
-
-// pagetabKind is a capsule's kind, in the pagetab's fixed order: the position
-// tells the kind before the word does (2026-09-22).
-type pagetabKind uint8
-
-const (
-	pagetabHeader  pagetabKind = iota // banner
-	pagetabNav                        // navigation, breadcrumb
-	pagetabSearch                     // search
-	pagetabSidebar                    // complementary
-	pagetabFooter                     // contentinfo
-	pagetabDialog                     // dialog, alertdialog — one capsule each, named
-)
-
-// word is the kind's word on its capsule: fixed, so a capsule reads the
-// same on every site. Where the user is in it went to the hint
-// (capsuleHint): on real pages the word for that was "Homepage",
-// "(Top)", "PRODUCTS", and the site's name is the URL row's.
-func (k pagetabKind) word() string {
-	switch k {
-	case pagetabHeader:
-		return "header"
-	case pagetabNav:
-		return "nav"
-	case pagetabSearch:
-		return "search"
-	case pagetabSidebar:
-		return "sidebar"
-	case pagetabFooter:
-		return "footer"
-	}
-	return "dialog"
-}
-
-// pagetabKindOf is the capsule a piece of chrome goes to.
-func pagetabKindOf(n *ir.Node) pagetabKind {
-	switch {
-	case n.Role == "banner":
-		return pagetabHeader
-	case n.Role == "navigation":
-		return pagetabNav
-	case n.Role == "search":
-		return pagetabSearch
-	case n.Role == "complementary":
-		return pagetabSidebar
-	case n.Role == "contentinfo":
-		return pagetabFooter
-	}
-	return pagetabDialog
-}
-
-// buildPagetab sorts the page's chrome into capsules: one per kind, in the
-// pagetab's fixed order, a page's every navigation behind one "nav"; a
-// dialog is its own, named — it is one thing the page wants.
-//
-// Only what a role CALLS chrome is here. There used to be an "other"
-// capsule as well, holding whatever lay outside main in no landmark, and
-// it was a guess: nothing had said that was furniture, webu had decided
-// it. On a page whose whole application area is an unlabelled div — a
-// Jira board, any app shell — that guess took the entire page off the
-// screen and left its text with no way to reach it at all, since a
-// capsule's list names only links, buttons and fields (user, 2026-09-22).
-// Unidentified is now simply content, drawn where the page put it.
-func buildPagetab(chrome []*ir.Node) []capsule {
-	byKind := map[pagetabKind][]*ir.Node{}
-	var dialogs []*ir.Node
-	for _, n := range chrome {
-		if k := pagetabKindOf(n); k == pagetabDialog {
-			dialogs = append(dialogs, n)
-		} else {
-			byKind[k] = append(byKind[k], n)
-		}
-	}
-	var out []capsule
-	for _, k := range []pagetabKind{pagetabHeader, pagetabNav, pagetabSearch, pagetabSidebar, pagetabFooter} {
-		if ns := byKind[k]; len(ns) > 0 {
-			out = append(out, newCapsule(k, ns))
-		}
-	}
-	for _, d := range dialogs {
-		out = append(out, newCapsule(pagetabDialog, []*ir.Node{d}))
-	}
-	return out
-}
-
-// roleNoun is a landmark role as a word to count by: "2 sidebars".
-func roleNoun(role string) string {
-	switch role {
-	case "banner":
-		return "header"
-	case "complementary":
-		return "sidebar"
-	case "contentinfo":
-		return "footer"
-	case "search":
-		return "search landmark"
-	}
-	return role
-}
-
-func newCapsule(k pagetabKind, ns []*ir.Node) capsule {
-	c := capsule{kind: k, nodes: ns}
-	c.label = capsuleText(c)
-	return c
-}
-
-// title is the capsule's word — a dialog's name, since the name says
-// what it wants: "Cookies", "Sign in".
-func (c capsule) title() string {
-	if c.kind == pagetabDialog {
-		if name := entryLabel(c.nodes[0], ""); name != "" {
-			return name
-		}
-	}
-	return c.kind.word()
-}
-
-// capsuleText is a capsule's label: its title and +N for how much is
-// behind it. Never the landmark's name: that is the hint's. No glyph of
-// its own — the capsules are one chain, and every one of them is a
-// list, so a glyph on each said nothing and cost three cells; the menu
-// glyph is said once, at the chain's head (withLead, 2026-09-22).
-func capsuleText(c capsule) string {
-	label := c.title()
-	if n := len(capsuleTargets(c)); n > 0 {
-		label += " +" + itoa(n)
-	}
-	return label
-}
-
-// capsuleTargets is what a capsule holds, in reading order across its
-// landmarks: a skip link is its own target, a landmark's are inside it.
-func capsuleTargets(c capsule) []entryTarget {
-	var out []entryTarget
-	for _, n := range c.nodes {
-		if n.Kind == ir.Link {
-			out = append(out, entryTarget{n, 0})
-			continue
-		}
-		out = append(out, entryTargets(n)...)
-	}
-	return out
-}
-
-// capsuleHint is what the panel's bottom border says while the hand is
-// on a capsule: what it is — the landmark's role and name, or how many
-// of the kind — where the user is in it when a navigation says so
-// (entryCurrent), and how much is inside.
-func capsuleHint(c capsule, pageURL string) string {
-	var parts []string
-	first := c.nodes[0]
-	switch {
-	case len(c.nodes) == 1:
-		s := first.Role
-		if name := oneLine(first.Name); name != "" {
-			s += " " + truncate(name, 30)
-		}
-		parts = append(parts, s)
-	default:
-		parts = append(parts, plural(len(c.nodes), roleNoun(first.Role)))
-	}
-	if c.kind == pagetabNav {
-		for _, n := range c.nodes {
-			if w := entryCurrent(n, pageURL); w != "" && w != oneLine(n.Name) {
-				parts = append(parts, "at "+truncate(w, 30))
-				break
-			}
-		}
-	}
-	if n := len(capsuleTargets(c)); n > 0 {
-		parts = append(parts, itoa(n)+" inside")
-	}
-	return strings.Join(parts, " · ")
 }
 
 // mainOf is the page's main landmark, or nil.
@@ -347,41 +157,6 @@ func mainOf(root *ir.Node) *ir.Node {
 		return main == nil
 	})
 	return main
-}
-
-// fitPagetab is how many capsules the chain holds at width: every one
-// when they all fit, else as many as leave room for the "+N" that
-// stands for the rest. The pagetab is a menu, not a line to scroll
-// (ux.md §A.0.K).
-func fitPagetab(pagetab []capsule, width int) int {
-	labels := make([]string, 0, len(pagetab)+1)
-	for _, c := range pagetab {
-		labels = append(labels, c.label)
-	}
-	if len(labels) == 0 || chainW(withLead(labels)) <= width-1 {
-		return len(pagetab)
-	}
-	for k := len(pagetab) - 1; k >= 0; k-- {
-		labels = labels[:k]
-		labels = append(labels, "+"+itoa(len(pagetab)-k))
-		if chainW(withLead(labels)) <= width-1 {
-			return k
-		}
-		labels = labels[:k]
-	}
-	return 0
-}
-
-// withLead puts the menu glyph on the chain's first segment. The
-// pagetab is one menu, so it says so once, at its head, rather than on
-// every segment (user, 2026-09-22).
-func withLead(labels []string) []string {
-	if len(labels) == 0 {
-		return labels
-	}
-	out := append([]string(nil), labels...)
-	out[0] = glyphMenu + " " + out[0]
-	return out
 }
 
 // itemAt is the first item whose span includes row, or -1.
@@ -459,11 +234,8 @@ type renderer struct {
 	textW int // where flow wraps: width, or the measure when narrower
 	rows  []row
 	items []item
-	// chrome is the page's chrome in reading order, off the rows and on
-	// the pagetab instead (buildPagetab).
-	chrome []*ir.Node
-	flow   []atom
-	fold   map[cdp.BackendNodeID]bool
+	flow  []atom
+	fold  map[cdp.BackendNodeID]bool
 	// drill is the list item opened to the whole panel (renderOpts).
 	drill cdp.BackendNodeID
 	// formLabel is the width of the label column while a form is being
@@ -529,8 +301,7 @@ func renderWith(root *ir.Node, o renderOpts) layout {
 	}
 	r.block(root, 0)
 	r.flush()
-	pagetab := buildPagetab(r.chrome)
-	return layout{rows: r.rows, items: r.items, marks: r.marks, pagetab: pagetab, fit: fitPagetab(pagetab, r.width)}
+	return layout{rows: r.rows, items: r.items, marks: r.marks}
 }
 
 // folded says whether a landmark is drawn shut: only when the user shut it.
@@ -800,111 +571,14 @@ func isSkipLink(n *ir.Node) bool {
 	return n.Skip || strings.HasPrefix(text, "skip") || strings.HasPrefix(text, "jump to")
 }
 
-// isEntry says whether a landmark is page chrome, a capsule on the pagetab.
-// main, article, region and form are the page itself and stay regions.
-func isEntry(n *ir.Node) bool {
-	if n.Kind != ir.Landmark {
-		return false
-	}
-	switch n.Role {
-	case "banner", "navigation", "search", "complementary", "contentinfo", "dialog", "alertdialog":
-		return true
-	}
-	return false
-}
-
-// entryIcon is the glyph that tells one kind of chrome from another.
-func entryIcon(n *ir.Node) string {
-	switch {
-	case n.Skip:
-		return glyphSkip
-	case n.Breadcrumb:
-		return glyphCrumb
-	case n.Role == "navigation":
-		return glyphMenu
-	case n.Role == "banner":
-		return glyphHeader
-	case n.Role == "search":
-		return glyphSearch
-	case n.Role == "complementary":
-		return glyphSidebar
-	case n.Role == "dialog", n.Role == "alertdialog":
-		return glyphDialog
-	}
-	return glyphFooter
-}
-
-// entryLabel is the word for a piece of chrome: where the user is in a
-// navigation (entryCurrent); the site, for a banner — its first link
-// that is not a skip link, the logo's name; the box, for a search; else
-// the landmark's own name, else its first heading, else nothing. Since
-// 2026-09-22 a capsule's word is its kind's (pagetabKind.word) and this is
-// the hint's (capsuleHint) — and a dialog's title (capsule.title).
-func entryLabel(n *ir.Node, pageURL string) string {
-	if n.Skip {
-		return oneLine(n.Name) // "Skip to": what it is, there is no "where"
-	}
-	switch n.Role {
-	case "navigation":
-		return entryCurrent(n, pageURL)
-	case "banner":
-		var logo *ir.Node
-		n.Walk(func(x *ir.Node) bool {
-			if logo == nil && x.Kind == ir.Link && oneLine(x.Text()) != "" && !strings.Contains(x.URL, "#") {
-				logo = x
-			}
-			return logo == nil
-		})
-		if logo != nil {
-			return oneLine(logo.Text())
-		}
-	case "search":
-		if f := firstOf(n, ir.Textbox); f != nil && oneLine(f.Name) != "" {
-			return oneLine(f.Name)
-		}
-	}
-	if name := oneLine(n.Name); name != "" {
-		return name
-	}
-	if h := firstOf(n, ir.Heading); h != nil {
-		return oneLine(h.Text())
-	}
-	if n.Role == "dialog" || n.Role == "alertdialog" {
-		// A nameless dialog's first words say what it wants: "We use
-		// cookies…".
-		var first string
-		n.Walk(func(x *ir.Node) bool {
-			if first == "" && x.Kind == ir.Text && strings.TrimSpace(x.Name) != "" {
-				first = oneLine(x.Name)
-			}
-			return first == ""
-		})
-		return truncate(first, 40)
-	}
-	return ""
-}
-
-// firstOf is the first node of kind under n, in reading order.
-func firstOf(n *ir.Node, kind ir.Kind) *ir.Node {
-	var found *ir.Node
-	n.Walk(func(x *ir.Node) bool {
-		if found == nil && x != n && x.Kind == kind {
-			found = x
-		}
-		return found == nil
-	})
-	return found
-}
-
-// entryTarget is one thing an entry opens — a link, a button, a field, a
-// check box, a select — and how deep in its lists it sits, for the
-// menu's indent.
+// entryTarget is one thing inside a container, with how deeply its lists
+// nest — what a table cell's popup lists (app.targetItems).
 type entryTarget struct {
 	node  *ir.Node
 	depth int
 }
 
-// entryTargets is what an entry holds, in reading order.
+// entryTargets is what a container holds, in reading order.
 func entryTargets(n *ir.Node) []entryTarget {
 	var out []entryTarget
 	keepSkip := n.Skip // a skip block's links ARE its list
@@ -926,74 +600,6 @@ func entryTargets(n *ir.Node) []entryTarget {
 	}
 	walk(n, 0)
 	return out
-}
-
-// entryCurrent is where the user is in a navigation or a breadcrumb, for
-// its row. The page's own word first — aria-current, on a link or its
-// list item — then, in a breadcrumb, the last crumb; in a navigation,
-// the link whose URL is the page's, or the longest that is a prefix of
-// it (the section tab); failing all, the landmark's own name.
-func entryCurrent(n *ir.Node, pageURL string) string {
-	var cur *ir.Node
-	n.Walk(func(x *ir.Node) bool {
-		if cur == nil && x != n && x.Current {
-			cur = x
-		}
-		return cur == nil
-	})
-	if cur != nil {
-		return oneLine(cur.Text())
-	}
-	if n.Breadcrumb {
-		var last *ir.Node
-		n.Walk(func(x *ir.Node) bool {
-			if x.Kind == ir.ListItem || x.Kind == ir.Link {
-				last = x
-			}
-			return true
-		})
-		if last != nil {
-			return oneLine(last.Text())
-		}
-	} else if best := urlMatch(entryTargets(n), pageURL); best != nil {
-		return oneLine(best.Text())
-	}
-	return oneLine(n.Name)
-}
-
-// urlMatch is the target whose URL is the page's, else the longest whose
-// URL is a path prefix of it — /docs for a page at /docs/api — else nil.
-func urlMatch(ts []entryTarget, pageURL string) *ir.Node {
-	norm := func(u string) string {
-		if i := strings.Index(u, "#"); i >= 0 {
-			u = u[:i]
-		}
-		return strings.TrimSuffix(u, "/")
-	}
-	page := norm(pageURL)
-	if page == "" {
-		return nil
-	}
-	var best *ir.Node
-	bestLen := 0
-	for _, t := range ts {
-		u := norm(t.node.URL)
-		if u == "" {
-			continue
-		}
-		if u == page {
-			return t.node
-		}
-		// A prefix has to reach past the origin: every link on the site
-		// is under https://host/.
-		if i := strings.Index(u, "://"); i >= 0 && !strings.Contains(u[i+3:], "/") {
-			continue
-		}
-		if strings.HasPrefix(page, u+"/") && len(u) > bestLen {
-			best, bestLen = t.node, len(u)
-		}
-	}
-	return best
 }
 
 func countItems(n *ir.Node) int {
@@ -1042,13 +648,6 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			// with the bare skip links (user, 2026-09-22): without a kind
 			// of its own it would fold into "nav" and put the page's
 			// anchors among its real navigation.
-			return
-		}
-		if isEntry(n) {
-			// Chrome, not content: a capsule on the pagetab under the URL,
-			// and what it holds is its item operations, not items
-			// (ux.md §A.0.K; off the page's rows since 2026-09-22).
-			r.chrome = append(r.chrome, n)
 			return
 		}
 		r.flush()

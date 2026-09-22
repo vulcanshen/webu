@@ -1,9 +1,8 @@
--- pagetab (5 of 5 fit) --
-header +1
-nav +2
-search +1
-sidebar
-footer
+Site header 󰌷 Home
+
+ ▾ Primary ─────────────────────────────────────────────────
+󰌷 A 󰌷 B
+
 # Main heading
 
 ## An article
@@ -16,8 +15,18 @@ An unnamed section is not a region.
 
   Q    󰘎  
 
+󰘎 Find  
+
+Sidebar
+
+Footer text
 -- items --
-0 heading "Main heading" rows 0-0
-1 landmark "An article…" rows 2-2
-2 landmark "Section text." rows 4-4
-3 textbox "Q" rows 10-10
+0 link "Home" rows 0-0
+1 landmark "A B" rows 2-2
+2 link "A" rows 3-3
+3 link "B" rows 3-3
+4 heading "Main heading" rows 5-5
+5 landmark "An article…" rows 7-7
+6 landmark "Section text." rows 9-9
+7 textbox "Q" rows 15-15
+8 textbox "Find" rows 17-17
