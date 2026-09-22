@@ -307,10 +307,10 @@ func TestOutlineEntriesAndJump(t *testing.T) {
 	if strings.Join(labels, "|") != strings.Join(want, "|") {
 		t.Fatalf("outline:\n%s\nwant:\n%s", strings.Join(labels, "\n"), strings.Join(want, "\n"))
 	}
-	// The banner is chrome, a capsule on the tray, so the outline reaches
+	// The banner is chrome, a capsule on the pagetab, so the outline reaches
 	// it there (outlineKey); the rest have a row.
 	if c := tb.capsuleOf(entries[0].node); c != 0 {
-		t.Errorf("the banner should be the tray's first capsule, is %d", c)
+		t.Errorf("the banner should be the pagetab's first capsule, is %d", c)
 	}
 	for _, e := range entries[1:] {
 		if _, ok := tb.lay.marks[e.node]; !ok {

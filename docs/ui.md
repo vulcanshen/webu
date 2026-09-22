@@ -102,18 +102,20 @@ footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
 **單一職責，永遠是頁面。** 邊框 chip 固定 `[2]`，不放模式名、不放頁標題（標題在 `[1]`，
 一個元素一個語意 §B）。
 
-- 第一列：URL（純文字、不可 focus、縮法見 §1.2）；第二列分隔線 = **tray（膠囊列）**，頁面的 chrome 以膠囊放在這條線上（2026-09-22，見下）；之後是 IR 渲染的頁面
+- 第一列：URL（純文字、不可 focus、縮法見 §1.2）；第二列分隔線 = **pagetab**（user 命名 2026-09-22），頁面的 chrome 以一條 powerline 鏈放在這條線上（見下）；之後是 IR 渲染的頁面
 - cursor 只停在 item（互動節點 + heading + landmark 的標題列），文字段落是 item 之間的 flow
 - **Heading 收合（2026-09-21）**：是 item 的 heading（裡面沒有 link 等 item 的）Enter 直接 Collapse / Expand，範圍到下一個同級或更高級 heading、或所在 landmark 結束為止；收合列 `▸ # 標題 · N items`；Outline 跳進被收合的區段會先展開。用詞與 landmark 列、Bookmarks 目錄列一致：Collapse / Expand
 - **Landmark（修訂 2026-09-20）**：每個 landmark 以一列帶名字的細線開頭（`▾ navigation Repository ────`），
   是 item，**Enter 直接開合**（修訂 2026-09-21：原本開 item menu 選 Collapse / Expand；Space menu 仍列這兩項）。
   **全部預設展開**（修訂 2026-09-21：原本有 `main` 時 main 之外的預設摺疊，實機看了像頁面壞掉）；收合的畫成
   `▸ banner · 14 items`，Outline 跳進摺疊的 landmark 會先把它打開
-- **page chrome 一種一顆膠囊，放在 URL 底下的 tray 上**（2026-09-22 從頁面裡的一行搬上去、按種類收、頁面本體從內容開始；2026-09-21：banner / navigation / breadcrumb / search / complementary / contentinfo 一套 style，取代原本的「導覽清單一行流式」與這些 landmark 的分隔線）：`󰍜 字 +N`——字是種類固定字彙 skip / header / nav / search / sidebar / footer（dialog 用名字、other = 有 main 時 main 之外不在 landmark 裡的東西）、icon 一律漢堡選單、順序固定；「你在哪一格」在面板下框 hint；main 不再畫 rule（chrome 都走了，main 就是頁面的起點）；`sectionheader` / `sectionfooter` 當 Group；skip link 的字也認 jump to。原本的——icon 分種類（page_layout_header / menu / map_marker_path / search / table_of_contents / page_layout_footer）；字是你在裡面的哪一格（navigation 目前的 tab、breadcrumb 最後一節）或它是什麼（banner 站名、search 框名、其他 landmark 名字或第一個 heading）；圓角膠囊（powerline 圓帽）、底色 surface0、hand 停在上面時用游標色（handColor）、面板沒 focus 時 surface2；固定順序、塞不下的收成最後一顆 `+N`，Enter 列出、選一顆就把 hand 放上去（暫佔最後一格）並開它的清單；`Esc`（沒有 popup / mode 時）上 tray、再 `Esc` 回頁面；頁面最上列按 `k` 也上得去、`h`/`l` 走（會繞）、`j` 回頁面、其他移動鍵先回頁面；hand 在 tray 上時頁面游標降成未 focus 色，說 `j` 會回哪裡；Enter 清單：多個 landmark 時每個一段 header 列、aria-current 的列 hint 標 here；沒目標的膠囊 Enter 看全文；內容不畫，Enter 開 item operation 選單列出裡面的 link / button / 輸入框 / 勾選 / select；search 只有一個框時 Enter 直接開框；skip link 進 skip 那顆、Enter 跳到內文。main / article / region / form 是內容，維持分隔線 + 可收合
+- **page chrome 一種一節，併成一條鏈放在 URL 底下的 pagetab 上**（2026-09-22 從頁面裡的一行搬上去、按種類收、頁面本體從內容開始；2026-09-21：banner / navigation / breadcrumb / search / complementary / contentinfo 一套 style，取代原本的「導覽清單一行流式」與這些 landmark 的分隔線）：`字 +N`——字是種類固定字彙 skip / header / nav / search / sidebar / footer（dialog 用名字、other = 有 main 時 main 之外不在 landmark 裡的東西）、**沒有 icon**、順序固定；「你在哪一格」在面板下框 hint；main 不再畫 rule（chrome 都走了，main 就是頁面的起點）；`sectionheader` / `sectionfooter` 當 Group；skip link 的字也認 jump to。原本的——icon 分種類（page_layout_header / menu / map_marker_path / search / table_of_contents / page_layout_footer）；字是你在裡面的哪一格（navigation 目前的 tab、breadcrumb 最後一節）或它是什麼（banner 站名、search 框名、其他 landmark 名字或第一個 heading）；**一條 powerline 鏈**（`pagetabChain`，與 header `[W]eb` 那條同一套幾何：`capLeft` 起、相鄰 `divider`（同色細斜線 / 異色實心斜接縫）、`capRight` 收）、未點亮的節底色是畫布色 + Text 字、hand 停的那一節用游標色（handColor）點亮、面板沒 focus 時 surface2；固定順序、塞不下的收成最後一顆 `+N`，Enter 列出、選一顆就把 hand 放上去（暫佔最後一格）並開它的清單；`Esc`（沒有 popup / mode 時）上 tray、再 `Esc` 回頁面；頁面最上列按 `k` 也上得去、`h`/`l` 走（會繞）、`j` 回頁面、其他移動鍵先回頁面；hand 在 tray 上時頁面游標降成未 focus 色，說 `j` 會回哪裡；Enter 清單：多個 landmark 時每個一段 header 列、aria-current 的列 hint 標 here；沒目標的那一節 Enter 看全文；內容不畫，Enter 開 item operation 選單列出裡面的 link / button / 輸入框 / 勾選 / select；search 只有一個框時 Enter 直接開框；skip link 進 skip 那一節、Enter 跳到內文。main / article / region / form 是內容，維持分隔線 + 可收合
+- **一串裸連結流動排版**（2026-09-22）：連續兩個以上、裡面沒有區塊的 block 連結不各佔一列，流成一段（`linkRun` / `bareBlockLink`）。一列一個是 CSS `display:block`，不是頁面的結構
+- **新頁起點**（2026-09-22 改）：游標到 main 裡第一個 item、**視窗也捲到那一列**；沒有 main 的頁停在最上層的 heading，兩者皆無才停第一列
 - **文字欄寬上限**：段落折行寬度 = min(面板寬, `config.yaml` 的 `measure`，預設 100)；表格、code、分隔線仍用整個面板寬
 - **非 HTML 的回應**（修訂 2026-09-20）：JSON / 純文字 / XML / CSV 等依 `document.contentType` 整份畫成一個 code block，
   JSON 自動縮排；不畫 Chrome 自己的 JSON viewer（Pretty-print 表單）
-- **新頁載入**：游標回 main 裡第一個 item、視窗在頂端；不跟著游標捲（同頁重畫才留位）
+- **新頁載入**：游標回 main 裡第一個 item、**視窗捲到它**（修訂 2026-09-22，原本停頁頂）；不跟著游標捲（同頁重畫才留位）
 - 空狀態（沒有分頁）：置中事實「no page」+ 提示（該按什麼），sshu `empty.go` 的形狀
 - 載入中：邊框 hint 顯示 loading；即時更新重畫時 cursor 留位（function.md §4 / §6）
 

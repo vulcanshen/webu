@@ -4,28 +4,42 @@
 
 ### Changed
 
-- **The page's chrome is on the tray under the URL, not in the page.**
+- **The page's chrome is on the pagetab under the URL, not in the page.**
   Skip links, banner, navigation, breadcrumb, search, sidebar, footer,
   dialog — the entries that were one row each at the top of the page —
   are capsules on the rule between the URL and the page, so the page
   itself starts at its content and main needs no rule of its own. One
-  capsule per kind, in a fixed order — `skip`, `header`, `nav`,
+  segment per kind, in a fixed order — `skip`, `header`, `nav`,
   `search`, `sidebar`, `footer`, then each dialog by its name — every
   navigation on the page behind the one `nav`, and, when the page has a
   main, whatever lies outside it in no landmark (a promo strip, a cookie
-  banner that is a plain div) behind `other`. Each reads `󰍜 word +N`:
-  the word is the kind's, the count what is inside; where you are in a
-  navigation is the panel's hint while the hand is on it. The ones the
+  banner that is a plain div) behind `other`. They are drawn as one
+  powerline chain, the way the header draws its screens, each segment
+  reading `word +N`: the word is the kind's, the count what is inside;
+  where you are in a navigation is the panel's hint while the hand is
+  on it. The ones the
   width leaves out sit behind a `+N`, whose Enter lists them and puts
-  the one chosen under the hand. `Esc` goes up onto the tray and back,
+  the one chosen under the hand. `Esc` goes up onto the pagetab and back,
   `k` from the top of the page goes up too, `h`/`l` walk it and wrap,
-  `j` comes back down; Enter on a capsule is its list — each navigation
+  `j` comes back down; Enter on a segment is its list — each navigation
   under its name, the current link marked — Space its menu, as before;
-  a capsule with nothing to open shows its text. The Outline still
+  a segment with nothing to open shows its text. The Outline still
   reaches them.
 - **An article's own header and footer are its lines**, not an
   "unsupported" row: this Chromium names them `sectionheader` and
   `sectionfooter`. A "Jump to content" link is a skip link too.
+- **A column of bare links flows like words.** A page that puts one link
+  per line — a sidebar of them, a menu — was costing a row each: a
+  hundred and twenty rows of one word each on w3schools before the
+  content began. A run of two or more such links now flows, several to
+  a row, the way a paragraph's links do. The row each was CSS, not
+  structure, and webu does not do CSS layout. Nothing is hidden and
+  nothing is guessed — a run of links that is content flows too, and
+  reads the same.
+- **A page opens where its reading starts.** The window scrolls to main,
+  not only the cursor; a page that declares no main opens on its first
+  heading, which is what the page is about, and everything above it
+  stays one `k` away.
 
 ## [0.1.1] — 2026-09-21
 

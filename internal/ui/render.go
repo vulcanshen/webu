@@ -83,109 +83,109 @@ type layout struct {
 	// marks is the first row of every landmark and heading, for the
 	// outline to jump to (ui.md §3.1).
 	marks map[*ir.Node]int
-	// tray is the page's chrome — banner, navigation, breadcrumb, search,
+	// pagetab is the page's chrome — banner, navigation, breadcrumb, search,
 	// sidebar, footer, dialog, skip link — as capsules on the rule under
-	// the URL (pagepanel.trayRow), in reading order, off the page's rows
+	// the URL (pagepanel.pagetabRow), in reading order, off the page's rows
 	// (2026-09-22). fit is how many of them the width holds; the rest
 	// are behind a "+N".
-	tray []capsule
-	fit  int
+	pagetab []capsule
+	fit     int
 }
 
-// capsule is one kind of chrome on the tray: the landmarks of that kind
+// capsule is one kind of chrome on the pagetab: the landmarks of that kind
 // — a page's every navigation is one capsule — and its label: the menu
 // glyph, the kind's word, +N for how much is behind it (capsuleText).
 type capsule struct {
-	kind  trayKind
+	kind  pagetabKind
 	nodes []*ir.Node
 	label string
 }
 
-// trayKind is a capsule's kind, in the tray's fixed order: the position
+// pagetabKind is a capsule's kind, in the pagetab's fixed order: the position
 // tells the kind before the word does (2026-09-22).
-type trayKind uint8
+type pagetabKind uint8
 
 const (
-	traySkip    trayKind = iota // skip links, and blocks of them
-	trayHeader                  // banner
-	trayNav                     // navigation, breadcrumb
-	traySearch                  // search
-	traySidebar                 // complementary
-	trayFooter                  // contentinfo
-	trayDialog                  // dialog, alertdialog — one capsule each, named
-	trayOther                   // outside main, in no landmark
+	pagetabSkip    pagetabKind = iota // skip links, and blocks of them
+	pagetabHeader                     // banner
+	pagetabNav                        // navigation, breadcrumb
+	pagetabSearch                     // search
+	pagetabSidebar                    // complementary
+	pagetabFooter                     // contentinfo
+	pagetabDialog                     // dialog, alertdialog — one capsule each, named
+	pagetabOther                      // outside main, in no landmark
 )
 
 // word is the kind's word on its capsule: fixed, so a capsule reads the
 // same on every site. Where the user is in it went to the hint
 // (capsuleHint): on real pages the word for that was "Homepage",
 // "(Top)", "PRODUCTS", and the site's name is the URL row's.
-func (k trayKind) word() string {
+func (k pagetabKind) word() string {
 	switch k {
-	case traySkip:
+	case pagetabSkip:
 		return "skip"
-	case trayHeader:
+	case pagetabHeader:
 		return "header"
-	case trayNav:
+	case pagetabNav:
 		return "nav"
-	case traySearch:
+	case pagetabSearch:
 		return "search"
-	case traySidebar:
+	case pagetabSidebar:
 		return "sidebar"
-	case trayFooter:
+	case pagetabFooter:
 		return "footer"
-	case trayDialog:
+	case pagetabDialog:
 		return "dialog"
 	}
 	return "other"
 }
 
-// trayKindOf is the capsule a piece of chrome goes to.
-func trayKindOf(n *ir.Node) trayKind {
+// pagetabKindOf is the capsule a piece of chrome goes to.
+func pagetabKindOf(n *ir.Node) pagetabKind {
 	switch {
 	case n.Kind == ir.Link || n.Skip:
-		return traySkip
+		return pagetabSkip
 	case n.Role == "banner":
-		return trayHeader
+		return pagetabHeader
 	case n.Role == "navigation":
-		return trayNav
+		return pagetabNav
 	case n.Role == "search":
-		return traySearch
+		return pagetabSearch
 	case n.Role == "complementary":
-		return traySidebar
+		return pagetabSidebar
 	case n.Role == "contentinfo":
-		return trayFooter
+		return pagetabFooter
 	case n.Role == "dialog", n.Role == "alertdialog":
-		return trayDialog
+		return pagetabDialog
 	}
-	return trayOther
+	return pagetabOther
 }
 
-// buildTray sorts the page's chrome into capsules: one per kind, in the
-// tray's fixed order, a page's every navigation behind one "nav"; a
+// buildPagetab sorts the page's chrome into capsules: one per kind, in the
+// pagetab's fixed order, a page's every navigation behind one "nav"; a
 // dialog is its own, named — it is one thing the page wants; what lies
 // outside main and in no landmark is "other".
-func buildTray(chrome, other []*ir.Node) []capsule {
-	byKind := map[trayKind][]*ir.Node{}
+func buildPagetab(chrome, other []*ir.Node) []capsule {
+	byKind := map[pagetabKind][]*ir.Node{}
 	var dialogs []*ir.Node
 	for _, n := range chrome {
-		if k := trayKindOf(n); k == trayDialog {
+		if k := pagetabKindOf(n); k == pagetabDialog {
 			dialogs = append(dialogs, n)
 		} else {
 			byKind[k] = append(byKind[k], n)
 		}
 	}
 	var out []capsule
-	for _, k := range []trayKind{traySkip, trayHeader, trayNav, traySearch, traySidebar, trayFooter} {
+	for _, k := range []pagetabKind{pagetabSkip, pagetabHeader, pagetabNav, pagetabSearch, pagetabSidebar, pagetabFooter} {
 		if ns := byKind[k]; len(ns) > 0 {
 			out = append(out, newCapsule(k, ns))
 		}
 	}
 	for _, d := range dialogs {
-		out = append(out, newCapsule(trayDialog, []*ir.Node{d}))
+		out = append(out, newCapsule(pagetabDialog, []*ir.Node{d}))
 	}
 	if len(other) > 0 {
-		out = append(out, newCapsule(trayOther, []*ir.Node{{Kind: ir.Landmark, Role: "other", Children: other}}))
+		out = append(out, newCapsule(pagetabOther, []*ir.Node{{Kind: ir.Landmark, Role: "other", Children: other}}))
 	}
 	return out
 }
@@ -205,7 +205,7 @@ func roleNoun(role string) string {
 	return role
 }
 
-func newCapsule(k trayKind, ns []*ir.Node) capsule {
+func newCapsule(k pagetabKind, ns []*ir.Node) capsule {
 	c := capsule{kind: k, nodes: ns}
 	c.label = capsuleText(c)
 	return c
@@ -214,7 +214,7 @@ func newCapsule(k trayKind, ns []*ir.Node) capsule {
 // title is the capsule's word — a dialog's name, since the name says
 // what it wants: "Cookies", "Sign in".
 func (c capsule) title() string {
-	if c.kind == trayDialog {
+	if c.kind == pagetabDialog {
 		if name := entryLabel(c.nodes[0], ""); name != "" {
 			return name
 		}
@@ -222,11 +222,12 @@ func (c capsule) title() string {
 	return c.kind.word()
 }
 
-// capsuleText is a capsule's label: the menu glyph — every capsule is a
-// list, so one glyph says so — its title, and +N for how much is
-// behind it. Never the landmark's name: that is the hint's.
+// capsuleText is a capsule's label: its title and +N for how much is
+// behind it. Never the landmark's name: that is the hint's. No glyph —
+// the capsules are one chain, and every one of them is a list, so a
+// glyph on each said nothing and cost three cells (2026-09-22).
 func capsuleText(c capsule) string {
-	label := glyphMenu + " " + c.title()
+	label := c.title()
 	if n := len(capsuleTargets(c)); n > 0 {
 		label += " +" + itoa(n)
 	}
@@ -255,9 +256,9 @@ func capsuleHint(c capsule, pageURL string) string {
 	var parts []string
 	first := c.nodes[0]
 	switch {
-	case c.kind == trayOther:
+	case c.kind == pagetabOther:
 		parts = append(parts, "outside main, in no landmark")
-	case c.kind == traySkip:
+	case c.kind == pagetabSkip:
 		parts = append(parts, plural(len(c.nodes), "skip link"))
 	case len(c.nodes) == 1:
 		s := first.Role
@@ -268,7 +269,7 @@ func capsuleHint(c capsule, pageURL string) string {
 	default:
 		parts = append(parts, plural(len(c.nodes), roleNoun(first.Role)))
 	}
-	if c.kind == trayNav {
+	if c.kind == pagetabNav {
 		for _, n := range c.nodes {
 			if w := entryCurrent(n, pageURL); w != "" && w != oneLine(n.Name) {
 				parts = append(parts, "at "+truncate(w, 30))
@@ -309,31 +310,31 @@ func holdsLandmark(n *ir.Node) bool {
 	return found
 }
 
-// fitTray is how many capsules the tray holds at width: every one when
+// fitPagetab is how many capsules the pagetab holds at width: every one when
 // they all fit, else as many as leave room for the "+N" that stands for
-// the rest. The tray is a menu, not a line to scroll (ux.md §A.0.K).
-func fitTray(tray []capsule, width int) int {
-	used := 1
-	for _, c := range tray {
-		used += capsuleW(c.label) + 1
+// the rest. The pagetab is a menu, not a line to scroll (ux.md §A.0.K).
+// fitPagetab is how many capsules the chain holds at width: every one
+// when they all fit, else as many as leave room for the "+N" that
+// stands for the rest. The pagetab is a menu, not a line to scroll
+// (ux.md §A.0.K).
+func fitPagetab(pagetab []capsule, width int) int {
+	labels := make([]string, 0, len(pagetab)+1)
+	for _, c := range pagetab {
+		labels = append(labels, c.label)
 	}
-	if used <= width {
-		return len(tray)
+	if len(labels) == 0 || chainW(labels) <= width-1 {
+		return len(pagetab)
 	}
-	for k := len(tray) - 1; k >= 0; k-- {
-		used = 1 + capsuleW("+"+itoa(len(tray)-k)) + 1
-		for _, c := range tray[:k] {
-			used += capsuleW(c.label) + 1
-		}
-		if used <= width {
+	for k := len(pagetab) - 1; k >= 0; k-- {
+		labels = labels[:k]
+		labels = append(labels, "+"+itoa(len(pagetab)-k))
+		if chainW(labels) <= width-1 {
 			return k
 		}
+		labels = labels[:k]
 	}
 	return 0
 }
-
-// capsuleW is a capsule's width: the label, a space either side, the caps.
-func capsuleW(label string) int { return dispW(label) + 4 }
 
 // itemAt is the first item whose span includes row, or -1.
 func (l layout) itemAt(row int) int {
@@ -408,7 +409,7 @@ type renderer struct {
 	items []item
 	// chrome is the page's chrome in reading order, off the rows, and
 	// other what lies outside main in no landmark when the page has a
-	// main: both go to the tray (buildTray).
+	// main: both go to the pagetab (buildPagetab).
 	chrome, other []*ir.Node
 	hasMain       bool
 	flow          []atom
@@ -453,8 +454,8 @@ func renderWith(root *ir.Node, o renderOpts) layout {
 	}
 	r.block(root, 0)
 	r.flush()
-	tray := buildTray(r.chrome, r.other)
-	return layout{rows: r.rows, items: r.items, marks: r.marks, tray: tray, fit: fitTray(tray, r.width)}
+	pagetab := buildPagetab(r.chrome, r.other)
+	return layout{rows: r.rows, items: r.items, marks: r.marks, pagetab: pagetab, fit: fitPagetab(pagetab, r.width)}
 }
 
 // folded says whether a landmark is drawn shut: only when the user shut it.
@@ -494,7 +495,7 @@ func (r *renderer) landmarkRule(n *ir.Node, id int, folded bool) {
 // (ux.md §A.0.K, 2026-09-21): what it holds is its item operations, not
 // items, since a row of links invites walking sideways and a terminal
 // has no width to spare for one. Since 2026-09-22 it is a capsule on
-// the tray under the URL rather than a row of the page (capsule).
+// the pagetab under the URL rather than a row of the page (capsule).
 
 // isSkipLink says whether a link is a skip link — the "Skip to main
 // content" an accessible page puts first, for a keyboard to pass the
@@ -508,7 +509,7 @@ func isSkipLink(n *ir.Node) bool {
 	return n.Skip || strings.HasPrefix(text, "skip") || strings.HasPrefix(text, "jump to")
 }
 
-// isEntry says whether a landmark is page chrome, a capsule on the tray.
+// isEntry says whether a landmark is page chrome, a capsule on the pagetab.
 // main, article, region and form are the page itself and stay regions.
 func isEntry(n *ir.Node) bool {
 	if n.Kind != ir.Landmark {
@@ -546,7 +547,7 @@ func entryIcon(n *ir.Node) string {
 // navigation (entryCurrent); the site, for a banner — its first link
 // that is not a skip link, the logo's name; the box, for a search; else
 // the landmark's own name, else its first heading, else nothing. Since
-// 2026-09-22 a capsule's word is its kind's (trayKind.word) and this is
+// 2026-09-22 a capsule's word is its kind's (pagetabKind.word) and this is
 // the hint's (capsuleHint) — and a dialog's title (capsule.title).
 func entryLabel(n *ir.Node, pageURL string) string {
 	if n.Skip {
@@ -749,7 +750,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		}
 	case ir.Landmark:
 		if isEntry(n) {
-			// Chrome, not content: a capsule on the tray under the URL,
+			// Chrome, not content: a capsule on the pagetab under the URL,
 			// and what it holds is its item operations, not items
 			// (ux.md §A.0.K; off the page's rows since 2026-09-22).
 			r.chrome = append(r.chrome, n)
@@ -759,7 +760,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.markNext = append(r.markNext, n)
 		if n.Role == "main" {
 			// The page itself: no rule, no item. With the chrome on the
-			// tray, main is where the page starts (2026-09-22).
+			// pagetab, main is where the page starts (2026-09-22).
 			r.lmDepth++
 			r.children(n, depth)
 			r.flush()
@@ -903,19 +904,72 @@ func (r *renderer) block(n *ir.Node, depth int) {
 }
 
 func (r *renderer) children(n *ir.Node, depth int) {
-	for _, c := range n.Children {
-		if c.IsBlock() {
+	inRun := linkRun(n.Children)
+	for i, c := range n.Children {
+		switch {
+		case inRun[i]:
+			// A run of bare links the page laid out one per line — a
+			// sidebar of them, a menu — flows like words instead
+			// (2026-09-22). webu does not do CSS layout, and a column
+			// of 120 one-word rows is the page's styling, not its
+			// content; flowed, nothing is hidden and nothing is guessed.
+			if !r.suppress {
+				r.inline(c, -1, segPlain)
+			}
+		case c.IsBlock():
 			r.block(c, depth+1)
-		} else if !r.suppress {
+		case !r.suppress:
 			r.inline(c, -1, segPlain)
 		}
 	}
 }
 
+// bareBlockLink is a link the page put on a line of its own with nothing
+// blocky inside it: a link whose row is CSS, not structure.
+func bareBlockLink(n *ir.Node) bool {
+	if n.Kind != ir.Link || !n.Block {
+		return false
+	}
+	for _, c := range n.Children {
+		if c.IsBlock() {
+			return false
+		}
+	}
+	return true
+}
+
+// linkRun marks the children that belong to a run of two or more bare
+// block links, blank text between them not counting as a break. One such
+// link on its own keeps its line: it is a button-like thing, not a list.
+func linkRun(kids []*ir.Node) []bool {
+	out := make([]bool, len(kids))
+	run := []int{}
+	flush := func() {
+		if len(run) > 1 {
+			for _, i := range run {
+				out[i] = true
+			}
+		}
+		run = run[:0]
+	}
+	for i, c := range kids {
+		switch {
+		case bareBlockLink(c):
+			run = append(run, i)
+		case c.Kind == ir.Text && strings.TrimSpace(c.Name) == "" && len(run) > 0:
+			// A blank between two of them is the page's own spacing.
+		default:
+			flush()
+		}
+	}
+	flush()
+	return out
+}
+
 // page walks the document when it has a main: landmarks are drawn, or
-// go to the tray; a wrapper that holds one is walked through; anything
+// go to the pagetab; a wrapper that holds one is walked through; anything
 // else — outside main, in no landmark: a promo strip, a cookie banner
-// that is a plain div — goes to the tray's "other" capsule rather than
+// that is a plain div — goes to the pagetab's "other" capsule rather than
 // above the content (2026-09-22).
 func (r *renderer) page(n *ir.Node, depth int) {
 	for _, c := range n.Children {
@@ -1114,7 +1168,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		r.words(n.Name, item, kind)
 	case ir.Link:
 		if isSkipLink(n) && !r.inCell && r.cellItem < 0 {
-			// Chrome, not a link to follow: the tray's skip capsule.
+			// Chrome, not a link to follow: the pagetab's skip capsule.
 			r.chrome = append(r.chrome, n)
 			return
 		}

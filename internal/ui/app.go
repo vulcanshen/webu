@@ -577,7 +577,7 @@ func (m *AppModel) enterSelect(typing bool) tea.Cmd {
 		return m.toast.show("no page to select from", toastInfo)
 	}
 	m.focus = panelPage
-	t.leaveTray()
+	t.leavePagetab()
 	m.sel.enter(t, typing)
 	return nil
 }
@@ -595,7 +595,7 @@ func (m *AppModel) leaveSelect() {
 	}
 	if i := t.lay.nearestItem(m.sel.row); i >= 0 {
 		t.cursor = i
-		t.leaveTray()
+		t.leavePagetab()
 	}
 	if t.frozen != nil {
 		msg := *t.frozen
@@ -704,16 +704,16 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case m.sel.on:
 			return m.selectKey(msg)
 		case m.focus == panelPage:
-			// Nothing up, no mode on: Esc is the way onto the tray under
+			// Nothing up, no mode on: Esc is the way onto the pagetab under
 			// the URL — the page's chrome — and back off it (2026-09-22).
 			if m.toast.anim.owns() {
 				return m, m.toast.close()
 			}
 			if t := m.shownTab(); t != nil {
-				if t.onTray() {
-					t.leaveTray()
+				if t.onPagetab() {
+					t.leavePagetab()
 				} else {
-					t.enterTray()
+					t.enterPagetab()
 				}
 			}
 			return m, nil
@@ -1317,10 +1317,10 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 type optionsKind int
 
 const (
-	optItemMenu optionsKind = iota // an item's operations on their own: what a capsule holds (Enter on it)
-	optSelect                      // a <select>'s options, keyed by index
-	optMoveTo                      // a bookmark's folder, keyed by index (bookmarks.go)
-	optTrayMore                    // the capsules behind the tray's "+N", keyed tray:i (openTrayMore)
+	optItemMenu    optionsKind = iota // an item's operations on their own: what a capsule holds (Enter on it)
+	optSelect                         // a <select>'s options, keyed by index
+	optMoveTo                         // a bookmark's folder, keyed by index (bookmarks.go)
+	optPagetabMore                    // the capsules behind the pagetab's "+N", keyed pagetab:i (openPagetabMore)
 )
 
 // itemMenuItems is an item's operations by role (menu-only, no letters —
@@ -1550,17 +1550,17 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(closeCmd, m.moveBookmark(m.moveRef, idx))
 	}
-	if m.optionsKind == optTrayMore {
-		// A capsule from behind the tray's "+N": the hand goes to it — it
-		// takes the tray's last slot meanwhile — and its list opens in
+	if m.optionsKind == optPagetabMore {
+		// A capsule from behind the pagetab's "+N": the hand goes to it — it
+		// takes the pagetab's last slot meanwhile — and its list opens in
 		// place of this one, on this one's layer.
 		t := m.shownTab()
-		i, err := strconv.Atoi(strings.TrimPrefix(key, "tray:"))
-		if t == nil || err != nil || i < 0 || i >= len(t.lay.tray) {
+		i, err := strconv.Atoi(strings.TrimPrefix(key, "pagetab:"))
+		if t == nil || err != nil || i < 0 || i >= len(t.lay.pagetab) {
 			return m, m.options.close()
 		}
-		t.focusTray(i)
-		return m.openItemMenuAt(t.lay.tray[i].nodes[0], m.options.layer)
+		t.focusPagetab(i)
+		return m.openItemMenuAt(t.lay.pagetab[i].nodes[0], m.options.layer)
 	}
 	n := m.optionsFor
 	t := m.shownTab()
@@ -1802,7 +1802,7 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	if t != nil {
 		if t.onMore() {
-			return m.openTrayMore(t)
+			return m.openPagetabMore(t)
 		}
 		if c := t.currentCapsule(); c != nil {
 			return m.enterCapsule(t, *c)
@@ -1878,8 +1878,8 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 // followed: its target is an anchor, and webu has nothing to scroll.
 func (m AppModel) skipToContent(t *tab) (tea.Model, tea.Cmd) {
 	at := t.firstItem()
-	if t.onTray() {
-		t.leaveTray()
+	if t.onPagetab() {
+		t.leavePagetab()
 	} else if at <= t.cursor && t.cursor+1 < len(t.lay.items) {
 		at = t.cursor + 1
 	}
@@ -1925,7 +1925,7 @@ func (m AppModel) openItemMenu(n *ir.Node) (tea.Model, tea.Cmd) {
 }
 
 // openItemMenuAt is openItemMenu on a given layer: the one the list
-// replaces, when it opens in place of another (openTrayMore).
+// replaces, when it opens in place of another (openPagetabMore).
 func (m AppModel) openItemMenuAt(n *ir.Node, layer int) (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	items, title := itemMenuItems(n, t.curFolded()), truncate(oneLine(nameOr(n.Name, n.Role)), 40)
@@ -1946,9 +1946,9 @@ func (m AppModel) enterCapsule(t *tab, c capsule) (tea.Model, tea.Cmd) {
 	switch {
 	case len(ts) == 0:
 		return m, m.showCapsule(c)
-	case c.kind == traySkip && len(ts) == 1:
+	case c.kind == pagetabSkip && len(ts) == 1:
 		return m.actOn(t, ts[0].node, false)
-	case c.kind == traySearch:
+	case c.kind == pagetabSearch:
 		var boxes []*ir.Node
 		for _, x := range ts {
 			if x.node.Kind == ir.Textbox {
@@ -1977,16 +1977,16 @@ func (m *AppModel) showCapsule(c capsule) tea.Cmd {
 	return m.message.show(glyphMenu, c.title(), wrapWords(text, min(72, max(20, m.w-12))), false, m.layer())
 }
 
-// openTrayMore is Enter on the tray's "+N": the capsules the width left
+// openPagetabMore is Enter on the pagetab's "+N": the capsules the width left
 // out, one row each. Choosing one puts the hand on it — it takes the
-// tray's last slot meanwhile — and opens its list (optionsKey).
-func (m AppModel) openTrayMore(t *tab) (tea.Model, tea.Cmd) {
+// pagetab's last slot meanwhile — and opens its list (optionsKey).
+func (m AppModel) openPagetabMore(t *tab) (tea.Model, tea.Cmd) {
 	var items []menuItem
-	for i := t.lay.fit; i < len(t.lay.tray); i++ {
-		c := t.lay.tray[i]
-		items = append(items, menuItem{label: c.label, key: "tray:" + itoa(i), hint: truncate(capsuleHint(c, t.url), 40)})
+	for i := t.lay.fit; i < len(t.lay.pagetab); i++ {
+		c := t.lay.pagetab[i]
+		items = append(items, menuItem{label: c.label, key: "pagetab:" + itoa(i), hint: truncate(capsuleHint(c, t.url), 40)})
 	}
-	m.optionsFor, m.optionsKind = nil, optTrayMore
+	m.optionsFor, m.optionsKind = nil, optPagetabMore
 	m.options.setItems(items, "more", m.layer())
 	return m, m.options.open()
 }
@@ -2533,8 +2533,8 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 		case t.loading:
 			hint = "loading"
 		case t.onMore():
-			// The hand on the tray: what it is under, and what is inside.
-			hint = plural(len(t.lay.tray)-t.lay.fit, "more capsule")
+			// The hand on the pagetab: what it is under, and what is inside.
+			hint = plural(len(t.lay.pagetab)-t.lay.fit, "more capsule")
 		case t.currentCapsule() != nil:
 			hint = truncate(capsuleHint(*t.currentCapsule(), t.url), max(1, innerW-8))
 		case len(t.lay.rows) > innerH-pageHeaderRows:
