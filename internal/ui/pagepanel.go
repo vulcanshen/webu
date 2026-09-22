@@ -368,15 +368,15 @@ func panelFrameFilled(innerW int, body []string, title, legend string, tone bord
 	return strings.Join(lines, "\n")
 }
 
-// pagetabRow is the pagetab: the rule under the URL, and on it the page's
-// chrome as capsules (ux.md §A.0.K, 2026-09-22) — one per kind, in a
-// fixed order: skip, header, nav, search, sidebar, footer, each dialog,
-// other; the menu glyph, the kind's word, +N for what is behind it —
-// and a "+N" for the ones the width left out. Off the page, so the page
-// starts at its content. The hand comes up here on Esc, or on k from
-// the page's top, walks the capsules on h/l, goes back down on j or
-// Esc; Enter on one is its list, Space its menu (tab.moveItem). A bare
-// rule when the page has no chrome.
+// pagetabRow is the pagetab: the rule under the URL, and on it the
+// page's four parts (parts.go) — header, body, others, footer, whichever
+// of them this page has, behind one menu glyph at the head of the strip.
+// Off the page, so the page below starts at its content.
+//
+// The hand comes up here on Esc, or on k from the page's top; h and l
+// walk the parts and the panel follows them; Enter or j takes the hand
+// back down, leaving the part it walked to on screen. A bare rule when
+// the page is all one part, where there is nothing to choose between.
 func (m AppModel) pagetabRow(t *tab, innerW int) string {
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	if t.drilled() {
@@ -402,9 +402,17 @@ func (m AppModel) pagetabRow(t *tab, innerW int) string {
 		labels = append(labels, p.kind.word())
 	}
 	labels = withLead(labels)
-	chain := partChain(labels, t.partIndex(t.at)+1, t.pagetabIndex()+1,
+	hand := t.onPagetab() && m.focus == panelPage && !m.sel.on
+	chain := partChain(labels, t.partIndex(t.at)+1, t.onPagetab(),
 		m.focus == panelPage && !m.sel.on, t.loading)
-	return chain + dim.Render(strings.Repeat("─", max(0, innerW-chainW(labels))))
+	// The rule to the panel's edge belongs to the strip: with the hand up
+	// here the whole row lights, edge included, which is what makes the
+	// state readable from across the screen (user, 2026-09-23).
+	rule := dim
+	if hand && !t.loading {
+		rule = lipgloss.NewStyle().Foreground(headerColor)
+	}
+	return chain + rule.Render(strings.Repeat("─", max(0, innerW-chainW(labels))))
 }
 
 // sectionHeadRow is the pagetab's row while one section is open: the
@@ -470,47 +478,94 @@ func chainW(labels []string) int {
 // page cursor's. Unfocused it drops to the register an unfocused chip
 // wears; all of it dims while the page is on its way.
 func pagetabChain(labels []string, active int, focused, dimmed bool) string {
-	return partChain(labels, active+1, 0, focused, dimmed)
-}
-
-// partChain draws the parts as one powerline strip with TWO lit states,
-// because the hand can be on a part that is not the one on screen:
-// showing is rosewater, the hand is lavender, and when they are the same
-// part the hand wins — it is the thing that moves (user, 2026-09-22).
-// Indexes are one-based so zero means neither.
-func partChain(labels []string, showing, hand int, focused, dimmed bool) string {
-	unlit := lipgloss.Color(baseHex)
-	litShow, litHand, ink := headerColor, editColor, headerColor
-	switch {
-	case dimmed:
-		litShow, litHand, ink = borderDim, borderDim, dimColor
-	case !focused:
-		litShow, litHand = borderDim, borderDim
+	unlit, ink := lipgloss.Color(baseHex), headerColor
+	fill := unlit
+	if active >= 0 {
+		fill = headerColor
 	}
-	fill := func(i int) lipgloss.Color {
-		switch i + 1 {
-		case hand:
-			return litHand
-		case showing:
-			return litShow
+	if dimmed {
+		ink = dimColor
+		if active >= 0 {
+			fill = borderDim
 		}
-		return unlit
+	} else if !focused && active >= 0 {
+		fill = borderDim
 	}
 	var b strings.Builder
-	b.WriteString(lipgloss.NewStyle().Foreground(fill(0)).Render(capLeft))
+	b.WriteString(lipgloss.NewStyle().Foreground(fill).Render(capLeft))
 	for i, lab := range labels {
 		if i > 0 {
-			div, fg, bg := divider(fill(i-1), fill(i))
+			div, fg, bg := divider(fill, fill)
 			b.WriteString(lipgloss.NewStyle().Foreground(fg).Background(bg).Render(div))
 		}
 		seg := " " + lab + " "
-		if c := fill(i); c != unlit {
+		if fill != unlit {
 			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).
-				Background(c).Bold(true).Render(seg))
+				Background(fill).Bold(true).Render(seg))
 			continue
 		}
 		b.WriteString(lipgloss.NewStyle().Foreground(ink).Background(unlit).Render(seg))
+		_ = i
 	}
-	b.WriteString(lipgloss.NewStyle().Foreground(fill(len(labels) - 1)).Render(capRight))
+	b.WriteString(lipgloss.NewStyle().Foreground(fill).Render(capRight))
+	return b.String()
+}
+
+// partChain draws the parts as one powerline strip, in one of two looks
+// — and which look it wears IS the answer to "where is the hand?" (user,
+// 2026-09-23).
+//
+// At rest the strip is dim and the part on screen is the one lit thing
+// on it: rosewater, filled, with the canvas for ink.
+//
+// With the hand on it the WHOLE strip lights — every segment filled
+// rosewater, and the rule that runs from it to the panel's edge with
+// them — and the part on screen inverts inside that: the canvas for
+// ground, rosewater for ink. A whole row changing state is a far
+// louder signal than one segment changing hue, and it buys the keys
+// back: because the row says where the hand is, h and l can show the
+// part as they reach it, and Enter is left to mean "yes, that one",
+// which is to take the hand back down. Moving a hand and then
+// confirming the move was two steps for one decision, and the lavender
+// that marked the difference between them is gone with it.
+//
+// at is one-based, so zero is a strip with nothing on screen.
+func partChain(labels []string, at int, hand, focused, dimmed bool) string {
+	canvas := lipgloss.Color(baseHex)
+	lit := hand && focused && !dimmed
+	// ground and ink, per segment.
+	dress := func(i int) (lipgloss.Color, lipgloss.Color) {
+		here := i+1 == at
+		switch {
+		case dimmed:
+			if here {
+				return borderDim, canvas
+			}
+			return canvas, dimColor
+		case lit && here:
+			return canvas, headerColor
+		case lit:
+			return headerColor, canvas
+		case here:
+			return headerColor, canvas
+		}
+		return canvas, dimColor
+	}
+	ground := func(i int) lipgloss.Color { g, _ := dress(i); return g }
+	var b strings.Builder
+	b.WriteString(lipgloss.NewStyle().Foreground(ground(0)).Render(capLeft))
+	for i, lab := range labels {
+		if i > 0 {
+			div, fg, bg := divider(ground(i-1), ground(i))
+			b.WriteString(lipgloss.NewStyle().Foreground(fg).Background(bg).Render(div))
+		}
+		g, fg := dress(i)
+		// Bold is for the segments that carry a state: the one on screen,
+		// and every one of them while the strip is lit. A dim label in
+		// bold is just a heavier dim label.
+		b.WriteString(lipgloss.NewStyle().Foreground(fg).Background(g).
+			Bold(lit || i+1 == at).Render(" " + lab + " "))
+	}
+	b.WriteString(lipgloss.NewStyle().Foreground(ground(len(labels) - 1)).Render(capRight))
 	return b.String()
 }

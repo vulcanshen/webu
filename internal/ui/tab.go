@@ -916,9 +916,12 @@ func (t *tab) enterPagetab() bool {
 }
 
 // stepPagetab walks the hand along the parts, wrapping at either end the
-// way every menu of the family does. It does NOT switch the part being
-// shown: the hand moves, Enter shows (the same as panel [1]'s tabs).
-func (t *tab) stepPagetab(k string) {
+// way every menu of the family does — and the panel walks with it: the
+// part the hand reaches is the part on screen, at once (user,
+// 2026-09-23). Moving the hand and then pressing Enter to send it was
+// two steps for one decision; Enter is now the confirmation, which is to
+// take the hand back down (app.enterItem).
+func (t *tab) stepPagetab(k string, visible int) {
 	n := len(t.parts)
 	if n == 0 {
 		t.leavePagetab()
@@ -930,7 +933,9 @@ func (t *tab) stepPagetab(k string) {
 	} else {
 		at++
 	}
-	t.focusPagetab((at + n) % n)
+	at = (at + n) % n
+	t.showPart(t.parts[at].kind, t.layW, visible)
+	t.focusPagetab(at)
 }
 
 // moveItem walks the cursor by navigation key. The page is a grid of rows
@@ -946,7 +951,7 @@ func (t *tab) moveItem(k string, visible int) {
 	if t.onPagetab() {
 		switch k {
 		case "h", "left", "l", "right":
-			t.stepPagetab(k)
+			t.stepPagetab(k, visible)
 			return
 		case "k", "up":
 			return

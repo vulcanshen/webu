@@ -436,8 +436,9 @@ func TestSkipLinkIsDropped(t *testing.T) {
 	}
 }
 
-// k from the top of the page puts the hand on the pagetab, h/l walk the
-// parts and wrap, j comes back down to the item the hand left.
+// k from the top of the page puts the hand on the pagetab; h/l walk the
+// parts, wrap, and show each one as they reach it; j comes back down
+// into whatever is on screen.
 func TestPagetabHand(t *testing.T) {
 	box := func(x, y, w, h float64) ir.Box { return ir.Box{X: x, Y: y, W: w, H: h} }
 	lm := func(role string, id int, kids ...*ir.Node) *ir.Node {
@@ -466,26 +467,32 @@ func TestPagetabHand(t *testing.T) {
 	if !tb.onPagetab() {
 		t.Error("k on the pagetab stays there")
 	}
+	// h walks the strip AND shows what it walks to: moving is choosing,
+	// so there is no second key (user, 2026-09-23).
 	tb.moveItem("h", 10)
 	if tb.parts[tb.pagetabIndex()].kind != partHeader {
 		t.Errorf("h wraps round the strip, is on %s", tb.parts[tb.pagetabIndex()].kind.word())
 	}
-	tb.moveItem("j", 10)
-	if tb.onPagetab() || tb.cursor != 0 {
-		t.Errorf("j comes back to the item the hand left: pagetab %d cursor %d", tb.pagetab, tb.cursor)
+	if tb.at != partHeader {
+		t.Errorf("and shows it: showing %s", tb.at.word())
 	}
-	// Walking the strip shows nothing; Enter does.
-	tb.enterPagetab()
-	tb.stepPagetab("h")
-	if tb.at != partMain {
-		t.Error("walking does not change what is shown")
-	}
-	tb.showPart(tb.parts[tb.pagetabIndex()].kind, 60, 10)
-	if tb.at == partMain || tb.onPagetab() {
-		t.Errorf("Enter shows the part and comes back down: at=%s", tb.at.word())
-	}
-	if v := dumpLayout(tb.lay); strings.Contains(v, "Body") {
+	if v := dumpLayout(tb.lay); strings.Contains(v, "Body") || !strings.Contains(v, "Home") {
 		t.Errorf("the panel is that part alone:\n%s", v)
+	}
+	// j comes down into the part it walked to, at its first item; the
+	// strip keeps it.
+	tb.moveItem("j", 10)
+	if tb.onPagetab() || tb.at != partHeader {
+		t.Errorf("j comes down onto the part on screen: pagetab %d at %s", tb.pagetab, tb.at.word())
+	}
+	// And round again: the strip wraps both ways, showing as it goes.
+	tb.enterPagetab()
+	tb.stepPagetab("l", 10)
+	if tb.at != partMain || !tb.onPagetab() {
+		t.Errorf("l from the header shows the body and stays up: at=%s", tb.at.word())
+	}
+	if v := dumpLayout(tb.lay); !strings.Contains(v, "Body") {
+		t.Errorf("the body is back:\n%s", v)
 	}
 }
 
