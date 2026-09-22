@@ -201,7 +201,11 @@ func (m AppModel) Session() store.Session {
 }
 
 func (m AppModel) Init() tea.Cmd {
-	return waitEvent(m.events)
+	// The spinner is armed on a key, because a key is where a fetch
+	// usually begins — but the page webu opens with has no key behind
+	// it, so its chain was never started and the first page of all drew
+	// one frozen frame (2026-09-22).
+	return tea.Batch(waitEvent(m.events), spinCmd())
 }
 
 // Close releases every tab. Chromium itself is the caller's to stop.
@@ -366,7 +370,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t == nil || msg.gen != t.gen {
 			return m, nil
 		}
-		t.loading = false
+		t.loading, t.navigating = false, false
 		if errors.Is(msg.err, page.ErrNoEntry) {
 			return m, m.toast.show("nothing to go "+msg.what+" to", toastInfo)
 		}
@@ -401,6 +405,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// A page with a dialog up answers no CDP call that touches it; the
 		// capture would only time out. It is re-asked once the dialog is.
 		if m.dialog != nil && m.dialog.tabID == t.id {
+			t.loading = false
 			return m, nil
 		}
 		return m, t.refresh()
@@ -547,6 +552,11 @@ func (m AppModel) askDialog(msg dialogMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(waitEvent(m.events), m.answerDialogOn(msg.tabID, false, ""))
 	}
 	m.dialog = &msg
+	// The click that raised this has not returned and will not until the
+	// dialog is answered, so the settle behind it never runs: the tab
+	// stops saying it is busy here instead (2026-09-22). What is waiting
+	// on the user is the dialog, and the dialog is on screen.
+	t.loading = false
 	title := "The page says"
 	lines := []string{msg.message}
 	accept := "ok"
@@ -589,7 +599,7 @@ func (m AppModel) answerDialogOn(tabID int, accept bool, text string) tea.Cmd {
 	if t == nil {
 		return nil
 	}
-	return t.act(func(ctx context.Context) error { return page.HandleDialog(ctx, accept, text) })
+	return t.press(func(ctx context.Context) error { return page.HandleDialog(ctx, accept, text) })
 }
 
 // ---------------------------------------------------------- selection
@@ -1681,16 +1691,20 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.options.close()
 	}
 	opt := n.Children[idx]
-	return m, tea.Batch(m.closeStack(), t.act(func(ctx context.Context) error { return page.Choose(ctx, opt.ID) }))
+	return m, tea.Batch(m.closeStack(), t.press(func(ctx context.Context) error { return page.Choose(ctx, opt.ID) }))
 }
 
 // ---------------------------------------------------------------- actions
 
 // busy reports whether the shown page is on its way somewhere: a
 // navigation or history move has been asked for and has not landed.
+// busy is a NAVIGATION in flight, and it is what swallows the keys that
+// would stack another one on it (ux.md §6). A click on the page is not
+// this: it says the page is loading, which dims it and turns the
+// spinner, but the keyboard stays live.
 func (m AppModel) busy() bool {
 	t := m.shownTab()
-	return t != nil && t.loading
+	return t != nil && t.navigating
 }
 
 // dispatch runs one action by its key — the same function whether the key
@@ -1825,7 +1839,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	case "click":
 		if n := t.current(); n != nil {
 			id := n.ID
-			return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
+			return m, t.press(func(ctx context.Context) error { return page.Click(ctx, id) })
 		}
 	case "choose":
 		return m.chooseOptions()
@@ -1903,7 +1917,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	case "submit":
 		if n := t.current(); n != nil {
 			id := n.ID
-			return m, t.act(func(ctx context.Context) error { return page.Submit(ctx, id) })
+			return m, t.press(func(ctx context.Context) error { return page.Submit(ctx, id) })
 		}
 	case "edit":
 		if n := t.current(); n != nil {
@@ -1912,7 +1926,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 	case "clear":
 		if n := t.current(); n != nil {
 			id := n.ID
-			return m, t.act(func(ctx context.Context) error { return page.Type(ctx, id, "") })
+			return m, t.press(func(ctx context.Context) error { return page.Type(ctx, id, "") })
 		}
 	}
 	return m, nil
@@ -1999,7 +2013,7 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 		return m.chooseOptionsFor(n)
 	case ir.Button, ir.Check, ir.Media, ir.Unsupported:
 		id := n.ID
-		return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
+		return m, t.press(func(ctx context.Context) error { return page.Click(ctx, id) })
 	case ir.Link:
 		// A link into the page lands the cursor, no confirm: nothing is
 		// left.
@@ -2128,7 +2142,7 @@ func (m AppModel) actOn(t *tab, x *ir.Node, search bool) (tea.Model, tea.Cmd) {
 		}
 	}
 	id := x.ID
-	return m, t.act(func(ctx context.Context) error { return page.Click(ctx, id) })
+	return m, t.press(func(ctx context.Context) error { return page.Click(ctx, id) })
 }
 
 // sameFragment is the fragment of a link that points into the page it
@@ -2249,7 +2263,7 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if t == nil {
 			return m, m.closeStack()
 		}
-		write := t.act(func(ctx context.Context) error { return page.Type(ctx, id, value) })
+		write := t.press(func(ctx context.Context) error { return page.Type(ctx, id, value) })
 		if m.input.search && strings.TrimSpace(value) != "" {
 			// A search box: what was typed is what the user came to
 			// submit, so the box's Enter offers that at once — a
@@ -2310,7 +2324,7 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if at == nil {
 			return m, m.input.close()
 		}
-		return m, tea.Batch(m.input.close(), at.act(func(ctx context.Context) error { return page.Auth(ctx, a.id, user, value) }))
+		return m, tea.Batch(m.input.close(), at.press(func(ctx context.Context) error { return page.Auth(ctx, a.id, user, value) }))
 	case inputFile:
 		f := m.upload
 		m.upload = nil
@@ -2334,7 +2348,7 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 		node := f.node
-		return m, tea.Batch(m.input.close(), ft.act(func(ctx context.Context) error { return page.SetFiles(ctx, node, files) }))
+		return m, tea.Batch(m.input.close(), ft.press(func(ctx context.Context) error { return page.SetFiles(ctx, node, files) }))
 	}
 	return m, m.closeStack()
 }
@@ -2360,7 +2374,7 @@ func (m *AppModel) cancelAuth() tea.Cmd {
 	if t == nil {
 		return nil
 	}
-	return t.act(func(ctx context.Context) error { return page.CancelAuth(ctx, a.id) })
+	return t.press(func(ctx context.Context) error { return page.CancelAuth(ctx, a.id) })
 }
 
 // inspectLines is what the Inspect popup shows about a node (ux.md §A.1):
@@ -2444,7 +2458,7 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, closeCmd
 		}
 		id := m.confirm.node
-		return m, tea.Batch(closeCmd, t.act(func(ctx context.Context) error { return page.Submit(ctx, id) }))
+		return m, tea.Batch(closeCmd, t.press(func(ctx context.Context) error { return page.Submit(ctx, id) }))
 	case confirmDeleteFolder:
 		return m, tea.Batch(closeCmd, m.deleteFolderTree(m.confirm.folder))
 	case confirmOpenLink:
@@ -2453,7 +2467,7 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, closeCmd
 		}
 		id := m.confirm.node
-		return m, tea.Batch(closeCmd, t.act(func(ctx context.Context) error { return page.Click(ctx, id) }))
+		return m, tea.Batch(closeCmd, t.press(func(ctx context.Context) error { return page.Click(ctx, id) }))
 	}
 	return m, closeCmd
 }

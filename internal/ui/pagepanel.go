@@ -22,8 +22,15 @@ const pageHeaderRows = 2
 // spinnerFrame).
 type spinTickMsg struct{}
 
+// spinCmd asks for the next frame, at the moment that frame is due
+// rather than one step from now. The frame is read from the clock
+// (theme.spinnerFrame), so a tick that lands late lands in the NEXT
+// frame's window and the one it was for is never drawn — which is how
+// eight slices came out looking like three (user, 2026-09-22).
 func spinCmd() tea.Cmd {
-	return tea.Tick(spinStep, func(time.Time) tea.Msg { return spinTickMsg{} })
+	now := time.Now().UnixNano()
+	due := (now/int64(spinStep) + 1) * int64(spinStep)
+	return tea.Tick(time.Duration(due-now), func(time.Time) tea.Msg { return spinTickMsg{} })
 }
 
 // fetching reports whether any tab is on its way somewhere: what keeps
