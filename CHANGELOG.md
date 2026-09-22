@@ -14,6 +14,13 @@
 
 ### Changed
 
+- **`measure` defaults to `full`, and takes the word.** The setting that
+  caps how wide a paragraph flows now reads `full` — the panel's own
+  width, whatever the terminal gives it — as well as a number of cells,
+  in `config.yaml` and on the Settings screen alike, and full is what it
+  starts as. It was a hundred cells, which left a column of unused panel
+  on any terminal wider than that; the person who wants a cap can still
+  say so.
 - **Two palettes, not one.** webu's own chrome and the page's content now
   have separate colour systems. The app palette — panels, borders, the
   header chain, the pagetab, the cursor, menus — keeps the whole

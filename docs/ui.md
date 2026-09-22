@@ -116,7 +116,7 @@ footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
 - **heading 靠底色分級**（2026-09-22）：h1 到 h6 各有自己的底，h1 最亮（surface2）、h6 落在 crust，中間四級用 VTP §2.5 的 lerp 內插（`headingBg` / `lerpHex`）；底色鋪到文字欄寬，所以 heading 是一條帶不是一個染色的字；`#` 標記留著，色彩被拉平的終端機上它才是層級的後備
 - **inline 標記**（2026-09-22）：`<strong>` 粗、`<em>` 斜、`<del>` 刪除線、`<ins>` 底線、`<mark>` 反白；`seg.attr`（`textAttr` 位元欄）疊在 kind 的樣式上（`withAttr`），所以 heading / 表格格 / code 裡的標記都保得住
 - **Markdown**（2026-09-22）：`ir.Markdown()` 把同一棵樹寫成 markdown——heading 的層級、段落、清單（緊湊、巢狀縮排、有序無序照 Chromium 的 marker 判）、pipe 表格、fenced code、`>` 引言、`---` 分隔線、`![alt](src)`、inline 標記轉 `**` `*` `~~` `<ins>` `==`；markdown 沒有的詞（按鈕、欄位、勾選、select）寫成方括號註記而不是丟掉；不做跳脫。用在 page Space menu 的 `Yank markdown`，以及 `internal/ir/testdata/*.md` 這組「人看得懂的 golden」
-- **文字欄寬上限**：段落折行寬度 = min(面板寬, `config.yaml` 的 `measure`，預設 100)；表格、code、分隔線仍用整個面板寬
+- **文字欄寬上限**：段落折行寬度 = min(面板寬, `config.yaml` 的 `measure`)；`measure` 收 `full`（面板自己的寬度、不設上限）或一個 20 以上的數字，**預設 full**（2026-09-22 user 定案：終端機沒要求的上限會留下一條用不到的欄位，要上限的人自己說）；表格、code、分隔線本來就用整個面板寬
 - **非 HTML 的回應**（修訂 2026-09-20）：JSON / 純文字 / XML / CSV 等依 `document.contentType` 整份畫成一個 code block，
   JSON 自動縮排；不畫 Chrome 自己的 JSON viewer（Pretty-print 表單）
 - **新頁載入**：游標回 main 裡第一個 item、**視窗捲到它**（修訂 2026-09-22，原本停頁頂）；不跟著游標捲（同頁重畫才留位）
@@ -250,7 +250,7 @@ splash 期間鍵盤完全歸它（2026-09-21）。`docs/social-preview.png` 用�
 | History | YAML sequence，一次 append 一筆（時間、URL、標題）；**無限保留**，History screen 的 Clear 是唯一清除入口 | `~/.webu/datas/history.yaml` |
 | Session | 離開時寫下所有分頁 URL，下次還原 | `~/.webu/datas/session.yaml` |
 | 下載檔案 | `download_dir`，預設 | `~/.webu/datas/downloads/` |
-| 設定 | v1 key：`search_engine`（預設 Google）、`download_dir`（預設 `~/.webu/datas/downloads`）、`measure`（預設 100）、`restore_session`（預設 true）；proxy v2。**規則（2026-09-21）：檔案裡有的 key，Settings screen 一定有一列**（`TestSettingsCoverConfig` 守著）——只能改檔才能設的 key，多數人永遠找不到 | `~/.config/webu/config.yaml` |
+| 設定 | v1 key：`search_engine`（預設 Google）、`download_dir`（預設 `~/.webu/datas/downloads`）、`measure`（`full` 或數字，預設 `full`）、`restore_session`（預設 true）；proxy v2。**規則（2026-09-21）：檔案裡有的 key，Settings screen 一定有一列**（`TestSettingsCoverConfig` 守著）——只能改檔才能設的 key，多數人永遠找不到 | `~/.config/webu/config.yaml` |
 | Chromium | 釘死 revision | `~/.cache/webu/chromium-<rev>/` |
 | profile | Chromium user-data-dir | `~/.webu/datas/profile/` |
 | log | chromedp 的 log（絕不進終端機） | `~/.webu/datas/webu.log` |

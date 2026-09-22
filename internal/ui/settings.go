@@ -2,7 +2,6 @@ package ui
 
 import (
 	"errors"
-	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -51,26 +50,22 @@ var settings = []setting{
 		get: func(c store.Config) string { return c.DownloadDir },
 		set: func(c *store.Config, v string) error { c.DownloadDir = v; return nil },
 		def: func(m AppModel) string { return m.downloadDir() }},
-	{key: "measure", desc: "how wide a paragraph flows before it wraps, in cells",
+	{key: "measure", desc: "how wide a paragraph flows before it wraps: full, or a number of cells",
 		get: func(c store.Config) string {
-			if c.Measure <= 0 {
+			if c.Measure <= store.MeasureFull {
 				return ""
 			}
-			return strconv.Itoa(c.Measure)
+			return c.Measure.String()
 		},
 		set: func(c *store.Config, v string) error {
-			if v == "" {
-				c.Measure = 0
-				return nil
-			}
-			n, err := strconv.Atoi(v)
-			if err != nil || n < 20 {
-				return errors.New("a number of cells, 20 or more")
+			n, err := store.ParseMeasure(v)
+			if err != nil {
+				return err
 			}
 			c.Measure = n
 			return nil
 		},
-		def: func(AppModel) string { return strconv.Itoa(store.DefaultMeasure) }},
+		def: func(AppModel) string { return store.MeasureFull.String() }},
 	{key: "restore_session", desc: "reopen the tabs that were open when webu last quit",
 		get: func(c store.Config) string {
 			if c.RestoreSession == nil {

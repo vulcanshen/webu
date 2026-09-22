@@ -124,7 +124,7 @@ search_engine: https://www.google.com/search?q=
 # Where downloads land. Default ~/.webu/datas/downloads.
 download_dir: ~/Downloads
 # How wide a paragraph flows before it wraps, in cells. Default 100.
-measure: 100
+measure: full        # or a number of cells, 20 or more
 # Reopen the tabs that were open when webu last quit. Default true;
 # false starts empty, or on the URLs given on the command line.
 restore_session: true
