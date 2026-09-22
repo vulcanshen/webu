@@ -344,7 +344,14 @@ func panelFrameFilled(innerW int, body []string, title, legend string, tone bord
 func (m AppModel) pagetabRow(t *tab, innerW int) string {
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	if t.drilled() {
-		return m.insideRow(t, t.drillTitle, pageClick, innerW)
+		// How deep, when it is more than one: the path has no bound and
+		// Esc comes back one level at a time, so the row has to say how
+		// many are left.
+		var depth []string
+		if n := len(t.drill); n > 1 {
+			depth = append(depth, itoa(n)+"  ")
+		}
+		return m.insideRow(t, t.drillTitle(), pageClick, innerW, depth...)
 	}
 	if t.read && t.sec < len(t.secs) {
 		return m.sectionHeadRow(t, innerW)

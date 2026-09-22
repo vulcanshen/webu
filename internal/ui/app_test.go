@@ -995,11 +995,13 @@ func TestNavigationEntry(t *testing.T) {
 	if n := d.page().current(); d.page().onPagetab() || n == nil || n.Kind != ir.Heading {
 		t.Errorf("j should leave the pagetab for the item the hand left, is on %+v", n)
 	}
-	// A link into the page lands the cursor on what it names, the form
-	// here, without following anything.
+	// A link into the page lands the cursor on what it names, without
+	// following anything. The form it names has no name of its own, so it
+	// has no row of its own either (2026-09-22) — landing on it means
+	// landing on the first thing in it.
 	d.cursorOn(ir.Link, "to the form")
 	d.key("enter")
-	if n := d.page().current(); n == nil || n.Kind != ir.Landmark || n.Role != "form" || d.m.confirm.isActive() {
+	if n := d.page().current(); n == nil || n.Kind != ir.Textbox || n.Name != "Name" || d.m.confirm.isActive() {
 		t.Errorf("a link into the page should land the cursor, no confirm; landed on %+v", n)
 	}
 

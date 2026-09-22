@@ -146,7 +146,7 @@ func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 		return b.String()
 	}
 	out := rows()
-	for _, want := range []string{"▸ region Header · 2 items", "body text", "▸ region Footer"} {
+	for _, want := range []string{"▸ Header · 2 items", "body text", "▸ Footer"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in\n%s", want, out)
 		}
@@ -167,7 +167,7 @@ func TestLandmarksFoldOnlyWhenTold(t *testing.T) {
 	tb.cursor = 0
 	tb.toggleFold(60)
 	out = rows()
-	if !strings.Contains(out, "▾ region Header") || !strings.Contains(out, "Home") {
+	if !strings.Contains(out, "▾ Header") || !strings.Contains(out, "Home") {
 		t.Errorf("Enter on a folded landmark opens it:\n%s", out)
 	}
 	if tb.cursor != 0 || tb.lay.items[0].node.Role != "region" {

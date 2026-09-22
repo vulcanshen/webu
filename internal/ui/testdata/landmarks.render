@@ -6,22 +6,16 @@ sidebar
 footer
 # Main heading
 
- ▾ article ─────────────────────────────────────────────────
 ## An article
 
-Body.
-
- ▾ region Named section ────────────────────────────────────
+ ▾ Named section ───────────────────────────────────────────
 Section text.
 
 An unnamed section is not a region.
 
- ▾ form ────────────────────────────────────────────────────
-Q    󰘎 ________________________________________________
+  Q    󰘎 ________________________________________________
 -- items --
 0 heading "Main heading" rows 0-0
 1 landmark "An article…" rows 2-2
-2 heading "An article" rows 3-3
-3 landmark "Section text." rows 7-7
-4 landmark "Q Q" rows 12-12
-5 textbox "Q" rows 13-13
+2 landmark "Section text." rows 4-4
+3 textbox "Q" rows 9-9

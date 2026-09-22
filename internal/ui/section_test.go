@@ -523,8 +523,8 @@ func TestAListItemIsOneThing(t *testing.T) {
 	if strings.Contains(in, "AIS-2") {
 		t.Errorf("the OTHER card is not on this page:\n%s", in)
 	}
-	if tb.drillTitle == "" || !strings.Contains(tb.drillTitle, "AIS-1") {
-		t.Errorf("the header row says what you are inside, says %q", tb.drillTitle)
+	if !strings.Contains(tb.drillTitle(), "AIS-1") {
+		t.Errorf("the header row says what you are inside, says %q", tb.drillTitle())
 	}
 	// Esc comes back out, onto the card it left.
 	tb.leaveDrill(60, 20)
@@ -535,9 +535,35 @@ func TestAListItemIsOneThing(t *testing.T) {
 		t.Errorf("back out, the cursor is on the card just left: %d", tb.cursor)
 	}
 	// A card the page has rebuilt under a new id does not strand the view.
-	tb.drill = 999
+	tb.drill = []drillStep{{id: 999, title: "gone"}}
 	tb.relayout(60)
 	if tb.drilled() {
 		t.Error("a card that is gone lets the page back")
+	}
+	// The path has no bound: a card holds a list whose items hold lists.
+	inner := &ir.Node{Kind: ir.ListItem, ID: 50, Children: []*ir.Node{
+		para(text("deep one")), para(text("and more")),
+	}}
+	outer := &ir.Node{Kind: ir.ListItem, ID: 40, Children: []*ir.Node{
+		para(text("the outer card")),
+		{Kind: ir.List, Children: []*ir.Node{inner}},
+	}}
+	tb2 := &tab{root: doc(&ir.Node{Kind: ir.List, Children: []*ir.Node{outer}}), cursor: -1}
+	tb2.relayout(60)
+	if !tb2.drillInto(tb2.lay.items[0].node, 60, 20) {
+		t.Fatal("into the outer card")
+	}
+	if !tb2.drillInto(tb2.lay.items[0].node, 60, 20) {
+		t.Fatalf("into the inner card, from inside the outer:\n%s", dumpLayout(tb2.lay))
+	}
+	if len(tb2.drill) != 2 {
+		t.Errorf("two levels deep, the path has %d", len(tb2.drill))
+	}
+	if v := dumpLayout(tb2.lay); !strings.Contains(v, "and more") {
+		t.Errorf("inside the inner card:\n%s", v)
+	}
+	tb2.leaveDrill(60, 20)
+	if len(tb2.drill) != 1 {
+		t.Errorf("Esc comes back ONE level, not all of them: %d", len(tb2.drill))
 	}
 }

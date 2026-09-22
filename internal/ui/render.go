@@ -523,10 +523,13 @@ func (r *renderer) landmarkRule(n *ir.Node, id int, folded bool) {
 	if folded {
 		glyph = "▸"
 	}
-	label := " " + glyph + " " + n.Role
-	if n.Name != "" {
-		label += " " + oneLine(n.Name)
-	}
+	// Its NAME, not its role. "form" and "article" are words out of the
+	// spec, and a reader does not need to be told the spelling of what
+	// they are looking at — the shape says it: a form is a label column
+	// against a value column, an article is one row you go into (user,
+	// 2026-09-22). A region with a name has something to say, and says
+	// only that.
+	label := " " + glyph + " " + oneLine(n.Name)
 	if c := countItems(n); folded && c > 0 {
 		label += " · " + plural(c, "item")
 	}
@@ -555,6 +558,26 @@ func (r *renderer) depthOf(level int) int {
 	return len(r.heads)
 }
 
+// thing draws one of the page's own things — a list item, an article —
+// shut: one item, one line (user, 2026-09-22).
+//
+// A card, a result, an entry is a THING, and a thing that spreads over a
+// dozen unlabelled lines is a thing you cannot see. The rule is the same
+// whatever is in it: one that already fits on a line simply looks the way
+// it always did.
+func (r *renderer) thing(n *ir.Node) {
+	id := r.newItem(n)
+	for _, sg := range r.firstLine(n) {
+		r.add(atom{text: sg.text, item: id, kind: sg.kind, attr: sg.attr})
+	}
+	r.flush()
+	if n.Kind == ir.Landmark {
+		// An article stands apart from what follows it; a bullet does
+		// not — a list of them is a list, not a run of paragraphs.
+		r.gap = true
+	}
+}
+
 // firstLine is what a list item shows when it is shut: the first line it
 // would draw, styled as it would be drawn.
 //
@@ -573,6 +596,24 @@ func (r *renderer) firstLine(n *ir.Node) []seg {
 		}
 	}
 	return nil
+}
+
+// formChildren draws a landmark's children, and a form's in columns.
+//
+// A form is drawn as a form: every label in one column, every value
+// against the same left edge (user, 2026-09-22, after sshu's). The
+// alignment IS what says "this is a form" — a terminal has no box to draw
+// one with, and labels trailing their own field at whatever column it
+// happens to start read as a paragraph with underscores in it.
+func (r *renderer) formChildren(n *ir.Node, depth int) {
+	if n.Role != "form" {
+		r.children(n, depth)
+		return
+	}
+	saved := r.formLabel
+	r.formLabel = formLabelW(n, r.textW)
+	r.children(n, depth)
+	r.formLabel = saved
 }
 
 // formLabelW is how wide a form's label column is: the widest name any
@@ -614,13 +655,24 @@ func (r *renderer) formField(n *ir.Node, id int, value func()) {
 	if n.Required {
 		label += " *"
 	}
-	// The gap is part of the column, not a space between words: a space
-	// atom is collapsed by the flow and the values would sit a cell apart
-	// from the button's.
-	r.add(atom{text: padRight(label, r.formLabel) + "  ", item: -1, kind: segDim})
+	// The label is the page's own text, not a hint about it: dim is for a
+	// control that cannot be used. And the gap is part of the column
+	// rather than a space between words — the flow collapses a space
+	// atom, which left the values a cell off from the button's.
+	k := segPlain
+	if n.Disabled {
+		k = segDim
+	}
+	r.add(atom{text: formIndent, item: -1, kind: segDim})
+	r.add(atom{text: padRight(label, r.formLabel) + "  ", item: -1, kind: k})
 	value()
 	r.flush()
 }
+
+// formIndent sets a form's rows in from the page's own left edge, so the
+// block reads as one thing rather than as a run of paragraphs that happen
+// to line up.
+const formIndent = "  "
 
 // isSkipLink says whether a link is a skip link — the "Skip to main
 // content" an accessible page puts first, for a keyboard to pass the
@@ -886,6 +938,24 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			return
 		}
 		r.flush()
+		if n.Role == "article" && n.ID != r.drill {
+			// An article is one thing, the way a list item is: one row
+			// until you go into it (user, 2026-09-22).
+			r.thing(n)
+			return
+		}
+		if n.Name == "" && n.Role != "main" {
+			// Nothing to name it with: a rule that says only "▾" is a
+			// line across the page for no reason. It is drawn the way
+			// main is — its content, in place — and it claims no row,
+			// because it has none.
+			r.lmDepth++
+			r.formChildren(n, depth)
+			r.flush()
+			r.leaveLandmark()
+			r.gap = true
+			return
+		}
 		r.markNext = append(r.markNext, n)
 		if n.Role == "main" {
 			// The page itself: no rule, no item. With the chrome on the
@@ -906,20 +976,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			return
 		}
 		r.lmDepth++
-		if n.Role == "form" {
-			// A form is drawn as a form: every label in one column, every
-			// value against the same left edge (user, 2026-09-22, after
-			// sshu's). The alignment IS what says "this is a form" — a
-			// terminal has no box to draw one with, and labels trailing
-			// their own field at whatever column it happens to start read
-			// as a paragraph with underscores in it.
-			saved := r.formLabel
-			r.formLabel = formLabelW(n, r.textW)
-			r.children(n, depth)
-			r.formLabel = saved
-		} else {
-			r.children(n, depth)
-		}
+		r.formChildren(n, depth)
 		r.flush()
 		r.leaveLandmark()
 		r.gap = true
@@ -976,18 +1033,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.lead = r.indent + marker
 		r.indent += strings.Repeat(" ", dispW(marker))
 		if n.ID != r.drill {
-			// One item, one line: its first line, and Enter for the rest
-			// (user, 2026-09-22). A list item is a THING — a card, a
-			// result, an entry — and a thing that spreads over a dozen
-			// unlabelled lines is a thing you cannot see. The rule is the
-			// same whatever is in it: a bullet that already fits on one
-			// line simply looks the way it always did.
-			id := r.newItem(n)
-			for _, sg := range r.firstLine(n) {
-				sg.item = id
-				r.add(atom{text: sg.text, item: id, kind: sg.kind, attr: sg.attr})
-			}
-			r.flush()
+			r.thing(n)
 			r.indent = saved
 			return
 		}
@@ -1311,7 +1357,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 			// Not a space atom: a run of spaces marked as space is
 			// trimmed off the head of a line, which is right for flow
 			// and wrong for a column.
-			r.add(atom{text: strings.Repeat(" ", r.formLabel+2), item: -1, kind: segDim})
+			r.add(atom{text: formIndent + strings.Repeat(" ", r.formLabel+2), item: -1, kind: segDim})
 		}
 		r.add(atom{text: glyphButton + " ", item: id, kind: k})
 		r.words(oneLine(nameOr(n.Name, n.Value)), id, k)
@@ -1321,10 +1367,20 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		if r.formLabel > 0 {
 			r.formField(n, id, func() {
 				r.add(atom{text: glyphInput + " ", item: id, kind: segInput})
-				// The bed runs to the end of the value column: a form's
-				// fields are one shape, and a twelve-cell stub under a
-				// full-width label reads as a stub.
-				r.add(atom{text: fieldBed(n, min(48, r.textW-r.formLabel-4)), item: id, kind: segInput})
+				// The slot recedes and the value stands in it. sshu's form
+				// draws no bed at all — the alignment is what says a value
+				// goes here — but it has placeholders to put in an empty
+				// one and the AX tree gives webu none, so an empty field
+				// would be an empty row. The bed is the least that can be
+				// there: dim, so it is the floor and not the furniture
+				// (user, 2026-09-22 — mauve underscores were the loudest
+				// thing on the page).
+				lead, v, trail := fieldSlot(n, min(48, r.textW-r.formLabel-6))
+				r.add(atom{text: lead, item: id, kind: segDim})
+				if v != "" {
+					r.add(atom{text: v, item: id, kind: segInput})
+				}
+				r.add(atom{text: trail, item: id, kind: segDim})
 			})
 			break
 		}
@@ -1577,19 +1633,22 @@ func (r *renderer) newItem(n *ir.Node) int {
 
 // fieldText is a textbox's box: the value, or nothing, on a bed of
 // underscores wide enough to be seen as a field (ux.md §2.2).
-func fieldText(n *ir.Node) string { return fieldBed(n, 12) }
+func fieldText(n *ir.Node) string {
+	lead, v, trail := fieldSlot(n, 12)
+	return lead + v + trail
+}
 
-// fieldBed is the value on its bed of underscores, at least bed wide: the
-// value centred in it, so an empty field is a slot and a full one is a
-// slot with something in it.
-func fieldBed(n *ir.Node, bed int) string {
+// fieldSlot is the value in its bed, split so the bed can recede and the
+// value stand in it: the underscores before, the value, the underscores
+// after. At least bed wide, and wider when the value needs it.
+func fieldSlot(n *ir.Node, bed int) (string, string, string) {
 	v := oneLine(n.Value)
 	if n.Protected && v != "" {
 		v = "••••"
 	}
 	w := max(max(bed, 12), dispW(v)+4)
 	pad := w - dispW(v)
-	return strings.Repeat("_", pad/2) + v + strings.Repeat("_", pad-pad/2)
+	return strings.Repeat("_", pad/2), v, strings.Repeat("_", pad-pad/2)
 }
 
 // checkText is the box or the dot, as a glyph: the state IS the glyph,

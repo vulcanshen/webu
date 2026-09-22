@@ -68,19 +68,22 @@ type tab struct {
 	// was drawn before; read is whether a section is open to the whole
 	// panel, sec is which one, and secTop scrolls the list when it is
 	// longer than the panel.
-	// drill is the list item opened to the whole panel — Enter on one,
-	// Esc back out. A list item is one thing, so it is one row until you
-	// go into it (render.firstLine, user 2026-09-22).
-	drill cdp.BackendNodeID
-	// drillTitle is that item's first line as it read when it was opened:
-	// what the panel's header row says while you are inside it.
-	drillTitle string
-	secs       []section
-	shape      pageShape
-	flat       bool
-	read       bool
-	sec        int
-	secTop     int
+	// drill is the path of things opened to the whole panel — Enter goes
+	// in, Esc comes back out one level. A list item or an article is one
+	// thing, so it is one row until you go into it (render.firstLine,
+	// user 2026-09-22).
+	//
+	// It is a STACK because the nesting has no bound: a card holds a
+	// list, whose items hold lists of their own, and a page may nest as
+	// deep as it likes. A single "the thing I am inside" was a guess that
+	// three levels was the most there could be (user).
+	drill  []drillStep
+	secs   []section
+	shape  pageShape
+	flat   bool
+	read   bool
+	sec    int
+	secTop int
 
 	// gen guards captures: a result from before the latest navigation is
 	// thrown away rather than drawn over the newer page.
@@ -134,6 +137,14 @@ func (t *tab) stillComing() bool {
 		}
 	}
 	return true
+}
+
+// drillStep is one level of that path: the node, by the id Chromium gave
+// it, and its first line as it read when it was opened — what the header
+// row says while you are inside it.
+type drillStep struct {
+	id    cdp.BackendNodeID
+	title string
 }
 
 // pageMsg is a capture landing: the page as Chromium has it now.
@@ -656,16 +667,12 @@ func (t *tab) relayout(width int) {
 	// page, so the cursor, the scrolling and the row window all work
 	// against them without a second set of rules (user, 2026-09-22).
 	root := t.root
-	if t.drill != 0 {
-		n := nodeByID(t.root, t.drill)
-		if n == nil {
-			t.drill, t.drillTitle = 0, ""
-		} else {
-			root = &ir.Node{Kind: ir.Document, Children: n.Children}
-		}
+	inside := t.drillNode()
+	if inside != t.root {
+		root = &ir.Node{Kind: ir.Document, Children: inside.Children}
 	}
 	t.lay = renderWith(root, renderOpts{width: max(1, width), measure: t.measure,
-		fold: t.fold, drill: t.drill})
+		fold: t.fold, drill: inside.ID})
 	t.layW = width
 	// The pagetab may have lost the capsule the hand was on, or its "+N".
 	if i := t.pagetabIndex(); i >= len(t.lay.pagetab) || (t.onMore() && t.lay.fit >= len(t.lay.pagetab)) {
