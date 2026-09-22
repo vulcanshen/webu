@@ -1,22 +1,20 @@
-󰘎 Empty              󰘎 Filled  some text   󰘎 Search
- query       󰘎 Password  ••••        󰘎 Email  a@b.c       󰘎 
-Number  42          󰘎 Read only  fixed       󰘎 Required
-             󰘎 Disabled  nope        󰘎 Placeholder only
-             󰘎 Labelled by aria              󰘎 Area
- line one…   󰘎 Empty area             
-󰘎 Editable div  typed here 
+󰘎 Empty   󰘎 Filled some text   󰘎 Search query   󰘎 Password
+••••••   󰘎 Email a@b.c   󰘎 Number 42   󰘎 Read only fixed  
+󰘎 Required   󰘎 Disabled nope   󰘎 Placeholder only   󰘎 
+Labelled by aria   󰘎 Area line one…   󰘎 Empty area  
+󰘎 Editable div typed here  
 -- items --
 0 textbox "Empty" rows 0-0
 1 textbox "Filled" rows 0-0
-2 textbox "Search" rows 0-1
-3 textbox "Password" rows 1-1
+2 textbox "Search" rows 0-0
+3 textbox "Password" rows 0-1
 4 textbox "Email" rows 1-1
-5 textbox "Number" rows 1-2
-6 textbox "Read only" rows 2-2
-7 textbox "Required" rows 2-3
-8 textbox "Disabled" rows 3-3
-9 textbox "Placeholder only" rows 3-4
-10 textbox "Labelled by aria" rows 4-4
-11 textbox "Area" rows 4-5
-12 textbox "Empty area" rows 5-5
-13 textbox "Editable div" rows 6-6
+5 textbox "Number" rows 1-1
+6 textbox "Read only" rows 1-1
+7 textbox "Required" rows 2-2
+8 textbox "Disabled" rows 2-2
+9 textbox "Placeholder only" rows 2-2
+10 textbox "Labelled by aria" rows 2-3
+11 textbox "Area" rows 3-3
+12 textbox "Empty area" rows 3-3
+13 textbox "Editable div" rows 4-4
