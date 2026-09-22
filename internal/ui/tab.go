@@ -446,17 +446,6 @@ func (t *tab) apply(msg pageMsg, width int) {
 	t.scrollToCursor(0)
 }
 
-// firstItem is where the cursor starts on a new page: the first item
-// inside main, else the first item at all, else -1. The chrome is on
-// the pagetab, not in the page, so a page starts at its content.
-// firstItem is where the cursor starts on a new page: the first item
-// inside main — main has no rule of its own, so by its row (marks) —
-// else the first item at all, else -1. The chrome is on the pagetab, not
-// in the page, so a page starts at its content.
-// firstItem is where the cursor starts on a new page: the first item
-// inside main — main has no rule of its own, so by its row (marks) —
-// else the first item at all, else -1. The chrome is on the pagetab, not
-// in the page, so a page starts at its content.
 // firstItem is where the page starts: the first item inside main — main
 // has no rule of its own, so by its row (marks) — else, on a page that
 // declares no main, the first heading, which is where its reading
@@ -570,19 +559,26 @@ func (t *tab) relayout(width int) {
 // recut cuts the fresh layout into sections and keeps the reader where it
 // was: rows move when the width changes, the heading does not.
 func (t *tab) recut() {
-	var was *ir.Node
+	was := t.sec
+	var wasNode *ir.Node
 	if t.sec < len(t.secs) {
-		was = t.secs[t.sec].node
+		wasNode = t.secs[t.sec].node
 	}
-	t.secs = sectionsOf(t.root, t.lay)
+	t.secs = sectionsOf(t.root, t.lay, t.url)
 	t.shape = shapeOf(t.secs)
 	if t.shape != shapeDoc {
 		t.read = false
 	}
-	t.sec = 0
-	if was != nil {
+	// Keep the reader where it was. A re-capture builds a whole new tree,
+	// so the heading is a new pointer and matching on that always fails:
+	// it is found by the id Chromium gave it, the way the item cursor is
+	// (apply), and failing that the list holds its place rather than
+	// going back to the top. A page that keeps mutating settles over and
+	// over, and every one of those was resetting the list.
+	t.sec = clamp(was, 0, max(0, len(t.secs)-1))
+	if wasNode != nil {
 		for i, s := range t.secs {
-			if s.node == was {
+			if s.node == wasNode || (wasNode.ID != 0 && s.node != nil && s.node.ID == wasNode.ID) {
 				t.sec = i
 				break
 			}
