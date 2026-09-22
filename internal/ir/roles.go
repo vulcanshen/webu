@@ -111,7 +111,17 @@ var Roles = map[string]Spec{
 	"Canvas": {Kind: Media, Action: Click, Display: "placeholder; nothing inside can be read"},
 	"Iframe": {Kind: Media, Action: Click, Display: "placeholder; the frame's content is not entered (v1)"},
 
-	"separator":  {Kind: Separator, Display: "a horizontal rule"},
+	"separator": {Kind: Separator, Display: "a horizontal rule"},
+
+	// Inline runs the page marks up: drawn with the terminal's own text
+	// attributes, the way a markdown reader draws them (2026-09-22).
+	// <del> and <ins> used to fall through to Unsupported, so struck-out
+	// text arrived wearing the unsupported glyph.
+	"strong":     {Kind: Span, Display: "<strong> / <b>: bold"},
+	"emphasis":   {Kind: Span, Display: "<em> / <i>: italic"},
+	"deletion":   {Kind: Span, Display: "<del> / <s>: struck through"},
+	"insertion":  {Kind: Span, Display: "<ins>: underlined"},
+	"mark":       {Kind: Span, Display: "<mark>: reversed, the way a page highlights a hit"},
 	"code":       {Kind: Code, Display: "monospace; a block when it spans lines"},
 	"blockquote": {Kind: Quote, Display: "indented quotation"},
 
@@ -128,9 +138,6 @@ var Roles = map[string]Spec{
 	"none":          {Transparent: true, Display: "invisible"},
 	"presentation":  {Transparent: true, Display: "invisible"},
 	"LabelText":     {Transparent: true, Display: "a <label>: invisible, the input carries the name"},
-	"strong":        {Transparent: true, Display: "emphasis is not drawn"},
-	"emphasis":      {Transparent: true, Display: "emphasis is not drawn"},
-	"mark":          {Transparent: true, Display: "highlight is not drawn"},
 	"time":          {Transparent: true, Display: "invisible"},
 	"superscript":   {Transparent: true, Display: "invisible"},
 	"subscript":     {Transparent: true, Display: "invisible"},

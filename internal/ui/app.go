@@ -1536,6 +1536,8 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Inspect", key: "I", hint: "DevTools: network, storage, console, source", disabled: t == nil},
 		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
 		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil},
+		menuItem{label: "Yank markdown", key: "yankmd", hint: "the page itself, as markdown",
+			disabled: t == nil || t.root == nil},
 		menuItem{label: "Close", key: "C", hint: "this tab", disabled: t == nil})
 	return items
 }
@@ -1786,6 +1788,12 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		return m.chooseOptions()
 	case "pagetab":
 		return m.togglePagetab()
+	case "yankmd":
+		// The page itself rather than its URL: what webu draws, said in
+		// the form the rest of the family passes around (ir.Markdown).
+		if t != nil && t.root != nil {
+			return m, copyToClipboard(ir.Markdown(t.root))
+		}
 	case "fold":
 		if t != nil {
 			t.toggleFold(m.pageW())

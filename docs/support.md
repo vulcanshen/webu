@@ -31,7 +31,9 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `complementary` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `contentinfo` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `definition` | quote | — | <dd>: indented under its term |
+| `deletion` | span | — | <del> / <s>: struck through |
 | `dialog` | landmark | — | page chrome: a dialog, a capsule on the bar under the URL; its buttons behind Enter |
+| `emphasis` | span | — | <em> / <i>: italic |
 | `figure` | group | — | a figure: its image and caption, on their own lines |
 | `form` | landmark | — | landmark region, enters the outline |
 | `grid` | table | — | columns aligned, widths shrunk to fit |
@@ -40,10 +42,12 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `heading` | heading | click | title with its level; cursor stops here |
 | `image` | media | click | placeholder: glyph, alt or (no alt) |
 | `img` | media | click | placeholder: glyph, alt or (no alt) |
+| `insertion` | span | — | <ins>: underlined |
 | `link` | link | click | glyph + name; Enter opens, menu: open in new tab, yank url |
 | `list` | list | — | the container of list items |
 | `listitem` | listitem | — | one item, with the marker Chromium drew |
 | `main` | landmark | — | landmark region, enters the outline |
+| `mark` | span | — | <mark>: reversed, the way a page highlights a hit |
 | `navigation` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `option` | option | — | one choice of a combobox |
 | `paragraph` | paragraph | — | a block of text, wrapped to width |
@@ -57,6 +61,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `sectionheader` | group | — | an article's or section's header: its lines, in place |
 | `separator` | separator | — | a horizontal rule |
 | `spinbutton` | textbox | edit | a number field; edits like a textbox |
+| `strong` | span | — | <strong> / <b>: bold |
 | `switch` | check | click | [x] name; Enter toggles |
 | `table` | table | — | columns aligned, widths shrunk to fit |
 | `term` | group | — | <dt>: on its own line |
@@ -76,13 +81,10 @@ These roles carry nothing a terminal can use; the node vanishes and its children
 | `ListMarker` | the bullet or number; becomes the item's marker |
 | `MenuListPopup` | the option list under a <select>; its options are read, it is not drawn |
 | `caption` | the table's name already carries it |
-| `emphasis` | emphasis is not drawn |
 | `generic` | div / span: invisible; a block one keeps its line break |
-| `mark` | highlight is not drawn |
 | `none` | invisible |
 | `presentation` | invisible |
 | `rowgroup` | thead / tbody: invisible |
-| `strong` | emphasis is not drawn |
 | `subscript` | invisible |
 | `superscript` | invisible |
 | `time` | invisible |

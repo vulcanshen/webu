@@ -149,23 +149,23 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 			used += dispW(text)
 			switch {
 			case s.item >= 0 && s.item == t.cursor && m.focus == panelPage && !t.onPagetab():
-				b.WriteString(cur.Render(text))
+				b.WriteString(withAttr(cur, s.attr).Render(text))
 			case s.item >= 0 && s.item == t.cursor:
-				b.WriteString(curOff.Render(text))
+				b.WriteString(withAttr(curOff, s.attr).Render(text))
 			case row.code:
 				style, ok := codeStyles[s.kind]
 				if !ok {
 					style = codeStyles[segCode]
 				}
-				b.WriteString(style.Render(text))
+				b.WriteString(withAttr(style, s.attr).Render(text))
 			case row.table:
 				bg := tableBg
 				if row.header {
 					bg = tableHeaderBg
 				}
-				b.WriteString(styles[s.kind].Background(bg).Render(text))
+				b.WriteString(withAttr(styles[s.kind].Background(bg), s.attr).Render(text))
 			default:
-				b.WriteString(styles[s.kind].Render(text))
+				b.WriteString(withAttr(styles[s.kind], s.attr).Render(text))
 			}
 		}
 		if row.code {
@@ -181,6 +181,31 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 		out = append(out, strings.Repeat(" ", innerW))
 	}
 	return out
+}
+
+// withAttr puts the page's own markup on top of whatever the run is
+// already drawn as: <strong> stays bold inside a link, <del> stays
+// struck through inside a table cell (render textAttr, 2026-09-22).
+func withAttr(st lipgloss.Style, a textAttr) lipgloss.Style {
+	if a == 0 {
+		return st
+	}
+	if a&attrBold != 0 {
+		st = st.Bold(true)
+	}
+	if a&attrItalic != 0 {
+		st = st.Italic(true)
+	}
+	if a&attrStrike != 0 {
+		st = st.Strikethrough(true)
+	}
+	if a&attrUnderline != 0 {
+		st = st.Underline(true)
+	}
+	if a&attrReverse != 0 {
+		st = st.Reverse(true)
+	}
+	return st
 }
 
 // segStyles is the colour of each kind of segment: one table, shared by the

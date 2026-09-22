@@ -1,5 +1,26 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **Yank the page as markdown.** The page's Space menu offers the whole
+  page on the clipboard as markdown — headings with their level, lists
+  nested and tight, pipe tables, fenced code, quotes, images, and the
+  inline markup as `**`, `*`, `~~`, `==`. What markdown has no word for
+  — a button, a field, a check box — is written as a bracketed note
+  rather than dropped, so a form still reads as a form. The same writer
+  gives the IR fixtures a second golden each, one a person can read.
+
+### Changed
+
+- **A page's own markup is drawn with the terminal's.** `<strong>` is
+  bold, `<em>` italic, `<del>` struck through, `<ins>` underlined and
+  `<mark>` reversed, composed with whatever the run already is — markup
+  inside a heading or a table cell keeps both. `<del>` and `<ins>` had
+  no entry in the role table at all until now, so struck-out text
+  arrived wearing the "unsupported" glyph.
+
 ## [0.2.0] — 2026-09-22
 
 ### Changed

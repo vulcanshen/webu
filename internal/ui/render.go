@@ -49,6 +49,43 @@ type seg struct {
 	text string
 	item int // index into layout.items, or -1
 	kind segKind
+	// attr is what the page marked this run up as — bold, italic, struck
+	// through — on top of whatever its kind draws (textAttr).
+	attr textAttr
+}
+
+// textAttr is the terminal's own text attributes, which is how webu draws
+// the inline markup a page carries: <strong>, <em>, <del>, <ins>, <mark>
+// (2026-09-22). A bitfield rather than more segKinds, because they
+// compose — bold inside a link is both — and because a kind already says
+// what a run IS while an attribute says how it is marked up.
+type textAttr uint8
+
+const (
+	attrBold textAttr = 1 << iota
+	attrItalic
+	attrStrike
+	attrUnderline
+	attrReverse
+)
+
+// attrOf is the attribute an inline run's role draws with.
+func attrOf(role string) textAttr {
+	switch role {
+	case "strong":
+		return attrBold
+	case "emphasis":
+		return attrItalic
+	case "deletion":
+		return attrStrike
+	case "insertion":
+		return attrUnderline
+	case "mark":
+		// Reverse video: a highlight that borrows no colour band, so it
+		// cannot be read as a link, as code, or as the cursor (theme).
+		return attrReverse
+	}
+	return 0
 }
 
 type row struct {
@@ -400,7 +437,8 @@ type atom struct {
 	text  string
 	item  int
 	kind  segKind
-	space bool // a breaking space: dropped at a line end
+	attr  textAttr // stamped by add from the renderer's current markup
+	space bool     // a breaking space: dropped at a line end
 }
 
 // renderOpts is what a layout depends on besides the tree.
@@ -441,9 +479,12 @@ type renderer struct {
 	// to while the cell is drawn: the cell is the one stop, the links in
 	// it are behind it (table, 2026-09-21). -1 outside a cell.
 	cellItem int
-	indent   string // prefix every wrapped line of the current block gets
-	lead     string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
-	gap      bool   // a blank row is owed before the next content row
+	// attr is the markup the run being gathered sits inside — <strong>,
+	// <em>, <del> — which add stamps onto every atom (inline, ir.Span).
+	attr   textAttr
+	indent string // prefix every wrapped line of the current block gets
+	lead   string // prefix the FIRST line gets instead of indent (a list marker); consumed by the next flush
+	gap    bool   // a blank row is owed before the next content row
 	// inCell: a table cell is being gathered. A cell is one line, so a block
 	// inside it (a <center>, a <div>) flattens into the flow instead of
 	// emitting rows of its own — which would land ABOVE the table, since the
@@ -1179,6 +1220,13 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	switch n.Kind {
 	case ir.Text:
 		r.words(n.Name, item, kind)
+	case ir.Span:
+		// The page's own markup: everything inside is drawn with one more
+		// attribute on it, whatever else it is (2026-09-22).
+		saved := r.attr
+		r.attr |= attrOf(n.Role)
+		r.inlineChildren(n, item, kind)
+		r.attr = saved
 	case ir.Link:
 		if isSkipLink(n) && !r.inCell && r.cellItem < 0 {
 			// Chrome, not a link to follow: the pagetab's skip capsule.
@@ -1292,6 +1340,7 @@ func (r *renderer) words(text string, item int, kind segKind) {
 }
 
 func (r *renderer) add(a atom) {
+	a.attr |= r.attr
 	// Two spaces in a row collapse, the way HTML collapses them.
 	if a.space && len(r.flow) > 0 && r.flow[len(r.flow)-1].space {
 		return
@@ -1725,11 +1774,12 @@ func (r *renderer) wrap() {
 	pending := false
 	var pendingItem int
 	var pendingKind segKind
+	var pendingAttr textAttr
 	for i := 0; i < len(flow); i++ {
 		a := flow[i]
 		if a.space {
 			if used > dispW(prefix) {
-				pending, pendingItem, pendingKind = true, a.item, a.kind
+				pending, pendingItem, pendingKind, pendingAttr = true, a.item, a.kind, a.attr
 			}
 			continue
 		}
@@ -1743,7 +1793,7 @@ func (r *renderer) wrap() {
 			pending = false
 		}
 		if pending {
-			line = append(line, seg{text: " ", item: pendingItem, kind: pendingKind})
+			line = append(line, seg{text: " ", item: pendingItem, kind: pendingKind, attr: pendingAttr})
 			used++
 			pending = false
 		}
@@ -1751,11 +1801,11 @@ func (r *renderer) wrap() {
 		for dispW(text) > avail() && avail() > 0 {
 			// A word wider than the line: hard-split it.
 			head := truncateNoEllipsis(text, avail())
-			line = append(line, seg{text: head, item: a.item, kind: a.kind})
+			line = append(line, seg{text: head, item: a.item, kind: a.kind, attr: a.attr})
 			text = strings.TrimPrefix(text, head)
 			emitLine()
 		}
-		line = append(line, seg{text: text, item: a.item, kind: a.kind})
+		line = append(line, seg{text: text, item: a.item, kind: a.kind, attr: a.attr})
 		used += dispW(text)
 	}
 	if len(line) > 1 {

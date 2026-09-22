@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
@@ -693,5 +694,57 @@ func TestOtherGoesToThePagetab(t *testing.T) {
 	bare := &ir.Node{Kind: ir.Document, Children: []*ir.Node{para(text("promo")), para(link("First", "u", 3))}}
 	if l := render(bare, 60); len(l.pagetab) != 0 || len(l.items) != 1 || !strings.Contains(dumpLayout(l), "promo") {
 		t.Errorf("without main the page keeps everything:\n%s", dumpLayout(l))
+	}
+}
+
+// TestInlineMarkup: the page's own markup is drawn with the terminal's
+// text attributes, composed with whatever the run already is — bold
+// inside a heading is both — and <del> / <ins> are drawn at all, having
+// fallen through to "unsupported" until 2026-09-22. A link is the one
+// place markup does not reach: a link draws its accessible name, which
+// Chromium has already flattened.
+func TestInlineMarkup(t *testing.T) {
+	span := func(role string, kids ...*ir.Node) *ir.Node {
+		return &ir.Node{Kind: ir.Span, Role: role, Children: kids}
+	}
+	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		para(text("plain "), span("strong", text("bold")), text(" "),
+			span("emphasis", text("ital")), text(" "),
+			span("deletion", text("gone")), text(" "),
+			span("insertion", text("new")), text(" "),
+			span("mark", text("hit"))),
+		{Kind: ir.Heading, Level: 2, Children: []*ir.Node{
+			text("a "), span("strong", text("loud")), text(" title")}},
+	}}
+	l := render(root, 60)
+	want := map[string]textAttr{
+		"bold": attrBold, "ital": attrItalic, "gone": attrStrike,
+		"new": attrUnderline, "hit": attrReverse, "plain": 0,
+	}
+	got := map[string]textAttr{}
+	var headAttr textAttr
+	var headKind segKind
+	for _, r := range l.rows {
+		for _, s := range r.segs {
+			word := strings.TrimSpace(s.text)
+			if _, ok := want[word]; ok {
+				got[word] = s.attr
+			}
+			if word == "loud" {
+				headAttr, headKind = s.attr, s.kind
+			}
+		}
+	}
+	for word, attr := range want {
+		if got[word] != attr {
+			t.Errorf("%q should be drawn with attr %b, is %b", word, attr, got[word])
+		}
+	}
+	if headAttr&attrBold == 0 || headKind != segHeading {
+		t.Errorf("markup inside a heading keeps both: attr %b kind %v", headAttr, headKind)
+	}
+	// The attribute reaches the paint rather than stopping at the layout.
+	if st := withAttr(lipgloss.NewStyle(), attrStrike); !st.GetStrikethrough() {
+		t.Error("withAttr should put the attribute on the style")
 	}
 }

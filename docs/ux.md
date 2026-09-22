@@ -77,6 +77,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 | 一串裸連結（頁面把連結一個一列排下來：側欄目錄、mega menu） | **流動排版**（2026-09-22）：連續兩個以上、裡面沒有區塊的 block 連結，不各佔一列，像段落裡的連結一樣一列擠好幾個。理由——一列一個是 CSS 的 `display:block`，webu 本來就不照 CSS 排版；w3schools 的側欄因此從約 120 列變成約 30 列。**什麼都沒藏、也沒猜**：量過七個站，內文裡的連結串最長 5–8（HN 全頁最長 2），導覽的 12–47，結構上分不開，所以不用數量切、不預設收合（user 2026-09-22：heading 不預設收）|
 | 頁面的起點 | 有 main 就是 **main 裡第一個 item**，**視窗也捲到那裡**（2026-09-22 改；先前是游標在 main、視窗停頁頂，user 實機看了效果不好）。沒有 main 的頁（w3schools、sqlite.org）就停在**最上層的那個 heading**（h1 = 這頁在講什麼，它前面的是傢俱）；連 heading 都沒有（Hacker News）才停第一列 |
 | table cell（有 header 的資料表） | **每一格都是 item**（表頭格也是；格裡的連結、按鈕不再是 item，藏在格後面）——格被壓縮、截斷是正常的，所以要能停上去看全文；這是唯一 `hjkl` 四鍵都在用的地方（`h/l` 同列換格、`j/k` 換列）。Enter：純文字格 → **內容 popup**（message popup，標題是該欄的表頭、全文折行、長了 `j/k` `u/d` `G` 捲動）；格裡只有一個連結 / 按鈕 / 欄位、沒有別的字 → 那一格就是那個東西，Enter 做它的 Enter（連結 confirm 後開）；文字加連結混合 → item operation 選單，第一列 Content、之後列出格裡的東西。Space 同一份。整張表有底色（surface0），表頭列更深一層（surface1）、文字 Text 粗體——**表頭靠底色分、不靠前景色**，Mauve 拿掉（2026-09-21） |
+| 頁面自己的 inline 標記（`<strong>` `<em>` `<del>` `<ins>` `<mark>`） | 用終端機的文字屬性畫：粗體 / 斜體 / 刪除線 / 底線 / 反白（2026-09-22）。是 `seg.attr` 位元欄不是新的 segKind——它們會**疊加**（heading 裡的粗體兩者都要），而 kind 說的是「這是什麼」、attr 說的是「頁面把它標成什麼」。`<mark>` 用反白是因為它不借任何色帶，不會被讀成連結、code 或游標。**`<del>` / `<ins>` 在此之前是落在 unsupported 的**，刪除線文字會頂著 unsupported glyph。連結是唯一到不了的地方：連結畫的是 accessible name，Chromium 已經把裡面的標記壓平了 |
 | 所有 item 共有 | Yank text、Inspect（message 類 popup：role、name、states、backendDOMNodeId、href 或 src） |
 | 未支援 role | 第一列 disabled：「role: slider，尚未支援，只能 click」（function.md §3 fallback） |
 
@@ -85,7 +86,7 @@ operation 一致 —— item 游標只停在 item 上，要進到段落文字裡
 **`[2]` 一般模式，panel operation**：`[R] Reload`、`[T]ab`（新分頁，與 `[1]` 的 `[T]` 一模一樣；修訂 2026-09-20）、`[P] Previous`、`[N] Next`、
 `[/] Search`（進 visual mode）、`[v]isual mode`（修訂 2026-09-20：原 `[V] View source` 搬進 DevTools › Source，`V` 讓給 visual mode；
 2026-09-21：再改小寫 `v`，`V` 還給家族的 splash 彩蛋——mode 不是 panel operation，這是這一區唯一的小寫）、`[L]ocation`（修訂 2026-09-21：原 `UR[L]`，label 改 Location、hint 改「a URL or a search; this page's own is offered」；2026-09-20 從 `[U]` 改來，對應 Chrome 的 Cmd+L；全域鍵，任何面板都能按，見 §7）、`[A]dd bookmark`（修訂 2026-09-20：原 `[A] Add to…` picker 二選一，Shortcuts 拿掉後只剩 Bookmarks，直接加）、`[O] Outline`、`[I]nspect`（DevTools；修訂 2026-09-20：原 `[D]`，`D` 讓給 header 的 Downloads，`I` 對應 Chrome 的 Cmd+Opt+I）、
-`[Z] Zoom`、`[Y] Yank page url`、`[C]lose`（關掉 `[2]` 正在顯示的分頁；`[1]` 的小寫 `c` 關的是游標列；
+`[Z] Zoom`、`[Y] Yank page url`、`Yank markdown`（menu-only，整頁轉 markdown 進剪貼簿；2026-09-22）、`[C]lose`（關掉 `[2]` 正在顯示的分頁；`[1]` 的小寫 `c` 關的是游標列；
 修訂 2026-09-21：原 `[W] Close`，`W` 讓給 header 的 Web）。
 
 Outline 與 DevTools 的作用對象是目前頁面 → contextual → 在這裡，不在 header、不在 §A.2
