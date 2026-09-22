@@ -1,8 +1,8 @@
-[x] Checked [ ] Unchecked [-] Mixed [ ] Disabled
+󰄵 Checked 󰄱 Unchecked 󰛲 Mixed 󰄱 Disabled
 Radios
-(•) One ( ) Two
-[x] Switch on [ ] Switch off
-[x] ARIA checkbox
+󰐾 One 󰐽 Two
+󰄵 Switch on 󰄱 Switch off
+󰄵 ARIA checkbox
 -- items --
 0 check "Checked" rows 0-0
 1 check "Unchecked" rows 0-0

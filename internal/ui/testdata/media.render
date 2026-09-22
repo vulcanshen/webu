@@ -1,12 +1,11 @@
-[󰋩 Has alt text]
+󰋩 Has alt text
 
-[󰋩 no alt]
+󰋩 no alt
 
-[󰋩 Aria labelled]
+󰋩 Aria labelled
 
-[󰕧 A video] [󰎇 no alt] [󰇞 A chart] [󰘔 Embedded frame]
-[󰋩 An svg]
-[󰋩 ARIA image]
+󰕧 A video 󰎇 no alt 󰇞 A chart 󰘔 Embedded frame 󰋩 An svg
+󰋩 ARIA image
 -- items --
 0 media "Has alt text" rows 0-0
 1 media "" rows 2-2
@@ -15,5 +14,5 @@
 4 media "" rows 6-6
 5 media "A chart" rows 6-6
 6 media "Embedded frame" rows 6-6
-7 media "An svg" rows 7-7
-8 media "ARIA image" rows 8-8
+7 media "An svg" rows 6-6
+8 media "ARIA image" rows 7-7

@@ -14,13 +14,13 @@ Visible text.
 󰮦 tree
 󰮦 treeitem Leaf Leaf
 Clickable div without a role
-[󰋩 Fig]
+󰋩 Fig
 Caption
-• [ Menu button ]
+• 󱊨 Menu button
 
 󰮦 meter Meter󰮦 ColorWell Colour 󰮦 Date Date 󰘎 Year Year
 _____0______ / 󰘎 Month Month _____0______ / 󰘎 Day Day
-_____0______ [ Show date picker Show date picker ] [ File ]
+_____0______ 󱊨 Show date picker Show date picker 󱊨 File
 -- items --
 0 unsupported "Volume" rows 0-0
 1 unsupported "Range" rows 1-1
