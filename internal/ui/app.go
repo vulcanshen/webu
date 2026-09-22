@@ -90,7 +90,6 @@ type AppModel struct {
 	// above (§6.4). The toast rides on top of everything.
 	spaceMenu spaceMenu
 	options   spaceMenu   // a textbox's Submit/Edit/Clear/Yank, or a select's options
-	outline   spaceMenu   // the page's landmarks and headings
 	lists     listPanel   // the screen behind a header chip after [W]eb
 	splash    splashModel // the easter egg (splash.go)
 	devtools  devtoolsPopup
@@ -106,8 +105,6 @@ type AppModel struct {
 	// Add to… picker.
 	optionsFor  *ir.Node
 	optionsKind optionsKind
-	// outlineFor is what the outline's rows stand for.
-	outlineFor []outlineEntry
 	// dialog is the page's question being asked (function.md §5); the page
 	// is stalled until it is answered, and settle captures wait too.
 	dialog *dialogMsg
@@ -161,7 +158,6 @@ func New(b *browser.Browser, start ...string) AppModel {
 		spaceMenu: newSpaceMenu(),
 		splash:    newSplashModel(),
 		options:   spaceMenu{anim: newPopupAnimator("options")},
-		outline:   newOutlineMenu(),
 		lists:     newListPanel(),
 		devtools:  newDevtoolsPopup(),
 		message:   newMessagePopup(),
@@ -219,7 +215,7 @@ func (m AppModel) narrow() bool { return m.w < narrowW }
 func (m AppModel) panelH() int  { return m.h - 3 } // the header row, its rule, and the footer row
 func (m AppModel) layer() int {
 	if m.spaceMenu.isActive() || m.options.isActive() ||
-		m.outline.isActive() || m.devtools.isActive() {
+		m.devtools.isActive() {
 		return 2
 	}
 	return 1
@@ -249,7 +245,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		first := m.w == 0
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
-			&m.spaceMenu, &m.options, &m.outline, &m.lists, &m.devtools, &m.message,
+			&m.spaceMenu, &m.options, &m.lists, &m.devtools, &m.message,
 			&m.help, &m.confirm, &m.input, &m.picker, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
@@ -273,7 +269,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AnimTickMsg:
 		return m, tea.Batch(
-			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.outline.anim.tick(msg),
+			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg),
 			m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
 			m.message.anim.tick(msg),
 			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg),
@@ -679,7 +675,7 @@ func (m *AppModel) recordVisit(t *tab) {
 // ------------------------------------------------------------------- keys
 
 func (m AppModel) popupOpen() bool {
-	return m.spaceMenu.isActive() || m.options.isActive() || m.outline.isActive() ||
+	return m.spaceMenu.isActive() || m.options.isActive() ||
 		m.devtools.isActive() || m.message.isActive() ||
 		m.help.isActive() || m.confirm.isActive() || m.input.isActive() || m.picker.isActive()
 }
@@ -689,7 +685,7 @@ func (m AppModel) popupOpen() bool {
 // that arrived during its animation belongs to whatever is under it.
 func (m AppModel) floatOwned() bool {
 	return m.toast.anim.owns() || m.input.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
-		m.options.anim.owns() || m.outline.anim.owns() || m.devtools.anim.owns() ||
+		m.options.anim.owns() || m.devtools.anim.owns() ||
 		m.message.anim.owns() || m.help.anim.owns() || m.spaceMenu.anim.owns()
 }
 
@@ -759,8 +755,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.confirmKey(msg)
 	case m.options.anim.owns():
 		return m.optionsKey(msg)
-	case m.outline.anim.owns():
-		return m.outlineKey(msg)
 	case m.devtools.anim.owns():
 		return m.devtoolsKey(msg)
 	case m.message.anim.owns():
@@ -825,8 +819,6 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		return m, m.confirm.close()
 	case m.options.anim.owns():
 		return m, m.options.close()
-	case m.outline.anim.owns():
-		return m, m.outline.close()
 	case m.devtools.anim.owns():
 		// Innermost first: the detail, then a filter being typed, then the
 		// popup.
@@ -877,7 +869,7 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 // over, and the user is back on the panel (§7.1).
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.input.close(), m.picker.close(), m.confirm.close(), m.options.close(),
-		m.outline.close(), m.devtools.close(), m.message.close(),
+		m.devtools.close(), m.message.close(),
 		m.help.close(), m.spaceMenu.close())
 }
 
@@ -968,7 +960,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m.dispatch("enter")
 		case "n", "p", "go":
 			return m.dispatch(k)
-		case "R", "T", "Y", "A", "O", "Z", "I", "C":
+		case "R", "T", "Y", "A", "Z", "I", "C":
 			return m.dispatch(k)
 		}
 	}
@@ -1550,7 +1542,6 @@ func (m AppModel) pageMenuItems() []menuItem {
 			disabled: t == nil || !t.read},
 		menuItem{label: "[p] Previous section", key: "p", hint: "the one before this, at the same depth",
 			disabled: t == nil || !t.read},
-		menuItem{label: "Outline", key: "O", hint: "landmarks and headings", disabled: t == nil},
 		menuItem{label: "Inspect", key: "I", hint: "DevTools: network, storage, console, source", disabled: t == nil},
 		menuItem{label: "Zoom", key: "Z", hint: "the page alone, or the grid back"},
 		menuItem{label: "Yank page url", key: "Y", hint: "to the clipboard", disabled: t == nil},
@@ -1797,8 +1788,6 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		if t != nil {
 			return m, copyToClipboard(t.url)
 		}
-	case "O":
-		return m, m.openOutline()
 	case "I":
 		// Inspect, Chrome's word for it (Cmd+Opt+I); D is the header's
 		// Downloads from any panel (revised 2026-09-20).
@@ -2585,9 +2574,6 @@ func (m AppModel) View() string {
 	// Bottom to top: the menu first so what it opened lands above it.
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.outline.isActive() {
-		out = overlay.Composite(m.outline.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.devtools.isActive() {
 		out = overlay.Composite(m.devtools.view(), out, overlay.Center, overlay.Center, 0, 0)
