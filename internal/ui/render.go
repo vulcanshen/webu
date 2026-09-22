@@ -26,6 +26,9 @@ const (
 	segLink
 	segButton
 	segInput
+	// segFieldBed is the ground a value sits on, which is what says a
+	// value goes here (theme.pageInputBg).
+	segFieldBed
 	segCheck
 	segMedia
 	segCode
@@ -1487,12 +1490,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 				// there: dim, so it is the floor and not the furniture
 				// (user, 2026-09-22 — mauve underscores were the loudest
 				// thing on the page).
-				lead, v, trail := fieldSlot(n, r.formBed())
-				r.add(atom{text: lead, item: id, kind: segDim})
-				if v != "" {
-					r.add(atom{text: v, item: id, kind: segInput})
-				}
-				r.add(atom{text: trail, item: id, kind: segDim})
+				r.add(atom{text: fieldSlot(n, r.formBed()), item: id, kind: segFieldBed})
 			})
 			break
 		}
@@ -1501,7 +1499,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 			r.words(n.Name, id, segInput)
 			r.add(atom{text: " ", item: id, kind: segInput, space: true})
 		}
-		r.add(atom{text: fieldText(n), item: id, kind: segInput})
+		r.add(atom{text: fieldSlot(n, formBedMin), item: id, kind: segFieldBed})
 	case ir.Check:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
@@ -1743,24 +1741,16 @@ func (r *renderer) newItem(n *ir.Node) int {
 	return len(r.items) - 1
 }
 
-// fieldText is a textbox's box: the value, or nothing, on a bed of
-// underscores wide enough to be seen as a field (ux.md §2.2).
-func fieldText(n *ir.Node) string {
-	lead, v, trail := fieldSlot(n, 12)
-	return lead + v + trail
-}
-
-// fieldSlot is the value in its bed, split so the bed can recede and the
-// value stand in it: the underscores before, the value, the underscores
-// after. At least bed wide, and wider when the value needs it.
-func fieldSlot(n *ir.Node, bed int) (string, string, string) {
+// fieldSlot is the value on its bed: the value, then the ground it sits
+// on out to bed cells. One string, drawn on the input ground — an empty
+// field is an empty bar, the way an empty field looks everywhere else.
+func fieldSlot(n *ir.Node, bed int) string {
 	v := oneLine(n.Value)
 	if n.Protected && v != "" {
 		v = "••••"
 	}
-	w := max(max(bed, 12), dispW(v)+4)
-	pad := w - dispW(v)
-	return strings.Repeat("_", pad/2), v, strings.Repeat("_", pad-pad/2)
+	w := max(max(bed, formBedMin), dispW(v)+2)
+	return " " + v + strings.Repeat(" ", max(1, w-dispW(v)-1))
 }
 
 // checkText is the box or the dot, as a glyph: the state IS the glyph,
