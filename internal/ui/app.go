@@ -264,6 +264,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.splash, cmd = m.splash.update(msg)
 		return m, cmd
 
+	case spinTickMsg:
+		// The chain lives exactly as long as the fetch does.
+		if m.fetching() {
+			return m, spinCmd()
+		}
+		return m, nil
+
 	case AnimTickMsg:
 		return m, tea.Batch(
 			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg), m.outline.anim.tick(msg),
@@ -382,7 +389,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t == nil {
 			return m, waitEvent(m.events)
 		}
-		return m, tea.Batch(waitEvent(m.events), t.settle(250*time.Millisecond))
+		cmds := []tea.Cmd{waitEvent(m.events), t.settle(250 * time.Millisecond)}
+		if m.fetching() {
+			// A navigation the page started rather than the user: the
+			// spinner is armed here instead.
+			cmds = append(cmds, spinCmd())
+		}
+		return m, tea.Batch(cmds...)
 
 	case settleMsg:
 		_, t := m.tabByID(msg.tabID)
@@ -427,7 +440,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		return m.handleKey(msg)
+		// A key is where a fetch begins, so it is where the spinner in
+		// panel [2] is armed; the chain then keeps itself alive for as
+		// long as the fetch does (pagepanel spinTickMsg). Arming twice
+		// costs a redraw, never a wrong frame: the frame is read from
+		// the clock, not counted.
+		mm, cmd := m.handleKey(msg)
+		if am, ok := mm.(AppModel); ok && am.fetching() {
+			cmd = tea.Batch(cmd, spinCmd())
+		}
+		return mm, cmd
 	}
 	return m, nil
 }

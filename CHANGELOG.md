@@ -36,6 +36,16 @@
   structure, and webu does not do CSS layout. Nothing is hidden and
   nothing is guessed — a run of links that is content flows too, and
   reads the same.
+- **The page panel says when it is fetching.** The globe beside the URL
+  turns while a page is on its way and comes back to rest when it lands,
+  so a slow site reads as working rather than as stuck; the glyph now
+  wears the same blue as the URL, the two being one thing — where you
+  are. A link chosen from the pagetab shows it like any other.
+- **An anchor scrolls to its target.** Following a link into the page —
+  from the pagetab, a table of contents, a skip link — puts the target
+  on the first row of the window rather than merely somewhere on it,
+  which looked like nothing had happened when the target was on screen
+  already.
 - **A page opens where its reading starts.** The window scrolls to main,
   not only the cursor; a page that declares no main opens on its first
   heading, which is what the page is about, and everything above it

@@ -595,6 +595,59 @@ func TestJumpToAnchor(t *testing.T) {
 	if tb.jumpToAnchor("plain", 20) || tb.jumpToAnchor("missing", 20) || tb.cursor != 0 {
 		t.Errorf("nothing to stop on is no jump: cursor %d", tb.cursor)
 	}
+	// The window follows: the target is the first row on screen, the way
+	// following an anchor scrolls a browser (2026-09-22). A long page,
+	// so there is somewhere to scroll to.
+	long := &ir.Node{Kind: ir.Document, Children: []*ir.Node{}}
+	for i := 0; i < 40; i++ {
+		long.Children = append(long.Children, para(text("filler line")))
+	}
+	long.Children = append(long.Children,
+		&ir.Node{Kind: ir.Landmark, Role: "region", Name: "Far", ID: 99, Children: []*ir.Node{para(link("There", "u", 98))}})
+	tb = &tab{cursor: 0, root: long, anchors: map[string]cdp.BackendNodeID{"far": 99},
+		parents: map[cdp.BackendNodeID]cdp.BackendNodeID{}}
+	tb.relayout(60)
+	tb.pagetab = 1 // and the hand was on the pagetab when it chose the anchor
+	if !tb.jumpToAnchor("far", 10) {
+		t.Fatal("the anchor should be found")
+	}
+	if row := tb.lay.items[tb.cursor].first; tb.top != row {
+		t.Errorf("the target should be the first row on screen: top %d, target row %d", tb.top, row)
+	}
+	if tb.onPagetab() {
+		t.Error("landing in the page takes the hand off the pagetab")
+	}
+}
+
+// TestSpinnerWhileFetching: panel [2]'s URL row turns while the page is
+// on its way and shows the web glyph at rest, and the glyph wears the
+// same blue as the URL beside it (2026-09-22).
+func TestSpinnerWhileFetching(t *testing.T) {
+	tb := &tab{id: 1, url: "https://x.test/", cursor: -1}
+	m := AppModel{w: 100, h: 30, tabs: []*tab{tb}}
+	row := func() string { return m.pageBody(80, 12)[0] }
+	if !strings.Contains(row(), glyphWeb) {
+		t.Errorf("at rest the row wears the web glyph: %q", row())
+	}
+	if m.fetching() {
+		t.Error("nothing is being fetched yet")
+	}
+	tb.loading = true
+	if !m.fetching() {
+		t.Error("a loading tab is a fetch in flight: what keeps the spinner armed")
+	}
+	spun := false
+	for _, f := range spinnerFrames {
+		if strings.Contains(row(), f) {
+			spun = true
+		}
+	}
+	if !spun || strings.Contains(row(), glyphWeb) {
+		t.Errorf("while fetching the glyph is replaced by a spinner frame: %q", row())
+	}
+	if len(spinnerFrames) < 4 {
+		t.Error("a spinner needs frames to spin")
+	}
 }
 
 // TestOtherGoesToThePagetab: with a main on the page, what lies outside it

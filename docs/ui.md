@@ -102,7 +102,7 @@ footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
 **單一職責，永遠是頁面。** 邊框 chip 固定 `[2]`，不放模式名、不放頁標題（標題在 `[1]`，
 一個元素一個語意 §B）。
 
-- 第一列：URL（純文字、不可 focus、縮法見 §1.2）；第二列分隔線 = **pagetab**（user 命名 2026-09-22），頁面的 chrome 以一條 powerline 鏈放在這條線上（見下）；之後是 IR 渲染的頁面
+- 第一列：URL（純文字、不可 focus、縮法見 §1.2），前面一個 glyph 說抓取狀態：靜止時是地球（`glyphWeb`）、抓取中換成 braille 轉圈（`spinnerFrames`，2026-09-22 user 定：不然看起來像卡住），glyph 與 URL 同一個藍（結構色帶，兩者是同一件事「你在哪」）；第二列分隔線 = **pagetab**（user 命名 2026-09-22），頁面的 chrome 以一條 powerline 鏈放在這條線上（見下）；之後是 IR 渲染的頁面
 - cursor 只停在 item（互動節點 + heading + landmark 的標題列），文字段落是 item 之間的 flow
 - **Heading 收合（2026-09-21）**：是 item 的 heading（裡面沒有 link 等 item 的）Enter 直接 Collapse / Expand，範圍到下一個同級或更高級 heading、或所在 landmark 結束為止；收合列 `▸ # 標題 · N items`；Outline 跳進被收合的區段會先展開。用詞與 landmark 列、Bookmarks 目錄列一致：Collapse / Expand
 - **Landmark（修訂 2026-09-20）**：每個 landmark 以一列帶名字的細線開頭（`▾ navigation Repository ────`），
@@ -116,6 +116,7 @@ footer 在 screen 上是 `space menu   ? help   esc web   q quit`。
 - **非 HTML 的回應**（修訂 2026-09-20）：JSON / 純文字 / XML / CSV 等依 `document.contentType` 整份畫成一個 code block，
   JSON 自動縮排；不畫 Chrome 自己的 JSON viewer（Pretty-print 表單）
 - **新頁載入**：游標回 main 裡第一個 item、**視窗捲到它**（修訂 2026-09-22，原本停頁頂）；不跟著游標捲（同頁重畫才留位）
+- **頁內錨點**：跳過去時**把目標捲成畫面第一列**（修訂 2026-09-22，原本只保證看得到，目標本來就在畫面上時看起來像沒反應）；hand 若在 pagetab 上會一併回到頁面
 - 空狀態（沒有分頁）：置中事實「no page」+ 提示（該按什麼），sshu `empty.go` 的形狀
 - 載入中：邊框 hint 顯示 loading；即時更新重畫時 cursor 留位（function.md §4 / §6）
 

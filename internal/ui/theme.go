@@ -1,6 +1,10 @@
 package ui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"time"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 // Colour anchors (catppuccin-mocha) — ui.md §4 / VTP §B. Assigned once,
 // derived everywhere. Each band is reserved: nothing borrows another's, or
@@ -62,6 +66,27 @@ const (
 	crustHex = "#11111b" // recessed background of an inactive capsule
 )
 
+// spinnerFrames stands in for the web glyph in panel [2]'s URL row while
+// the page is on its way (2026-09-22). A page being fetched used to be
+// told only by the text dimming, which reads as a hang rather than as
+// work; something has to move. Braille dots, the terminal's own idiom
+// for that, rather than a Nerd Font glyph: one glyph cannot spin.
+var spinnerFrames = []string{
+	string(rune(0x280b)), string(rune(0x2819)), string(rune(0x2839)), string(rune(0x2838)),
+	string(rune(0x283c)), string(rune(0x2834)), string(rune(0x2826)), string(rune(0x2827)),
+	string(rune(0x2807)), string(rune(0x280f)),
+}
+
+// spinStep is how long one frame of it lasts.
+const spinStep = 90 * time.Millisecond
+
+// spinnerFrame is the frame due now. It is read from the clock rather
+// than counted, so the animation is right however many redraws land —
+// and a stray tick costs a redraw, never a jump.
+func spinnerFrame() string {
+	return spinnerFrames[(time.Now().UnixNano()/int64(spinStep))%int64(len(spinnerFrames))]
+}
+
 // Nerd Font glyphs. Never a PUA literal in source — built from the rune so
 // the codepoint stays greppable and the file stays editor-safe (family
 // rule). One role, one glyph, one table (ux.md §B).
@@ -110,7 +135,9 @@ var (
 	// page is on its way. The same codepoint as kbu's Logs live glyph
 	// (ui.md §2): the family says "live" with one shape.
 	glyphLive = string(rune(0xf0753)) // kbu logsLiveGlyph, U+F0753
-	// Panel [2]'s URL row, at rest.
+	// Panel [2]'s URL row, at rest. It wears the structural band — blue,
+	// the colour of the URL beside it — because the pair is one thing:
+	// where you are (2026-09-22).
 	glyphWeb = string(rune(0xf059f)) // nf-md-web
 
 	// Page roles (ux.md §B: one role, one glyph).
