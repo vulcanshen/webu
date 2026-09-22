@@ -818,7 +818,7 @@ func TestABlockLabelIsNotPrintedTwice(t *testing.T) {
 			para(text("Password")), field("Password", 3),
 		}},
 	}}
-	l := render(root, 60)
+	l := render(root, 100)
 	for _, name := range []string{"Username or email address", "Password"} {
 		n := 0
 		for _, r := range l.rows {
@@ -834,14 +834,14 @@ func TestABlockLabelIsNotPrintedTwice(t *testing.T) {
 	kept := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		para(text("Type your Password below, carefully")), field("Password", 4),
 	}}
-	if k := render(kept, 60); !strings.Contains(dumpLayout(k), "carefully") {
+	if k := render(kept, 100); !strings.Contains(dumpLayout(k), "carefully") {
 		t.Errorf("only an exact label is dropped:\n%s", dumpLayout(k))
 	}
 	// Nor is a row anything else points at: an item's row survives.
 	held := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
 		para(link("Password", "https://x.test/p", 9)), field("Password", 5),
 	}}
-	if h := render(held, 60); len(h.items) != 2 {
+	if h := render(held, 100); len(h.items) != 2 {
 		t.Errorf("a row an item is on is never dropped:\n%s", dumpLayout(h))
 	}
 }
@@ -1006,5 +1006,92 @@ func TestPressingIsNotNavigating(t *testing.T) {
 	_ = tb.act(func(context.Context) error { return nil })
 	if tb.loading || tb.navigating {
 		t.Error("a reveal webu does for itself is quiet, or its settle would reveal again forever")
+	}
+}
+
+// A form is drawn as a form: every label in one column, every value
+// against the same left edge (user, 2026-09-22, after sshu's). The
+// alignment IS what says "this is a form" — a terminal has no box to draw
+// one with. The label is not an item: the cursor stops on the value,
+// which is what Enter opens.
+func TestAFormIsDrawnInColumns(t *testing.T) {
+	field := func(name string, req bool, id int) *ir.Node {
+		return &ir.Node{Kind: ir.Textbox, Name: name, Required: req,
+			ID: cdp.BackendNodeID(id), Focusable: true}
+	}
+	form := &ir.Node{Kind: ir.Landmark, Role: "form", ID: 1, Children: []*ir.Node{
+		field("User", true, 2),
+		field("A much longer label", false, 3),
+		{Kind: ir.Check, Role: "checkbox", Name: "Remember me", ID: 4},
+		{Kind: ir.Button, Role: "button", Name: "Sign in", ID: 5},
+	}}
+	l := render(&ir.Node{Kind: ir.Document, Children: []*ir.Node{form}}, 80)
+
+	// Every value starts at the same column.
+	var at []int
+	for _, r := range l.rows {
+		for _, g := range r.segs {
+			if g.kind == segInput || g.kind == segCheck || g.kind == segButton {
+				break
+			}
+		}
+	}
+	col := -1
+	for _, it := range l.items {
+		switch it.node.Kind {
+		case ir.Textbox, ir.Check, ir.Button:
+			if col < 0 {
+				col = it.col
+			}
+			at = append(at, it.col)
+		}
+	}
+	if len(at) != 4 {
+		t.Fatalf("four controls; got %d:\n%s", len(at), dumpLayout(l))
+	}
+	for i, c := range at {
+		if c != col {
+			t.Errorf("control %d starts at column %d, the first at %d — a form's values line up:\n%s",
+				i, c, col, dumpLayout(l))
+		}
+	}
+	// The label is chrome for the value, not something to stop on.
+	v := dumpLayout(l)
+	if !strings.Contains(v, "User *") {
+		t.Errorf("a required field says so on its label:\n%s", v)
+	}
+	if strings.Contains(v, `textbox "A much longer label" rows`) == false {
+		t.Errorf("the value is still the item:\n%s", v)
+	}
+	// Outside a form, nothing changes: a loose field keeps its name inline.
+	loose := render(&ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		para(field("Search", false, 9)),
+	}}, 80)
+	if row := loose.rows[0].plain(); !strings.HasPrefix(strings.TrimSpace(row), glyphInput) {
+		t.Errorf("a field outside a form is unchanged, is %q", row)
+	}
+}
+
+// A form whose controls have no accessible name has nothing to put in a
+// column — Hacker News writes its "username:" as text in a table cell
+// beside the box, not as a label the AX tree can tie to it. An empty
+// column is an indent for nothing, so such a form is drawn the way a
+// loose field is.
+func TestAFormWithNoLabelsKeepsItsShape(t *testing.T) {
+	form := &ir.Node{Kind: ir.Landmark, Role: "form", ID: 1, Children: []*ir.Node{
+		para(text("username:")),
+		{Kind: ir.Textbox, ID: 2, Focusable: true},
+		para(text("password:")),
+		{Kind: ir.Textbox, ID: 3, Focusable: true, Protected: true},
+	}}
+	l := render(&ir.Node{Kind: ir.Document, Children: []*ir.Node{form}}, 80)
+	for _, it := range l.items {
+		if it.node.Kind == ir.Textbox && it.col > 2 {
+			t.Errorf("with no labels a field starts where it always did, starts at %d:\n%s",
+				it.col, dumpLayout(l))
+		}
+	}
+	if formLabelW(form, 80) != 0 {
+		t.Error("no names, no column")
 	}
 }

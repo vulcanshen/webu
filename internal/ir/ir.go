@@ -114,8 +114,12 @@ type Node struct {
 	// Skip marks a link the page calls a skip link by class; a link whose
 	// text starts with "skip" and points at an anchor is one regardless
 	// (ui isSkipLink).
-	Skip      bool
-	Disabled  bool
+	Skip     bool
+	Disabled bool
+	// Required: the form will not go without this one. The AX tree says
+	// so and a page usually says so in ink webu does not read, so the
+	// label carries it (ui render.formField).
+	Required  bool
 	Focusable bool
 	Expanded  bool // a combobox or disclosure that is open
 	Selected  bool // an Option
@@ -249,7 +253,7 @@ func dump(b *strings.Builder, n *Node, depth int) {
 		on   bool
 		name string
 	}{
-		{n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}, {n.Skip, "skip"}, {n.Disabled, "disabled"},
+		{n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}, {n.Skip, "skip"}, {n.Disabled, "disabled"}, {n.Required, "required"},
 		{n.Focusable, "focusable"}, {n.Expanded, "expanded"}, {n.Selected, "selected"},
 		{n.Header, "header"}, {n.Block, "block"},
 	} {

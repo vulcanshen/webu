@@ -448,7 +448,10 @@ type renderer struct {
 	fold   map[cdp.BackendNodeID]bool
 	// drill is the list item opened to the whole panel (renderOpts).
 	drill cdp.BackendNodeID
-	root  *ir.Node
+	// formLabel is the width of the label column while a form is being
+	// drawn, 0 outside one (render.formLabelW).
+	formLabel int
+	root      *ir.Node
 	// A collapsed heading (2026-09-21) hides its section: everything after
 	// it up to the next heading of its level or higher, or the end of the
 	// landmark it is in. suppress is on while that is being skipped;
@@ -570,6 +573,53 @@ func (r *renderer) firstLine(n *ir.Node) []seg {
 		}
 	}
 	return nil
+}
+
+// formLabelW is how wide a form's label column is: the widest name any
+// of its controls has, within reason. Beyond a third of the text width
+// the labels would leave no room for the values they name, and a label
+// that is really a sentence is better truncated than allowed to push
+// every value off the row.
+func formLabelW(form *ir.Node, textW int) int {
+	w := 0
+	form.Walk(func(n *ir.Node) bool {
+		switch n.Kind {
+		case ir.Textbox, ir.Check, ir.Combobox:
+			w = max(w, dispW(oneLine(n.Name)))
+		}
+		return true
+	})
+	if w == 0 {
+		// Not one control has a name — Hacker News writes its "username:"
+		// as text in a table cell beside the box, not as a label the AX
+		// tree can tie to it. There is nothing to put in a column, and an
+		// empty column is an indent for nothing: the form is drawn the
+		// way a loose field is.
+		return 0
+	}
+	return clamp(w+2, 1, max(8, min(32, textW/3))) // +2 for the required mark
+}
+
+// formField draws one control inside a form: its name in the label
+// column, dim and NOT an item, then the value against the column's edge,
+// which is what the cursor stops on and what Enter opens. The label is
+// chrome for the value, and a cursor that stopped on it would have
+// nothing to do there.
+func (r *renderer) formField(n *ir.Node, id int, value func()) {
+	r.flush()
+	// A required field says so on its label, the way every form on paper
+	// and screen has said it. The page says it in ink webu does not read,
+	// so without this the asterisk simply went missing.
+	label := truncate(oneLine(n.Name), max(1, r.formLabel-2))
+	if n.Required {
+		label += " *"
+	}
+	// The gap is part of the column, not a space between words: a space
+	// atom is collapsed by the flow and the values would sit a cell apart
+	// from the button's.
+	r.add(atom{text: padRight(label, r.formLabel) + "  ", item: -1, kind: segDim})
+	value()
+	r.flush()
 }
 
 // isSkipLink says whether a link is a skip link — the "Skip to main
@@ -856,7 +906,20 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			return
 		}
 		r.lmDepth++
-		r.children(n, depth)
+		if n.Role == "form" {
+			// A form is drawn as a form: every label in one column, every
+			// value against the same left edge (user, 2026-09-22, after
+			// sshu's). The alignment IS what says "this is a form" — a
+			// terminal has no box to draw one with, and labels trailing
+			// their own field at whatever column it happens to start read
+			// as a paragraph with underscores in it.
+			saved := r.formLabel
+			r.formLabel = formLabelW(n, r.textW)
+			r.children(n, depth)
+			r.formLabel = saved
+		} else {
+			r.children(n, depth)
+		}
 		r.flush()
 		r.leaveLandmark()
 		r.gap = true
@@ -1240,11 +1303,31 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		if n.Disabled {
 			k = segDim
 		}
+		if r.formLabel > 0 {
+			// A form's own button lines up under the values it acts on,
+			// not under their labels: it answers the column, it does not
+			// name a row of it.
+			r.flush()
+			// Not a space atom: a run of spaces marked as space is
+			// trimmed off the head of a line, which is right for flow
+			// and wrong for a column.
+			r.add(atom{text: strings.Repeat(" ", r.formLabel+2), item: -1, kind: segDim})
+		}
 		r.add(atom{text: glyphButton + " ", item: id, kind: k})
 		r.words(oneLine(nameOr(n.Name, n.Value)), id, k)
 	case ir.Textbox:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
+		if r.formLabel > 0 {
+			r.formField(n, id, func() {
+				r.add(atom{text: glyphInput + " ", item: id, kind: segInput})
+				// The bed runs to the end of the value column: a form's
+				// fields are one shape, and a twelve-cell stub under a
+				// full-width label reads as a stub.
+				r.add(atom{text: fieldBed(n, min(48, r.textW-r.formLabel-4)), item: id, kind: segInput})
+			})
+			break
+		}
 		r.add(atom{text: glyphInput + " ", item: id, kind: segInput})
 		if n.Name != "" {
 			r.words(n.Name, id, segInput)
@@ -1254,11 +1337,27 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Check:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
+		if r.formLabel > 0 {
+			// The box alone in the value column: the name is already in
+			// the label column, and saying it twice on one row is the
+			// thing the column was for.
+			r.formField(n, id, func() {
+				r.add(atom{text: checkText(n), item: id, kind: segCheck})
+			})
+			break
+		}
 		r.add(atom{text: checkText(n) + " ", item: id, kind: segCheck})
 		r.words(n.Name, id, segCheck)
 	case ir.Combobox:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
+		if r.formLabel > 0 {
+			r.formField(n, id, func() {
+				r.add(atom{text: glyphSelect + " ", item: id, kind: segInput})
+				r.words(oneLine(n.Value), id, segInput)
+			})
+			break
+		}
 		if n.Name != "" {
 			r.words(n.Name, id, segInput)
 			r.add(atom{text: " ", item: id, kind: segInput, space: true})
@@ -1478,13 +1577,17 @@ func (r *renderer) newItem(n *ir.Node) int {
 
 // fieldText is a textbox's box: the value, or nothing, on a bed of
 // underscores wide enough to be seen as a field (ux.md §2.2).
-func fieldText(n *ir.Node) string {
+func fieldText(n *ir.Node) string { return fieldBed(n, 12) }
+
+// fieldBed is the value on its bed of underscores, at least bed wide: the
+// value centred in it, so an empty field is a slot and a full one is a
+// slot with something in it.
+func fieldBed(n *ir.Node, bed int) string {
 	v := oneLine(n.Value)
 	if n.Protected && v != "" {
 		v = "••••"
 	}
-	const bed = 12
-	w := max(bed, dispW(v)+4)
+	w := max(max(bed, 12), dispW(v)+4)
 	pad := w - dispW(v)
 	return strings.Repeat("_", pad/2) + v + strings.Repeat("_", pad-pad/2)
 }

@@ -14,7 +14,7 @@ document "textbox" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/
   text "Read only " #65
   textbox "Read only" value="fixed" focusable #1
   text "Required " #67
-  textbox "Required" focusable #2
+  textbox "Required" required focusable #2
   text "Disabled " #68
   textbox "Disabled" value="nope" disabled #3
   textbox "Placeholder only" focusable #4
