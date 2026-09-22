@@ -14,8 +14,8 @@
   navigation on the page behind the one `nav`, and, when the page has a
   main, whatever lies outside it in no landmark (a promo strip, a cookie
   banner that is a plain div) behind `other`. They are drawn as one
-  powerline chain, the way the header draws its screens, each segment
-  reading `word +N`: the word is the kind's, the count what is inside;
+  powerline chain, the way the header draws its screens, a menu glyph at
+  its head and each segment reading `word +N`: the word is the kind's, the count what is inside;
   where you are in a navigation is the panel's hint while the hand is
   on it. The ones the
   width leaves out sit behind a `+N`, whose Enter lists them and puts

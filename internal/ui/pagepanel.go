@@ -261,12 +261,13 @@ func (m AppModel) pagetabRow(t *tab, innerW int) string {
 			active = i
 		}
 	}
-	for len(labels) > 1 && chainW(labels) > innerW-1 {
+	for len(labels) > 1 && chainW(withLead(labels)) > innerW-1 {
 		labels = labels[:len(labels)-1]
 		if active >= len(labels) {
 			active = len(labels) - 1
 		}
 	}
+	labels = withLead(labels)
 	chain := pagetabChain(labels, active, m.focus == panelPage, t.loading)
 	return chain + dim.Render(strings.Repeat("─", max(0, innerW-chainW(labels))))
 }
