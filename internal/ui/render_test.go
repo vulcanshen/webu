@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chromedp/cdproto/cdp"
@@ -936,5 +937,39 @@ func TestAMetadataNameIsAField(t *testing.T) {
 	}
 	if _, _, ok := labelled("Chart: revenue, by quarter"); !ok {
 		t.Error("a comma in the VALUE is fine; only the label must be plain")
+	}
+}
+
+// page.Navigate waits for <body> to exist, and on an application that is
+// the shell with nothing in it — the content arrives later through the
+// mutation observer. Calling that "loaded" stopped the spinner over a
+// blank panel (user, 2026-09-22). A page that arrives empty is still on
+// its way, until the grace runs out.
+func TestAnEmptyArrivalIsStillLoading(t *testing.T) {
+	shell := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "main", ID: 1},
+	}}
+	tb := &tab{cursor: -1, root: shell, blankUntil: time.Now().Add(time.Minute)}
+	tb.relayout(60)
+	if !tb.stillComing() {
+		t.Errorf("a shell with nothing drawn is still on its way:\n%s", dumpLayout(tb.lay))
+	}
+	// Once anything is drawn, it has arrived.
+	tb.root = &ir.Node{Kind: ir.Document, Children: []*ir.Node{para(text("hello"))}}
+	tb.relayout(60)
+	if tb.stillComing() {
+		t.Error("a page with content on it has arrived")
+	}
+	// The grace is what keeps a page that really is blank from spinning
+	// for ever.
+	tb.root, tb.blankUntil = shell, time.Now().Add(-time.Second)
+	tb.relayout(60)
+	if tb.stillComing() {
+		t.Error("past the grace, an empty page is an empty page")
+	}
+	// So is an error: that has its own screen.
+	tb.blankUntil, tb.errText = time.Now().Add(time.Minute), "net::ERR_FAILED"
+	if tb.stillComing() {
+		t.Error("a page that failed is not still coming")
 	}
 }
