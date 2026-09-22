@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **The page's chrome is on the bar under the URL, not in the page.**
+  Banner, navigation, breadcrumb, search, sidebar, footer, dialog and
+  skip link — the entries that were one row each at the top of the
+  page — are capsules on the rule between the URL and the page, in
+  reading order, so the page itself starts at its content. Each still
+  reads `glyph word +N`; the ones the width leaves out sit behind a
+  `+N`, whose Enter lists them and puts the one chosen under the hand.
+  `k` from the top of the page goes up onto the bar, `h`/`l` walk it
+  and wrap, `j` comes back down; Enter on a capsule is its list, Space
+  its menu, as before. The Outline still reaches them.
+
 ## [0.1.1] — 2026-09-21
 
 ### Added

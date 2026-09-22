@@ -1,3 +1,5 @@
+-- bar (1 of 1 fit) --
+󱂬 Dialog text +1
 󰮦 slider Volume
 󰮦 slider Range
 󰮦 DisclosureTriangle Show more Show more
@@ -9,8 +11,6 @@ Visible text.
 󰮦 tabpanelPanel A content
 󰮦 statusSaved.
 󰮦 alertSomething happened.
-▎ 󱂬 Dialog text +1 
-
 󰮦 tree
 󰮦 treeitem Leaf Leaf
 Clickable div without a role
@@ -28,14 +28,13 @@ _____0______ [ Show date picker Show date picker ] [ File ]
 3 unsupported "Already open" rows 3-3
 4 unsupported "Tab A" rows 7-7
 5 unsupported "Tab B" rows 7-7
-6 landmark "Dialog textOK" rows 11-11
-7 unsupported "Leaf" rows 14-14
-8 media "Fig" rows 16-16
-9 button "Menu button" rows 18-18
-10 unsupported "Colour" rows 20-20
-11 unsupported "Year Year/Month Month/Day DayShow date picker Show date picker" rows 20-21
-12 textbox "Year Year" rows 20-21
-13 textbox "Month Month" rows 21-21
-14 textbox "Day Day" rows 21-22
-15 button "Show date picker Show date picker" rows 22-22
-16 button "File" rows 22-22
+6 unsupported "Leaf" rows 12-12
+7 media "Fig" rows 14-14
+8 button "Menu button" rows 16-16
+9 unsupported "Colour" rows 18-18
+10 unsupported "Year Year/Month Month/Day DayShow date picker Show date picker" rows 18-19
+11 textbox "Year Year" rows 18-19
+12 textbox "Month Month" rows 19-19
+13 textbox "Day Day" rows 19-20
+14 button "Show date picker Show date picker" rows 20-20
+15 button "File" rows 20-20

@@ -1,7 +1,9 @@
-▎ 󰛼 Home +1 
-
-▎  Primary +2 
-
+-- bar (5 of 5 fit) --
+󰛼 Home +1
+ Primary +2
+ Find +1
+󰠶
+󰛻
  ▾ main ────────────────────────────────────────────────────
 # Main heading
 
@@ -17,22 +19,11 @@ An unnamed section is not a region.
 
  ▾ form ────────────────────────────────────────────────────
 󰘎 Q ____________
-
-▎  Find +1 
-
-▎ 󰠶 
-
-▎ 󰛻 
 -- items --
-0 landmark "Site header Home" rows 0-0
-1 landmark "A B" rows 2-2
-2 landmark "Main heading…" rows 4-4
-3 heading "Main heading" rows 5-5
-4 landmark "An article…" rows 7-7
-5 heading "An article" rows 8-8
-6 landmark "Section text." rows 12-12
-7 landmark "Q Q" rows 17-17
-8 textbox "Q" rows 18-18
-9 landmark "Find Find" rows 20-20
-10 landmark "Sidebar" rows 22-22
-11 landmark "Footer text" rows 24-24
+0 landmark "Main heading…" rows 0-0
+1 heading "Main heading" rows 1-1
+2 landmark "An article…" rows 3-3
+3 heading "An article" rows 4-4
+4 landmark "Section text." rows 8-8
+5 landmark "Q Q" rows 13-13
+6 textbox "Q" rows 14-14

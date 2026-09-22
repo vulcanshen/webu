@@ -31,8 +31,6 @@ const (
 	segCode
 	segUnsupported
 	segLandmark    // a landmark's rule row: its role and name
-	segNavBar      // a navigation's entry row: the bar at its left…
-	segNav         // …and its label, on a ground of its own
 	segTableHeader // a table's header cells
 	// Inside a code block with a language (highlight.go).
 	segCodeKey
@@ -85,7 +83,48 @@ type layout struct {
 	// marks is the first row of every landmark and heading, for the
 	// outline to jump to (ui.md §3.1).
 	marks map[*ir.Node]int
+	// bar is the page's chrome — banner, navigation, breadcrumb, search,
+	// sidebar, footer, dialog, skip link — as capsules on the rule under
+	// the URL (pagepanel.barRow), in reading order, off the page's rows
+	// (2026-09-22). fit is how many of them the width holds; the rest
+	// are behind a "+N".
+	bar []capsule
+	fit int
 }
+
+// capsule is one piece of chrome on the bar: the node, and its label —
+// a glyph for its kind, a word for where the user is in it, +N for how
+// much is behind it (capsuleText).
+type capsule struct {
+	node  *ir.Node
+	label string
+}
+
+// fitBar is how many capsules the bar holds at width: every one when
+// they all fit, else as many as leave room for the "+N" that stands for
+// the rest. The bar is a menu, not a line to scroll (ux.md §A.0.K).
+func fitBar(bar []capsule, width int) int {
+	used := 1
+	for _, c := range bar {
+		used += capsuleW(c.label) + 1
+	}
+	if used <= width {
+		return len(bar)
+	}
+	for k := len(bar) - 1; k >= 0; k-- {
+		used = 1 + capsuleW("+"+itoa(len(bar)-k)) + 1
+		for _, c := range bar[:k] {
+			used += capsuleW(c.label) + 1
+		}
+		if used <= width {
+			return k
+		}
+	}
+	return 0
+}
+
+// capsuleW is a capsule's width: the label, a space either side, the caps.
+func capsuleW(label string) int { return dispW(label) + 4 }
 
 // itemAt is the first item whose span includes row, or -1.
 func (l layout) itemAt(row int) int {
@@ -158,6 +197,7 @@ type renderer struct {
 	textW int // where flow wraps: width, or the measure when narrower
 	rows  []row
 	items []item
+	bar   []capsule // the page's chrome, off the rows (layout.bar)
 	flow  []atom
 	fold  map[cdp.BackendNodeID]bool
 	root  *ir.Node
@@ -199,7 +239,7 @@ func renderWith(root *ir.Node, o renderOpts) layout {
 	}
 	r.block(root, 0)
 	r.flush()
-	return layout{rows: r.rows, items: r.items, marks: r.marks}
+	return layout{rows: r.rows, items: r.items, marks: r.marks, bar: r.bar, fit: fitBar(r.bar, r.width)}
 }
 
 // folded says whether a landmark is drawn shut: only when the user shut it.
@@ -234,36 +274,31 @@ func (r *renderer) landmarkRule(n *ir.Node, id int, folded bool) {
 	}})
 }
 
-// entryRow is the one row a piece of page chrome gets — a banner, a
-// navigation or breadcrumb, a search, a sidebar, a footer: an entry, not
-// a region (ux.md §A.0.K, 2026-09-21). A bar at the left and, on a
-// ground of its own the way a quote is set, a glyph for its kind and a
-// word for where the user is in it, never the landmark's role. What it
-// holds is its item operations, not items: a row of links invites
-// walking sideways, and a terminal has no width to spare for one. +N
-// says how much is behind the row.
-func (r *renderer) entryRow(n *ir.Node, id int) {
-	label := " " + entryIcon(n)
-	pageURL := ""
-	if r.root != nil {
-		pageURL = r.root.URL
-	}
+// capsuleText is the label of a piece of page chrome — a banner, a
+// navigation or breadcrumb, a search, a sidebar, a footer, a dialog: an
+// entry, not a region (ux.md §A.0.K, 2026-09-21), and since 2026-09-22
+// a capsule on the bar under the URL rather than a row of the page. A
+// glyph for its kind and a word for where the user is in it, never the
+// landmark's role. What it holds is its item operations, not items: a
+// row of links invites walking sideways, and a terminal has no width to
+// spare for one. +N says how much is behind it.
+func capsuleText(n *ir.Node, pageURL string) string {
+	label := entryIcon(n)
 	if word := entryLabel(n, pageURL); word != "" {
 		label += " " + word
 	}
 	if c := len(entryTargets(n)); c > 0 {
 		label += " +" + itoa(c)
 	}
-	r.entryLine(id, label)
+	return label
 }
 
-// entryLine is the entry style: the bar, then the label on its ground.
-func (r *renderer) entryLine(id int, label string) {
-	label = truncate(label+" ", max(1, r.width-2))
-	r.emit(row{segs: []seg{
-		{text: "▎", item: id, kind: segNavBar},
-		{text: label, item: id, kind: segNav},
-	}})
+// pageURL is the page's own URL, for the word on a navigation's capsule.
+func (r *renderer) pageURL() string {
+	if r.root != nil {
+		return r.root.URL
+	}
+	return ""
 }
 
 // isSkipLink says whether a link is a skip link — the "Skip to main
@@ -277,19 +312,13 @@ func isSkipLink(n *ir.Node) bool {
 	return n.Skip || strings.HasPrefix(strings.ToLower(strings.TrimSpace(n.Text())), "skip")
 }
 
-// isSkipItem says whether an item is a skip link or a block of them —
-// the rows a new page never starts on (tab.firstItem).
-func isSkipItem(n *ir.Node) bool {
-	return isSkipLink(n) || (n.Kind == ir.Landmark && n.Skip)
+// skipText is a skip link's capsule: chrome, on the bar, and Enter is
+// what it says (app skipToContent).
+func skipText(n *ir.Node) string {
+	return glyphSkip + " " + oneLine(n.Text())
 }
 
-// skipRow draws a skip link in the entry style: chrome, one row, and
-// Enter is what it says (app skipToContent).
-func (r *renderer) skipRow(n *ir.Node, id int) {
-	r.entryLine(id, " "+glyphSkip+" "+oneLine(n.Text()))
-}
-
-// isEntry says whether a landmark is page chrome, drawn as an entry row.
+// isEntry says whether a landmark is page chrome, a capsule on the bar.
 // main, article, region and form are the page itself and stay regions.
 func isEntry(n *ir.Node) bool {
 	if n.Kind != ir.Landmark {
@@ -524,15 +553,15 @@ func (r *renderer) block(n *ir.Node, depth int) {
 	case ir.Document:
 		r.children(n, depth)
 	case ir.Landmark:
-		r.flush()
-		r.markNext = append(r.markNext, n)
 		if isEntry(n) {
-			// Chrome, not content: one row, and what it holds is its
-			// item operations, not items (ux.md §A.0.K, 2026-09-21).
-			r.entryRow(n, r.newItem(n))
-			r.gap = true
+			// Chrome, not content: a capsule on the bar under the URL,
+			// and what it holds is its item operations, not items
+			// (ux.md §A.0.K; off the page's rows since 2026-09-22).
+			r.bar = append(r.bar, capsule{n, capsuleText(n, r.pageURL())})
 			return
 		}
+		r.flush()
+		r.markNext = append(r.markNext, n)
 		folded := r.folded(n)
 		id := r.newItem(n)
 		r.items[id].folded = folded
@@ -827,10 +856,8 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		r.words(n.Name, item, kind)
 	case ir.Link:
 		if isSkipLink(n) && !r.inCell && r.cellItem < 0 {
-			// Chrome, not a link to follow: one row of the entry style.
-			r.flush()
-			r.skipRow(n, r.newItem(n))
-			r.gap = true
+			// Chrome, not a link to follow: a capsule on the bar.
+			r.bar = append(r.bar, capsule{n, skipText(n)})
 			return
 		}
 		id := r.itemOf(n)

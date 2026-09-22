@@ -307,7 +307,12 @@ func TestOutlineEntriesAndJump(t *testing.T) {
 	if strings.Join(labels, "|") != strings.Join(want, "|") {
 		t.Fatalf("outline:\n%s\nwant:\n%s", strings.Join(labels, "\n"), strings.Join(want, "\n"))
 	}
-	for _, e := range entries {
+	// The banner is chrome, a capsule on the bar, so the outline reaches
+	// it there (outlineKey); the rest have a row.
+	if c := tb.capsuleOf(entries[0].node); c != 0 {
+		t.Errorf("the banner should be the bar's first capsule, is %d", c)
+	}
+	for _, e := range entries[1:] {
 		if _, ok := tb.lay.marks[e.node]; !ok {
 			t.Errorf("no row mark for %q", e.label)
 		}
