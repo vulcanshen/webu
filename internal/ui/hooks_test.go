@@ -387,3 +387,23 @@ func TestTheBrowserSaysWhoItIs(t *testing.T) {
 		t.Errorf("the client hints name webu too:\n%s", v)
 	}
 }
+
+// A PDF is not supported, and the page says so rather than sitting
+// blank: headless Chromium has no viewer and hands over an empty
+// document (user, 2026-09-23). Its URL is a Y away.
+func TestAPDFSaysItIsUnsupported(t *testing.T) {
+	b := hookBrowser(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Write([]byte("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"))
+	}))
+	defer srv.Close()
+	d := startAt(t, b, srv.URL+"/doc.pdf", store.Config{})
+	d.until("the page says so", func() bool {
+		p := d.page()
+		return p != nil && p.root != nil && strings.Contains(dumpLayout(p.lay), "unsupported media type: application/pdf")
+	})
+	if v := dumpLayout(d.page().lay); !strings.Contains(v, "Y yanks its URL") {
+		t.Errorf("and what to do about it:\n%s", v)
+	}
+}
