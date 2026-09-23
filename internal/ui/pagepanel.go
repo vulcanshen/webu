@@ -60,15 +60,14 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		out = append(out, lipgloss.NewStyle().Foreground(selectColor).Render(padRight(" "+st, innerW)))
 	} else {
 		// The glyph says what state the fetch is in and the URL says
-		// where: one pair, one colour (2026-09-22). While the page is
-		// coming that colour is lavender, the whole row of it (user,
-		// 2026-09-23) — a turning glyph is a small thing to notice, and
-		// the row it sits on is the one place the eye already is.
-		icon, ink := glyphWeb, urlColor
+		// where: one pair, one colour (2026-09-22). The glyph alone —
+		// colouring the whole row while the page came was tried and it
+		// took the eye off the page (user, 2026-09-23).
+		icon := glyphWeb
 		if t.working() {
-			icon, ink = spinnerFrame(), editColor
+			icon = spinnerFrame()
 		}
-		blue := lipgloss.NewStyle().Foreground(ink)
+		blue := lipgloss.NewStyle().Foreground(urlColor)
 		// While a section is open the URL wears its anchor: a section is
 		// a place, and the address bar is where a place is named.
 		shown := fitURL(t.url+t.sectionAnchor(), innerW-3)
@@ -173,8 +172,12 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 		// the panel knows how wide the row ended up (render.boxPart).
 		span := min(innerW, max(1, row.boxW))
 		if row.box == boxTop || row.box == boxBottom {
-			out = append(out, frame.Render(boxRule(row, span))+
-				strings.Repeat(" ", max(0, innerW-span)))
+			// b already holds the line number: a framed block's edge is a
+			// line of the page like any other, and dropping it here left
+			// the frame hanging a column left of its own sides.
+			b.WriteString(frame.Render(boxRule(row, span)))
+			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
+			out = append(out, b.String())
 			continue
 		}
 		if row.box == boxSide {

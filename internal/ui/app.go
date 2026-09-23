@@ -2162,9 +2162,13 @@ func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 		// Never the old value: Chromium hands over dots, not the secret.
 		value = ""
 	}
-	return m.input.ask(inputPopup{title: oneLine(nameOr(n.Name, "field")), glyph: glyphPencil,
-		prompt: fieldTakes(n), accept: "set", action: inputField, node: n.ID, value: value,
-		masked: n.Protected, search: search}, m.layer())
+	// The type on the border, the field's own name over the box (user,
+	// 2026-09-23). The border is chrome and says what KIND of box this
+	// is; the line inside it is about this one field, and the name is
+	// the thing that tells one field from the next.
+	return m.input.ask(inputPopup{title: fieldTakes(n), glyph: glyphPencil,
+		prompt: oneLine(nameOr(n.Name, "field")), accept: "set", action: inputField,
+		node: n.ID, value: value, masked: n.Protected, search: search}, m.layer())
 }
 
 // fieldTakes is what the box over a field says it wants. The page's own
