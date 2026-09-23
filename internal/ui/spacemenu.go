@@ -35,11 +35,14 @@ type spaceMenu struct {
 	// rows is a window of that many rows, when the menu asked for one —
 	// a slider's numbers show ten at a time (user, 2026-09-23). Zero is
 	// what the screen holds. setItems clears it.
-	rows    int
-	title   string
-	layer   int
-	screenW int
-	screenH int
+	rows int
+	// pendingG holds the first half of the gg chord, the menu's own: a
+	// float takes its keys raw, before panelKey composes them.
+	pendingG bool
+	title    string
+	layer    int
+	screenW  int
+	screenH  int
 }
 
 // newHostPicker is a second spaceMenu instance reused as tab [1]'s host chooser.
@@ -60,7 +63,7 @@ func newCredPicker() spaceMenu {
 
 func (m *spaceMenu) setItems(items []menuItem, title string, layer int) {
 	m.items, m.title, m.layer = items, title, layer
-	m.cursor, m.top, m.rows = m.firstSelectable(), 0, 0
+	m.cursor, m.top, m.rows, m.pendingG = m.firstSelectable(), 0, 0, false
 }
 
 func (m spaceMenu) isActive() bool      { return m.anim.isActive() }
@@ -72,6 +75,15 @@ func (m *spaceMenu) setSize(w, h int)   { m.screenW, m.screenH = w, h }
 func (m spaceMenu) firstSelectable() int {
 	for i, it := range m.items {
 		if !it.header && !it.separator {
+			return i
+		}
+	}
+	return 0
+}
+
+func (m spaceMenu) lastSelectable() int {
+	for i := len(m.items) - 1; i >= 0; i-- {
+		if !m.items[i].header && !m.items[i].separator {
 			return i
 		}
 	}
@@ -127,11 +139,29 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string, tea.Cmd) {
 	if !m.anim.isInteractive() {
 		return m, "", nil
 	}
-	switch k := msg.String(); k {
+	k := msg.String()
+	// gg is the first row, G the last (user, 2026-09-23): the same
+	// vocabulary as every list (nav.go), composed here because the chord
+	// never reaches panelKey while a float is up.
+	if m.pendingG {
+		m.pendingG = false
+		if k == "g" {
+			m.cursor = m.firstSelectable()
+			m.scroll()
+			return m, "", nil
+		}
+	} else if k == "g" {
+		m.pendingG = true
+		return m, "", nil
+	}
+	switch k {
 	case "j", "down":
 		m.step(1)
 	case "k", "up":
 		m.step(-1)
+	case "G":
+		m.cursor = m.lastSelectable()
+		m.scroll()
 	case "d", "ctrl+d":
 		// Half a window, the way every list in the app pages (nav.go).
 		m.step(max(1, m.visible()/2))
