@@ -106,6 +106,23 @@ func attachFrames(ctx context.Context, c *ir.Capture, docs []*domsnapshot.Docume
 			c.Frames = map[cdp.BackendNodeID]*ir.Capture{}
 		}
 		c.Frames[owner] = fc
+		// Its boxes join the page's, placed where its owner is and keyed
+		// as the tree will carry them: the parts and the popups are cut
+		// by geometry, and a frame's content is on the page too
+		// (ui.splitParts, pagepopup). A frame's own boxes are in its
+		// own coordinates, from its top-left corner; a frame inside it
+		// has already been placed in those.
+		at := c.Boxes[owner]
+		if c.Boxes == nil {
+			c.Boxes = map[cdp.BackendNodeID]ir.Box{}
+		}
+		for id, b := range fc.Boxes {
+			if id < ir.CarriedFrom {
+				id += fc.Base
+			}
+			b.X, b.Y = b.X+at.X, b.Y+at.Y
+			c.Boxes[id] = b
+		}
 	}
 	for _, want := range frames {
 		for owner, fr := range owners {
