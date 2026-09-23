@@ -1,0 +1,24 @@
+<!doctype html><html><head><title>Menu</title><style>
+  body { margin: 0; font: 16px/1.4 sans-serif; }
+  main { min-height: 1400px; padding: 20px; }
+  .wrap { position: relative; }
+  [role=menu] { position: absolute; top: 100%; left: 0; margin: 0; padding: 4px; list-style: none; background: #eee; border: 1px solid #999; }
+  [role=menuitem] { padding: 6px 10px; }
+</style></head><body>
+<main>
+<h1>Menu button</h1>
+<div class="wrap">
+<button type="button" id="btn" aria-haspopup="true" aria-expanded="false" onclick="var m=document.getElementById('m'); m.hidden=false; this.setAttribute('aria-expanded','true'); m.querySelector('[role=menuitem]').focus()">Actions</button>
+<ul id="m" role="menu" aria-labelledby="btn" hidden>
+<li role="menuitem" tabindex="-1" onclick="pick(this)">Action 1</li>
+<li role="menuitem" tabindex="-1" onclick="pick(this)">Action 2</li>
+<li role="menuitem" tabindex="-1" onclick="pick(this)">Action 3</li>
+</ul>
+</div>
+<p>Last action: <output id="out">none</output></p>
+<p>A paragraph the menu drops over, and another line of it to be sure.</p>
+</main>
+<script>
+function pick(li) { document.getElementById('out').textContent = li.textContent; var m = document.getElementById('m'); m.hidden = true; document.getElementById('btn').setAttribute('aria-expanded', 'false'); }
+</script>
+</body></html>
