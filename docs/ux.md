@@ -314,7 +314,7 @@ new tab、Submit、goto），menu 這個 source 清掉，不回到 menu。
 1. 輸入列：打字即從 Bookmarks / History fuzzy 建議
 2. Enter 時判斷輸入：
    - 像 URL（有 scheme、或 `host.tld` 形）→ 無 scheme 補 `https://`
-   - 不像 URL → **當搜尋**，預設 Google（修訂 2026-09-21，原 DuckDuckGo），`config.yaml` 的 `search_engine` 可換（Settings screen 也能改）
+   - 不像 URL → **當搜尋**，預設 DuckDuckGo html 版 `https://html.duckduckgo.com/html/?q=`（修訂 2026-09-23：Google 對 headless Chromium 的搜尋一律回 reCAPTCHA，即使 webu 已用自己的 UA；09-21 曾改成 Google），`config.yaml` 的 `search_engine` 可換（Settings screen 也能改）
 3. `L` 開在目前分頁，`T` 開新分頁
 
 ---
