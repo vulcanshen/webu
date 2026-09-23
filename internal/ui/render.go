@@ -33,6 +33,9 @@ const (
 	segMedia
 	segCode
 	segUnsupported
+	// segInvalid is a field's value the page marked wrong: the one seg
+	// kind in the colour of "is wrong" (theme pageInvalid).
+	segInvalid
 	segLandmark    // a landmark's rule row: its role and name
 	segTableHeader // a table's header cells
 	// Inside a code block with a language (highlight.go).
@@ -560,6 +563,39 @@ func (r *renderer) formField(n *ir.Node, id int, value func()) {
 	r.flush()
 }
 
+// valueKind is the seg kind a field's value is drawn in: the input
+// colour, or — when the page marked the value wrong — the colour of "is
+// wrong" (user, 2026-09-23). The label stays as it is: it is the page's
+// word, not a state.
+func valueKind(n *ir.Node) segKind {
+	if n.Invalid {
+		return segInvalid
+	}
+	return segInput
+}
+
+// fieldset draws a named group inside a form — <fieldset> with its
+// <legend> — as a group heading and then its fields: the name in bold on
+// a row of its own, and not again as the legend's text, which Chromium
+// hands over twice (as the group's name and as a child). Without this
+// the legend was one more plain row at the label column, a label with
+// no value (2026-09-23).
+func (r *renderer) fieldset(n *ir.Node, depth int) {
+	r.flush()
+	r.emit(row{segs: []seg{
+		{text: r.indent, item: -1, kind: segPlain},
+		{text: oneLine(n.Name), item: -1, kind: segPlain, attr: attrBold}}})
+	cp := *n
+	cp.Children = nil
+	for _, c := range n.Children {
+		if c.Role != "Legend" {
+			cp.Children = append(cp.Children, c)
+		}
+	}
+	r.inlineChildren(&cp, -1, segPlain)
+	r.flush()
+}
+
 // isSkipLink says whether a link is a skip link — the "Skip to main
 // content" an accessible page puts first, for a keyboard to pass the
 // header by: a same-page anchor whose text starts with skip or jump to
@@ -811,12 +847,20 @@ func (r *renderer) block(n *ir.Node, depth int) {
 	case ir.Group:
 		r.flush()
 		r.markNext = append(r.markNext, n)
+		if r.inForm && n.Name != "" {
+			r.fieldset(n, depth)
+			return
+		}
 		r.inlineChildren(n, -1, segPlain)
 		r.flush()
 	case ir.Code:
 		r.flush()
 		r.markNext = append(r.markNext, n)
-		r.codeBlock(n)
+		// A block of code is a stop: the smallest unit of content is a
+		// block that holds text, and a block the cursor cannot reach
+		// cannot be read on its own or yanked (user, 2026-09-23). Enter
+		// is the block in a popup, Space has Yank text.
+		r.codeBlock(n, r.newItem(n))
 		r.gap = true
 	case ir.Unsupported:
 		r.flush()
@@ -1125,7 +1169,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 				// (user, 2026-09-22 — mauve underscores were the loudest
 				// thing on the page).
 				if v := fieldValue(n); v != "" {
-					r.words(v, id, segInput)
+					r.words(v, id, valueKind(n))
 					r.add(atom{text: " ", item: id, kind: segInput, space: true})
 				}
 				r.add(atom{text: " ", item: id, kind: segCaret})
@@ -1138,7 +1182,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 			r.add(atom{text: " ", item: id, kind: segInput, space: true})
 		}
 		if v := fieldValue(n); v != "" {
-			r.words(v, id, segInput)
+			r.words(v, id, valueKind(n))
 			r.add(atom{text: " ", item: id, kind: segInput, space: true})
 		}
 		r.add(atom{text: " ", item: id, kind: segCaret})
@@ -1189,7 +1233,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Code:
 		if strings.Contains(n.Text(), "\n") && !r.inCell {
 			r.flush()
-			r.codeBlock(n)
+			r.codeBlock(n, r.newItem(n))
 			r.flush()
 			return
 		}
@@ -1483,7 +1527,7 @@ func oneLine(s string) string {
 
 // codeBlock draws a code node's lines verbatim: no wrapping, clipped at the
 // width, because a wrapped line of code reads as two lines of code.
-func (r *renderer) codeBlock(n *ir.Node) {
+func (r *renderer) codeBlock(n *ir.Node, id int) {
 	// A line wider than the block folds onto the next row at the block's
 	// width — the text measure, which is also where its ground stops —
 	// rather than being cut: a cut line of code or JSON is a line lost.
@@ -1497,6 +1541,9 @@ func (r *renderer) codeBlock(n *ir.Node) {
 	}
 	for _, segs := range lines {
 		for _, fold := range foldSegs(segs, width) {
+			for i := range fold {
+				fold[i].item = id
+			}
 			r.emit(row{segs: append([]seg{{text: r.indent, item: -1, kind: segCode}}, fold...), code: true})
 		}
 	}

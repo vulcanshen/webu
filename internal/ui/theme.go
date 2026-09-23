@@ -105,6 +105,10 @@ var (
 	// (user, 2026-09-22). It is what sshu's form shows in an empty
 	// field: one lit cell and nothing else.
 	pageInputBg = lipgloss.Color("#45475a") // surface1
+	// pageInvalid is a field's value the page marked wrong: the app's
+	// "is wrong" red, on the page. The one state colour a field has —
+	// required is an asterisk, disabled is dim (2026-09-23).
+	pageInvalid = warnColor
 	// Code, inline and block, keys included: one colour for one concept.
 	// A block sits on a ground so it reads as a block.
 	pageCode   = lipgloss.Color("#f5c2e7") // pink

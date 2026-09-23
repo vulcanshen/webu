@@ -114,3 +114,29 @@ func TestAComboboxWithNoOptionsIsATextbox(t *testing.T) {
 		t.Errorf("with options: still a combobox of two, got %+v", sel)
 	}
 }
+
+// aria-invalid reaches the IR: a field the page marked wrong is drawn
+// in the colour of "is wrong" (ui), and the box over it says so.
+func TestAnInvalidFieldIsMarked(t *testing.T) {
+	val := func(s string) *accessibility.Value {
+		raw, _ := json.Marshal(s)
+		return &accessibility.Value{Type: accessibility.ValueTypeString, Value: raw}
+	}
+	bad, fine := axNode(2, "textbox", "Email", 2), axNode(3, "textbox", "Name", 3)
+	bad.Properties = []*accessibility.Property{{Name: accessibility.PropertyNameInvalid, Value: val("true")}}
+	fine.Properties = []*accessibility.Property{{Name: accessibility.PropertyNameInvalid, Value: val("false")}}
+	root := ir.Build(ir.Capture{Nodes: []*accessibility.Node{axNode(1, "RootWebArea", "P", 1, 2, 3), bad, fine}})
+	got := map[cdp.BackendNodeID]bool{}
+	root.Walk(func(n *ir.Node) bool {
+		if n.Kind == ir.Textbox {
+			got[n.ID] = n.Invalid
+		}
+		return true
+	})
+	if !got[2] || got[3] {
+		t.Errorf("invalid: %v", got)
+	}
+	if !strings.Contains(ir.Dump(root), "invalid") {
+		t.Error("the dump says so")
+	}
+}

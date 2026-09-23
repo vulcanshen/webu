@@ -103,6 +103,9 @@ type Node struct {
 	Checked   Tri
 	Multiline bool // Textbox: a textarea or a contenteditable
 	Protected bool // Textbox: a password field — the value is shown masked
+	// Invalid: the page marked the field's value wrong (aria-invalid, or
+	// the browser's own validation). Drawn in the colour of "is wrong".
+	Invalid bool
 	// Focused: the page's keyboard is here (the AX tree's focused). A
 	// block that appears after a press and takes the keyboard is asking
 	// for an answer — how a popup is told from a chat bubble (ui popup).
@@ -265,7 +268,7 @@ func dump(b *strings.Builder, n *Node, depth int) {
 		on   bool
 		name string
 	}{
-		{n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}, {n.Skip, "skip"}, {n.Disabled, "disabled"}, {n.Required, "required"},
+		{n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}, {n.Skip, "skip"}, {n.Disabled, "disabled"}, {n.Required, "required"}, {n.Invalid, "invalid"},
 		{n.Focusable, "focusable"}, {n.Expanded, "expanded"}, {n.Selected, "selected"},
 		{n.Header, "header"}, {n.Block, "block"},
 	} {

@@ -1456,6 +1456,8 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 		items = append(items,
 			menuItem{label: "role: " + n.Role + ", not supported yet — only click", key: "unsupported", disabled: true},
 			menuItem{label: "Click", key: "click", hint: "the page decides"})
+	case ir.Code:
+		items = append(items, menuItem{label: "[Enter] Read", key: "enter", hint: "the block on its own, lines unfolded"})
 	}
 	return append(items,
 		menuItem{label: "Yank text", key: "yanktext", hint: "what it says"},
@@ -1966,6 +1968,11 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 		return m, nil
 	case ir.Cell:
 		return m.enterCell(t, n)
+	case ir.Code:
+		// A block of code on its own: the lines unfolded, as far as the
+		// terminal is wide, the page's keys to scroll (showCell's
+		// sibling — the smallest unit of content is read, not opened).
+		return m, m.showCode(n)
 	case ir.Landmark:
 		if n.Role == "search" {
 			// A search with one box has one obvious operation: the box
@@ -2054,6 +2061,17 @@ func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
 		text = "(empty)"
 	}
 	return m.message.show(glyphTable, title, wrapWords(text, min(72, max(20, m.w-12))), false, m.layer())
+}
+
+// showCode is a code block in full: every line as the page wrote it,
+// tabs as four spaces, titled by its language when the page named one.
+func (m *AppModel) showCode(n *ir.Node) tea.Cmd {
+	title := "code"
+	if n.Lang != "" {
+		title += " · " + n.Lang
+	}
+	text := strings.ReplaceAll(strings.TrimRight(n.Text(), "\n"), "\t", "    ")
+	return m.message.show(glyphCode, title, strings.Split(text, "\n"), false, m.layer())
 }
 
 // openItemMenu is Enter on an item whose own operation IS its operation
@@ -2199,7 +2217,13 @@ func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 	// 2026-09-23). The border is chrome and says what KIND of box this
 	// is; the line inside it is about this one field, and the name is
 	// the thing that tells one field from the next.
-	return m.input.ask(inputPopup{title: fieldTakes(n), glyph: glyphPencil,
+	title := fieldTakes(n)
+	if n.Invalid {
+		// The page marked what is there wrong: the one thing the box
+		// should say about the value it is about to replace.
+		title += " · invalid"
+	}
+	return m.input.ask(inputPopup{title: title, glyph: glyphPencil,
 		prompt: oneLine(nameOr(n.Name, "field")), accept: "set", action: inputField,
 		node: n.ID, value: value, masked: n.Protected, search: search}, m.layer())
 }
