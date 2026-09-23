@@ -39,36 +39,50 @@ const popupGrace = settleGrace
 // often inside main as beside it, and as often inside a wrapper the
 // page made for it.
 func findPopup(prev, skip map[cdp.BackendNodeID]bool, root *ir.Node, boxes map[cdp.BackendNodeID]ir.Box) *ir.Node {
+	return findPopupIn(prev, skip, root, boxes, nil)
+}
+
+// findPopupIn is findPopup told the DOM's parents (Capture.Parents): what
+// a block is over is judged against every box the page laid out, and
+// the boxes of the block's own DOM — the text inside its buttons, the
+// html and body around it — are not what it is over. The IR alone
+// cannot say: a button is a leaf in it, its text is not.
+func findPopupIn(prev, skip map[cdp.BackendNodeID]bool, root *ir.Node, boxes map[cdp.BackendNodeID]ir.Box, parents map[cdp.BackendNodeID]cdp.BackendNodeID) *ir.Node {
 	if root == nil {
 		return nil
 	}
 	var found *ir.Node
-	var walk func(n *ir.Node)
-	walk = func(n *ir.Node) {
+	var walk func(n *ir.Node, chain []*ir.Node)
+	walk = func(n *ir.Node, chain []*ir.Node) {
+		chain = append(chain, n)
 		for _, c := range n.Children {
 			if found != nil {
 				return
 			}
-			if c.ID != 0 && !skip[c.ID] && (len(prev) == 0 || !prev[c.ID]) && isPopup(c, n.Children, boxes) {
+			if c.ID != 0 && !skip[c.ID] && (len(prev) == 0 || !prev[c.ID]) && isPopup(c, chain, boxes, parents) {
 				found = c
 				return
 			}
-			walk(c)
+			walk(c, chain)
 		}
 	}
-	walk(root)
+	walk(root, nil)
 	return found
 }
 
-// isPopup is the test on one block, against the blocks beside it: it
-// wants an answer — the page put the keyboard into it, or called it a
-// dialog — it has something to press, and unless it is declared modal
-// it is over something rather than after it.
-func isPopup(c *ir.Node, siblings []*ir.Node, boxes map[cdp.BackendNodeID]ir.Box) bool {
+// isPopup is the test on one block: it wants an answer — the page put
+// the keyboard into it, or called it a dialog or a menu — it has
+// something to press, and unless it is declared modal it is OVER
+// something: some element the page laid out, not its own and not one
+// of the ancestors holding it, is half covered by it, or half of it
+// lies on such an element. A block the page laid out in its flow covers
+// nothing and is covered by nothing but what holds it.
+func isPopup(c *ir.Node, chain []*ir.Node, boxes map[cdp.BackendNodeID]ir.Box, parents map[cdp.BackendNodeID]cdp.BackendNodeID) bool {
 	if countItems(c) == 0 {
 		return false
 	}
-	declared := c.Modal || (c.Kind == ir.Landmark && (c.Role == "dialog" || c.Role == "alertdialog"))
+	declared := c.Modal || (c.Kind == ir.Landmark && (c.Role == "dialog" || c.Role == "alertdialog")) ||
+		c.Role == "menu"
 	if !declared && !hasFocus(c) {
 		return false
 	}
@@ -81,13 +95,32 @@ func isPopup(c *ir.Node, siblings []*ir.Node, boxes map[cdp.BackendNodeID]ir.Box
 	if b.Area() <= 0 {
 		return false
 	}
-	for _, o := range siblings {
-		if o == c {
+	// Its own: the IR under it and over it, and — where the DOM's
+	// parents are known — every DOM node under it and over it too.
+	own := map[cdp.BackendNodeID]bool{}
+	c.Walk(func(x *ir.Node) bool { own[x.ID] = true; return true })
+	for _, a := range chain {
+		own[a.ID] = true
+	}
+	for id, hop := c.ID, 0; id != 0 && hop < 256; id, hop = parents[id], hop+1 {
+		own[id] = true
+	}
+	related := func(id cdp.BackendNodeID) bool {
+		if own[id] {
+			return true
+		}
+		for x, hop := id, 0; x != 0 && hop < 256; x, hop = parents[x], hop+1 {
+			if x == c.ID {
+				return true
+			}
+		}
+		return false
+	}
+	for id, ob := range boxes {
+		if ob.Area() <= 0 || related(id) {
 			continue
 		}
-		if ob := boxOf(o, boxes); ob.Area() > 0 && overlap(b, ob) >= b.Area()/2 {
-			// Over something rather than after it: a block the page
-			// laid out in its flow overlaps nothing.
+		if o := overlap(b, ob); o >= ob.Area()/2 || o >= b.Area()/2 {
 			return true
 		}
 	}
@@ -163,7 +196,7 @@ func (t *tab) noticePopup() bool {
 	}
 	var p *ir.Node
 	if time.Now().Before(t.popupUntil) {
-		p = findPopup(t.prevTop, t.popupSet(), t.root, t.boxes)
+		p = findPopupIn(t.prevTop, t.popupSet(), t.root, t.boxes, t.parents)
 	}
 	switch {
 	case p != nil:

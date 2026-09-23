@@ -48,6 +48,11 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `listitem` | listitem | — | one item, with the marker Chromium drew |
 | `main` | landmark | — | landmark region, enters the outline |
 | `mark` | span | — | <mark>: reversed, the way a page highlights a hit |
+| `menu` | group | — | a menu: its items, one per line; one that opens after a press is a popup |
+| `menubar` | group | — | a menu bar: its items, in a row |
+| `menuitem` | button | click | tap glyph + name; Enter presses |
+| `menuitemcheckbox` | button | click | tap glyph + name; Enter presses |
+| `menuitemradio` | button | click | tap glyph + name; Enter presses |
 | `navigation` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `option` | option | — | one choice of a combobox |
 | `paragraph` | paragraph | — | a block of text, wrapped to width |

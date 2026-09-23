@@ -126,6 +126,14 @@ var Roles = map[string]Spec{
 	"blockquote": {Kind: Quote, Display: "indented quotation"},
 
 	"group": {Kind: Group, Display: "a plain container kept for its line break"},
+
+	// A menu that opens from a button is a popup (ui pagepopup); its
+	// items are things to press, drawn as buttons are (2026-09-23).
+	"menu":             {Kind: Group, Display: "a menu: its items, one per line; one that opens after a press is a popup"},
+	"menubar":          {Kind: Group, Display: "a menu bar: its items, in a row"},
+	"menuitem":         {Kind: Button, Action: Click, Display: "tap glyph + name; Enter presses"},
+	"menuitemcheckbox": {Kind: Button, Action: Click, Display: "tap glyph + name; Enter presses"},
+	"menuitemradio":    {Kind: Button, Action: Click, Display: "tap glyph + name; Enter presses"},
 	// A header or footer inside an article or section (this Chromium's
 	// names for them): the article's own lines, in place, not chrome.
 	"sectionheader": {Kind: Group, Display: "an article's or section's header: its lines, in place"},

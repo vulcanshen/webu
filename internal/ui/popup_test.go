@@ -21,8 +21,11 @@ func TestAPopupIsToldByBehaviour(t *testing.T) {
 	button := func(id int, name string, focused bool) *ir.Node {
 		return &ir.Node{Kind: ir.Button, Name: name, ID: cdp.BackendNodeID(id), Focusable: true, Focused: focused}
 	}
-	prev := map[cdp.BackendNodeID]bool{1: true}
-	boxes := map[cdp.BackendNodeID]ir.Box{1: box(0, 0, 1000, 2000)}
+	prev := map[cdp.BackendNodeID]bool{1: true, 2: true}
+	// The body, and a paragraph in it at the top: what a sheet at the
+	// top of the page lies over.
+	body.Children[0].ID = 2
+	boxes := map[cdp.BackendNodeID]ir.Box{1: box(0, 0, 1000, 2000), 2: box(0, 100, 1000, 40)}
 
 	// A sheet over the body with the keyboard in it.
 	sheet := &ir.Node{Kind: ir.Group, ID: 10, Children: []*ir.Node{para(text("Session expiring")), button(11, "Stay", true)}}
@@ -55,6 +58,21 @@ func TestAPopupIsToldByBehaviour(t *testing.T) {
 	if p := findPopup(prev, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, after}}, boxes); p != nil {
 		t.Errorf("a block after the body is in the flow, not over it: %v", p)
 	}
+	// A menu is a popup by declaration, over what it drops onto: the
+	// APG menu button opens one below its button and over the paragraph
+	// under that — no sibling of its own is touched (2026-09-23).
+	menu := &ir.Node{Kind: ir.Group, Role: "menu", ID: 80, Children: []*ir.Node{button(81, "Action 1", false), button(82, "Action 2", false)}}
+	wrapper := &ir.Node{Kind: ir.Group, ID: 85, Children: []*ir.Node{button(86, "Actions", true), menu}}
+	page := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		{Kind: ir.Landmark, Role: "main", ID: 1, Children: []*ir.Node{wrapper, para(text("Last action"))}}}}
+	page.Children[0].Children[1].ID = 90
+	page.Children[0].Children[1].Children[0].ID = 91 // the paragraph's text run, as wide as its words
+	mboxes := map[cdp.BackendNodeID]ir.Box{1: box(0, 0, 1000, 2000), 85: box(80, 900, 200, 40), 86: box(80, 900, 100, 40),
+		80: box(80, 940, 90, 160), 90: box(80, 990, 800, 30), 91: box(80, 990, 100, 30)}
+	if p := findPopup(map[cdp.BackendNodeID]bool{1: true, 85: true, 86: true, 90: true, 91: true}, nil, page, mboxes); p != menu {
+		t.Errorf("a menu that drops over the words below is a popup: %v", p)
+	}
+
 	// Declared modal: the declaration is the whole of the evidence, with
 	// no geometry at all.
 	dlg := &ir.Node{Kind: ir.Landmark, Role: "dialog", ID: 50, Modal: true, Children: []*ir.Node{para(text("Cookies?")), button(51, "Accept", false)}}
@@ -303,4 +321,39 @@ func TestAPressLandsWhereTheCursorIs(t *testing.T) {
 			t.Fatalf("round %d: Accept did not close the dialog", round)
 		}
 	}
+}
+
+// A menu that opens from a button is a popup: over the page, its items
+// pressable, gone when one is pressed (the APG menu button, 2026-09-23).
+func TestAMenuButtonOpensAPopup(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	exe, ok := browser.Installed()
+	if !ok {
+		t.Skip("pinned Chromium not installed; run webu once")
+	}
+	b, err := browser.Launch(exe, t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	abs, _ := filepath.Abs("testdata/menu.html")
+	d := newDriver(t, New(b, "file://"+abs))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the menu page", d.loaded("Menu"))
+	p := d.page()
+	d.cursorOn(ir.Button, "Actions")
+	d.key("enter")
+	d.until("the menu is a popup", func() bool { return p.popupNode() != nil })
+	v := dumpLayout(p.lay)
+	if !strings.Contains(v, "Action 3") || strings.Contains(v, "Last action") {
+		t.Errorf("the popup is the menu:\n%s", v)
+	}
+	if strings.Contains(v, "menuitem") {
+		t.Errorf("a menu item is drawn as a button, not as its role:\n%s", v)
+	}
+	d.cursorOn(ir.Button, "Action 3")
+	d.key("enter")
+	d.until("picked", func() bool { return p.popupNode() == nil && strings.Contains(dumpLayout(p.lay), "Action 3") })
 }
