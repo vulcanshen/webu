@@ -200,7 +200,7 @@ item 上 `Enter` 就是滑鼠左鍵：輸入框直接開框打字（密碼框遮
 - **iframe** —— 畫成佔位框，不走進去
 - `<textarea>` 用你自己的 `$EDITOR` 編輯、上傳檔案的檔案選擇器（目前打路徑）
 - **媒體** —— 圖片、影片、音訊是佔位框；yank URL 拿去別處開
-- **CAPTCHA、passkey / WebAuthn、WebRTC** —— 遇到會明講，還沒解：目前沒有有視窗的瀏覽器可以交棒
+- **CAPTCHA、passkey / WebAuthn、WebRTC** —— 遇到會明講、給你 Yank url 拿去別處開。沒有第二條路：webu 是 headless、得在沒有 display 的機器上跑，沒有視窗可以交棒
 - 滑鼠、Linux ARM build（沒有它的 Chromium snapshot）
 
 ## 用什麼做的

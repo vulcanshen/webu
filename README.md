@@ -202,7 +202,7 @@ Not there yet:
 - **iframes** — drawn as a placeholder; their content is not walked
 - a `<textarea>` in your own `$EDITOR`, and a file picker for uploads (a path is typed for now)
 - **media** — images, video and audio are placeholders; yank the URL and open it elsewhere
-- **CAPTCHA, passkeys / WebAuthn, WebRTC** — said plainly when met, not solved: there is no windowed browser to hand off to yet
+- **CAPTCHA, passkeys / WebAuthn, WebRTC** — said plainly when met, with the URL a Yank away to open elsewhere. There is no second way: webu is headless and has to run where there is no display, so there is no window to hand off to
 - mouse support, a Linux ARM build (no Chromium snapshot for it)
 
 ## Built with
