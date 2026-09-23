@@ -11,7 +11,7 @@ import (
 )
 
 // A slider is its bar and where it stands, and Enter lists its numbers
-// ten to a window, the cursor on the current one; j/k/u/d walk them and
+// ten to a window, the cursor on the current one; j/k/u/d/gg/G walk them and
 // Enter moves the slider there (user, 2026-09-23): an <input type=range>
 // takes it as its value, an ARIA slider is stepped there with the arrows.
 func TestASliderIsABarAndListsItsNumbers(t *testing.T) {
@@ -64,14 +64,24 @@ func TestASliderIsABarAndListsItsNumbers(t *testing.T) {
 	if o.top != o.cursor-5 {
 		t.Errorf("mid-window: top %d for cursor %d", o.top, o.cursor)
 	}
-	// d is half a window, j one row; Enter is the number under the cursor.
+	// G is the last number, gg the first; d is half a window, j one row;
+	// Enter is the number under the cursor.
+	d.key("G")
+	if it := d.m.options.items[d.m.options.cursor]; it.label != "255" {
+		t.Errorf("G is the end of the bar: %q", it.label)
+	}
+	d.key("g")
+	d.key("g")
+	if it := d.m.options.items[d.m.options.cursor]; it.label != "0" {
+		t.Errorf("gg is its start: %q", it.label)
+	}
 	d.key("d")
 	d.key("j")
-	if it := d.m.options.items[d.m.options.cursor]; it.label != "134" {
+	if it := d.m.options.items[d.m.options.cursor]; it.label != "6" {
 		t.Errorf("d then j is six rows down: %q", it.label)
 	}
 	d.key("enter")
-	d.until("red at 134", func() bool { return strings.Contains(rowOf("Red"), "134") })
+	d.until("red at 6", func() bool { return strings.HasSuffix(strings.TrimSpace(rowOf("Red")), " 6") })
 
 	// An ARIA slider has no value to set: it is walked there.
 	d.cursorOn(ir.Textbox, "Volume")
