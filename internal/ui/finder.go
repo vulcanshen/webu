@@ -174,7 +174,13 @@ func indexPage(t *tab) []hit {
 	// in the body says nothing about the footer, and a flat page — every
 	// paragraph a top-level node — is still one run of reading.
 	last := partKind(255)
+	only := t.popupNode()
 	for i, c := range t.root.Children {
+		if only != nil && c != only {
+			// A popup is the panel until it is answered: the page under
+			// it is out of reach, so it is out of the index too.
+			continue
+		}
 		part, ok := partOf[c]
 		if !ok {
 			part = partMain
