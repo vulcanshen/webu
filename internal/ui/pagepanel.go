@@ -410,11 +410,7 @@ func (m AppModel) pagetabRow(t *tab, innerW int) string {
 		// so the row is a rule and Esc has nowhere to go.
 		return dim.Render(strings.Repeat("─", innerW))
 	}
-	labels := make([]string, 0, len(t.parts))
-	for _, p := range t.parts {
-		labels = append(labels, p.kind.word())
-	}
-	labels = withLead(labels)
+	labels := partLabels(t.parts)
 	hand := t.onPagetab() && m.focus == panelPage && !m.sel.on
 	chain := partChain(labels, t.partIndex(t.at)+1, t.onPagetab(),
 		m.focus == panelPage && !m.sel.on, t.loading)

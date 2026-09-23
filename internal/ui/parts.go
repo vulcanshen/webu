@@ -247,13 +247,28 @@ func partHint(t *tab) string {
 	return plural(n, "item") + " · Enter to stay"
 }
 
-// withLead puts the menu glyph on the chain's first segment. The pagetab
-// is one strip, so it says so once, at its head (user, 2026-09-22).
-func withLead(labels []string) []string {
-	if len(labels) == 0 {
-		return labels
+// glyph is the part's mark: one of a family of four, so a part is the
+// same thing wherever it is named — on the pagetab, and against a hit in
+// the search list (user, 2026-09-23).
+func (k partKind) glyph() string {
+	switch k {
+	case partHeader:
+		return glyphHeader
+	case partOthers:
+		return glyphOthers
+	case partFooter:
+		return glyphFooter
 	}
-	out := append([]string(nil), labels...)
-	out[0] = glyphMenu + " " + out[0]
+	return glyphBody
+}
+
+// partLabels is the pagetab's segments: each part's own glyph and word.
+// One hamburger at the head used to stand for all of them, which said
+// "this row is a menu" and nothing about the row's contents.
+func partLabels(parts []part) []string {
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		out = append(out, p.kind.glyph()+" "+p.kind.word())
+	}
 	return out
 }

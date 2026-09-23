@@ -248,19 +248,23 @@ var (
 	glyphPencil = string(rune(0xf040))  // nf-fa-pencil          — input popup
 	glyphList   = string(rune(0xf0279)) // nf-md-format_list_bulleted — outline
 
+	// The page's four parts (parts.go), one Material Design family so
+	// the set reads as one set. Worn twice: on the pagetab, where they
+	// replaced a single hamburger that said only "this row is a menu",
+	// and in the search list, where a hit has to say which part of the
+	// page it was found in (user, 2026-09-23).
+	glyphHeader = string(rune(0xf06fc)) // nf-md-page_layout_header
+	glyphBody   = string(rune(0xf06fa)) // nf-md-page_layout_body
+	glyphOthers = string(rune(0xf06fd)) // nf-md-page_layout_sidebar_left
+	glyphFooter = string(rune(0xf06fb)) // nf-md-page_layout_footer
+
 	// The header's three popups (ux.md §B: one role, one glyph).
 	glyphBookmark = string(rune(0xf00c0)) // nf-md-bookmark
 	glyphHistory  = string(rune(0xf02da)) // nf-md-history
 	glyphDownload = string(rune(0xf01da)) // nf-md-download
 	glyphSettings = string(rune(0xf0493)) // nf-md-cog
 	glyphFolder   = string(rune(0xf024b)) // nf-md-folder — a bookmark folder's row
-	glyphCrumb    = string(rune(0xf0d20)) // nf-md-map_marker_path — a breadcrumb's entry row
-	glyphHeader   = string(rune(0xf06fc)) // nf-md-page_layout_header — a banner's
-	glyphFooter   = string(rune(0xf06fb)) // nf-md-page_layout_footer — a contentinfo's
-	glyphSidebar  = string(rune(0xf0836)) // nf-md-table_of_contents — a complementary's
-	glyphDialog   = string(rune(0xf10ac)) // nf-md-dock_window — a dialog's (a cookie banner, a modal)
 	glyphTable    = string(rune(0xf04eb)) // nf-md-table — a cell's content popup
-	glyphSkip     = string(rune(0xf04ad)) // nf-md-skip_next — a skip link's row
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 
