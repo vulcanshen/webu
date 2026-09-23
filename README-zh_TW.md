@@ -118,8 +118,9 @@ webu help                         # 完整用法；webu version 印版本
 ### 設定 —— `config.yaml`
 
 ```yaml
-# 在 L 打的不是 URL 時，搜尋送去哪：打的字接在後面。預設 Google。
-search_engine: https://www.google.com/search?q=
+# 在 L 打的不是 URL 時，搜尋送去哪：打的字接在後面。預設 DuckDuckGo 的 HTML 版 ——
+# Google 對 headless 瀏覽器的搜尋一律回 reCAPTCHA。Brave（search.brave.com/search?q=）也能用。
+search_engine: https://html.duckduckgo.com/html/?q=
 # 下載落在哪。預設 ~/.webu/datas/downloads。
 download_dir: ~/Downloads
 # 段落折行的欄寬。預設 100。

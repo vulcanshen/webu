@@ -117,9 +117,15 @@ func (c Config) TextWidth() int {
 	return int(c.Measure)
 }
 
-// DefaultSearch is where a goto that is not a URL goes (ux.md §7). Google
-// since 2026-09-21; it was DuckDuckGo.
-const DefaultSearch = "https://www.google.com/search?q="
+// DefaultSearch is where a goto that is not a URL goes (ux.md §7).
+//
+// DuckDuckGo's HTML endpoint (2026-09-23): Google was the default from
+// 2026-09-21, and Google answers a headless Chromium's search with its
+// reCAPTCHA — even once webu signs its own user agent — which is a page
+// webu can only draw a placeholder for. The html endpoint is the one
+// DuckDuckGo keeps for clients without JavaScript, and of the twelve
+// engines tried it draws the cleanest page (measured, 2026-09-23).
+const DefaultSearch = "https://html.duckduckgo.com/html/?q="
 
 // Search is the engine prefix in force.
 func (c Config) Search() string {

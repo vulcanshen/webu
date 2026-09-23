@@ -119,8 +119,10 @@ Settings and bookmarks are hand-editable YAML; bookmarks carry a `folder` path e
 
 ```yaml
 # Where a search goes when what you typed at L is not a URL: the words are
-# appended to it. Default Google.
-search_engine: https://www.google.com/search?q=
+# appended to it. Default DuckDuckGo's HTML endpoint — Google answers a
+# headless browser's search with a reCAPTCHA. Brave (search.brave.com/search?q=)
+# works too.
+search_engine: https://html.duckduckgo.com/html/?q=
 # Where downloads land. Default ~/.webu/datas/downloads.
 download_dir: ~/Downloads
 # How wide a paragraph flows before it wraps, in cells. Default 100.
