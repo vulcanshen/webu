@@ -3,6 +3,7 @@ package page
 import (
 	"context"
 
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/fetch"
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
@@ -32,9 +33,21 @@ const observerScript = `(() => {
 // itself injected into every document the tab loads from now on, and — for
 // a tab that already has a document, one the page opened itself — the
 // observer run in that document too. Run once per tab.
-func Prepare(ctx context.Context) error {
+func Prepare(ctx context.Context, ua string, meta *emulation.UserAgentMetadata) error {
 	return chromedp.Run(ctx,
 		chromedp.ActionFunc(func(ctx context.Context) error {
+			// Who the tab says it is, before it says anything to anyone:
+			// the string on every request, the brands in the client
+			// hints (browser.Browser.identify). Empty: Chromium's own.
+			if ua != "" {
+				p := emulation.SetUserAgentOverride(ua)
+				if meta != nil {
+					p = p.WithUserAgentMetadata(meta)
+				}
+				if err := p.Do(ctx); err != nil {
+					return err
+				}
+			}
 			if err := enableDevDomains(ctx); err != nil {
 				return err
 			}

@@ -1,8 +1,13 @@
 package browser
 
 import (
+	"runtime"
+
 	"context"
 	"fmt"
+	cdpbrowser "github.com/chromedp/cdproto/browser"
+	"github.com/chromedp/cdproto/emulation"
+	"github.com/vulcanshen/webu/internal/version"
 	"io"
 	"path/filepath"
 	"strings"
@@ -17,6 +22,11 @@ import (
 type Browser struct {
 	Ctx         context.Context
 	allocCancel context.CancelFunc
+	// UserAgent is what webu calls itself to a page, and UAMeta the same
+	// for the client-hint headers (identify). Empty when Chromium could
+	// not be asked: the page then sees Chromium's own.
+	UserAgent string
+	UAMeta    *emulation.UserAgentMetadata
 }
 
 // Launch starts exe headless on profile and waits until it answers.
@@ -107,7 +117,64 @@ func Launch(exe, profile string, logw io.Writer) (*Browser, error) {
 		allocCancel()
 		return nil, fmt.Errorf("start chromium: %w", err)
 	}
-	return &Browser{Ctx: ctx, allocCancel: allocCancel}, nil
+	b := &Browser{Ctx: ctx, allocCancel: allocCancel}
+	b.identify(ef)
+	return b, nil
+}
+
+// identify works out what webu says it is, from what Chromium says it is.
+//
+// webu is a browser: Chromium with a terminal for a face. Chromium's own
+// string calls the engine "HeadlessChrome", which is the name of a mode,
+// not of a browser — and a page told "headless" answers with its
+// bot-check instead of itself. So the engine is named the way every
+// Chromium-based browser names it, Chrome/<version>, and webu signs
+// after it, the way Edge and Vivaldi sign theirs (user, 2026-09-23).
+// Not a disguise: every part of it is true, and "webu" is in it.
+func (b *Browser) identify(errf func(string, ...any)) {
+	var product, ua string
+	err := chromedp.Run(b.Ctx, chromedp.ActionFunc(func(ctx context.Context) error {
+		var err error
+		_, product, _, ua, _, err = cdpbrowser.GetVersion().Do(ctx)
+		return err
+	}))
+	if err != nil {
+		errf("identify: %v", err)
+		return
+	}
+	b.UserAgent = userAgent(ua, version.Version)
+	b.UAMeta = uaMetadata(product, version.Version)
+}
+
+// userAgent is Chromium's string with the engine named as a browser
+// names it, and webu's name and version after it.
+func userAgent(chromium, ver string) string {
+	return strings.Replace(chromium, "HeadlessChrome/", "Chrome/", 1) + " webu/" + ver
+}
+
+// uaMetadata is the same identity for Sec-CH-UA and navigator.userAgentData:
+// the brands are Chromium at its version and webu at its own; the
+// platform is the one this is running on.
+func uaMetadata(product, ver string) *emulation.UserAgentMetadata {
+	full := product
+	if i := strings.IndexByte(full, '/'); i >= 0 {
+		full = full[i+1:]
+	}
+	major := full
+	if i := strings.IndexByte(major, '.'); i >= 0 {
+		major = major[:i]
+	}
+	platform := map[string]string{"darwin": "macOS", "linux": "Linux", "windows": "Windows"}[runtime.GOOS]
+	arch := map[string]string{"arm64": "arm", "amd64": "x86"}[runtime.GOARCH]
+	return &emulation.UserAgentMetadata{
+		Brands: []*emulation.UserAgentBrandVersion{
+			{Brand: "Chromium", Version: major}, {Brand: "webu", Version: ver}},
+		FullVersionList: []*emulation.UserAgentBrandVersion{
+			{Brand: "Chromium", Version: full}, {Brand: "webu", Version: ver}},
+		Platform:     platform,
+		Architecture: arch,
+		Bitness:      "64",
+	}
 }
 
 // Close asks Chromium to quit and waits for it, then releases the allocator.

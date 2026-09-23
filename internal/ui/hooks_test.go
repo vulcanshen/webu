@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"fmt"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -343,5 +345,33 @@ func TestBookmarkOpensANewTab(t *testing.T) {
 	d.until("page B in the new tab", d.loaded("Page B"))
 	if d.m.tabs[0].title != "Page A" {
 		t.Errorf("the first tab should be untouched: %q", d.m.tabs[0].title)
+	}
+}
+
+// A page is told who is asking: Chromium named the way a browser names
+// it, and webu after it — on every request and in the client hints —
+// never "Headless", which is the name of a mode and what a page answers
+// with its bot-check (user, 2026-09-23).
+func TestTheBrowserSaysWhoItIs(t *testing.T) {
+	b := hookBrowser(t)
+	if !strings.Contains(b.UserAgent, " webu/") || strings.Contains(b.UserAgent, "Headless") {
+		t.Fatalf("the browser's own name: %q", b.UserAgent)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, "<title>Who</title><p>agent %s</p><p>hints %s</p>",
+			html.EscapeString(r.UserAgent()), html.EscapeString(r.Header.Get("Sec-CH-UA")))
+	}))
+	defer srv.Close()
+	d := startAt(t, b, srv.URL, store.Config{})
+	d.until("who", d.loaded("Who"))
+	v := dumpLayout(d.page().lay)
+	if !strings.Contains(v, "webu/") || !strings.Contains(v, "Chrome/") || strings.Contains(v, "Headless") {
+		t.Errorf("the request carried webu's name:\n%s", v)
+	}
+	// The hints go only where Chromium sends them; where they went they
+	// say the same thing.
+	if strings.Contains(v, "hints ") && !strings.Contains(v, "hints \n") && !strings.Contains(v, `"webu"`) {
+		t.Errorf("the client hints name webu too:\n%s", v)
 	}
 }

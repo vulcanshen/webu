@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	cdpbrowser "github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/fetch"
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
@@ -137,6 +138,10 @@ type tab struct {
 	frozen *pageMsg
 	// dev is the tab's network and console record for DevTools (ui.md §3.2).
 	dev *page.DevLog
+	// ua and uaMeta are what the tab says it is (browser.Browser.identify),
+	// applied when it is prepared.
+	ua     string
+	uaMeta *emulation.UserAgentMetadata
 	// fold is the user's word on which landmarks are open or shut, by node
 	// id, which survives a recapture; measure is the text width cap.
 	fold    map[cdp.BackendNodeID]bool
@@ -281,7 +286,8 @@ func (m *AppModel) newTabFor(id target.ID) *tab {
 
 func (m *AppModel) newTabWith(ctx context.Context, cancel context.CancelFunc) *tab {
 	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1, dev: &page.DevLog{},
-		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth()}
+		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth(),
+		ua: m.browser.UserAgent, uaMeta: m.browser.UAMeta}
 	m.nextTabID++
 	page.Observe(ctx, t.dev)
 	ch := m.events
@@ -372,11 +378,12 @@ func (t *tab) adopt() tea.Cmd {
 	t.gen++
 	t.loading, t.prepared = true, true
 	gen, id, ctx := t.gen, t.id, t.ctx
+	ua, meta := t.ua, t.uaMeta
 	return func() tea.Msg {
 		if err := chromedp.Run(ctx); err != nil {
 			return pageMsg{tabID: id, gen: gen, err: fmt.Errorf("attach: %w", err)}
 		}
-		if err := page.Prepare(ctx); err != nil {
+		if err := page.Prepare(ctx, ua, meta); err != nil {
 			return pageMsg{tabID: id, gen: gen, err: fmt.Errorf("prepare: %w", err)}
 		}
 		if err := chromedp.Run(ctx, chromedp.WaitReady("body")); err != nil {
@@ -401,11 +408,12 @@ func (t *tab) load(url string) tea.Cmd {
 	t.settlingUntil = time.Now().Add(settleGrace)
 	t.url = url
 	gen, id, ctx := t.gen, t.id, t.ctx
+	ua, meta := t.ua, t.uaMeta
 	prepare := !t.prepared
 	t.prepared = true
 	return func() tea.Msg {
 		if prepare {
-			if err := page.Prepare(ctx); err != nil {
+			if err := page.Prepare(ctx, ua, meta); err != nil {
 				return pageMsg{tabID: id, gen: gen, url: url, err: fmt.Errorf("prepare: %w", err)}
 			}
 		}

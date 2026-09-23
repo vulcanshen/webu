@@ -36,3 +36,21 @@ func TestLaunchAnswers(t *testing.T) {
 	}
 	t.Logf("user agent: %s", ua)
 }
+
+// webu signs its own user agent: Chromium's string with the engine named
+// the way a browser names it, and webu after it (launch.identify).
+func TestWebuSignsItsUserAgent(t *testing.T) {
+	got := userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/131.0.6778.85 Safari/537.36", "0.3.0")
+	want := "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.85 Safari/537.36 webu/0.3.0"
+	if got != want {
+		t.Errorf("got  %s\nwant %s", got, want)
+	}
+	m := uaMetadata("HeadlessChrome/131.0.6778.85", "0.3.0")
+	if len(m.Brands) != 2 || m.Brands[0].Brand != "Chromium" || m.Brands[0].Version != "131" ||
+		m.Brands[1].Brand != "webu" || m.Brands[1].Version != "0.3.0" {
+		t.Errorf("brands: %+v", m.Brands)
+	}
+	if m.FullVersionList[0].Version != "131.0.6778.85" || m.Platform == "" || m.Bitness != "64" {
+		t.Errorf("full version list / platform: %+v %q", m.FullVersionList[0], m.Platform)
+	}
+}
