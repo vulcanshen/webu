@@ -442,3 +442,50 @@ func TestEnterHoversThenClicks(t *testing.T) {
 		t.Errorf("the hover must not wait for headless Chromium's five-second acknowledgement: %v", took)
 	}
 }
+
+// An iframe is one thing until you go in: Enter opens its document in
+// place, a link inside it moves the frame, Esc comes back out (user,
+// 2026-09-23).
+func TestAnIframeIsEnteredInPlace(t *testing.T) {
+	b := hookBrowser(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		switch r.URL.Path {
+		case "/frame":
+			w.Write([]byte(`<title>Inner</title><h2>Inside the frame</h2><p>frame text</p><a href="/frame2">go deeper</a>`))
+		case "/frame2":
+			w.Write([]byte(`<title>Deeper</title><p>you went deeper</p>`))
+		default:
+			w.Write([]byte(`<title>Outer</title><h1>Outer page</h1><iframe src="/frame" title="The embed" width="400" height="200"></iframe><p>after the frame</p>`))
+		}
+	}))
+	defer srv.Close()
+	d := startAt(t, b, srv.URL, store.Config{})
+	d.until("outer", d.loaded("Outer"))
+	p := d.page()
+	if v := dumpLayout(p.lay); strings.Contains(v, "Inside the frame") || !strings.Contains(v, "The embed") {
+		t.Fatalf("the frame is one row, shut:\n%s", v)
+	}
+	d.cursorOn(ir.Media, "The embed")
+	if n := p.current(); n.Frame == "" {
+		t.Fatalf("the row knows its frame: %+v", n)
+	}
+	d.key("enter")
+	d.until("inside", func() bool { return p.drilled() && strings.Contains(dumpLayout(p.lay), "Inside the frame") })
+	if v := dumpLayout(p.lay); strings.Contains(v, "after the frame") {
+		t.Errorf("inside the frame the page outside is not shown:\n%s", v)
+	}
+	// A link in the frame moves the frame, and the panel stays inside.
+	d.cursorOn(ir.Link, "go deeper")
+	d.key("enter")
+	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
+	d.key("enter")
+	d.until("deeper", func() bool { return strings.Contains(dumpLayout(p.lay), "you went deeper") })
+	if !p.drilled() || !strings.HasSuffix(p.url, "/") {
+		t.Errorf("the frame moved, the page did not: drilled=%v url=%s", p.drilled(), p.url)
+	}
+	d.key("esc")
+	if p.drilled() || !strings.Contains(dumpLayout(p.lay), "after the frame") {
+		t.Errorf("Esc is back out to the page:\n%s", dumpLayout(p.lay))
+	}
+}

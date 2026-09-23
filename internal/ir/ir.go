@@ -114,6 +114,10 @@ type Node struct {
 	// <dialog>.showModal()). Chromium prunes the rest of the tree behind
 	// one, so it is the one popup that needs no geometry to be seen.
 	Modal bool
+	// Frame is the frame an <iframe> holds, by Chromium's frame id
+	// (Capture.FrameOf): the one Media that is a thing to go into. Its
+	// Children are that frame's document once it has been opened.
+	Frame string
 	// InputType is what an <input> declared it takes — "email", "date",
 	// "number" — lower-cased, empty when the page said nothing or the
 	// field is not an <input> (Capture.Types).

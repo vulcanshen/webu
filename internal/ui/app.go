@@ -429,6 +429,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !fresh {
 			t.scrollToCursor(m.pageVisible())
 		}
+		if id := t.wantDrill; id != 0 && !t.working() {
+			// The frame Enter asked for: in, now that its document is
+			// here — or not, when it is another site's and could not be.
+			t.wantDrill = 0
+			if n := nodeByID(t.root, id); n != nil && len(n.Children) > 0 {
+				t.drillInto(n, m.pageW(), m.pageVisible())
+			} else {
+				return m, m.toast.show("a frame from another site: webu cannot enter it; its address is a Yank away", toastInfo)
+			}
+		}
 		if t.stillComing() {
 			// An application's shell: <body> exists and nothing is drawn
 			// yet. Keep saying so, and look again — the observer will
@@ -1975,6 +1985,16 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 		return m, nil
 	case ir.Cell:
 		return m.enterCell(t, n)
+	case ir.Media:
+		if n.Frame != "" {
+			// An iframe is one thing until you go in (user, 2026-09-23):
+			// its document, when it has come; asked for, when not.
+			if len(n.Children) > 0 {
+				t.drillInto(n, m.pageW(), m.pageVisible())
+				return m, nil
+			}
+			return m, tea.Batch(t.openFrame(n), spinCmd())
+		}
 	case ir.Code:
 		// A block of code on its own: the lines unfolded, as far as the
 		// terminal is wide, the page's keys to scroll (showCell's

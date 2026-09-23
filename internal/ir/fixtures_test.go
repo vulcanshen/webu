@@ -128,7 +128,7 @@ func captureTree(t *testing.T, b *browser.Browser, html string) ir.Capture {
 		chromedp.WaitReady("body"),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var err error
-			c, err = page.Capture(ctx)
+			c, err = page.Capture(ctx, nil)
 			return err
 		}),
 	)
