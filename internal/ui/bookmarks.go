@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/vulcanshen/webu/internal/page"
 	"github.com/vulcanshen/webu/internal/store"
 )
 
@@ -358,16 +360,35 @@ func (m *AppModel) startImport() tea.Cmd {
 	return m.picker.open(glyphBookmark, "Import bookmarks", importDir(), m.layer())
 }
 
-// pickerKey drives the file picker; a pick goes to the one thing that
-// opens it so far, the Bookmarks import.
+// pickerKey drives the file picker; a pick goes to whichever of the two
+// things that open it is waiting — a page's file chooser, or the
+// Bookmarks import.
 func (m AppModel) pickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	path, done := m.picker.update(msg)
 	if !done {
 		return m, nil
 	}
 	closeCmd := m.picker.close()
+	if m.upload != nil {
+		return m, tea.Batch(closeCmd, m.uploadPicked(path))
+	}
 	cmd := m.importPicked(path)
 	return m, tea.Batch(closeCmd, cmd)
+}
+
+// uploadPicked hands the chosen file to the page's chooser.
+func (m *AppModel) uploadPicked(path string) tea.Cmd {
+	f := m.upload
+	m.upload = nil
+	if f == nil {
+		return nil
+	}
+	_, ft := m.tabByID(f.tabID)
+	if ft == nil {
+		return nil
+	}
+	node, files := f.node, []string{path}
+	return ft.press(func(ctx context.Context) error { return page.SetFiles(ctx, node, files) })
 }
 
 // importPicked reads the chosen file at once — a wrong file is news here,

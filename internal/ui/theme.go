@@ -266,6 +266,7 @@ var (
 	glyphBookmark = string(rune(0xf00c0)) // nf-md-bookmark
 	glyphHistory  = string(rune(0xf02da)) // nf-md-history
 	glyphDownload = string(rune(0xf01da)) // nf-md-download
+	glyphUpload   = string(rune(0xf0a4d)) // nf-md-file_upload — a page's file chooser, answered with the picker
 	glyphSettings = string(rune(0xf0493)) // nf-md-cog
 	glyphFolder   = string(rune(0xf024b)) // nf-md-folder — a bookmark folder's row
 	glyphTable    = string(rune(0xf04eb)) // nf-md-table — a cell's content popup

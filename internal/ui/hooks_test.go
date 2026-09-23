@@ -180,7 +180,11 @@ func TestHTTPAuthIsAsked(t *testing.T) {
 
 func TestFileUploadIsAsked(t *testing.T) {
 	b := hookBrowser(t)
-	dir := t.TempDir()
+	// The picker opens in ~/Downloads: a home with one file in it.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	dir := filepath.Join(home, "Downloads")
+	os.MkdirAll(dir, 0o755)
 	file := filepath.Join(dir, "notes.txt")
 	os.WriteFile(file, []byte("hi"), 0o644)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -192,10 +196,18 @@ func TestFileUploadIsAsked(t *testing.T) {
 	d.until("upload page", d.loaded("Upload"))
 	d.cursorOn(ir.Button, "Attach")
 	d.act()
-	d.until("path asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFile })
-	d.key(file)
+	// The file is picked, not typed: the picker, as the Bookmarks
+	// import has it (user, 2026-09-23).
+	d.until("the picker", func() bool { return d.m.picker.isInteractive() })
+	if d.m.picker.dir != dir {
+		t.Errorf("the picker opens in Downloads: %q", d.m.picker.dir)
+	}
+	d.key("notes")
 	d.key("enter")
 	d.until("file chosen", func() bool { return strings.Contains(dumpLayout(d.page().lay), "chose:notes.txt") })
+	if d.m.upload != nil || d.m.picker.isActive() {
+		t.Error("the chooser is answered and the picker gone")
+	}
 }
 
 func TestUndoCloseAndQuitConfirm(t *testing.T) {
