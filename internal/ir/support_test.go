@@ -83,3 +83,34 @@ func TestHiddenTextIsDropped(t *testing.T) {
 		t.Error("with no bounds at all nothing is hidden")
 	}
 }
+
+// An ARIA combobox with nothing to choose from is a box to type in:
+// Google's search box is a textarea that calls itself one, and Enter on
+// it must open the input, not say there are no options (2026-09-23).
+func TestAComboboxWithNoOptionsIsATextbox(t *testing.T) {
+	c := ir.Capture{Nodes: []*accessibility.Node{
+		axNode(1, "RootWebArea", "Page", 1, 2, 3),
+		axNode(2, "combobox", "搜尋", 2),
+		axNode(3, "combobox", "Pick", 3, 4),
+		axNode(4, "MenuListPopup", "", 4, 5, 6),
+		axNode(5, "option", "One", 5),
+		axNode(6, "option", "Two", 6),
+	}}
+	root := ir.Build(c)
+	var bare, sel *ir.Node
+	root.Walk(func(n *ir.Node) bool {
+		switch n.ID {
+		case 2:
+			bare = n
+		case 3:
+			sel = n
+		}
+		return true
+	})
+	if bare == nil || bare.Kind != ir.Textbox || bare.Name != "搜尋" {
+		t.Errorf("no options: a textbox, got %+v", bare)
+	}
+	if sel == nil || sel.Kind != ir.Combobox || len(sel.Children) != 2 {
+		t.Errorf("with options: still a combobox of two, got %+v", sel)
+	}
+}

@@ -2161,7 +2161,23 @@ func (m AppModel) chooseOptionsFor(n *ir.Node) (tea.Model, tea.Cmd) {
 // which is the model that gets returned — a value receiver here would open
 // the popup on a copy nobody keeps.
 func (m *AppModel) editField(n *ir.Node) tea.Cmd {
-	return m.editFieldAs(n, n.Role == "searchbox")
+	return m.editFieldAs(n, n.Role == "searchbox" || m.inSearch(n))
+}
+
+// inSearch reports whether a node sits inside a search landmark: a box
+// there is a search box whatever it calls itself — Google's is a
+// combobox — and what is typed into it is what the user came to submit.
+func (m AppModel) inSearch(n *ir.Node) bool {
+	t := m.shownTab()
+	if t == nil {
+		return false
+	}
+	for _, a := range chainTo(t.root, n) {
+		if a.Kind == ir.Landmark && a.Role == "search" {
+			return true
+		}
+	}
+	return false
 }
 
 // editFieldAs is editField told whether the box is a search: one by its

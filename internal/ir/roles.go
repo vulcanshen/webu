@@ -79,7 +79,7 @@ var Roles = map[string]Spec{
 	"checkbox":      {Kind: Check, Action: Click, Display: "box glyph, ticked or not, + name; Enter toggles"},
 	"radio":         {Kind: Check, Action: Click, Display: "dot glyph, filled or not, + name; Enter selects"},
 	"switch":        {Kind: Check, Action: Click, Display: "box glyph, ticked or not, + name; Enter toggles"},
-	"combobox":      {Kind: Combobox, Action: Choose, Display: "name + dropdown glyph + value; Enter lists the options"},
+	"combobox":      {Kind: Combobox, Action: Choose, Display: "name + dropdown glyph + value; Enter lists the options — one with no options is a textbox (Google's search box)"},
 	"option":        {Kind: Option, Display: "one choice of a combobox"},
 	"MenuListPopup": {Transparent: true, Display: "the option list under a <select>; its options are read, it is not drawn"},
 

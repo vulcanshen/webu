@@ -1073,3 +1073,46 @@ func TestTableCells(t *testing.T) {
 	d.key("enter")
 	d.until("the other cell", func() bool { return d.m.message.isInteractive() && d.m.message.title == "Site" })
 }
+
+// Google's search box is a textarea that calls itself a combobox, with
+// no options: Enter on it is the input popup, offered to the page's
+// Enter afterwards because it sits in a search landmark — not "no
+// options to choose from" (user, 2026-09-23). A combobox WITH options
+// still drops its list.
+func TestAComboboxWithNoOptionsOpensTheInput(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	exe, ok := browser.Installed()
+	if !ok {
+		t.Skip("pinned Chromium not installed; run webu once")
+	}
+	b, err := browser.Launch(exe, t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	abs, _ := filepath.Abs("testdata/combo.html")
+	d := newDriver(t, New(b, "file://"+abs))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("combo page", d.loaded("Combo"))
+
+	d.cursorOn(ir.Textbox, "搜尋")
+	d.key("enter")
+	d.until("the input", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
+	if d.m.input.prompt != "搜尋" || !d.m.input.search {
+		t.Errorf("the box over the field: prompt %q search %v", d.m.input.prompt, d.m.input.search)
+	}
+	if d.m.message.isActive() {
+		t.Error("no message about options")
+	}
+	d.key("esc")
+	d.until("input gone", func() bool { return !d.m.input.isActive() })
+
+	d.cursorOn(ir.Combobox, "Pick")
+	d.key("enter")
+	d.until("the options", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optSelect })
+	if len(d.m.options.items) < 2 {
+		t.Errorf("a real select lists its options: %d", len(d.m.options.items))
+	}
+}
