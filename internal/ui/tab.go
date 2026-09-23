@@ -825,8 +825,14 @@ func (t *tab) relayout(width int) {
 			fold: t.fold, drill: inside.ID})
 	}
 	g := t.gutter
+	if t.popupNode() != nil {
+		// A popup has no line numbers: a dialog is a few lines to answer,
+		// not a page to move about in, and [go] has nowhere to go in it
+		// (user, 2026-09-23).
+		g = 0
+	}
 	lay := draw(g)
-	if g2 := lineNumW(len(lay.rows)); g2 != g {
+	if g2 := lineNumW(len(lay.rows)); g2 != g && t.popupNode() == nil {
 		g, lay = g2, draw(g2)
 	}
 	t.lay, t.gutter = lay, g

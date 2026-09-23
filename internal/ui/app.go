@@ -1572,7 +1572,7 @@ func pagetabItem(t *tab) menuItem {
 // number in the gutter (user, 2026-09-23).
 func goItem(t *tab) menuItem {
 	n := 0
-	if t != nil {
+	if t != nil && t.popupNode() == nil {
 		n = t.lineCount()
 	}
 	return menuItem{label: "[go] Go to line", key: "go",
@@ -2751,6 +2751,9 @@ func (m AppModel) openFinder(kind finderKind) (tea.Model, tea.Cmd) {
 		return m, m.toast.show("no page to search", toastInfo)
 	}
 	if kind == finderGo {
+		if t.popupNode() != nil {
+			return m, m.toast.show("a popup has no lines to go to: answer it", toastInfo)
+		}
 		if t.lineCount() == 0 {
 			return m, m.toast.show("this page has no lines to go to", toastInfo)
 		}
