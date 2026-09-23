@@ -103,6 +103,10 @@ type Node struct {
 	Checked   Tri
 	Multiline bool // Textbox: a textarea or a contenteditable
 	Protected bool // Textbox: a password field — the value is shown masked
+	// InputType is what an <input> declared it takes — "email", "date",
+	// "number" — lower-cased, empty when the page said nothing or the
+	// field is not an <input> (Capture.Types).
+	InputType string
 	// Current is aria-current: where the user is, in a navigation or a
 	// breadcrumb (on the link, or on its list item). From the DOM, not
 	// the AX tree (Capture.Current).

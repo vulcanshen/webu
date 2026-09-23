@@ -631,3 +631,22 @@ func siblingSection(secs []section, at, step int) int {
 	}
 	return clamp(at+step, 0, len(secs)-1)
 }
+
+// lineGiven is the go chord's box answered on a page rather than on the
+// section list: a line number of what the panel is showing. Out of range,
+// or not a number, keeps the box open and says why — the same shape
+// sectionGiven uses.
+func (m AppModel) lineGiven(t *tab, value string) (tea.Model, tea.Cmd) {
+	if t == nil {
+		return m, m.input.close()
+	}
+	last := t.lineCount()
+	n, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil {
+		return m, m.toast.show("a line number, 1 to "+itoa(last), toastInfo)
+	}
+	if !t.goToLine(n, m.pageVisible()) {
+		return m, m.toast.show("this page has lines 1 to "+itoa(last), toastInfo)
+	}
+	return m, m.input.close()
+}

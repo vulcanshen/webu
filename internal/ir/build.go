@@ -32,6 +32,11 @@ type Capture struct {
 	// to: Top Bar · Sidebar · Main Content"); a link's text says it too
 	// (ui). A block is wrapped in a navigation of its own at build time.
 	Skip map[cdp.BackendNodeID]bool `json:"skip,omitempty"`
+	// Types is what an <input> declared it takes — "email", "date",
+	// "number" — by backend id. The AX tree folds all of them into
+	// textbox, and a terminal has to say which, because a box on screen
+	// shows nothing of what it expects.
+	Types map[cdp.BackendNodeID]string `json:"types,omitempty"`
 	// Viewport is the window the page was laid out in — not the page's
 	// own size, which Boxes gives. A page shorter than its viewport is
 	// whole: nothing is off screen for the chrome to be in the way of
@@ -169,6 +174,7 @@ func Build(c Capture) *Node {
 		byID:       make(map[accessibility.NodeID]*accessibility.Node, len(c.Nodes)),
 		display:    c.Display,
 		protected:  c.Protected,
+		types:      c.Types,
 		current:    c.Current,
 		hidden:     c.Hidden,
 		skip:       maps.Clone(c.Skip),
@@ -192,6 +198,7 @@ type builder struct {
 	byID       map[accessibility.NodeID]*accessibility.Node
 	display    map[cdp.BackendNodeID]string
 	protected  map[cdp.BackendNodeID]bool
+	types      map[cdp.BackendNodeID]string
 	current    map[cdp.BackendNodeID]bool
 	hidden     map[cdp.BackendNodeID]bool
 	skip       map[cdp.BackendNodeID]bool
@@ -362,6 +369,11 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 			// capture that did not look at the DOM — the AX node itself
 			// does not say.
 			n.Protected = b.protected[n.ID] || (n.Value != "" && strings.Trim(n.Value, "•") == "")
+			// What the page said the box takes. The AX tree folds email,
+			// tel, url, date and the rest into one textbox, and a box on
+			// screen shows nothing of what it expects, so the popup over
+			// it has to say (ui editFieldAs).
+			n.InputType = b.types[n.ID]
 		}
 		return []*Node{n}
 	case Combobox:

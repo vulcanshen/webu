@@ -60,12 +60,15 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		out = append(out, lipgloss.NewStyle().Foreground(selectColor).Render(padRight(" "+st, innerW)))
 	} else {
 		// The glyph says what state the fetch is in and the URL says
-		// where: one pair, one colour (2026-09-22).
-		icon := glyphWeb
+		// where: one pair, one colour (2026-09-22). While the page is
+		// coming that colour is lavender, the whole row of it (user,
+		// 2026-09-23) — a turning glyph is a small thing to notice, and
+		// the row it sits on is the one place the eye already is.
+		icon, ink := glyphWeb, urlColor
 		if t.working() {
-			icon = spinnerFrame()
+			icon, ink = spinnerFrame(), editColor
 		}
-		blue := lipgloss.NewStyle().Foreground(urlColor)
+		blue := lipgloss.NewStyle().Foreground(ink)
 		// While a section is open the URL wears its anchor: a section is
 		// a place, and the address bar is where a place is named.
 		shown := fitURL(t.url+t.sectionAnchor(), innerW-3)
@@ -155,9 +158,16 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	// does not run on past the end of what is being read (section.go).
 	lo, hi := t.rowRange()
 	end := min(hi+1, t.top+innerH)
+	// The line numbers count from what the panel is SHOWING, not from the
+	// page behind it: inside a section, or inside a list item, the panel
+	// is that thing, and "line 5" has to mean the fifth line of what is
+	// being read (2026-09-23).
+	gut := t.gutter
+	innerW -= gut
 	for i := max(t.top, lo); i < end; i++ {
 		var b strings.Builder
 		used := 0
+		b.WriteString(lineNum(i-lo+1, gut, t.loading))
 		row := t.lay.rows[i]
 		// A framed block — a form — is drawn by the panel, because only
 		// the panel knows how wide the row ended up (render.boxPart).
@@ -230,7 +240,7 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 		out = append(out, b.String())
 	}
 	for len(out) < innerH {
-		out = append(out, strings.Repeat(" ", innerW))
+		out = append(out, strings.Repeat(" ", innerW+gut))
 	}
 	return out
 }
@@ -568,4 +578,32 @@ func partChain(labels []string, at int, hand, focused, dimmed bool) string {
 	}
 	b.WriteString(lipgloss.NewStyle().Foreground(ground(len(labels) - 1)).Render(capRight))
 	return b.String()
+}
+
+// lineNumW is how wide the line-number column is for a page of n rows:
+// the digits, and one space to keep the number off the text.
+//
+// Every page has one, not only the section list (user, 2026-09-23). A
+// number earns its column when a key takes you to it, and [go] is that
+// key here as it is there — on a page it asks for a line rather than a
+// section (app.dispatch).
+func lineNumW(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	return len(itoa(n)) + 1
+}
+
+// lineNum draws one: right-aligned in the gutter, in the structural blue
+// every key-shaped thing in this app wears, dim while the page is on its
+// way like everything else on it.
+func lineNum(n, w int, dimmed bool) string {
+	if w <= 0 {
+		return ""
+	}
+	ink := focusColor
+	if dimmed {
+		ink = dimColor
+	}
+	return lipgloss.NewStyle().Foreground(ink).Render(padLeft(itoa(n), w-1) + " ")
 }

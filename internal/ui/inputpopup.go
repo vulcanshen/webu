@@ -28,6 +28,7 @@ const (
 	inputImportName                // the folder a browser's export goes under (bookmarks.go)
 	inputRename                    // a bookmark's title, or a folder's name (bookmarks.go)
 	inputSection                   // a section's number, from the go chord (section.go)
+	inputLine                      // a line of what is on screen, from the same chord
 )
 
 // inputPopup is one line of text with a question above it — the message
