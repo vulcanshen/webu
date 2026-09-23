@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -164,6 +165,10 @@ type tab struct {
 	// applied when it is prepared.
 	ua     string
 	uaMeta *emulation.UserAgentMetadata
+	// acting serialises the page actions (act): a click must not have a
+	// reveal scroll the page between reading its target and pressing. A
+	// pointer, so the backdrop's copy of the tab shares it (pagepopup).
+	acting *sync.Mutex
 	// fold is the user's word on which landmarks are open or shut, by node
 	// id, which survives a recapture; measure is the text width cap.
 	fold    map[cdp.BackendNodeID]bool
@@ -309,7 +314,7 @@ func (m *AppModel) newTabFor(id target.ID) *tab {
 func (m *AppModel) newTabWith(ctx context.Context, cancel context.CancelFunc) *tab {
 	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1, dev: &page.DevLog{},
 		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth(),
-		ua: m.browser.UserAgent, uaMeta: m.browser.UAMeta}
+		ua: m.browser.UserAgent, uaMeta: m.browser.UAMeta, acting: &sync.Mutex{}}
 	m.nextTabID++
 	page.Observe(ctx, t.dev)
 	ch := m.events
@@ -514,8 +519,37 @@ func (t *tab) press(fn func(context.Context) error) tea.Cmd {
 }
 
 func (t *tab) act(fn func(context.Context) error) tea.Cmd {
+	return t.run(fn, true)
+}
+
+// unblock is press for what lets the page go on: a dialog's answer, an
+// HTTP challenge's. A click that opened an alert does not return until
+// the alert is answered, so the answer must not queue behind it (the
+// lock below) — it would be waiting for the thing that is waiting for
+// it.
+func (t *tab) unblock(fn func(context.Context) error) tea.Cmd {
+	t.loading = true
+	t.settlingUntil = time.Now().Add(settleGrace)
+	t.popupUntil = time.Now().Add(popupGrace)
+	return t.run(fn, false)
+}
+
+// run is act with or without the tab's action lock.
+//
+// One action on the page at a time. Every cursor move reveals its node,
+// and a walk of five items is five reveals in flight when Enter comes; a
+// click reads its target's box and then presses at that point, and a
+// stale reveal scrolling the page between the two put the press on
+// whatever had moved under it — one press in six missed, measured on
+// the APG alert example (2026-09-23). The lock makes the read and the
+// press one act.
+func (t *tab) run(fn func(context.Context) error, lock bool) tea.Cmd {
 	ctx := t.ctx
 	do := func() tea.Msg {
+		if lock && t.acting != nil {
+			t.acting.Lock()
+			defer t.acting.Unlock()
+		}
 		if err := fn(ctx); err != nil {
 			return actionErrMsg{err: err}
 		}

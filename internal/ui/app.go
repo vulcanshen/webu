@@ -608,7 +608,7 @@ func (m AppModel) answerDialogOn(tabID int, accept bool, text string) tea.Cmd {
 	if t == nil {
 		return nil
 	}
-	return t.press(func(ctx context.Context) error { return page.HandleDialog(ctx, accept, text) })
+	return t.unblock(func(ctx context.Context) error { return page.HandleDialog(ctx, accept, text) })
 }
 
 // ---------------------------------------------------------- selection
@@ -2354,7 +2354,7 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if at == nil {
 			return m, m.input.close()
 		}
-		return m, tea.Batch(m.input.close(), at.press(func(ctx context.Context) error { return page.Auth(ctx, a.id, user, value) }))
+		return m, tea.Batch(m.input.close(), at.unblock(func(ctx context.Context) error { return page.Auth(ctx, a.id, user, value) }))
 	case inputFile:
 		f := m.upload
 		m.upload = nil
@@ -2404,7 +2404,7 @@ func (m *AppModel) cancelAuth() tea.Cmd {
 	if t == nil {
 		return nil
 	}
-	return t.press(func(ctx context.Context) error { return page.CancelAuth(ctx, a.id) })
+	return t.unblock(func(ctx context.Context) error { return page.CancelAuth(ctx, a.id) })
 }
 
 // inspectLines is what the Inspect popup shows about a node (ux.md §A.1):

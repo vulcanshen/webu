@@ -160,3 +160,48 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 		t.Errorf("the page is still the page:\n%s", v)
 	}
 }
+
+// A press right after a walk of the cursor lands where the cursor is.
+// Every cursor move reveals its node, and a walk leaves reveals in
+// flight when Enter comes; a click reads its target's box and presses
+// at that point, and a stale reveal scrolling the page between the two
+// put one press in six on whatever had moved under it (2026-09-23).
+// The page actions are serialised per tab now (tab.act).
+func TestAPressLandsWhereTheCursorIs(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	exe, ok := browser.Installed()
+	if !ok {
+		t.Skip("pinned Chromium not installed; run webu once")
+	}
+	b, err := browser.Launch(exe, t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	abs, _ := filepath.Abs("testdata/popup.html")
+	d := newDriver(t, New(b, "file://"+abs))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the popups page", d.loaded("Popups"))
+	p := d.page()
+	for round := 1; round <= 5; round++ {
+		// To the bottom of the page and back up to the button, then Enter
+		// at once: the reveals of the walk are still in flight.
+		d.key("G")
+		d.cursorOn(ir.Button, "Open dialog")
+		d.key("enter")
+		deadline := time.Now().Add(4 * time.Second)
+		d.until("the dialog", func() bool { return p.popupNode() != nil || time.Now().After(deadline) })
+		if p.popupNode() == nil {
+			t.Fatalf("round %d: the press missed its button", round)
+		}
+		d.cursorOn(ir.Button, "Accept")
+		d.key("enter")
+		deadline = time.Now().Add(4 * time.Second)
+		d.until("answered", func() bool { return p.popupNode() == nil || time.Now().After(deadline) })
+		if p.popupNode() != nil {
+			t.Fatalf("round %d: Accept did not close the dialog", round)
+		}
+	}
+}
