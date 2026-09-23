@@ -328,6 +328,11 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 			n.Disabled = boolean(p.Value)
 		case accessibility.PropertyNameRequired:
 			n.Required = boolean(p.Value)
+		case accessibility.PropertyNameInvalid:
+			// "true", "grammar", "spelling" — or "false".
+			if v := str(p.Value); v != "" && v != "false" {
+				n.Invalid = true
+			}
 		case accessibility.PropertyNameFocusable:
 			n.Focusable = boolean(p.Value)
 		case accessibility.PropertyNameFocused:

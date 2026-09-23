@@ -321,6 +321,7 @@ func segStyles() map[segKind]lipgloss.Style {
 		segMedia:       lipgloss.NewStyle().Foreground(pageMedia),
 		segCode:        lipgloss.NewStyle().Foreground(pageCode),
 		segUnsupported: lipgloss.NewStyle().Foreground(pageDim),
+		segInvalid:     lipgloss.NewStyle().Foreground(pageInvalid),
 		segLandmark:    lipgloss.NewStyle().Foreground(pageDim).Bold(true),
 		segTableHeader: lipgloss.NewStyle().Foreground(pageText).Bold(true), // the header row's ground tells it apart (pagepanel)
 	}

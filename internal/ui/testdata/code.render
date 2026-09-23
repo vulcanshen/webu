@@ -6,3 +6,4 @@ func main() {
 preformatted
 without code
 -- items --
+0 code "func main() {…" rows 2-4
