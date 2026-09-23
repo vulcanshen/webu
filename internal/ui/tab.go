@@ -55,6 +55,14 @@ type tab struct {
 	// gutter is how many columns the line-number column takes off the
 	// left of the panel; the layout was made at what it left (relayout).
 	gutter int
+	// popup is the block the page put up after a press and that wants an
+	// answer, by Chromium's id; the panel is that block until the page
+	// takes it down (popup.go). prevTop is the top of the tree at the
+	// last capture, which is what an appearing block is told against,
+	// and popupUntil how long after a press one can still be its answer.
+	popup      cdp.BackendNodeID
+	prevTop    map[cdp.BackendNodeID]bool
+	popupUntil time.Time
 	// drillHead is the row of the drilled thing's first line, which the
 	// panel draws as its header row rather than in the page — the way a
 	// section's heading is the header while it is read; drillBody is
@@ -486,6 +494,8 @@ func (t *tab) press(fn func(context.Context) error) tea.Cmd {
 	// list item on an application takes as long as a small navigation
 	// does, and said nothing while it did (user, 2026-09-22).
 	t.settlingUntil = time.Now().Add(settleGrace)
+	// And whatever the page puts up in answer is a popup (popup.go).
+	t.popupUntil = time.Now().Add(popupGrace)
 	return t.act(fn)
 }
 
@@ -565,7 +575,18 @@ func (t *tab) apply(msg pageMsg, width int) {
 	t.changed = t.print != was
 	t.anchors, t.parents, t.boxes = msg.cap.Anchors, msg.cap.Parents, msg.cap.Boxes
 	t.viewport = msg.cap.Viewport
+	popped := t.noticePopup(fresh)
 	t.relayout(width)
+	if popped {
+		// Into the popup, or back out of it: the page on screen is
+		// another one, and the cursor starts where it starts.
+		t.drill = nil
+		t.relayout(width)
+		t.cursor, t.top = t.firstItem(), 0
+		t.leavePagetab()
+		t.scrollToCursor(0)
+		return
+	}
 	if fresh {
 		// A different page: it opens where it declares it starts. A
 		// document opens on its section list, everything else on the
@@ -709,9 +730,12 @@ func (t *tab) relayout(width int) {
 	// shows that item: either way its contents are the page, so the
 	// cursor, the scrolling and the row window all work against them
 	// without a second set of rules (user, 2026-09-22).
-	t.parts = splitParts(t.root, t.boxes, t.viewport)
+	t.parts = splitParts(sansPopup(t.root, t.popup), t.boxes, t.viewport)
 	base := t.root
-	if p := t.activePart(); p != nil {
+	if p := t.popupNode(); p != nil {
+		// A popup is the panel until it is answered (popup.go).
+		base = &ir.Node{Kind: ir.Document, Children: []*ir.Node{p}}
+	} else if p := t.activePart(); p != nil {
 		base = &ir.Node{Kind: ir.Document, Children: p.nodes}
 	}
 	root := base
@@ -970,7 +994,7 @@ func (t *tab) pagetabIndex() int {
 // user's eye already is. False when the page has only the one part: there
 // is nothing to move between (app pagetabItem says so instead).
 func (t *tab) enterPagetab() bool {
-	if len(t.parts) < 2 {
+	if len(t.parts) < 2 || t.popupNode() != nil {
 		return false
 	}
 	t.focusPagetab(t.partIndex(t.at))

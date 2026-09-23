@@ -103,6 +103,14 @@ type Node struct {
 	Checked   Tri
 	Multiline bool // Textbox: a textarea or a contenteditable
 	Protected bool // Textbox: a password field — the value is shown masked
+	// Focused: the page's keyboard is here (the AX tree's focused). A
+	// block that appears after a press and takes the keyboard is asking
+	// for an answer — how a popup is told from a chat bubble (ui popup).
+	Focused bool
+	// Modal: the page declared this a modal dialog (aria-modal, or
+	// <dialog>.showModal()). Chromium prunes the rest of the tree behind
+	// one, so it is the one popup that needs no geometry to be seen.
+	Modal bool
 	// InputType is what an <input> declared it takes — "email", "date",
 	// "number" — lower-cased, empty when the page said nothing or the
 	// field is not an <input> (Capture.Types).

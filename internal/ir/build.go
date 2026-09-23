@@ -330,6 +330,10 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 			n.Required = boolean(p.Value)
 		case accessibility.PropertyNameFocusable:
 			n.Focusable = boolean(p.Value)
+		case accessibility.PropertyNameFocused:
+			n.Focused = boolean(p.Value)
+		case accessibility.PropertyNameModal:
+			n.Modal = boolean(p.Value)
 		case accessibility.PropertyNameExpanded:
 			n.Expanded = boolean(p.Value)
 		case accessibility.PropertyNameSelected:

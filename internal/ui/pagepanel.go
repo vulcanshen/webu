@@ -426,6 +426,16 @@ func (m AppModel) pagetabRow(t *tab, innerW int) string {
 		}
 		return m.insideRow(t, t.drillTitle(), pageClick, innerW, depth...)
 	}
+	if p := t.popupNode(); p != nil {
+		// A popup is the panel until it is answered (popup.go): the row
+		// says so in the colour of "worth catching", and Esc has no
+		// part to go to.
+		title := oneLine(p.Name)
+		if title == "" {
+			title = oneLine(p.Text())
+		}
+		return m.insideRow(t, title, peachColor, innerW, "popup  ")
+	}
 	if t.read && t.sec < len(t.secs) {
 		return m.sectionHeadRow(t, innerW)
 	}

@@ -892,6 +892,11 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 		t.leaveDrill(m.pageW(), m.pageVisible())
 		return m, nil
 	}
+	if t.popupNode() != nil {
+		// A popup is not left, it is answered (popup.go): the page put it
+		// up for a decision, and Esc would be that decision put off.
+		return m, m.toast.show("this popup wants an answer: Esc does not close it", toastInfo)
+	}
 	if t.read {
 		t.closeSection()
 		return m, nil
@@ -2659,6 +2664,8 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 		switch {
 		case t.working():
 			hint = "loading"
+		case t.popupNode() != nil:
+			hint = "a popup: answer it, Esc does not close it"
 		case t.onPagetab():
 			// The hand on the pagetab: what that part holds, and whether
 			// it is the one being shown.
