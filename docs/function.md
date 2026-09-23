@@ -326,7 +326,7 @@ webu 只需要「DOM 變了」的通知與重畫策略。
 | **完整，與 GUI 無差** | 所有 DOM 驅動的互動：登入、表單、POST、SPA、即時更新、多分頁、OAuth 跳轉、Shadow DOM、iframe |
 | **完整，但 webu 要接 hook 畫 UI** | alert / confirm / prompt、離頁確認、HTTP auth、檔案上傳、下載、hover 選單（§5） |
 | **有損** | 圖片與多媒體只給佔位框；a11y 做爛的站靠 click handler 補救；拖拉排序；顏色與位置才有意義的資訊 |
-| **做不到** | 影片音訊：佔位框，Yank url 拿去別處開。canvas / WebGL app、CAPTCHA、passkey / Touch ID（WebAuthn 是 OS 層對話框）、WebRTC：交棒給同 profile 的有視窗 Chromium（§9.1） |
+| **做不到** | 影片音訊：佔位框，Yank url 拿去別處開。canvas / WebGL app、CAPTCHA、passkey / Touch ID（WebAuthn 是 OS 層對話框）、WebRTC：佔位框明講 + Yank url，沒有第二條路（§9.1） |
 
 ### 開發者日常網站的估計
 
@@ -414,25 +414,17 @@ TUI 做不了的東西分兩種，出口不同：
 | 種類 | 例子 | 出口 | 登入狀態 |
 |---|---|---|---|
 | **內容本身是多媒體** | 影片、音訊、大圖、地圖 | 第一版不做出口：佔位框 + Yank url。內建 viewer 方案擱置（§4 多媒體） | 不需要共享 |
-| **卡在 session 裡的關卡** | CAPTCHA、passkey / Touch ID、canvas app、拖拉 | **第一版不支援**：偵測到 reCAPTCHA / hCaptcha / Turnstile iframe 就畫佔位框明講「webu 做不到」+ Yank url。交棒機制擱置（下） | 必須共享，不然過了關 webu 也不知道 |
+| **卡在 session 裡的關卡** | CAPTCHA、passkey / Touch ID、canvas app、拖拉 | **不支援，明講**：偵測到 reCAPTCHA / hCaptcha / Turnstile iframe 就畫佔位框說「webu 做不到」+ Yank url。沒有第二條路（下） | 必須共享，不然過了關 webu 也不知道 |
 
 不做終端機內的圖片協定或 screencast 視覺模式（§4 多媒體）。
 
-**交棒機制（擱置，日後再議）**：
+**沒有交棒機制（決定 2026-09-23）**。曾經擱置一個方案：關掉 headless、以同 profile 開有視窗的 Chromium 讓人過關、關窗後接回來。拿掉，因為它跟 webu 的前提相衝：webu 讀的是 AX tree 不是畫面，所以它**必須**能在沒有 display 的機器上跑（SSH 進去的 server 是主要場景之一），而那種機器上根本沒有視窗可以交棒。一個只在桌面才存在的出口，不是出口，是分岔的行為。
 
-1. webu 記下所有分頁的 URL（與 session 還原共用同一份），關掉 headless 實例
-2. 以同 profile 啟動有視窗的 Chromium，只開該 URL
-3. 使用者處理完、關掉視窗 → Chromium 行程結束 → webu 偵測到，重啟 headless、還原所有分頁
-4. 代價：頁面內的記憶體狀態（未送出的表單、SPA 的 in-memory state）會掉；cookie / localStorage 不會
-
-**沒有 display 的環境**（SSH 進遠端）：Browser 這列是 disabled，按下去說明原因；
-Yank url 仍可用，使用者拿到本機開。
+所以碰到驗證碼就是硬牆：佔位框 + Yank url，使用者拿到別的地方開，登入不共享。這也是預設搜尋引擎不用 Google 的原因（§8「輸入網址」）—— 它對 headless 一律回 reCAPTCHA，即使 webu 用自己的 UA。
 
 **隱形 CAPTCHA 多半會過**：reCAPTCHA v3 與 Cloudflare managed challenge 只看瀏覽器像不像正常人；
-webu 拿掉 `--enable-automation`、走 `--headless=new`、profile 持久帶 cookie，大多直接通過。
+webu 拿掉 `--enable-automation`、走 `--headless=new`、profile 持久帶 cookie、UA 簽自己的名字，大多直接通過。
 真的跳出圖片挑戰的才過不了。
-
-替代方案只有「用系統瀏覽器另開 URL、登入不共享」，那 CAPTCHA 就真的過不了。
 
 ---
 
@@ -442,7 +434,7 @@ webu 拿掉 `--enable-automation`、走 `--headless=new`、profile 持久帶 coo
 |---|---|---|
 | 1 | ~~attach 還是 headless~~ | **已決（2026-09-20）**：自帶釘死版本的 Chromium、不開放覆寫、一律 headless 無視窗，見 §9 |
 | 2 | ~~Shell 功能做到哪~~ | **已決**：逐項落點與版次在 `ui.md` §7；四個附帶問題已決（非 URL 當搜尋、下載目錄 config、憑證每次問、歷史與書籤是 header 開的 popup） |
-| 3 | ~~逃生口~~ | **已決（2026-09-20）**：多媒體只畫佔位框；CAPTCHA 等 session 關卡第一版不支援、明講並給 Yank url；交棒機制擱置（§9.1） |
+| 3 | ~~逃生口~~ | **已決（2026-09-20，2026-09-23 收斂）**：多媒體只畫佔位框；CAPTCHA 等 session 關卡不支援、明講並給 Yank url；交棒機制拿掉，因為 webu 得在沒有 display 的機器上跑（§9.1） |
 | 4 | ~~翻譯層品質底線~~ | **已決（2026-09-20）**：不以站為單位保證，以 **AX role 白名單**為單位（§3）。未支援 role 一律 fallback、不隱藏，Enter 仍可 click。站只當 smoke test |
 
 其他不用決定，Chromium 已經替 webu 決定了。
