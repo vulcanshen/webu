@@ -139,6 +139,15 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 	d.key("enter")
 	d.until("extended", func() bool { return p.popupNode() == nil && strings.Contains(dumpLayout(p.lay), "extended") })
 
+	// A disabled control: Enter says why nothing happened, rather than
+	// clicking on nothing.
+	d.cursorOn(ir.Button, "Nope")
+	d.key("enter")
+	if !d.m.toast.isActive() || !strings.Contains(d.m.toast.msg, "disabled") {
+		t.Errorf("Enter on a disabled button says so: %q", d.m.toast.msg)
+	}
+	d.key("esc")
+
 	// The toast: nothing to press, so it is content, and the page stays.
 	d.cursorOn(ir.Button, "Notify")
 	d.key("enter")
