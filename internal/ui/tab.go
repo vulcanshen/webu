@@ -1142,29 +1142,146 @@ func treePrint(n *ir.Node) uint64 {
 	return h
 }
 
-// lineCount is how many lines the panel is showing: the page, or the one
-// section open in it, or the one list item drilled into. The number in
-// the gutter counts from the top of that, so this is what it counts to
-// (pagepanel.pageRows).
+// lineCount is how many lines the panel is showing: the section list,
+// or the page, or the one section open in it, or the one list item
+// drilled into. The number in the gutter counts from the top of that,
+// so this is what it counts to (pagepanel.pageRows, sectionRows).
 func (t *tab) lineCount() int {
+	if t.listing() {
+		return len(t.secs)
+	}
 	lo, hi := t.rowRange()
 	return max(0, hi-lo+1)
 }
 
-// goToLine puts the reader on a line of what is on screen, one-based,
-// and the cursor on the nearest item at or after it — a line with
-// nothing to stop on is still somewhere to look, so the window moves
-// whether or not the cursor can follow.
+// lineText is what line n of what is showing says, for a list of them.
+func (t *tab) lineText(n int) string {
+	if t.listing() {
+		if n < 1 || n > len(t.secs) {
+			return ""
+		}
+		s := t.secs[n-1]
+		return strings.Repeat("  ", max(0, s.depth-1)) + s.title
+	}
+	lo, hi := t.rowRange()
+	row := lo + n - 1
+	if n < 1 || row > hi {
+		return ""
+	}
+	return strings.TrimSpace(t.lay.rows[row].plain())
+}
+
+// goToLine puts the reader on a line of what is on screen, one-based.
+// On the section list that is the list's cursor; on a page it is the
+// window, with the item cursor on the nearest item at or after it — a
+// line with nothing to stop on is still somewhere to look, so the window
+// moves whether or not the cursor can follow.
 func (t *tab) goToLine(n, visible int) bool {
+	if t.listing() {
+		if n < 1 || n > len(t.secs) {
+			return false
+		}
+		t.sec = n - 1
+		t.clampSecTop(visible)
+		return true
+	}
 	lo, hi := t.rowRange()
 	row := lo + n - 1
 	if n < 1 || row > hi {
 		return false
 	}
+	t.landRow(row, visible)
+	return true
+}
+
+// landRow is where a jump into the page arrives: the window scrolled so
+// the row is the first on screen, the hand off the pagetab, and the
+// cursor on the first item at or after the row when there is one.
+func (t *tab) landRow(row, visible int) {
+	lo, hi := t.rowRange()
+	row = clamp(row, lo, hi)
 	t.leavePagetab()
 	t.top = clamp(row, lo, max(lo, hi-visible+1))
 	if at := t.itemAtOrAfter(row, true); at >= 0 && t.lay.items[at].first <= hi {
 		t.cursor = at
 	}
-	return true
+}
+
+// rowOf is the row a node starts on in the current layout, or -1: an
+// item's first row when the node is one or holds one; the row the
+// renderer marked for it (a heading, a paragraph, a table); else the
+// item the node is INSIDE — a table's cell is the item, and a link in
+// the cell lands on the cell.
+func (t *tab) rowOf(n *ir.Node) int {
+	if n == nil {
+		return -1
+	}
+	for _, it := range t.lay.items {
+		if it.node == n || holds(n, it.node) {
+			return it.first
+		}
+	}
+	if at, ok := t.lay.marks[n]; ok {
+		return at
+	}
+	for _, it := range t.lay.items {
+		if holds(it.node, n) {
+			return it.first
+		}
+	}
+	return -1
+}
+
+// chainTo is every node from the root down to n, n last; nil when the
+// tree does not hold it.
+func chainTo(root, n *ir.Node) []*ir.Node {
+	var chain []*ir.Node
+	var find func(x *ir.Node) bool
+	find = func(x *ir.Node) bool {
+		chain = append(chain, x)
+		if x == n {
+			return true
+		}
+		for _, c := range x.Children {
+			if find(c) {
+				return true
+			}
+		}
+		chain = chain[:len(chain)-1]
+		return false
+	}
+	if root == nil || !find(root) {
+		return nil
+	}
+	return chain
+}
+
+// chainOf is a hit's node as the CURRENT tree has it, with its
+// ancestors: by Chromium's id when it has one, since a recapture hands
+// back the same page under new pointers; by its trail of child indexes
+// when it has none, or the id is gone — with the kind checked, so a page
+// that changed shape under the finder fails rather than lands somewhere
+// else. Nil when it cannot be found.
+func (t *tab) chainOf(h hit) []*ir.Node {
+	if t.root == nil || h.node == nil {
+		return nil
+	}
+	if h.node.ID != 0 {
+		if n := nodeByID(t.root, h.node.ID); n != nil {
+			return chainTo(t.root, n)
+		}
+	}
+	chain := []*ir.Node{t.root}
+	n := t.root
+	for _, i := range h.trail {
+		if i < 0 || i >= len(n.Children) {
+			return nil
+		}
+		n = n.Children[i]
+		chain = append(chain, n)
+	}
+	if n.Kind != h.node.Kind {
+		return nil
+	}
+	return chain
 }

@@ -94,6 +94,7 @@ type AppModel struct {
 	splash    splashModel // the easter egg (splash.go)
 	devtools  devtoolsPopup
 	message   messagePopup
+	finder    finder // [/] over the page's nodes, [go] over its lines (finder.go)
 	help      helpPopup
 	confirm   confirmPopup
 	input     inputPopup
@@ -161,6 +162,7 @@ func New(b *browser.Browser, start ...string) AppModel {
 		lists:     newListPanel(),
 		devtools:  newDevtoolsPopup(),
 		message:   newMessagePopup(),
+		finder:    newFinder(),
 		help:      newHelpPopup(),
 		confirm:   newConfirmPopup(),
 		input:     newInputPopup(),
@@ -250,7 +252,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
 			&m.spaceMenu, &m.options, &m.lists, &m.devtools, &m.message,
-			&m.help, &m.confirm, &m.input, &m.picker, &m.toast} {
+			&m.finder, &m.help, &m.confirm, &m.input, &m.picker, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
 		m.relayoutTabs()
@@ -275,7 +277,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(
 			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg),
 			m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
-			m.message.anim.tick(msg),
+			m.message.anim.tick(msg), m.finder.anim.tick(msg),
 			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg),
 			m.picker.anim.tick(msg), m.toast.anim.tick(msg))
 
@@ -700,7 +702,7 @@ func (m *AppModel) recordVisit(t *tab) {
 
 func (m AppModel) popupOpen() bool {
 	return m.spaceMenu.isActive() || m.options.isActive() ||
-		m.devtools.isActive() || m.message.isActive() ||
+		m.devtools.isActive() || m.message.isActive() || m.finder.isActive() ||
 		m.help.isActive() || m.confirm.isActive() || m.input.isActive() || m.picker.isActive()
 }
 
@@ -709,14 +711,14 @@ func (m AppModel) popupOpen() bool {
 // that arrived during its animation belongs to whatever is under it.
 func (m AppModel) floatOwned() bool {
 	return m.toast.anim.owns() || m.input.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
-		m.options.anim.owns() || m.devtools.anim.owns() ||
+		m.options.anim.owns() || m.devtools.anim.owns() || m.finder.anim.owns() ||
 		m.message.anim.owns() || m.help.anim.owns() || m.spaceMenu.anim.owns()
 }
 
 // typing reports whether a float is taking text: every printable key is a
 // character then (§4.5). A search being typed in selection mode counts.
 func (m AppModel) typing() bool {
-	return m.input.anim.owns() || m.picker.anim.owns() || (m.screen != screenWeb && m.lists.typing) ||
+	return m.input.anim.owns() || m.picker.anim.owns() || m.finder.typing() || (m.screen != screenWeb && m.lists.typing) ||
 		(m.devtools.anim.owns() && m.devtools.typing) ||
 		(m.sel.on && m.sel.typing && !m.popupOpen())
 }
@@ -775,6 +777,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.inputKey(msg)
 	case m.picker.anim.owns():
 		return m.pickerKey(msg)
+	case m.finder.anim.owns():
+		return m.finderKey(msg)
 	case m.confirm.anim.owns():
 		return m.confirmKey(msg)
 	case m.options.anim.owns():
@@ -836,6 +840,11 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		return m, m.input.close()
 	case m.picker.anim.owns():
 		return m, m.picker.close()
+	case m.finder.anim.owns():
+		// Layered: from the list Esc goes back up to the query, and from
+		// the query it closes.
+		cmd, _ := m.finder.escape()
+		return m, cmd
 	case m.confirm.anim.owns():
 		if m.confirm.action == confirmDialog {
 			return m, tea.Batch(m.confirm.close(), m.answerDialog(false, ""))
@@ -897,7 +906,7 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 // over, and the user is back on the panel (§7.1).
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.input.close(), m.picker.close(), m.confirm.close(), m.options.close(),
-		m.devtools.close(), m.message.close(),
+		m.devtools.close(), m.message.close(), m.finder.close(),
 		m.help.close(), m.spaceMenu.close())
 }
 
@@ -943,7 +952,7 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case " ":
 		return m.openMenu()
 	case "/":
-		return m, m.enterSelect(true)
+		return m.openFinder(finderSearch)
 	case "V":
 		// The family's easter egg, on the family's key (splash.go).
 		return m, m.splash.show()
@@ -1514,7 +1523,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Tab", key: "T", hint: "a new one, at a URL"},
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
-		menuItem{label: "[/] Search", key: "/", hint: "find text on the page", disabled: t == nil},
+		menuItem{label: "[/] Search", key: "/", hint: "every part of the page; Enter goes there", disabled: t == nil},
 		menuItem{label: "Visual mode", key: "v", hint: "walk the text by character, copy some", disabled: t == nil},
 		menuItem{label: "Location", key: "L", hint: "a URL or a search; this page's own is offered"},
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
@@ -1552,18 +1561,13 @@ func pagetabItem(t *tab) menuItem {
 		hint: "header, body, others, footer"}
 }
 
-// goItem is the go chord's row, which names what the chord reaches from
-// where you are: the section list has section numbers, every other
-// screen of the panel has line numbers (user, 2026-09-23).
+// goItem is the go chord's row: a line of what is on screen, by the
+// number in the gutter (user, 2026-09-23).
 func goItem(t *tab) menuItem {
-	switch {
-	case t == nil:
-		return menuItem{label: "[go] Go to line", key: "go", hint: "by its number", disabled: true}
-	case t.listing():
-		return menuItem{label: "[go] Go to section", key: "go",
-			hint: "by its number, 1 to " + itoa(len(t.secs))}
+	n := 0
+	if t != nil {
+		n = t.lineCount()
 	}
-	n := t.lineCount()
 	return menuItem{label: "[go] Go to line", key: "go",
 		hint: "by its number, 1 to " + itoa(n), disabled: n == 0}
 }
@@ -1796,7 +1800,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		m.relayoutTabs()
 		return m, nil
 	case "/":
-		return m, m.enterSelect(true)
+		return m.openFinder(finderSearch)
 	case "v", "select":
 		return m, m.enterSelect(false)
 	case "A":
@@ -1832,24 +1836,10 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "go":
 		// A number earns its column only when a key takes you to it
-		// (user, 2026-09-22); this is that key, for both columns that
-		// have one. On the section list it is a section's number; on a
-		// page — or inside a section, or inside a list item — it is a
-		// line of what is on screen (user, 2026-09-23).
-		if t == nil {
-			return m, nil
-		}
-		if t.listing() {
-			return m, m.input.ask(inputPopup{title: "Go to section", glyph: glyphList,
-				prompt: "number", accept: "go", action: inputSection,
-				placeholder: "1-" + itoa(len(t.secs))}, m.layer())
-		}
-		if n := t.lineCount(); n > 0 {
-			return m, m.input.ask(inputPopup{title: "Go to line", glyph: glyphList,
-				prompt: "number", accept: "go", action: inputLine,
-				placeholder: "1-" + itoa(n)}, m.layer())
-		}
-		return m, m.toast.show("this page has no lines to go to", toastInfo)
+		// (user, 2026-09-22); this is that key. It asks for a line of
+		// what is on screen — on the section list the lines are the
+		// sections, so the same number reaches both (user, 2026-09-23).
+		return m.openFinder(finderGo)
 	case "sections":
 		// The page as one sheet, or cut into sections: the way out when
 		// the cut is wrong for this page, and the way in when a page was
@@ -2258,10 +2248,6 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.bookmarkTitleGiven(value)
 	case inputRename:
 		return m, m.renameGiven(value)
-	case inputSection:
-		return m.sectionGiven(t, value)
-	case inputLine:
-		return m.lineGiven(t, value)
 	case inputEval:
 		// The prompt stays; the expression and, when it comes, its result
 		// go to the console list behind it.
@@ -2575,6 +2561,9 @@ func (m AppModel) View() string {
 	if m.message.isActive() {
 		out = overlay.Composite(m.message.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.finder.isActive() {
+		out = overlay.Composite(m.finder.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.help.isActive() {
 		out = overlay.Composite(m.help.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -2672,4 +2661,84 @@ func (m AppModel) footer() string {
 		return keyLegend(selectLegendPairs(m.sel.typing), m.w)
 	}
 	return keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"tab/1-2", "panels"}, {"q", "quit"}}, m.w)
+}
+
+// openFinder opens [/] or [go] over the shown tab.
+func (m AppModel) openFinder(kind finderKind) (tea.Model, tea.Cmd) {
+	t := m.shownTab()
+	if t == nil || t.root == nil {
+		return m, m.toast.show("no page to search", toastInfo)
+	}
+	if kind == finderGo {
+		if t.lineCount() == 0 {
+			return m, m.toast.show("this page has no lines to go to", toastInfo)
+		}
+		return m, m.finder.openGo(t, m.layer())
+	}
+	return m, m.finder.openSearch(t, m.layer())
+}
+
+// finderKey is a keystroke while the finder is up. Enter on a hit lands
+// on it and closes the finder — in that order, so a landing that fails
+// can say so with the finder still there.
+func (m AppModel) finderKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	h, ok := m.finder.update(msg)
+	if !ok {
+		return m, nil
+	}
+	t := m.shownTab()
+	if t == nil {
+		return m, m.finder.close()
+	}
+	if m.finder.kind == finderGo {
+		t.goToLine(h.line, m.pageVisible())
+		return m, m.finder.close()
+	}
+	if !m.goToHit(t, h) {
+		return m, m.toast.show("that is not on the page any more", toastInfo)
+	}
+	return m, m.finder.close()
+}
+
+// goToHit takes the page to a search hit: the part it is in, the things
+// it is inside drilled into, the section that holds it opened, and the
+// window and cursor on its row. Nothing is pressed (finder.go).
+//
+// Everything about WHERE is read off the tree as it is now — the hit
+// says which node, the tree says what it is inside (tab.chainOf): the
+// page is recaptured while the finder is up, and a path remembered at
+// index time would be a path through a tree that is gone.
+func (m *AppModel) goToHit(t *tab, h hit) bool {
+	w, vis := m.pageW(), m.pageVisible()
+	chain := t.chainOf(h)
+	if chain == nil {
+		return false
+	}
+	node := chain[len(chain)-1]
+	m.focus = panelPage
+	t.showPart(h.part, w, vis)
+	// Each list item or article on the way down is one thing until you
+	// go in: go in.
+	for _, a := range chain[:len(chain)-1] {
+		if isThing(a) && !t.drillInto(a, w, vis) {
+			return false
+		}
+	}
+	t.reveal(node, w)
+	// The node's own row, or the nearest ancestor's that has one — a
+	// table's cell is the item, and what is in the cell lands on it.
+	row := -1
+	for i := len(chain) - 1; i >= 0 && row < 0; i-- {
+		row = t.rowOf(chain[i])
+	}
+	if row < 0 {
+		return false
+	}
+	if t.listing() || t.read {
+		// A document: the section holding the row is the one to read.
+		t.sec = sectionAt(t.secs, row)
+		t.read = true
+	}
+	t.landRow(row, vis)
+	return true
 }

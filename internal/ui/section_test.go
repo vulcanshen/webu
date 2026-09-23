@@ -411,33 +411,43 @@ func TestSectionDepth(t *testing.T) {
 }
 
 // The ordinals came back with the key that uses them: `go`, a number,
-// Enter. A number outside the list, or anything that is not one, keeps
-// the box open and says the range.
-func TestGoToSectionByNumber(t *testing.T) {
+// Enter — and the number is a LINE of what is showing (user, 2026-09-23).
+// On the section list the lines are the sections; inside one they are
+// its own lines, so the same key reaches both without a second meaning.
+func TestGoToLineByNumber(t *testing.T) {
 	root := doc(hd(1, "Title"), para(text("lede")),
 		hd(2, "One"), para(text("a")), hd(2, "Two"), para(text("b")), hd(2, "Three"), para(text("c")))
 	tb := &tab{root: root, cursor: -1}
 	tb.relayout(60)
-	m := AppModel{w: 100, h: 30}
-
-	if _, _ = m.sectionGiven(tb, "3"); tb.sec != 2 {
+	if !tb.listing() {
+		t.Fatal("a document opens on its section list")
+	}
+	if n := tb.lineCount(); n != len(tb.secs) {
+		t.Errorf("on the list the lines are the sections: %d, want %d", n, len(tb.secs))
+	}
+	if !tb.goToLine(3, 10) || tb.sec != 2 {
 		t.Errorf("go 3 lands on section 3 (index 2), landed on %d", tb.sec)
 	}
-	for _, bad := range []string{"0", "99", "", "two"} {
+	for _, bad := range []int{0, 99} {
 		was := tb.sec
-		if _, _ = m.sectionGiven(tb, bad); tb.sec != was {
-			t.Errorf("%q should move nothing, moved to %d", bad, tb.sec)
+		if tb.goToLine(bad, 10) || tb.sec != was {
+			t.Errorf("%d should move nothing, moved to %d", bad, tb.sec)
 		}
 	}
-	// Reading one already: the number opens that one rather than dropping
-	// back to the list to choose it.
+	// Reading one: its lines, from its first.
 	tb.sec = 0
 	tb.openSection(10)
-	if _, _ = m.sectionGiven(tb, "2"); !tb.read || tb.sec != 1 {
-		t.Errorf("from inside a section the number opens the next, read=%v sec=%d", tb.read, tb.sec)
+	lo, hi := tb.rowRange()
+	if n := tb.lineCount(); n != hi-lo+1 {
+		t.Errorf("inside a section the lines are its own: %d, want %d", n, hi-lo+1)
 	}
-	if lo, _ := tb.rowRange(); lo != tb.secs[1].body {
-		t.Errorf("the window should follow to the section opened")
+	// A short section cannot scroll, so the line is on screen rather
+	// than at the top of it.
+	if !tb.goToLine(2, 10) || tb.top > lo+1 || lo+1 >= tb.top+10 {
+		t.Errorf("go 2 is the section's second line, on screen: top %d, line at %d", tb.top, lo+1)
+	}
+	if tb.lineText(1) == "" {
+		t.Error("a line's text is what the list shows for it")
 	}
 }
 
