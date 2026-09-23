@@ -1253,7 +1253,15 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		}
 		r.inlineChildren(n, id, kind)
 	case ir.Option:
-		// Only ever drawn by the options popup.
+		// A combobox's options are listed behind it and never come here.
+		// A listbox's do: each a row of its own, a radio or a check glyph
+		// for whether it is chosen — one choice or many, as the list
+		// allows — and the name (user, 2026-09-23).
+		r.flush()
+		id := r.itemOf(n)
+		r.add(atom{text: optionText(n) + " ", item: id, kind: segCheck})
+		r.words(oneLine(n.Name), id, segCheck)
+		r.flush()
 	default:
 		if n.IsBlock() && !r.inCell {
 			r.block(n, 2)
@@ -1466,6 +1474,20 @@ func checkText(n *ir.Node) string {
 		return glyphCheckMixed
 	}
 	return glyphCheckOff
+}
+
+// optionText is a listbox option's glyph: a check box when the list
+// takes many, a radio button when it takes one; filled when chosen.
+func optionText(n *ir.Node) string {
+	switch {
+	case n.Multi && n.Selected:
+		return glyphCheckOn
+	case n.Multi:
+		return glyphCheckOff
+	case n.Selected:
+		return glyphRadioOn
+	}
+	return glyphRadioOff
 }
 
 func mediaText(n *ir.Node) string {

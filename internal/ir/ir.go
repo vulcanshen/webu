@@ -114,6 +114,11 @@ type Node struct {
 	// <dialog>.showModal()). Chromium prunes the rest of the tree behind
 	// one, so it is the one popup that needs no geometry to be seen.
 	Modal bool
+	// Multi: many of these can be chosen at once — a listbox declared
+	// multiselectable, on it and on each of its options (Build). An
+	// option of one draws as a check box; of a single-choice list, as a
+	// radio button.
+	Multi bool
 	// Frame is the frame an <iframe> holds, by Chromium's frame id
 	// (Capture.FrameOf): the one Media that is a thing to go into. Its
 	// Children are that frame's document once it has been opened.

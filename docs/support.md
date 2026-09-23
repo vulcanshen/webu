@@ -18,6 +18,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `RootWebArea` | document | — | the page; its name is the title |
 | `StaticText` | text | — | a run of text |
 | `Video` | media | click | placeholder; menu: yank url |
+| `alert` | group | — | an alert, drawn in place as it appears |
 | `alertdialog` | landmark | — | page chrome: a dialog, a capsule on the bar under the URL; its buttons behind Enter |
 | `article` | landmark | — | landmark region, enters the outline |
 | `banner` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
@@ -45,7 +46,9 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `insertion` | span | — | <ins>: underlined |
 | `link` | link | click | glyph + name; Enter opens, menu: open in new tab, yank url |
 | `list` | list | — | the container of list items |
+| `listbox` | group | — | a list of options to pick from, one per row (2026-09-23) |
 | `listitem` | listitem | — | one item, with the marker Chromium drew |
+| `log` | group | — | a log, drawn in place as it grows |
 | `main` | landmark | — | landmark region, enters the outline |
 | `mark` | span | — | <mark>: reversed, the way a page highlights a hit |
 | `menu` | group | — | a menu: its items, one per line; one that opens after a press is a popup |
@@ -54,7 +57,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `menuitemcheckbox` | button | click | tap glyph + name; Enter presses |
 | `menuitemradio` | button | click | tap glyph + name; Enter presses |
 | `navigation` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
-| `option` | option | — | one choice of a combobox |
+| `option` | option | click | one choice of a combobox, listed behind it; one of a listbox is a row of its own, a radio or check glyph + name, Enter picks |
 | `paragraph` | paragraph | — | a block of text, wrapped to width |
 | `radio` | check | click | dot glyph, filled or not, + name; Enter selects |
 | `region` | landmark | — | landmark region, enters the outline |
@@ -90,6 +93,7 @@ These roles carry nothing a terminal can use; the node vanishes and its children
 | `none` | invisible |
 | `presentation` | invisible |
 | `rowgroup` | thead / tbody: invisible |
+| `status` | a status line (<output>, role=status): its text flows where it is, as it changes |
 | `subscript` | invisible |
 | `superscript` | invisible |
 | `time` | invisible |

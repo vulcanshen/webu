@@ -17,9 +17,9 @@ document "unsupported" url=file:///Users/vulcan/Documents/sideproj/webu/internal
       text "Tab B" #77
   unsupported:tabpanel block #34
     text "Panel A content" #78
-  unsupported:status block #35
+  group:status #35
     text "Saved." #79
-  unsupported:alert block #36
+  group:alert #36
     text "Something happened." #80
   landmark:dialog focusable #37
     paragraph #38

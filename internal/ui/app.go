@@ -2054,7 +2054,7 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 		return m, m.editField(n)
 	case ir.Combobox:
 		return m.chooseOptionsFor(n)
-	case ir.Button, ir.Check, ir.Media, ir.Unsupported:
+	case ir.Button, ir.Check, ir.Media, ir.Unsupported, ir.Option:
 		id := n.ID
 		return m, t.press(func(ctx context.Context) error { return page.Click(ctx, id) })
 	case ir.Link:

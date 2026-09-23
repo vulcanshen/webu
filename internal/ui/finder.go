@@ -140,7 +140,8 @@ func indexPage(t *tab) []hit {
 	under := ""
 	var walk func(n *ir.Node, part partKind, trail []int)
 	walk = func(n *ir.Node, part partKind, trail []int) {
-		if n.Kind == ir.Option {
+		if n.Kind == ir.Combobox {
+			// Its options are listed behind it, not on the page.
 			return
 		}
 		if n.Kind == ir.Heading {
@@ -192,8 +193,12 @@ func indexPage(t *tab) []hit {
 // for a node that is only a container.
 func hitText(n *ir.Node) string {
 	switch n.Kind {
-	case ir.Document, ir.Text, ir.Span, ir.List, ir.Table, ir.Row, ir.Separator, ir.Option:
+	case ir.Document, ir.Text, ir.Span, ir.List, ir.Table, ir.Row, ir.Separator:
 		return ""
+	case ir.Option:
+		// A listbox's option is a row of its own (a combobox's never
+		// reach here).
+		return oneLine(n.Name)
 	case ir.Heading:
 		if s := oneLine(n.Name); s != "" {
 			return s

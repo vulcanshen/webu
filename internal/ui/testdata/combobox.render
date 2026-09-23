@@ -1,9 +1,11 @@
 Pick one 󱐀 Beta Grouped 󱐀 b Disabled 󱐀 x Multi
-󰮦 listbox Multi
+󰄵 m1
+󰄱 m2
 󰘎 Datalist  
 -- items --
 0 combobox "" rows 0-0
 1 combobox "" rows 0-0
 2 combobox "" rows 0-0
-3 unsupported "" rows 1-1
-4 textbox "Datalist" rows 2-2
+3 option "m1" rows 1-1
+4 option "m2" rows 2-2
+5 textbox "Datalist" rows 3-3
