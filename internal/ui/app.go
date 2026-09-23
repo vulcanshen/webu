@@ -2057,6 +2057,13 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 	case ir.Button, ir.Check, ir.Media, ir.Unsupported, ir.Option:
 		id := n.ID
 		return m, t.press(func(ctx context.Context) error { return page.Click(ctx, id) })
+	case ir.Group:
+		if n.Role == "treeitem" {
+			// A tree's item: the page's click opens a branch or picks a
+			// leaf, whichever it is.
+			id := n.ID
+			return m, t.press(func(ctx context.Context) error { return page.Click(ctx, id) })
+		}
 	case ir.Link:
 		// A link into the page lands the cursor, no confirm: nothing is
 		// left.

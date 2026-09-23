@@ -1,0 +1,20 @@
+<!doctype html><html><head><title>Tree</title><style>[role=group] { padding-left: 1em; }</style></head><body>
+<h1 id="lbl">My Documents</h1>
+<ul role="tree" aria-labelledby="lbl">
+<li role="treeitem" aria-expanded="false" aria-level="1" tabindex="0" onclick="toggle(this, event)"><span class="name">Projects</span>
+  <ul role="group" hidden>
+  <li role="treeitem" aria-level="2" tabindex="-1" onclick="pick(this, event)">project-1.docx</li>
+  <li role="treeitem" aria-level="2" tabindex="-1" onclick="pick(this, event)">project-2.docx</li>
+  </ul></li>
+<li role="treeitem" aria-expanded="false" aria-level="1" tabindex="-1" onclick="toggle(this, event)"><span class="name">Reports</span>
+  <ul role="group" hidden>
+  <li role="treeitem" aria-level="2" tabindex="-1" onclick="pick(this, event)">report-1</li>
+  </ul></li>
+<li role="treeitem" aria-level="1" tabindex="-1" onclick="pick(this, event)">Letters</li>
+</ul>
+<p>Selected: <output id="out">none</output></p>
+<script>
+function toggle(li, ev) { ev.stopPropagation(); var g = li.querySelector('[role=group]'); var open = li.getAttribute('aria-expanded') === 'true'; li.setAttribute('aria-expanded', open ? 'false' : 'true'); g.hidden = open; }
+function pick(li, ev) { ev.stopPropagation(); document.getElementById('out').textContent = li.textContent.trim(); }
+</script>
+</body></html>

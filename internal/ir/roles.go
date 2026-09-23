@@ -136,6 +136,12 @@ var Roles = map[string]Spec{
 	"alert":  {Kind: Group, Display: "an alert, drawn in place as it appears"},
 	"log":    {Kind: Group, Display: "a log, drawn in place as it grows"},
 
+	// A tree: its items indented by level, a branch with a triangle
+	// for open or shut, a leaf without; Enter is the page's own click —
+	// a branch opens, a leaf is chosen (ui render, 2026-09-23).
+	"tree":     {Kind: Group, Display: "a tree: its items, indented by level"},
+	"treeitem": {Kind: Group, Action: Click, Display: "indent + ▸/▾ for a branch + name; Enter clicks — opens a branch, picks a leaf"},
+
 	// A menu that opens from a button is a popup (ui pagepopup); its
 	// items are things to press, drawn as buttons are (2026-09-23).
 	"menu":             {Kind: Group, Display: "a menu: its items, one per line; one that opens after a press is a popup"},

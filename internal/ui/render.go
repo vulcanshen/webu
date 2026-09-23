@@ -563,6 +563,33 @@ func (r *renderer) formField(n *ir.Node, id int, value func()) {
 	r.flush()
 }
 
+// treeItem draws one item of a tree the way the Bookmarks folder tree
+// draws its rows (user, 2026-09-23): indented by its level, a triangle
+// for a branch — open or shut — and the name, once. The page's own
+// icon and text under the item say the name again and are left out;
+// the group of items under an open branch is drawn below it, deeper.
+func (r *renderer) treeItem(n *ir.Node, depth int) {
+	id := r.newItem(n)
+	indent := strings.Repeat("  ", max(0, n.Level-1))
+	mark := "  "
+	switch {
+	case n.Expandable && n.Expanded:
+		mark = "▾ "
+	case n.Expandable:
+		mark = "▸ "
+	}
+	r.add(atom{text: indent + mark, item: -1, kind: segDim})
+	// The name as one run of words: a page that builds it from an icon
+	// and a label hands it over with the join's whitespace in it.
+	r.words(strings.Join(strings.Fields(n.Name), " "), id, segPlain)
+	r.flush()
+	for _, c := range n.Children {
+		if c.IsBlock() {
+			r.block(c, depth+1)
+		}
+	}
+}
+
 // valueKind is the seg kind a field's value is drawn in: the input
 // colour, or — when the page marked the value wrong — the colour of "is
 // wrong" (user, 2026-09-23). The label stays as it is: it is the page's
@@ -849,6 +876,10 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.markNext = append(r.markNext, n)
 		if r.inForm && n.Name != "" {
 			r.fieldset(n, depth)
+			return
+		}
+		if n.Role == "treeitem" {
+			r.treeItem(n, depth)
 			return
 		}
 		r.inlineChildren(n, -1, segPlain)

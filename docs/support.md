@@ -74,6 +74,8 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `table` | table | — | columns aligned, widths shrunk to fit |
 | `term` | group | — | <dt>: on its own line |
 | `textbox` | textbox | edit | name ____value____; Enter edits in a popup |
+| `tree` | group | — | a tree: its items, indented by level |
+| `treeitem` | group | click | indent + ▸/▾ for a branch + name; Enter clicks — opens a branch, picks a leaf |
 
 ## Invisible
 
