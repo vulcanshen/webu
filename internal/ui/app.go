@@ -98,7 +98,8 @@ type AppModel struct {
 	help      helpPopup
 	confirm   confirmPopup
 	input     inputPopup
-	picker    filePicker // a file, picked rather than typed (filepicker.go)
+	editor    editorPopup // a textarea's box: several lines, two modes (editorpopup.go)
+	picker    filePicker  // a file, picked rather than typed (filepicker.go)
 	toast     toastModel
 
 	// optionsFor is the node the options menu is about, and optionsKind
@@ -167,6 +168,7 @@ func New(b *browser.Browser, start ...string) AppModel {
 		confirm:   newConfirmPopup(),
 		input:     newInputPopup(),
 		picker:    newFilePicker(),
+		editor:    newEditorPopup(),
 		toast:     newToast(),
 	}
 	m.listenBrowser()
@@ -252,7 +254,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
 			&m.spaceMenu, &m.options, &m.lists, &m.devtools, &m.message,
-			&m.finder, &m.help, &m.confirm, &m.input, &m.picker, &m.toast} {
+			&m.finder, &m.help, &m.confirm, &m.input, &m.editor, &m.picker, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
 		m.relayoutTabs()
@@ -278,7 +280,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg),
 			m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
 			m.message.anim.tick(msg), m.finder.anim.tick(msg),
-			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg),
+			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.editor.anim.tick(msg),
 			m.picker.anim.tick(msg), m.toast.anim.tick(msg))
 
 	case devTickMsg:
@@ -702,14 +704,14 @@ func (m *AppModel) recordVisit(t *tab) {
 func (m AppModel) popupOpen() bool {
 	return m.spaceMenu.isActive() || m.options.isActive() ||
 		m.devtools.isActive() || m.message.isActive() || m.finder.isActive() ||
-		m.help.isActive() || m.confirm.isActive() || m.input.isActive() || m.picker.isActive()
+		m.help.isActive() || m.confirm.isActive() || m.input.isActive() || m.editor.isActive() || m.picker.isActive()
 }
 
 // floatOwned reports whether some float still holds the keyboard — not
 // merely is on screen: one that is closing has let go (§6.2), and an Esc
 // that arrived during its animation belongs to whatever is under it.
 func (m AppModel) floatOwned() bool {
-	return m.toast.anim.owns() || m.input.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
+	return m.toast.anim.owns() || m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
 		m.options.anim.owns() || m.devtools.anim.owns() || m.finder.anim.owns() ||
 		m.message.anim.owns() || m.help.anim.owns() || m.spaceMenu.anim.owns()
 }
@@ -717,7 +719,7 @@ func (m AppModel) floatOwned() bool {
 // typing reports whether a float is taking text: every printable key is a
 // character then (§4.5). A search being typed in selection mode counts.
 func (m AppModel) typing() bool {
-	return m.input.anim.owns() || m.picker.anim.owns() || m.finder.typing() || (m.screen != screenWeb && m.lists.typing) ||
+	return m.input.anim.owns() || m.editor.typing() || m.picker.anim.owns() || m.finder.typing() || (m.screen != screenWeb && m.lists.typing) ||
 		(m.devtools.anim.owns() && m.devtools.typing) ||
 		(m.sel.on && m.sel.typing && !m.popupOpen())
 }
@@ -774,6 +776,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case m.input.anim.owns():
 		return m.inputKey(msg)
+	case m.editor.anim.owns():
+		return m.editorKey(msg)
 	case m.picker.anim.owns():
 		return m.pickerKey(msg)
 	case m.finder.anim.owns():
@@ -835,6 +839,10 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.input.close(), m.cancelAuth())
 		}
 		return m, m.input.close()
+	case m.editor.anim.owns():
+		// Layered: out of writing into the box, and out of the box.
+		cmd, _ := m.editor.escape()
+		return m, cmd
 	case m.picker.anim.owns():
 		m.upload = nil // a page's chooser is simply left unanswered: nothing is chosen
 		return m, m.picker.close()
@@ -908,7 +916,7 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 // closeStack tears every float down: an errand that ended in an action is
 // over, and the user is back on the panel (§7.1).
 func (m *AppModel) closeStack() tea.Cmd {
-	return tea.Batch(m.input.close(), m.picker.close(), m.confirm.close(), m.options.close(),
+	return tea.Batch(m.input.close(), m.editor.close(), m.picker.close(), m.confirm.close(), m.options.close(),
 		m.devtools.close(), m.message.close(), m.finder.close(),
 		m.help.close(), m.spaceMenu.close())
 }
@@ -2229,6 +2237,11 @@ func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 		// should say about the value it is about to replace.
 		title += " · invalid"
 	}
+	if n.Multiline {
+		// A textarea: the big box, several lines, two modes
+		// (editorpopup.go).
+		return m.editor.ask(title, oneLine(nameOr(n.Name, "field")), value, n.ID, m.layer())
+	}
 	return m.input.ask(inputPopup{title: title, glyph: glyphPencil,
 		prompt: oneLine(nameOr(n.Name, "field")), accept: "set", action: inputField,
 		node: n.ID, value: value, masked: n.Protected, search: search}, m.layer())
@@ -2622,6 +2635,9 @@ func (m AppModel) View() string {
 	if m.input.isActive() {
 		out = overlay.Composite(m.input.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.editor.isActive() {
+		out = overlay.Composite(m.editor.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.toast.isActive() {
 		out = overlay.Composite(m.toast.view(), out, overlay.Center, overlay.Bottom, 0, -2)
 	}
@@ -2794,4 +2810,19 @@ func (m *AppModel) goToHit(t *tab, h hit) bool {
 	}
 	t.landRow(row, vis)
 	return true
+}
+
+// editorKey is a keystroke while the textarea's box is up: the value it
+// commits is typed into the field, the way a line's is.
+func (m AppModel) editorKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	value, done := m.editor.update(msg)
+	if !done {
+		return m, nil
+	}
+	t := m.shownTab()
+	id := m.editor.node
+	if t == nil {
+		return m, m.editor.close()
+	}
+	return m, tea.Batch(m.editor.close(), t.press(func(ctx context.Context) error { return page.Type(ctx, id, value) }))
 }
