@@ -484,7 +484,7 @@ func TestScreensAndSession(t *testing.T) {
 
 	// Settings: one row, Enter edits it, the file and the row follow.
 	d.key("S")
-	if e, _, ok := d.m.lists.current(); d.m.screen != screenSettings || !ok || e.title != "search_engine" || !strings.Contains(e.meta, "google.com") {
+	if e, _, ok := d.m.lists.current(); d.m.screen != screenSettings || !ok || e.title != "search_engine" || !strings.Contains(e.meta, "duckduckgo.com") {
 		t.Fatalf("first settings row: %+v %v (screen %v)", e, ok, d.m.screen)
 	}
 	d.key("j")
