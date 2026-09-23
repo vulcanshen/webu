@@ -54,6 +54,11 @@ type tab struct {
 	// gutter is how many columns the line-number column takes off the
 	// left of the panel; the layout was made at what it left (relayout).
 	gutter int
+	// drillHead is the row of the drilled thing's first line, which the
+	// panel draws as its header row rather than in the page — the way a
+	// section's heading is the header while it is read; drillBody is
+	// the first row after it (relayout). -1 and 0 when not drilled.
+	drillHead, drillBody int
 	// pending: restored from the last session but not loaded yet — it loads
 	// when it is switched to (ux.md §6).
 	pending bool
@@ -592,6 +597,14 @@ func (t *tab) firstItem() int {
 	if len(t.lay.items) == 0 {
 		return -1
 	}
+	if t.drilled() {
+		// Inside a thing: its body, past the header row — unless the
+		// header holds the only item there is.
+		if at := t.itemAtOrAfter(t.drillBody, false); at >= 0 {
+			return at
+		}
+		return 0
+	}
 	if main := mainOf(t.root); main != nil {
 		if row, ok := t.lay.marks[main]; ok {
 			if at := t.itemAtOrAfter(row, true); at >= 0 {
@@ -715,6 +728,27 @@ func (t *tab) relayout(width int) {
 	}
 	t.lay, t.gutter = lay, g
 	t.layW = width
+	t.drillHead, t.drillBody = -1, 0
+	if inside != base {
+		// Inside a thing its first line is the header row (pagepanel
+		// insideRow): the first row with anything on it, then the blank
+		// under it, are not the page. Printing the line under a header
+		// that said the same thing was every drill saying its name
+		// twice (measured, 2026-09-23).
+		for i, r := range lay.rows {
+			if strings.TrimSpace(r.plain()) != "" {
+				t.drillHead = i
+				break
+			}
+		}
+		if t.drillHead >= 0 {
+			at := t.drillHead + 1
+			for at < len(lay.rows) && strings.TrimSpace(lay.rows[at].plain()) == "" {
+				at++
+			}
+			t.drillBody = at
+		}
+	}
 	// The page may have lost the part the hand was on.
 	if i := t.pagetabIndex(); i >= len(t.parts) {
 		t.leavePagetab()
@@ -781,6 +815,9 @@ func (t *tab) rowRange() (int, int) {
 	if t.read && t.sec < len(t.secs) {
 		s := t.secs[t.sec]
 		return s.body, min(s.last, len(t.lay.rows)-1)
+	}
+	if t.drilled() {
+		return t.drillBody, len(t.lay.rows) - 1
 	}
 	return 0, len(t.lay.rows) - 1
 }

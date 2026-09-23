@@ -1947,8 +1947,17 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 	switch n.Kind {
 	case ir.ListItem:
 		// A list item is one thing; Enter is how you go into it
-		// (section.drillInto).
-		t.drillInto(n, m.pageW(), m.pageVisible())
+		// (section.drillInto). One that is nothing but its first line
+		// has no inside to go to — Enter is Enter on what that line
+		// holds, a link or a button, and nothing when it holds only
+		// text (2026-09-23).
+		w, vis := m.pageW(), m.pageVisible()
+		if t.drillInto(n, w, vis) && t.drillBody >= len(t.lay.rows) {
+			t.leaveDrill(w, vis)
+			if x := firstItemIn(n); x != nil {
+				return m.enterOn(t, x)
+			}
+		}
 		return m, nil
 	case ir.Cell:
 		return m.enterCell(t, n)
@@ -1971,6 +1980,19 @@ func (m AppModel) enterItem() (tea.Model, tea.Cmd) {
 		return m.dispatch("fold")
 	}
 	return m.enterOn(t, n)
+}
+
+// firstItemIn is the first thing the cursor could stop on inside n, or
+// nil: what Enter on a one-line list item is Enter on.
+func firstItemIn(n *ir.Node) *ir.Node {
+	var found *ir.Node
+	n.Walk(func(x *ir.Node) bool {
+		if found == nil && x != n && x.ID != 0 && x.IsItem() {
+			found = x
+		}
+		return found == nil
+	})
+	return found
 }
 
 // enterOn is Enter on an interactive node: the item under the cursor,

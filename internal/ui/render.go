@@ -658,12 +658,18 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			r.thing(n)
 			return
 		}
-		if n.Name == "" && n.Role != "main" {
+		if (n.Name == "" || namedByItsHeading(n)) && n.Role != "main" {
 			// Nothing to name it with: a rule that says only "▾" is a
 			// line across the page for no reason. It is drawn the way
 			// main is — its content, in place — and it claims no row,
 			// because it has none. It is still marked, so a search hit
 			// among its bare children has a row to land on (finder.go).
+			//
+			// A region named by the heading inside it is the same case:
+			// <section aria-labelledby=…> is how a document marks up
+			// every section, and a rule saying "Background" over a
+			// heading saying "Background" printed the page's outline
+			// twice, one row apart (measured on Wikipedia, 2026-09-23).
 			r.lmDepth++
 			r.markNext = append(r.markNext, n)
 			r.formChildren(n, depth)
@@ -832,6 +838,24 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.inline(n, -1, segPlain)
 		r.flush()
 	}
+}
+
+// namedByItsHeading reports whether a region takes its name from the
+// first heading inside it — <section aria-labelledby=…> — so that the
+// name is drawn once, on the heading, and not again on a rule above it.
+func namedByItsHeading(n *ir.Node) bool {
+	if n.Kind != ir.Landmark || n.Name == "" {
+		return false
+	}
+	name := oneLine(n.Name)
+	var first *ir.Node
+	n.Walk(func(x *ir.Node) bool {
+		if x != n && x.Kind == ir.Heading && first == nil {
+			first = x
+		}
+		return first == nil
+	})
+	return first != nil && oneLine(first.Name) == name
 }
 
 func (r *renderer) children(n *ir.Node, depth int) {

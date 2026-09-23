@@ -187,25 +187,6 @@ func indexPage(t *tab) []hit {
 	return out
 }
 
-// namedByItsHeading reports whether a region takes its name from a
-// heading inside it — <section aria-labelledby=…>, which is how a
-// document marks up every section — so that the name is one hit, on the
-// heading, and not two.
-func namedByItsHeading(n *ir.Node) bool {
-	if n.Kind != ir.Landmark || n.Name == "" {
-		return false
-	}
-	name := oneLine(n.Name)
-	found := false
-	n.Walk(func(x *ir.Node) bool {
-		if x != n && x.Kind == ir.Heading && oneLine(x.Name) == name {
-			found = true
-		}
-		return !found
-	})
-	return found
-}
-
 // hitText is what a node contributes to the index: the text of its own
 // inline run, with blocks under it left to be hits of their own. Empty
 // for a node that is only a container.

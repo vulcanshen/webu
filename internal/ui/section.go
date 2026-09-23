@@ -238,11 +238,10 @@ func bodyStart(s section, lay layout) int {
 	for at <= s.last && at < len(lay.rows) && strings.TrimSpace(lay.rows[at].plain()) == "" {
 		at++
 	}
-	if at > s.last {
-		// A section that is nothing but its heading: it still has to
-		// show something, so it shows that.
-		return s.first
-	}
+	// A section that is nothing but its heading has no body: the header
+	// row says its name, and drawing the heading under it said it twice
+	// (GitHub's sidebar, whose sections fill in lazily — measured
+	// 2026-09-23). The range is empty and the panel shows the header.
 	return at
 }
 

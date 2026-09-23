@@ -126,32 +126,7 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	if innerH <= 0 {
 		return nil
 	}
-	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
-	curOff := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim)
-	styles := segStyles()
-	if t.loading {
-		// The page on screen is the one being LEFT: it dims until the next
-		// one lands, so a key pressed now is visibly pressed on nothing —
-		// and the navigation keys are swallowed meanwhile (AppModel.busy).
-		for k := range styles {
-			styles[k] = lipgloss.NewStyle().Foreground(dimColor)
-		}
-		cur = curOff
-	}
-	// A code block's rows sit on their own background, padding included,
-	// so the block reads as one thing; the text width is what the block
-	// spans, not the panel, so it does not run under the side of the page.
-	codeStyles := codeStyles()
-	codePad := lipgloss.NewStyle().Background(pageCodeBg)
-	if t.loading {
-		for k := range codeStyles {
-			codeStyles[k] = lipgloss.NewStyle().Foreground(pageDim).Background(pageCodeBg)
-		}
-	}
-	frame := lipgloss.NewStyle().Foreground(pageDim)
-	if t.loading {
-		frame = lipgloss.NewStyle().Foreground(dimColor)
-	}
+	st := m.rowStyles(t)
 	out := make([]string, 0, innerH)
 	// While one section is open the panel shows only its rows: the page
 	// does not run on past the end of what is being read (section.go).
@@ -164,88 +139,131 @@ func (m AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	gut := t.gutter
 	innerW -= gut
 	for i := max(t.top, lo); i < end; i++ {
-		var b strings.Builder
-		used := 0
-		b.WriteString(lineNum(i-lo+1, gut, t.loading))
-		row := t.lay.rows[i]
-		// A framed block — a form — is drawn by the panel, because only
-		// the panel knows how wide the row ended up (render.boxPart).
-		span := min(innerW, max(1, row.boxW))
-		if row.box == boxTop || row.box == boxBottom {
-			// b already holds the line number: a framed block's edge is a
-			// line of the page like any other, and dropping it here left
-			// the frame hanging a column left of its own sides.
-			b.WriteString(frame.Render(boxRule(row, span)))
-			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
-			out = append(out, b.String())
-			continue
-		}
-		if row.box == boxSide {
-			b.WriteString(frame.Render("│"))
-			used++
-		}
-		for _, s := range row.segs {
-			text := s.text
-			if used+dispW(text) > innerW {
-				text = truncate(text, innerW-used)
-			}
-			if text == "" {
-				continue
-			}
-			used += dispW(text)
-			switch {
-			case s.item >= 0 && s.item == t.cursor && m.focus == panelPage && !t.onPagetab():
-				// On a heading the cursor wears that level's colour, the
-				// way the section list's does: being under the hand must
-				// not cost a row the one thing it was saying.
-				lit := cur
-				if row.heading > 0 && !t.loading {
-					lit = cur.Background(levelColor(row.heading))
-				}
-				b.WriteString(withAttr(lit, s.attr).Render(text))
-			case s.item >= 0 && s.item == t.cursor:
-				b.WriteString(withAttr(curOff, s.attr).Render(text))
-			case row.code:
-				style, ok := codeStyles[s.kind]
-				if !ok {
-					style = codeStyles[segCode]
-				}
-				b.WriteString(withAttr(style, s.attr).Render(text))
-			case row.heading > 0 && !t.loading:
-				// The page's own outline, drawn on the ink: one bright hue
-				// per depth, cycling (theme.levelColor). It used to be a
-				// grey ground per level, which made every heading a band
-				// and asked the eye to rank six greys (v0.2.1, replaced
-				// 2026-09-22).
-				b.WriteString(withAttr(styles[s.kind].Foreground(levelColor(row.heading)), s.attr).Render(text))
-			case row.table:
-				bg := pageTableBg
-				if row.header {
-					bg = pageTableHeadBg
-				}
-				b.WriteString(withAttr(styles[s.kind].Background(bg), s.attr).Render(text))
-			default:
-				b.WriteString(withAttr(styles[s.kind], s.attr).Render(text))
-			}
-		}
-		switch {
-		case row.code:
-			span := min(innerW, max(used, t.textWidth()))
-			b.WriteString(codePad.Render(strings.Repeat(" ", max(0, span-used))))
-			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
-		case row.box == boxSide:
-			b.WriteString(strings.Repeat(" ", max(0, span-used-1)))
-			b.WriteString(frame.Render("│"))
-			b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
-		default:
-			b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
-		}
-		out = append(out, b.String())
+		out = append(out, lineNum(i-lo+1, gut, t.loading)+m.rowLine(t, i, innerW, st))
 	}
 	for len(out) < innerH {
 		out = append(out, strings.Repeat(" ", innerW+gut))
 	}
 	return out
+}
+
+// rowStyles is the dress every row of a page shares: the cursor, the
+// text kinds, a code block's ground, a form's frame — all of them dimmed
+// together while the page is on its way.
+type rowStyles struct {
+	cur, curOff lipgloss.Style
+	styles      map[segKind]lipgloss.Style
+	codeStyles  map[segKind]lipgloss.Style
+	codePad     lipgloss.Style
+	frame       lipgloss.Style
+}
+
+func (m AppModel) rowStyles(t *tab) rowStyles {
+	st := rowStyles{
+		cur:    lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor),
+		curOff: lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim),
+		styles: segStyles(),
+		// A code block's rows sit on their own background, padding
+		// included, so the block reads as one thing; the text width is
+		// what the block spans, not the panel, so it does not run under
+		// the side of the page.
+		codeStyles: codeStyles(),
+		codePad:    lipgloss.NewStyle().Background(pageCodeBg),
+		frame:      lipgloss.NewStyle().Foreground(pageDim),
+	}
+	if t.loading {
+		// The page on screen is the one being LEFT: it dims until the next
+		// one lands, so a key pressed now is visibly pressed on nothing —
+		// and the navigation keys are swallowed meanwhile (AppModel.busy).
+		for k := range st.styles {
+			st.styles[k] = lipgloss.NewStyle().Foreground(dimColor)
+		}
+		st.cur = st.curOff
+		for k := range st.codeStyles {
+			st.codeStyles[k] = lipgloss.NewStyle().Foreground(pageDim).Background(pageCodeBg)
+		}
+		st.frame = lipgloss.NewStyle().Foreground(dimColor)
+	}
+	return st
+}
+
+// rowLine draws one row of the layout at innerW, the cursor lit where it
+// is. The panel's rows and the header row a drilled thing's first line
+// becomes (insideRow) are drawn by the one function, so they cannot
+// disagree about what a link or a cursor looks like.
+func (m AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
+	var b strings.Builder
+	used := 0
+	row := t.lay.rows[i]
+	// A framed block — a form — is drawn by the panel, because only
+	// the panel knows how wide the row ended up (render.boxPart).
+	span := min(innerW, max(1, row.boxW))
+	if row.box == boxTop || row.box == boxBottom {
+		b.WriteString(st.frame.Render(boxRule(row, span)))
+		b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
+		return b.String()
+	}
+	if row.box == boxSide {
+		b.WriteString(st.frame.Render("│"))
+		used++
+	}
+	for _, s := range row.segs {
+		text := s.text
+		if used+dispW(text) > innerW {
+			text = truncate(text, innerW-used)
+		}
+		if text == "" {
+			continue
+		}
+		used += dispW(text)
+		switch {
+		case s.item >= 0 && s.item == t.cursor && m.focus == panelPage && !t.onPagetab():
+			// On a heading the cursor wears that level's colour, the
+			// way the section list's does: being under the hand must
+			// not cost a row the one thing it was saying.
+			lit := st.cur
+			if row.heading > 0 && !t.loading {
+				lit = st.cur.Background(levelColor(row.heading))
+			}
+			b.WriteString(withAttr(lit, s.attr).Render(text))
+		case s.item >= 0 && s.item == t.cursor:
+			b.WriteString(withAttr(st.curOff, s.attr).Render(text))
+		case row.code:
+			style, ok := st.codeStyles[s.kind]
+			if !ok {
+				style = st.codeStyles[segCode]
+			}
+			b.WriteString(withAttr(style, s.attr).Render(text))
+		case row.heading > 0 && !t.loading:
+			// The page's own outline, drawn on the ink: one bright hue
+			// per depth, cycling (theme.levelColor). It used to be a
+			// grey ground per level, which made every heading a band
+			// and asked the eye to rank six greys (v0.2.1, replaced
+			// 2026-09-22).
+			b.WriteString(withAttr(st.styles[s.kind].Foreground(levelColor(row.heading)), s.attr).Render(text))
+		case row.table:
+			bg := pageTableBg
+			if row.header {
+				bg = pageTableHeadBg
+			}
+			b.WriteString(withAttr(st.styles[s.kind].Background(bg), s.attr).Render(text))
+		default:
+			b.WriteString(withAttr(st.styles[s.kind], s.attr).Render(text))
+		}
+	}
+	switch {
+	case row.code:
+		span := min(innerW, max(used, t.textWidth()))
+		b.WriteString(st.codePad.Render(strings.Repeat(" ", max(0, span-used))))
+		b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
+	case row.box == boxSide:
+		b.WriteString(strings.Repeat(" ", max(0, span-used-1)))
+		b.WriteString(st.frame.Render("│"))
+		b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
+	default:
+		b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
+	}
+	return b.String()
 }
 
 // boxRule is a framed block's top or bottom edge, the name of the block
@@ -400,6 +418,12 @@ func (m AppModel) pagetabRow(t *tab, innerW int) string {
 		if n := len(t.drill); n > 1 {
 			depth = append(depth, itoa(n)+"  ")
 		}
+		if t.drillHead >= 0 && t.drillHead < len(t.lay.rows) {
+			// The thing's first line IS the header row, drawn as the
+			// page draws it — its link a link, its cursor a cursor —
+			// and not again below (tab.relayout).
+			return m.headRow(t, innerW, depth...)
+		}
 		return m.insideRow(t, t.drillTitle(), pageClick, innerW, depth...)
 	}
 	if t.read && t.sec < len(t.secs) {
@@ -457,6 +481,17 @@ func (m AppModel) insideRow(t *tab, title string, ink lipgloss.Color, innerW int
 	name := truncate(title, max(1, innerW-used-2))
 	return lead + atStyle.Render(at) + nameStyle.Render(name) +
 		dim.Render(" "+strings.Repeat("─", max(0, innerW-used-dispW(name)-1)))
+}
+
+// headRow is insideRow with a row of the page for its name: a drilled
+// thing's first line, live. What that line held — a link, a button —
+// stays on the page, up here, and the cursor can stop on it.
+func (m AppModel) headRow(t *tab, innerW int, before ...string) string {
+	dim := lipgloss.NewStyle().Foreground(dimColor)
+	lead := pagetabChain([]string{glyphMenu}, -1, m.focus == panelPage, t.loading)
+	at := " " + strings.Join(before, "")
+	used := chainW([]string{glyphMenu}) + dispW(at)
+	return lead + dim.Render(at) + m.rowLine(t, t.drillHead, max(1, innerW-used), m.rowStyles(t))
 }
 
 // chainW is the width of a chain of labels: two caps, a space either
