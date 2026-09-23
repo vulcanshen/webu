@@ -114,6 +114,10 @@ type Node struct {
 	// <dialog>.showModal()). Chromium prunes the rest of the tree behind
 	// one, so it is the one popup that needs no geometry to be seen.
 	Modal bool
+	// Expandable: the page can open and shut this (aria-expanded is
+	// there at all); Expanded is whether it is open. A tree's branch
+	// against its leaf: the leaf has no aria-expanded to be false.
+	Expandable bool
 	// Multi: many of these can be chosen at once — a listbox declared
 	// multiselectable, on it and on each of its options (Build). An
 	// option of one draws as a check box; of a single-choice list, as a

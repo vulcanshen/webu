@@ -403,6 +403,7 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 		case accessibility.PropertyNameModal:
 			n.Modal = boolean(p.Value)
 		case accessibility.PropertyNameExpanded:
+			n.Expandable = true
 			n.Expanded = boolean(p.Value)
 		case accessibility.PropertyNameSelected:
 			n.Selected = boolean(p.Value)

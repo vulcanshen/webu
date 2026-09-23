@@ -25,8 +25,8 @@ document "unsupported" url=file:///Users/vulcan/Documents/sideproj/webu/internal
     paragraph #38
       text "Dialog text" #81
     button "OK" focusable #39
-  unsupported:tree block #40
-    unsupported:treeitem "Leaf" level=1 focusable block #41
+  group:tree #40
+    group:treeitem "Leaf" level=1 focusable #41
       text "Leaf" #83
   group:generic #42
     text "Clickable div without a role" #84
