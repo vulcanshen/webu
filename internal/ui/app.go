@@ -1420,6 +1420,7 @@ const (
 	optItemMenu optionsKind = iota // an item's operations on their own
 	optSelect                      // a <select>'s options, keyed by index
 	optMoveTo                      // a bookmark's folder, keyed by index (bookmarks.go)
+	optSlide                       // a slider's numbers, keyed "v:<number>" (slideMenu)
 )
 
 // itemMenuItems is an item's operations by role (menu-only, no letters —
@@ -1684,6 +1685,13 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		closeCmd := m.options.close()
 		mm, cmd := m.dispatch(key)
 		return mm, tea.Batch(closeCmd, cmd)
+	}
+	if m.optionsKind == optSlide {
+		if n == nil {
+			return m, m.options.close()
+		}
+		v := strings.TrimPrefix(key, "v:")
+		return m, tea.Batch(m.closeStack(), t.press(func(ctx context.Context) error { return page.Slide(ctx, n.ID, v) }))
 	}
 	idx, err := strconv.Atoi(key)
 	if n == nil || err != nil || idx < 0 || idx >= len(n.Children) {
@@ -2270,16 +2278,29 @@ func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 		return m.editor.ask(title, oneLine(nameOr(n.Name, "field")), value, n.ID, m.layer())
 	}
 	if n.Role == "slider" {
-		// A slider: a number within its range, and webu moves the bar
-		// there (page.Slide) — there is nothing on a bar to type into
-		// (user, 2026-09-23).
-		return m.input.ask(inputPopup{title: title, glyph: glyphPencil,
-			prompt: oneLine(nameOr(n.Name, "field")), accept: "set", action: inputSlide,
-			node: n.ID, value: value}, m.layer())
+		return m.slideMenu(n)
 	}
 	return m.input.ask(inputPopup{title: title, glyph: glyphPencil,
 		prompt: oneLine(nameOr(n.Name, "field")), accept: "set", action: inputField,
 		node: n.ID, value: value, masked: n.Protected, search: search}, m.layer())
+}
+
+// slideMenu lists a slider's numbers in the options menu, ten to a
+// window, the cursor on where it stands; picking one moves the slider
+// there (page.Slide). A bar is chosen along, not typed into (user,
+// 2026-09-23).
+func (m *AppModel) slideMenu(n *ir.Node) tea.Cmd {
+	items, at := sliderItems(n)
+	m.optionsFor, m.optionsKind = n, optSlide
+	m.options.setItems(items, oneLine(nameOr(n.Name, "slider"))+" · "+sliderRange(n), m.layer())
+	m.options.rows = 10
+	m.options.cursor = at
+	// The current number mid-window, with what is either side of it.
+	m.options.top = max(0, min(at-m.options.visible()/2, len(items)-m.options.visible()))
+	if m.options.isActive() {
+		return nil // swapped in place under the open float
+	}
+	return m.options.open()
 }
 
 // fieldTakes is what the box over a field says it wants. The page's own
@@ -2294,10 +2315,6 @@ func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 func fieldTakes(n *ir.Node) string {
 	if n.Protected {
 		return "password"
-	}
-	if n.Role == "slider" {
-		// The ends of the bar, the one thing a number for it needs.
-		return "number " + sliderRange(n)
 	}
 	switch t := n.InputType; t {
 	case "":
@@ -2358,17 +2375,6 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.input.close(), write, ask)
 		}
 		return m, tea.Batch(m.closeStack(), write)
-	case inputSlide:
-		id := m.input.node
-		if t == nil {
-			return m, m.closeStack()
-		}
-		v := strings.TrimSpace(value)
-		if _, err := strconv.ParseFloat(v, 64); err != nil {
-			// The box stays: what was typed is not a place on the bar.
-			return m, m.toast.show("a number, for the slider", toastInfo)
-		}
-		return m, tea.Batch(m.closeStack(), t.press(func(ctx context.Context) error { return page.Slide(ctx, id, v) }))
 	case inputPrompt:
 		return m, tea.Batch(m.input.close(), m.answerDialog(true, value))
 	case inputSetting:

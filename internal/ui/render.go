@@ -1242,7 +1242,7 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 		if n.Role == "slider" {
 			// A slider is its bar and where it stands (user,
 			// 2026-09-23): the track with the thumb on it, then the
-			// number. Enter asks for a number (app editFieldAs).
+			// number. Enter lists its numbers (app slideMenu).
 			bar := func() {
 				r.add(atom{text: sliderBar(n) + " ", item: id, kind: segInput})
 				r.words(sliderValue(n), id, valueKind(n))

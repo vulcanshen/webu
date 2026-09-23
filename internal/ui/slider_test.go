@@ -10,10 +10,11 @@ import (
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
-// A slider is its bar and where it stands, and Enter asks for a number
-// (user, 2026-09-23): an <input type=range> takes it as its value, an
-// ARIA slider is stepped there with the arrows.
-func TestASliderIsABarAndTakesANumber(t *testing.T) {
+// A slider is its bar and where it stands, and Enter lists its numbers
+// ten to a window, the cursor on the current one; j/k/u/d walk them and
+// Enter moves the slider there (user, 2026-09-23): an <input type=range>
+// takes it as its value, an ARIA slider is stepped there with the arrows.
+func TestASliderIsABarAndListsItsNumbers(t *testing.T) {
 	t.Setenv("WEBU_CONFIG", t.TempDir())
 	t.Setenv("WEBU_DATA", t.TempDir())
 	exe, ok := browser.Installed()
@@ -47,31 +48,39 @@ func TestASliderIsABarAndTakesANumber(t *testing.T) {
 	if vol := rowOf("Volume"); vol == "" || !strings.Contains(vol, "40") {
 		t.Fatalf("the ARIA slider too:\n%s", dumpLayout(p.lay))
 	}
-	thumb := strings.Index(red, "●")
 
-	// Enter asks for a number, the ends of the bar on the border.
+	// Enter lists the numbers: ten a window, the current one under the
+	// cursor and mid-window, the range in the title.
 	d.cursorOn(ir.Textbox, "Red")
 	d.key("enter")
-	d.until("the number box", func() bool { return d.m.input.isInteractive() })
-	if d.m.input.title != "number 0–255" || d.m.input.value != "128" {
-		t.Errorf("the box says the range and holds the value: %q %q", d.m.input.title, d.m.input.value)
+	d.until("the number list", func() bool { return d.m.options.isInteractive() })
+	o := d.m.options
+	if o.title != "Red · 0–255" || len(o.items) != 256 || o.visible() != 10 {
+		t.Errorf("every number of the bar, ten at a time, under the range: %q %d %d", o.title, len(o.items), o.visible())
 	}
-	for _, k := range []string{"backspace", "backspace", "backspace", "2", "0", "0"} {
-		d.key(k)
+	if it := o.items[o.cursor]; it.label != "128" || it.hint != "current" {
+		t.Errorf("the cursor is on where it stands: %+v", it)
+	}
+	if o.top != o.cursor-5 {
+		t.Errorf("mid-window: top %d for cursor %d", o.top, o.cursor)
+	}
+	// d is half a window, j one row; Enter is the number under the cursor.
+	d.key("d")
+	d.key("j")
+	if it := d.m.options.items[d.m.options.cursor]; it.label != "134" {
+		t.Errorf("d then j is six rows down: %q", it.label)
 	}
 	d.key("enter")
-	d.until("red at 200", func() bool { r := rowOf("Red"); return strings.Contains(r, "200") && strings.Index(r, "●") > thumb })
+	d.until("red at 134", func() bool { return strings.Contains(rowOf("Red"), "134") })
 
 	// An ARIA slider has no value to set: it is walked there.
 	d.cursorOn(ir.Textbox, "Volume")
 	d.key("enter")
-	d.until("the number box", func() bool { return d.m.input.isInteractive() })
-	if d.m.input.title != "number 0–100" {
-		t.Errorf("its range too: %q", d.m.input.title)
+	d.until("the number list", func() bool { return d.m.options.isInteractive() })
+	if d.m.options.title != "Volume · 0–100" {
+		t.Errorf("its range too: %q", d.m.options.title)
 	}
-	for _, k := range []string{"backspace", "backspace", "3", "5"} {
-		d.key(k)
-	}
+	d.key("u")
 	d.key("enter")
 	d.until("volume at 35", func() bool { return strings.Contains(rowOf("Volume"), "35") })
 }

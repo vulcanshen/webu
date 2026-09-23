@@ -16,7 +16,6 @@ const (
 	inputGoto                      // open a URL in the shown tab (ux.md §7)
 	inputGotoNewTab                // open a URL in a new tab
 	inputField                     // write a textbox's value back to the page (ux.md §2)
-	inputSlide                     // a slider's number: webu moves it there (page.Slide)
 	inputPrompt                    // answer a page's prompt() (function.md §5)
 	inputAuthUser                  // an HTTP challenge: the name, then…
 	inputAuthPass                  // …the password, masked

@@ -141,8 +141,6 @@ func TestAFieldSaysWhatItTakes(t *testing.T) {
 		{f("spinbutton", "", false, false), "number"},
 		{f("textbox", "", false, true), "text, several lines"},
 		{f("textbox", "", false, false), "text"},
-		// A slider: a number, and the ends of its bar.
-		{fieldTakes(&ir.Node{Kind: ir.Textbox, Role: "slider", InputType: "range", Min: 0, Max: 255, ID: 1}), "number 0–255"},
 	} {
 		if c.got != c.want {
 			t.Errorf("got %q, want %q", c.got, c.want)
