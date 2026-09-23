@@ -107,10 +107,14 @@ func sectionsOf(root *ir.Node, lay layout, pageURL string) []section {
 	if heads[0].row > top {
 		out = append(out, section{title: "(top)", first: top, last: heads[0].row - 1})
 	}
-	// Each boundary is one row, used by both sides, so the sections tile
-	// the page with no gap and no overlap. A landmark's rule sits above
-	// the heading it opens — Wikipedia wraps every section in a region —
-	// so the boundary is drawn above that rule, not below it.
+	// A section reaches to the next heading at its own level or above:
+	// it holds its sub-sections, the way a chapter holds its parts, so
+	// opening one reads through them (user, 2026-09-23 — MDN's "Try it"
+	// is an h2 whose every row is under its h4s, and read alone it was
+	// empty). Siblings still meet at one row; a child lies inside its
+	// parent. A landmark's rule sits above the heading it opens —
+	// Wikipedia wraps every section in a region — so a boundary is
+	// drawn above that rule, not below it.
 	start := func(i int) int {
 		at := heads[i].row
 		for at > 0 && isLandmarkRule(lay.rows[at-1]) {
@@ -123,8 +127,11 @@ func sectionsOf(root *ir.Node, lay layout, pageURL string) []section {
 		if i > 0 {
 			first = start(i)
 		}
-		if i+1 < len(heads) {
-			last = max(first, start(i+1)-1)
+		for j := i + 1; j < len(heads); j++ {
+			if heads[j].node.Level <= h.node.Level {
+				last = max(first, start(j)-1)
+				break
+			}
 		}
 		out = append(out, section{
 			node:  h.node,
@@ -180,7 +187,7 @@ func pruneNav(secs []section) []section {
 		nav := s.node != nil && s.prose == 0 && s.links > 0 && !kid &&
 			s.tables+s.codes+s.media == 0
 		if nav && len(out) > 0 {
-			out[len(out)-1].last = s.last
+			out[len(out)-1].last = max(out[len(out)-1].last, s.last)
 			continue
 		}
 		// The leading run is only a section when it holds something: a
@@ -346,14 +353,16 @@ func shapeOf(secs []section) pageShape {
 }
 
 // sectionAt is the section holding row r — where the cursor is, said in
-// sections.
+// sections: the innermost, since a section holds its sub-sections and
+// the one that starts last is the deepest.
 func sectionAt(secs []section, r int) int {
+	at := 0
 	for i, s := range secs {
 		if r >= s.first && r <= s.last {
-			return i
+			at = i
 		}
 	}
-	return 0
+	return at
 }
 
 // sectionAnchor is the fragment for the open section, "#emulators", when

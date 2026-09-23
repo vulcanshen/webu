@@ -47,16 +47,21 @@ func TestSectionsCutOnHeadings(t *testing.T) {
 	if shapeOf(secs) != shapeDoc {
 		t.Errorf("four headings is a document")
 	}
-	// The ranges tile the page: no row belongs to two sections, none to
-	// none.
-	for i := 1; i < len(secs); i++ {
-		if secs[i].first != secs[i-1].last+1 {
-			t.Errorf("%q ends at %d, %q starts at %d — a gap or an overlap",
-				secs[i-1].title, secs[i-1].last, secs[i].title, secs[i].first)
-		}
+	// A section holds its sub-sections, the way a chapter holds its
+	// parts; siblings meet at one row; the last reaches the page's end.
+	title, first, inside, second := secs[0], secs[1], secs[2], secs[3]
+	if title.first != 0 || title.last != len(l.rows)-1 {
+		t.Errorf("the h1 holds the page: %d-%d of %d rows", title.first, title.last, len(l.rows))
 	}
-	if last := secs[len(secs)-1].last; last != len(l.rows)-1 {
-		t.Errorf("the last section ends at %d, the page at %d", last, len(l.rows)-1)
+	if inside.first <= first.first || inside.last != first.last {
+		t.Errorf("%q lies inside %q: %d-%d in %d-%d", inside.title, first.title, inside.first, inside.last, first.first, first.last)
+	}
+	if second.first != first.last+1 {
+		t.Errorf("%q ends at %d, %q starts at %d — siblings meet at one row",
+			first.title, first.last, second.title, second.first)
+	}
+	if second.last != len(l.rows)-1 {
+		t.Errorf("the last section ends at %d, the page at %d", second.last, len(l.rows)-1)
 	}
 }
 
@@ -246,10 +251,9 @@ func TestSectionsTileAcrossLandmarkRules(t *testing.T) {
 	if got := titles(secs); strings.Join(got, "|") != "Title|Background|Emulators" {
 		t.Fatalf("sections %v", got)
 	}
-	for i := 1; i < len(secs); i++ {
-		if secs[i].first != secs[i-1].last+1 {
-			t.Errorf("row %d belongs to no section or to two", secs[i-1].last+1)
-		}
+	// The two h2s are siblings under the h1 and meet at one row.
+	if secs[2].first != secs[1].last+1 {
+		t.Errorf("row %d belongs to no h2 or to two", secs[1].last+1)
 	}
 	if secs[0].first != 0 || secs[len(secs)-1].last != len(l.rows)-1 {
 		t.Errorf("the sections do not cover the page: %d-%d of %d rows",
@@ -372,8 +376,10 @@ func TestBorderFillsAsYouRead(t *testing.T) {
 	if got := tb.readPct(20); got != 100 {
 		t.Errorf("at the end of a section the border is full, got %d%%", got)
 	}
-	// A section that fits reports nothing to fill.
-	tb.sec, tb.top = 0, tb.secs[0].first
+	// A section that fits reports nothing to fill: the last part, on a
+	// screen taller than it. (The h1 holds the whole page now, so it is
+	// not the one that fits.)
+	tb.sec, tb.top = len(tb.secs)-1, tb.secs[len(tb.secs)-1].first
 	if got := tb.readPct(200); got != -1 {
 		t.Errorf("a section that fits has no progress, got %d", got)
 	}
