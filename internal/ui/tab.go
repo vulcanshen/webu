@@ -71,6 +71,12 @@ type tab struct {
 	// backParts is the pagetab for that same moment (noticePopup).
 	back      layout
 	backParts []part
+	// backSecs, backRead, backSec and backTop are where the reader was
+	// on that page — the section open, the row at the top — so that
+	// answering the popup puts them back there, not at the list.
+	backSecs         []section
+	backRead         bool
+	backSec, backTop int
 	// drillHead is the row of the drilled thing's first line, which the
 	// panel draws as its header row rather than in the page — the way a
 	// section's heading is the header while it is read; drillBody is
@@ -587,9 +593,19 @@ func (t *tab) apply(msg pageMsg, width int) {
 	t.relayout(width)
 	if popped {
 		// Into the popup, or back out of it: the page on screen is
-		// another one, and the cursor starts where it starts.
+		// another one, and the cursor starts where it starts — except
+		// that coming back out is coming back to where the reader was,
+		// the section open and the window where it stood.
 		t.drill = nil
 		t.relayout(width)
+		if t.popup == 0 && t.backRead && t.backSec < len(t.secs) {
+			t.read, t.sec = true, t.backSec
+			t.cursor, t.top = t.firstItem(), t.backTop
+			t.leavePagetab()
+			t.scrollToCursor(0)
+			t.backRead = false
+			return
+		}
 		t.cursor, t.top = t.firstItem(), 0
 		t.leavePagetab()
 		t.scrollToCursor(0)

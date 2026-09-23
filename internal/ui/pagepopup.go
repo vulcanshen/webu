@@ -148,8 +148,10 @@ func (t *tab) noticePopup(fresh bool) bool {
 		if p := findPopup(t.prevTop, t.root, t.boxes); p != nil {
 			t.popup = p.ID
 			// The page as it was the moment before: the backdrop, for
-			// as long as the page under the popup is not in the tree.
-			t.back, t.backParts = t.lay, t.parts
+			// as long as the page under the popup is not in the tree —
+			// and where the reader was on it, to come back to.
+			t.back, t.backParts, t.backSecs = t.lay, t.parts, t.secs
+			t.backRead, t.backSec, t.backTop = t.read, t.sec, t.top
 		}
 	}
 	t.prevTop = allIDs(t.root)
@@ -182,12 +184,15 @@ func (t *tab) backdrop() *tab {
 	bt := *t
 	bt.lay = t.back
 	bt.parts = t.backParts
+	bt.secs, bt.read, bt.sec, bt.top = t.backSecs, t.backRead, t.backSec, t.backTop
 	bt.gutter = lineNumW(len(t.back.rows))
 	bt.cursor = -1
 	bt.loading = true
 	bt.popup = 0
-	bt.top = 0
-	bt.read, bt.drill = false, nil
+	bt.drill = nil
+	if bt.sec >= len(bt.secs) {
+		bt.read = false
+	}
 	return &bt
 }
 

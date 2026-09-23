@@ -2015,6 +2015,13 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 	if m.busy() {
 		return m, nil
 	}
+	if n.Disabled {
+		// A click on a disabled control does nothing in the browser
+		// either, but the browser shows it greyed and a terminal's grey
+		// is easy to miss: say why nothing happened (2026-09-23 — the
+		// APG alert example disables Discard when the notes are empty).
+		return m, m.toast.show(oneLine(nameOr(n.Name, "this"))+" is disabled on the page", toastInfo)
+	}
 	switch n.Kind {
 	case ir.Textbox:
 		return m, m.editField(n)
