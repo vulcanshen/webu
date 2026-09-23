@@ -55,11 +55,22 @@ func TestAPopupIsToldByBehaviour(t *testing.T) {
 	if p := findPopup(prev, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, after}}, boxes); p != nil {
 		t.Errorf("a block after the body is in the flow, not over it: %v", p)
 	}
-	// Declared modal: Chromium prunes the rest of the tree behind it, so
-	// there is nothing to overlap, and the declaration is enough.
+	// Declared modal: the declaration is the whole of the evidence, with
+	// no geometry at all.
 	dlg := &ir.Node{Kind: ir.Landmark, Role: "dialog", ID: 50, Modal: true, Children: []*ir.Node{para(text("Cookies?")), button(51, "Accept", false)}}
 	if p := findPopup(prev, &ir.Node{Kind: ir.Document, Children: []*ir.Node{dlg}}, map[cdp.BackendNodeID]ir.Box{}); p != dlg {
 		t.Errorf("a modal dialog is a popup on its word alone: %v", p)
+	}
+	// And wherever the page hung it: inside main, after the example it
+	// belongs to, the way the ARIA practices' own examples are built.
+	inner := &ir.Node{Kind: ir.Landmark, Role: "main", ID: 1, Children: []*ir.Node{para(text("the page")), dlg}}
+	if p := findPopup(prev, &ir.Node{Kind: ir.Document, Children: []*ir.Node{inner}}, map[cdp.BackendNodeID]ir.Box{}); p != dlg {
+		t.Errorf("a dialog inside main is found there: %v", p)
+	}
+	// A new subtree's root is the candidate, not every new node under
+	// it: the dialog, not its Accept button.
+	if p := findPopup(map[cdp.BackendNodeID]bool{1: true}, &ir.Node{Kind: ir.Document, Children: []*ir.Node{inner}}, nil); p != dlg {
+		t.Errorf("the root of the new subtree: %v", p)
 	}
 }
 
