@@ -1,0 +1,20 @@
+<!doctype html><html><head><title>Slider</title></head><body>
+<h1>Mix</h1>
+<form>
+<label for="r">Red</label> <input id="r" type="range" min="0" max="255" value="128">
+</form>
+<div id="v" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40" aria-valuetext="40 percent"></div>
+<script>
+document.getElementById('v').addEventListener('keydown', function (e) {
+  var now = +this.getAttribute('aria-valuenow');
+  if (e.key === 'ArrowRight') now = Math.min(100, now + 1);
+  else if (e.key === 'ArrowLeft') now = Math.max(0, now - 1);
+  else if (e.key === 'Home') now = 0;
+  else if (e.key === 'End') now = 100;
+  else return;
+  this.setAttribute('aria-valuenow', now);
+  this.setAttribute('aria-valuetext', now + ' percent');
+  e.preventDefault();
+});
+</script>
+</body></html>

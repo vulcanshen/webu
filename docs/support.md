@@ -68,10 +68,14 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `sectionfooter` | group | — | an article's or section's footer: its lines, in place |
 | `sectionheader` | group | — | an article's or section's header: its lines, in place |
 | `separator` | separator | — | a horizontal rule |
+| `slider` | textbox | edit | a bar with its value; Enter asks for a number |
 | `spinbutton` | textbox | edit | a number field; edits like a textbox |
 | `strong` | span | — | <strong> / <b>: bold |
 | `switch` | check | click | box glyph, ticked or not, + name; Enter toggles |
+| `tab` | button | click | one tab of the strip; Enter chooses it |
 | `table` | table | — | columns aligned, widths shrunk to fit |
+| `tablist` | group | — | a strip of tabs, the chosen one lit |
+| `tabpanel` | group | — | a tab's content, in place |
 | `term` | group | — | <dt>: on its own line |
 | `textbox` | textbox | edit | name ____value____; Enter edits in a popup |
 | `tree` | group | — | a tree: its items, indented by level |

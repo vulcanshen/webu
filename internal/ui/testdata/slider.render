@@ -1,0 +1,10 @@
+# Mix
+
+
+  Red    ──────●───── 128
+
+Volume ────●─────── 40
+-- items --
+0 heading "Mix" rows 0-0
+1 textbox "Red" rows 3-3
+2 textbox "Volume" rows 5-5

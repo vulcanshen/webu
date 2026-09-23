@@ -2269,6 +2269,14 @@ func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 		// (editorpopup.go).
 		return m.editor.ask(title, oneLine(nameOr(n.Name, "field")), value, n.ID, m.layer())
 	}
+	if n.Role == "slider" {
+		// A slider: a number within its range, and webu moves the bar
+		// there (page.Slide) — there is nothing on a bar to type into
+		// (user, 2026-09-23).
+		return m.input.ask(inputPopup{title: title, glyph: glyphPencil,
+			prompt: oneLine(nameOr(n.Name, "field")), accept: "set", action: inputSlide,
+			node: n.ID, value: value}, m.layer())
+	}
 	return m.input.ask(inputPopup{title: title, glyph: glyphPencil,
 		prompt: oneLine(nameOr(n.Name, "field")), accept: "set", action: inputField,
 		node: n.ID, value: value, masked: n.Protected, search: search}, m.layer())
@@ -2286,6 +2294,10 @@ func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 func fieldTakes(n *ir.Node) string {
 	if n.Protected {
 		return "password"
+	}
+	if n.Role == "slider" {
+		// The ends of the bar, the one thing a number for it needs.
+		return "number " + sliderRange(n)
 	}
 	switch t := n.InputType; t {
 	case "":
@@ -2346,6 +2358,17 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.input.close(), write, ask)
 		}
 		return m, tea.Batch(m.closeStack(), write)
+	case inputSlide:
+		id := m.input.node
+		if t == nil {
+			return m, m.closeStack()
+		}
+		v := strings.TrimSpace(value)
+		if _, err := strconv.ParseFloat(v, 64); err != nil {
+			// The box stays: what was typed is not a place on the bar.
+			return m, m.toast.show("a number, for the slider", toastInfo)
+		}
+		return m, tea.Batch(m.closeStack(), t.press(func(ctx context.Context) error { return page.Slide(ctx, id, v) }))
 	case inputPrompt:
 		return m, tea.Batch(m.input.close(), m.answerDialog(true, value))
 	case inputSetting:
