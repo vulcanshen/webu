@@ -2,14 +2,12 @@ document "unsupported" url=file:///Users/vulcan/Documents/sideproj/webu/internal
   textbox:slider "Volume" value="5" range=0..10 focusable block #10
   textbox:slider "Range" value="3" range=0..100 focusable #11
   group #15
-    unsupported:DisclosureTriangle "Show more" focusable block #19
-      text "Show more" #72
+    button "Show more" focusable block #19
   group #21
-    unsupported:DisclosureTriangle "Already open" focusable expanded block #25
-      text "Already open" #74
+    button "Already open" focusable expanded block #25
     paragraph #26
       text "Visible text." #75
-  unsupported:progressbar "Loading" range=0..1 #27
+  gauge:progressbar "Loading" value="0.5" range=0..1 #27
   group:tablist #31
     button "Tab A" focusable selected #32
     button "Tab B" focusable #33
@@ -35,13 +33,7 @@ document "unsupported" url=file:///Users/vulcan/Documents/sideproj/webu/internal
   list #49
     listitem marker="• " #50
       button "Menu button" focusable #51
-  unsupported:meter "Meter" range=0..1 #52
-  unsupported:ColorWell "Colour" focusable #56
-  unsupported:Date "Date" focusable #3
-    textbox:spinbutton "Year Year" value="0" range=1..275760 focusable #62
-    text "/" #89
-    textbox:spinbutton "Month Month" value="0" range=1..12 focusable #64
-    text "/" #91
-    textbox:spinbutton "Day Day" value="0" range=1..31 focusable #66
-    button "Show date picker Show date picker" focusable #67
+  gauge:meter "Meter" value="0.6" range=0..1 #52
+  textbox:ColorWell "Colour" value="#000000" focusable #56
+  textbox:Date "Date" focusable #3
   button "File" value="No file chosen" focusable #68

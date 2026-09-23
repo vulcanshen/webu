@@ -10,8 +10,13 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 |---|---|---|---|
 | `Audio` | media | click | placeholder; menu: yank url |
 | `Canvas` | media | click | placeholder; nothing inside can be read |
+| `ColorWell` | textbox | edit | a colour box; Enter asks for #rrggbb |
+| `Date` | textbox | edit | a date box; Enter asks for YYYY-MM-DD |
+| `DateTime` | textbox | edit | a date-and-time, month or week box; Enter asks for it in the browser's shape |
 | `DescriptionList` | list | — | <dl>: terms and definitions |
+| `DisclosureTriangle` | button | click | a summary with its triangle; Enter opens or shuts what follows |
 | `Iframe` | media | click | one row; Enter opens the frame's document in place, Esc comes back out — a frame from another site cannot be entered and says so |
+| `InputTime` | textbox | edit | a time box; Enter asks for HH:MM |
 | `LayoutTableCell` | cell | — | a layout-table cell: its content, a space apart from the next |
 | `LayoutTableRow` | group | — | a layout-table row: one line of flow (the Hacker News shape) |
 | `LineBreak` | text | — | a line break inside text |
@@ -56,9 +61,11 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `menuitem` | button | click | tap glyph + name; Enter presses |
 | `menuitemcheckbox` | button | click | tap glyph + name; Enter presses |
 | `menuitemradio` | button | click | tap glyph + name; Enter presses |
+| `meter` | gauge | — | a filled bar with its value; reads only |
 | `navigation` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `option` | option | click | one choice of a combobox, listed behind it; one of a listbox is a row of its own, a radio or check glyph + name, Enter picks |
 | `paragraph` | paragraph | — | a block of text, wrapped to width |
+| `progressbar` | gauge | — | a filled bar with its value; reads only |
 | `radio` | check | click | dot glyph, filled or not, + name; Enter selects |
 | `region` | landmark | — | landmark region, enters the outline |
 | `row` | row | — | one table row |

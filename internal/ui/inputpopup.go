@@ -16,6 +16,7 @@ const (
 	inputGoto                      // open a URL in the shown tab (ux.md §7)
 	inputGotoNewTab                // open a URL in a new tab
 	inputField                     // write a textbox's value back to the page (ux.md §2)
+	inputFill                      // a date, a time, a colour: the value set whole (page.Fill)
 	inputPrompt                    // answer a page's prompt() (function.md §5)
 	inputAuthUser                  // an HTTP challenge: the name, then…
 	inputAuthPass                  // …the password, masked
@@ -49,6 +50,9 @@ type inputPopup struct {
 	node cdp.BackendNodeID
 	// masked draws the value as dots: a password field's edit.
 	masked bool
+	// shape is what an inputFill value has to look like — "YYYY-MM-DD",
+	// "#rrggbb" — checked before it is sent (fill.go).
+	shape string
 	// search: the box is a search box, so the value written is then
 	// offered to the page's Enter (inputKey).
 	search bool

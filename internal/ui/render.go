@@ -481,9 +481,11 @@ func fitForm(want, value, avail int) (int, bool) {
 }
 
 // formValueW is the value column this form needs: the field glyph, a
-// space, the widest value it actually holds, and the caret after it. The
-// box is sized by it, so an empty form is not a sliver and a form full
-// of long values is not cut to pieces.
+// space, the widest value it actually holds, a space, and the caret
+// after it. The box is sized by it, so an empty form is not a sliver and
+// a form full of long values is not cut to pieces. The space before the
+// caret went uncounted until a date box held the widest value there
+// was, and its caret wrapped to a row of its own (2026-09-23).
 func formValueW(form *ir.Node) int {
 	w := 0
 	form.Walk(func(n *ir.Node) bool {
@@ -499,7 +501,7 @@ func formValueW(form *ir.Node) int {
 		}
 		return true
 	})
-	return dispW(glyphInput) + 1 + clamp(w, formValueMin, formSlot) + 1
+	return dispW(glyphInput) + 1 + clamp(w, formValueMin, formSlot) + 2
 }
 
 // formLabelW is how wide a form's label column is: the widest name any
@@ -1234,8 +1236,30 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 			// and wrong for a column.
 			r.add(atom{text: strings.Repeat(" ", r.formLabel+2), item: -1, kind: segDim})
 		}
-		r.add(atom{text: glyphButton + " ", item: id, kind: k})
+		lead := glyphButton + " "
+		if n.Role == "DisclosureTriangle" {
+			// <details>: the triangle says whether what follows is open.
+			lead = "▸ "
+			if n.Expanded {
+				lead = "▾ "
+			}
+		}
+		r.add(atom{text: lead, item: id, kind: k})
 		r.words(oneLine(nameOr(n.Name, n.Value)), id, k)
+	case ir.Gauge:
+		// A gauge reads only — a progress, a meter — so it is no stop:
+		// its name, the bar filled to where it stands, the value.
+		if n.Name != "" {
+			r.words(oneLine(n.Name), item, kind)
+			r.add(atom{text: " ", item: item, kind: kind, space: true})
+		}
+		filled, rest := gaugeBar(n)
+		if filled != "" {
+			r.add(atom{text: filled, item: item, kind: segPlain})
+		}
+		r.add(atom{text: rest, item: item, kind: segDim})
+		r.add(atom{text: " ", item: item, kind: kind, space: true})
+		r.words(gaugeValue(n), item, kind)
 	case ir.Textbox:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)

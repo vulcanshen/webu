@@ -2,13 +2,13 @@
 
 [Range: 3]
 
-Show more
+[Show more]
 
-Already open
+[Already open]
 
 Visible text.
 
-Loading
+[Loading: 0.5]
 
 [Tab A] [Tab B]
 
@@ -32,4 +32,4 @@ Caption
 
 - [Menu button]
 
-Meter Colour [Year Year: 0] / [Month Month: 0] / [Day Day: 0] [Show date picker Show date picker] [File]
+[Meter: 0.6] [Colour: #000000] [Date] [File]

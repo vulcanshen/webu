@@ -1,0 +1,34 @@
+document "Gauges" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/gauges.html focusable #4
+  heading "Status" level=1 #10
+    text "Status" #97
+  paragraph #11
+    text "Upload " #98
+    gauge:progressbar value="0.5" range=0..1 #12
+    text " done." #99
+  paragraph #16
+    text "Waiting " #100
+    gauge:progressbar range=0..1 #17
+  paragraph #21
+    text "Disk " #101
+    gauge:meter value="65" range=0..100 #22
+    text " used." #102
+  gauge:progressbar "Build" value="42" range=0..100 block #26
+  group #27
+    button "Show more" focusable block #31
+  group #33
+    button "Already open" focusable expanded block #37
+    paragraph #38
+      text "The visible part." #107
+  landmark:form #3
+    text "Day" #108
+    textbox:Date "Day" value="2026-09-23" focusable #40
+    text "When" #114
+    textbox:DateTime "When" focusable #51
+    text "Time" #124
+    textbox:InputTime "Time" value="13:45" focusable #66
+    text "Month" #128
+    textbox:DateTime "Month" focusable #75
+    text "Week" #132
+    textbox:DateTime "Week" focusable #84
+    text "Tint" #137
+    textbox:ColorWell "Tint" value="#336699" focusable #94
