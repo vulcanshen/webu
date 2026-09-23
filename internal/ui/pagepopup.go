@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
@@ -146,6 +147,9 @@ func (t *tab) noticePopup(fresh bool) bool {
 	if t.popup == 0 && !fresh && time.Now().Before(t.popupUntil) {
 		if p := findPopup(t.prevTop, t.root, t.boxes); p != nil {
 			t.popup = p.ID
+			// The page as it was the moment before: the backdrop, for
+			// as long as the page under the popup is not in the tree.
+			t.back, t.backParts = t.lay, t.parts
 		}
 	}
 	t.prevTop = allIDs(t.root)
@@ -169,4 +173,38 @@ func sansPopup(root *ir.Node, popup cdp.BackendNodeID) *ir.Node {
 		}
 	}
 	return out
+}
+
+// backdrop is the tab as the panel draws it under a popup: the page's
+// own layout, dimmed the way a page being left is, and no cursor — the
+// cursor is in the float. A copy, so nothing about the tab moves.
+func (t *tab) backdrop() *tab {
+	bt := *t
+	bt.lay = t.back
+	bt.parts = t.backParts
+	bt.gutter = lineNumW(len(t.back.rows))
+	bt.cursor = -1
+	bt.loading = true
+	bt.popup = 0
+	bt.top = 0
+	bt.read, bt.drill = false, nil
+	return &bt
+}
+
+// popupTitle is what the float's border says: the popup's name, or its
+// first line when the page gave it none.
+func (t *tab) popupTitle() string {
+	p := t.popupNode()
+	if p == nil {
+		return ""
+	}
+	if s := oneLine(p.Name); s != "" {
+		return s
+	}
+	for _, r := range t.lay.rows {
+		if s := strings.TrimSpace(r.plain()); s != "" {
+			return s
+		}
+	}
+	return "popup"
 }

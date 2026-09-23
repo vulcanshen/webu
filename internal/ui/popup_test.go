@@ -106,10 +106,15 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 	d.until("the dialog is the panel", func() bool { return p.popupNode() != nil })
 	v := dumpLayout(p.lay)
 	if !strings.Contains(v, "We use cookies") || strings.Contains(v, "Some body text") {
-		t.Errorf("the panel is the dialog and nothing else:\n%s", v)
+		t.Errorf("the cursor walks the dialog and nothing else:\n%s", v)
 	}
-	if h := d.m.pagetabRow(p, 80); !strings.Contains(h, "popup") {
-		t.Errorf("the header row says popup:\n%s", h)
+	// Drawn as a float over the page: the dialog in a box, the page
+	// still there under it.
+	if f := d.m.pagePopupView(p); !strings.Contains(f, "We use cookies") || !strings.Contains(f, "Accept") {
+		t.Errorf("the float is the dialog:\n%s", f)
+	}
+	if view := d.m.View(); !strings.Contains(view, "We use cookies") || !strings.Contains(view, "Some body text") {
+		t.Errorf("the page shows through under the float:\n%s", view)
 	}
 	d.key("esc")
 	if p.popupNode() == nil || !d.m.toast.isActive() {
@@ -128,7 +133,7 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 	d.key("enter")
 	d.until("the sheet is the panel", func() bool { return p.popupNode() != nil })
 	if v := dumpLayout(p.lay); !strings.Contains(v, "about to expire") || strings.Contains(v, "Some body text") {
-		t.Errorf("the panel is the sheet:\n%s", v)
+		t.Errorf("the cursor walks the sheet:\n%s", v)
 	}
 	d.cursorOn(ir.Button, "Stay signed in")
 	d.key("enter")

@@ -269,6 +269,7 @@ var (
 	glyphSettings = string(rune(0xf0493)) // nf-md-cog
 	glyphFolder   = string(rune(0xf024b)) // nf-md-folder — a bookmark folder's row
 	glyphTable    = string(rune(0xf04eb)) // nf-md-table — a cell's content popup
+	glyphPopup    = string(rune(0xf10ac)) // nf-md-dock_window — a page's own popup, floated (pagepopup.go)
 	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
 	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
 

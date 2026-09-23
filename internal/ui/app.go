@@ -2615,7 +2615,12 @@ func (m AppModel) View() string {
 	}
 	out = m.header() + "\n" + m.headerRule() + "\n" + out + "\n" + m.footer()
 
-	// Bottom to top: the menu first so what it opened lands above it.
+	// Bottom to top. The page's own popup first, under everything of
+	// webu's: a menu opened on it lands above it (pagepopup.go).
+	if t := m.shownTab(); t != nil && m.screen == screenWeb && t.popupNode() != nil {
+		out = overlay.Composite(m.pagePopupView(t), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	// Then the menu, so what it opened lands above it.
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -2689,7 +2694,7 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 		case t.working():
 			hint = "loading"
 		case t.popupNode() != nil:
-			hint = "a popup: answer it, Esc does not close it"
+			hint = "a popup is up: answer it"
 		case t.onPagetab():
 			// The hand on the pagetab: what that part holds, and whether
 			// it is the one being shown.
