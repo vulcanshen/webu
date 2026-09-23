@@ -1,0 +1,19 @@
+<!doctype html><html><head><title>Listbox</title></head><body>
+<h1>Pick one, pick many</h1>
+<p id="one-label">Favourite element:</p>
+<ul role="listbox" aria-labelledby="one-label" tabindex="0">
+<li role="option" aria-selected="true" onclick="pickOne(this)">Neptunium</li>
+<li role="option" aria-selected="false" onclick="pickOne(this)">Plutonium</li>
+<li role="option" aria-selected="false" onclick="pickOne(this)">Americium</li>
+</ul>
+<p id="many-label">Toppings:</p>
+<ul role="listbox" aria-labelledby="many-label" aria-multiselectable="true" tabindex="0">
+<li role="option" aria-selected="false" onclick="toggle(this)">Cheese</li>
+<li role="option" aria-selected="true" onclick="toggle(this)">Olives</li>
+</ul>
+<p>Chosen: <output id="out">Neptunium</output></p>
+<script>
+function pickOne(li) { for (const o of li.parentNode.children) o.setAttribute('aria-selected', o === li ? 'true' : 'false'); document.getElementById('out').textContent = li.textContent; }
+function toggle(li) { li.setAttribute('aria-selected', li.getAttribute('aria-selected') === 'true' ? 'false' : 'true'); }
+</script>
+</body></html>

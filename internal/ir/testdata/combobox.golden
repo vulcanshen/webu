@@ -13,7 +13,7 @@ document "combobox" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir
     combobox "Disabled" value="x" disabled #1
       option "x" #55
     text "Multi " #85
-    unsupported:listbox "Multi" focusable #59
+    group:listbox "Multi" focusable #59
       option "m1" focusable selected block #63
       option "m2" focusable block #66
     text "Datalist " #86

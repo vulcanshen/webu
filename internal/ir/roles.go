@@ -80,7 +80,8 @@ var Roles = map[string]Spec{
 	"radio":         {Kind: Check, Action: Click, Display: "dot glyph, filled or not, + name; Enter selects"},
 	"switch":        {Kind: Check, Action: Click, Display: "box glyph, ticked or not, + name; Enter toggles"},
 	"combobox":      {Kind: Combobox, Action: Choose, Display: "name + dropdown glyph + value; Enter lists the options — one with no options is a textbox (Google's search box)"},
-	"option":        {Kind: Option, Display: "one choice of a combobox"},
+	"option":        {Kind: Option, Action: Click, Display: "one choice of a combobox, listed behind it; one of a listbox is a row of its own, a radio or check glyph + name, Enter picks"},
+	"listbox":       {Kind: Group, Display: "a list of options to pick from, one per row (2026-09-23)"},
 	"MenuListPopup": {Transparent: true, Display: "the option list under a <select>; its options are read, it is not drawn"},
 
 	"list":            {Kind: List, Display: "the container of list items"},
@@ -126,6 +127,14 @@ var Roles = map[string]Spec{
 	"blockquote": {Kind: Quote, Display: "indented quotation"},
 
 	"group": {Kind: Group, Display: "a plain container kept for its line break"},
+
+	// Live regions: content the page updates in place — a status line,
+	// an alert, a log. Drawn where they are, as what they say; the
+	// terminal has no way to announce them and does not need one, the
+	// row changes under the reader's eyes (2026-09-23).
+	"status": {Transparent: true, Display: "a status line (<output>, role=status): its text flows where it is, as it changes"},
+	"alert":  {Kind: Group, Display: "an alert, drawn in place as it appears"},
+	"log":    {Kind: Group, Display: "a log, drawn in place as it grows"},
 
 	// A menu that opens from a button is a popup (ui pagepopup); its
 	// items are things to press, drawn as buttons are (2026-09-23).

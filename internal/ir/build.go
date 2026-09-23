@@ -225,6 +225,20 @@ func Build(c Capture) *Node {
 		b.byID[n.NodeID] = n
 	}
 	out := b.convert(c.Nodes[0])
+	// A listbox's options are drawn as what the list allows: one choice
+	// or many. The list says; each option is told (ui render).
+	for _, top := range out {
+		top.Walk(func(n *Node) bool {
+			if n.Role == "listbox" {
+				for _, o := range n.Children {
+					if o.Kind == Option {
+						o.Multi = n.Multi
+					}
+				}
+			}
+			return true
+		})
+	}
 	root := &Node{Kind: Document, Role: "RootWebArea", Children: out}
 	if len(out) == 1 && out[0].Kind == Document {
 		root = out[0]
@@ -382,6 +396,8 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 			}
 		case accessibility.PropertyNameFocusable:
 			n.Focusable = boolean(p.Value)
+		case accessibility.PropertyNameMultiselectable:
+			n.Multi = boolean(p.Value)
 		case accessibility.PropertyNameFocused:
 			n.Focused = boolean(p.Value)
 		case accessibility.PropertyNameModal:
