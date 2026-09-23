@@ -56,6 +56,11 @@ type tab struct {
 	// gutter is how many columns the line-number column takes off the
 	// left of the panel; the layout was made at what it left (relayout).
 	gutter int
+	// entry is the history entry the page shown is, and places where the
+	// reader was on each entry left: going back lands there, the way a
+	// browser restores its scroll (user, 2026-09-23).
+	entry  int64
+	places map[int64]place
 	// popups is the stack of blocks the page put up and that want an
 	// answer, by Chromium's id, the top one last; the float is that one
 	// until the page takes it down (pagepopup.go). prevTop is every node of the tree at
@@ -250,8 +255,25 @@ type pageMsg struct {
 	gen   int
 	url   string
 	title string
+	// entry is the history entry the tab is on (page.Entry): a place
+	// on a page is remembered under it, so going back lands where the
+	// reader left (tab.places).
+	entry int64
 	cap   ir.Capture
 	err   error
+}
+
+// place is where the reader was on a page: which part, the section
+// open, the window and the cursor — what going back to it restores.
+// Indexes rather than nodes: a page come back to is captured afresh
+// and its nodes are new, but the same page lays out the same.
+type place struct {
+	at     partKind
+	flat   bool
+	read   bool
+	sec    int
+	top    int
+	cursor int
 }
 
 // pageEventMsg says Chromium reported a navigation or load in this tab;
@@ -580,7 +602,8 @@ func capture(ctx context.Context, id, gen int) tea.Msg {
 	if err != nil {
 		err = fmt.Errorf("capture: %w", err)
 	}
-	return pageMsg{tabID: id, gen: gen, url: url, title: title, cap: c, err: err}
+	entry, _ := page.Entry(ctx)
+	return pageMsg{tabID: id, gen: gen, url: url, title: title, entry: entry, cap: c, err: err}
 }
 
 // apply takes a capture in: the page, its layout at the current width, and
@@ -606,7 +629,24 @@ func (t *tab) apply(msg pageMsg, width int) {
 	// (the first item, inside main when there is one — ux.md §6) and the
 	// window is at the top, wherever that item sits. A redraw of the same
 	// page keeps both.
-	fresh := msg.url != "" && msg.url != t.lastVisit
+	// moved: another history entry than the one drawn — a navigation,
+	// or a step back or forward. Where the reader was on the one left
+	// is kept, and where they were on the one arrived at, if they have
+	// been there, is put back. It is also what fresh means: the URL
+	// against the last visit recorded said "new" on every settle until
+	// the visit was recorded, and each said so by resetting the cursor
+	// (2026-09-23).
+	moved := msg.entry != 0 && msg.entry != t.entry
+	fresh := moved || (msg.entry == 0 && msg.url != "" && msg.url != t.lastVisit)
+	if moved && t.entry != 0 && t.root != nil {
+		if t.places == nil {
+			t.places = map[int64]place{}
+		}
+		t.places[t.entry] = place{at: t.at, flat: t.flat, read: t.read, sec: t.sec, top: t.top, cursor: t.cursor}
+	}
+	if msg.entry != 0 {
+		t.entry = msg.entry
+	}
 	if msg.url != "" {
 		t.url = msg.url
 	}
@@ -652,6 +692,18 @@ func (t *tab) apply(msg pageMsg, width int) {
 		t.cursor, t.top = t.firstItem(), 0
 		t.leavePagetab()
 		t.scrollToCursor(0)
+		return
+	}
+	if pl, ok := t.places[msg.entry]; moved && ok {
+		// Back where the reader was: the part, the section, the window,
+		// the cursor — by index, since the page's nodes are new.
+		t.at, t.flat = pl.at, pl.flat
+		t.relayout(width)
+		t.read, t.sec = pl.read && pl.sec < len(t.secs), pl.sec
+		t.sec = clamp(t.sec, 0, max(0, len(t.secs)-1))
+		t.cursor = clamp(pl.cursor, -1, len(t.lay.items)-1)
+		t.top = clamp(pl.top, 0, max(0, len(t.lay.rows)-1))
+		t.leavePagetab()
 		return
 	}
 	if fresh {

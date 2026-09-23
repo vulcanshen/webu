@@ -201,6 +201,24 @@ func Location(ctx context.Context) (url, title string, err error) {
 	return
 }
 
+// Entry is the id of the history entry the tab is on: what a place on
+// a page is remembered under (ui tab.places), since a URL can be in the
+// stack twice and each visit is its own place.
+func Entry(ctx context.Context) (int64, error) {
+	var id int64
+	err := run(ctx, func(ctx context.Context) error {
+		cur, entries, err := cdppage.GetNavigationHistory().Do(ctx)
+		if err != nil {
+			return err
+		}
+		if int(cur) >= 0 && int(cur) < len(entries) {
+			id = entries[cur].ID
+		}
+		return nil
+	})
+	return id, err
+}
+
 // ErrNoEntry is Back or Forward with nowhere to go.
 var ErrNoEntry = errors.New("no such history entry")
 

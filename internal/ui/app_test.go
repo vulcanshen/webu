@@ -1116,3 +1116,59 @@ func TestAComboboxWithNoOptionsOpensTheInput(t *testing.T) {
 		t.Errorf("a real select lists its options: %d", len(d.m.options.items))
 	}
 }
+
+// Going back lands where the reader left, the way a browser restores
+// its scroll: the cursor and the window on the page come back to are
+// the ones it had, not the page's start (user, 2026-09-23). Each
+// history entry has its own place, so a page in the stack twice is two
+// places.
+func TestBackReturnsToThePlaceLeft(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	exe, ok := browser.Installed()
+	if !ok {
+		t.Skip("pinned Chromium not installed; run webu once")
+	}
+	b, err := browser.Launch(exe, t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	abs, _ := filepath.Abs("testdata/nav.html")
+	d := newDriver(t, New(b, "file://"+abs))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("page A", d.loaded("Page A"))
+	p := d.page()
+
+	// Down the page to the Confirm button, then off to page B by the
+	// link above it.
+	d.cursorOn(ir.Button, "Confirm")
+	wasCursor, wasTop := p.cursor, p.top
+	if wasCursor <= 0 {
+		t.Fatalf("the cursor should be down the page: %d", wasCursor)
+	}
+	d.cursorOn(ir.Link, "a link to B")
+	leftCursor := p.cursor
+	d.key("enter")
+	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
+	d.key("enter")
+	d.until("page B", d.loaded("Page B"))
+	if p.entry == 0 || len(p.places) != 1 {
+		t.Fatalf("leaving a page keeps its place under its entry: entry %d, places %d", p.entry, len(p.places))
+	}
+
+	d.key("P")
+	d.until("page A again", d.loaded("Page A"))
+	if p.cursor != leftCursor {
+		t.Errorf("back lands on the item the reader left: cursor %d, want %d", p.cursor, leftCursor)
+	}
+	_ = wasTop
+	// And forward keeps B where it was too — its start, which is where
+	// it was left.
+	d.key("N")
+	d.until("page B again", d.loaded("Page B"))
+	if n := p.current(); n == nil || n.Kind != ir.Heading {
+		t.Errorf("forward is back on B's start: %+v", n)
+	}
+}
