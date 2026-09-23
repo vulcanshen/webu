@@ -49,8 +49,9 @@ type Capture struct {
 	FrameOf map[cdp.BackendNodeID]string   `json:"frameOf,omitempty"`
 	Frames  map[cdp.BackendNodeID]*Capture `json:"-"`
 	// Base is the offset a frame's ids are carried at when the frame is
-	// another process's, whose ids start at 1 again (page.Sessions).
-	// Zero for the page and for a frame of its own process.
+	// another process's, whose ids start at 1 again (page.Sessions): a
+	// multiple of CarriedFrom. Zero for the page and for a frame of its
+	// own process.
 	Base cdp.BackendNodeID `json:"-"`
 	// Viewport is the window the page was laid out in — not the page's
 	// own size, which Boxes gives. A page shorter than its viewport is
@@ -647,11 +648,19 @@ func num(v *accessibility.Value) int {
 	return int(f)
 }
 
+// CarriedFrom is where carried ids begin: an id at or above it belongs
+// to a frame from another process, carried at that frame's Base — a
+// multiple of this — and the rest of the id is the one its process knows
+// (page.Sessions). The page's own ids never reach it.
+const CarriedFrom cdp.BackendNodeID = 1 << 40
+
 // offsetIDs carries every id under n at base: a frame from another
-// process numbers its nodes from 1, as the page does its own.
+// process numbers its nodes from 1, as the page does its own. An id
+// already carried — a frame inside this frame, spliced in at its own
+// base — is left as it is.
 func offsetIDs(n *Node, base cdp.BackendNodeID) {
 	n.Walk(func(c *Node) bool {
-		if c.ID != 0 {
+		if c.ID != 0 && c.ID < CarriedFrom {
 			c.ID += base
 		}
 		return true

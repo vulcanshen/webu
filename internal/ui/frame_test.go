@@ -18,10 +18,19 @@ import (
 // (2026-09-23). A file:// page holding an http:// frame is such a pair.
 func TestACrossSiteFrameIsEntered(t *testing.T) {
 	b := hookBrowser(t)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// One server, two sites: 127.0.0.1 and localhost are different sites
+	// to the browser, so the frame inside the frame is another process
+	// again.
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
+		if r.URL.Path == "/deep" {
+			w.Write([]byte(`<title>Deep</title><p>deepest text</p>`))
+			return
+		}
 		w.Write([]byte(`<title>Inner</title><h2>Inside another site</h2><p>remote text</p>` +
-			`<button onclick="this.textContent='Pressed'">Press me</button>`))
+			`<button onclick="this.textContent='Pressed'">Press me</button>` +
+			`<iframe src="` + strings.Replace(srv.URL, "127.0.0.1", "localhost", 1) + `/deep" title="Deeper" width="300" height="100"></iframe>`))
 	}))
 	defer srv.Close()
 	outer := filepath.Join(t.TempDir(), "outer.html")
@@ -48,8 +57,13 @@ func TestACrossSiteFrameIsEntered(t *testing.T) {
 	d.cursorOn(ir.Button, "Press me")
 	d.key("enter")
 	d.until("pressed", func() bool { return strings.Contains(dumpLayout(p.lay), "Pressed") })
+	// A frame inside the frame, from a third site: entered the same way.
+	d.cursorOn(ir.Media, "Deeper")
+	d.key("enter")
+	d.until("deeper", func() bool { return strings.Contains(dumpLayout(p.lay), "deepest text") })
+	d.key("esc")
 	d.key("esc")
 	if p.drilled() || !strings.Contains(dumpLayout(p.lay), "after the frame") {
-		t.Errorf("Esc is back out to the page:\n%s", dumpLayout(p.lay))
+		t.Errorf("Esc twice is back out to the page:\n%s", dumpLayout(p.lay))
 	}
 }
