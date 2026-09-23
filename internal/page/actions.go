@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
@@ -61,6 +62,7 @@ func Click(ctx context.Context, id cdp.BackendNodeID) error {
 		if x < 0 || y < 0 {
 			return jsClick(ctx, id)
 		}
+		hover(ctx, x, y)
 		if err := input.DispatchMouseEvent(input.MousePressed, x, y).
 			WithButton(input.Left).WithClickCount(1).Do(ctx); err != nil {
 			return err
@@ -68,6 +70,19 @@ func Click(ctx context.Context, id cdp.BackendNodeID) error {
 		return input.DispatchMouseEvent(input.MouseReleased, x, y).
 			WithButton(input.Left).WithClickCount(1).Do(ctx)
 	})
+}
+
+// hover is the mouse arriving before it presses: a mouseMoved at the
+// point, which is what opens a menu that opens on hover — a terminal has
+// no hover, so Enter is it (user, 2026-09-23). The event is sent and not
+// waited for: headless Chromium acknowledges a mouseMoved only after a
+// five-second timeout (measured 2026-09-20 and again 2026-09-23), while
+// the page has acted on it at once — the menu is open, the click that
+// follows lands. The deadline error is the expected outcome.
+func hover(ctx context.Context, x, y float64) {
+	short, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	_ = input.DispatchMouseEvent(input.MouseMoved, x, y).Do(short)
 }
 
 func quadCentre(q dom.Quad) (float64, float64) {
