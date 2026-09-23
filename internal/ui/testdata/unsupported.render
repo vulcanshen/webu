@@ -1,10 +1,10 @@
 Volume ──────●───── 5
 Range ●─────────── 3
-󰮦 DisclosureTriangle Show more Show more
-󰮦 DisclosureTriangle Already open Already open
+▸ Show more
+▾ Already open
 Visible text.
 
-󰮦 progressbar Loading
+Loading ━━━━━━────── 50%
  Tab A  Tab B 
 
 Panel A content
@@ -20,24 +20,18 @@ Clickable div without a role
 Caption
 • 󱊨 Menu button
 
-󰮦 meter Meter󰮦 ColorWell Colour 󰮦 Date Date 󰘎 Year Year 0  
-/ 󰘎 Month Month 0   / 󰘎 Day Day 0   󱊨 Show date picker Show
-date picker 󱊨 File
+Meter ━━━━━━━───── 60%󰘎 Colour #000000   󰘎 Date   󱊨 File
 -- items --
 0 textbox "Volume" rows 0-0
 1 textbox "Range" rows 1-1
-2 unsupported "Show more" rows 2-2
-3 unsupported "Already open" rows 3-3
+2 button "Show more" rows 2-2
+3 button "Already open" rows 3-3
 4 button "Tab A" rows 7-7
 5 button "Tab B" rows 7-7
 6 button "OK" rows 14-14
 7 group "Leaf" rows 16-16
 8 media "Fig" rows 18-18
 9 listitem "Menu button" rows 20-20
-10 unsupported "Colour" rows 22-22
-11 unsupported "Year Year/Month Month/Day DayShow date picker Show date picker" rows 22-23
-12 textbox "Year Year" rows 22-22
-13 textbox "Month Month" rows 23-23
-14 textbox "Day Day" rows 23-23
-15 button "Show date picker Show date picker" rows 23-24
-16 button "File" rows 24-24
+10 textbox "Colour" rows 22-22
+11 textbox "Date" rows 22-22
+12 button "File" rows 22-22

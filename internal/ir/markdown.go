@@ -254,6 +254,16 @@ func writeInline(b *strings.Builder, n *Node) {
 		mdWrite(b, box+nameOrText(n))
 	case Combobox:
 		mdWrite(b, "["+nameOrText(n)+": "+n.Value+"]")
+	case Gauge:
+		label := n.Name
+		if label == "" {
+			label = n.Role
+		}
+		if n.Value == "" {
+			mdWrite(b, "["+label+"]") // a progress with no value yet
+		} else {
+			mdWrite(b, "["+label+": "+n.Value+"]")
+		}
 	case Separator:
 		mdWrite(b, "---")
 	default:

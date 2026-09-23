@@ -2280,6 +2280,14 @@ func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 	if n.Role == "slider" {
 		return m.slideMenu(n)
 	}
+	if shape := fillFormat(n.InputType); shape != "" {
+		// A date, a time, a colour: one string in the browser's shape,
+		// set whole (page.Fill) — the box has nothing to type into, only
+		// the picker's parts Chromium hands over (user, 2026-09-23).
+		return m.input.ask(inputPopup{title: title + " · " + shape, glyph: glyphPencil,
+			prompt: oneLine(nameOr(n.Name, "field")), accept: "set", action: inputFill,
+			node: n.ID, value: value, shape: shape}, m.layer())
+	}
 	return m.input.ask(inputPopup{title: title, glyph: glyphPencil,
 		prompt: oneLine(nameOr(n.Name, "field")), accept: "set", action: inputField,
 		node: n.ID, value: value, masked: n.Protected, search: search}, m.layer())
@@ -2375,6 +2383,18 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.input.close(), write, ask)
 		}
 		return m, tea.Batch(m.closeStack(), write)
+	case inputFill:
+		id := m.input.node
+		if t == nil {
+			return m, m.closeStack()
+		}
+		v := strings.TrimSpace(value)
+		if v != "" && !fillOK(m.input.shape, v) {
+			// The box stays: the browser would drop the value without a
+			// word, and an edit that vanishes is worse than one refused.
+			return m, m.toast.show("wants "+m.input.shape, toastInfo)
+		}
+		return m, tea.Batch(m.closeStack(), t.press(func(ctx context.Context) error { return page.Fill(ctx, id, v) }))
 	case inputPrompt:
 		return m, tea.Batch(m.input.close(), m.answerDialog(true, value))
 	case inputSetting:

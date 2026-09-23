@@ -1,0 +1,31 @@
+# Status
+
+Upload ━━━━━━────── 50% done.
+
+Waiting ──────────── …
+
+Disk ━━━━━━━━──── 65/100 used.
+
+Build ━━━━━─────── 42/100
+▸ Show more
+▾ Already open
+The visible part.
+
+
+  Day      󰘎 2026-09-23  
+  When     󰘎  
+  Time     󰘎 13:45  
+  Month    󰘎  
+  Week     󰘎  
+  Tint     󰘎 #336699  
+
+-- items --
+0 heading "Status" rows 0-0
+1 button "Show more" rows 9-9
+2 button "Already open" rows 10-10
+3 textbox "Day" rows 14-14
+4 textbox "When" rows 15-15
+5 textbox "Time" rows 16-16
+6 textbox "Month" rows 17-17
+7 textbox "Week" rows 18-18
+8 textbox "Tint" rows 19-19

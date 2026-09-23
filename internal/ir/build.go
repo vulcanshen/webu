@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"maps"
+	"math"
+	"strconv"
 	"strings"
 
 	"github.com/chromedp/cdproto/accessibility"
@@ -422,6 +424,11 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 	if !n.IsBlock() && n.Kind != Text && b.blockBox(n.ID) {
 		n.Block = true
 	}
+	if n.Kind == Gauge || role == "slider" {
+		// A number on a range comes through a float32: 0.6 arrives as
+		// 0.6000000238418579, and that is not what the page said.
+		n.Value = cleanNum(n.Value)
+	}
 
 	switch n.Kind {
 	case Text:
@@ -630,6 +637,16 @@ func num(v *accessibility.Value) int {
 		return 0
 	}
 	return int(f)
+}
+
+// cleanNum rounds a number's text to six places and writes it plainly;
+// anything that is not a number is left alone.
+func cleanNum(s string) string {
+	f, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	if err != nil {
+		return s
+	}
+	return strconv.FormatFloat(math.Round(f*1e6)/1e6, 'f', -1, 64)
 }
 
 func flt(v *accessibility.Value) float64 {

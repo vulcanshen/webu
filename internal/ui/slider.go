@@ -33,6 +33,31 @@ func sliderValue(n *ir.Node) string {
 	return "–"
 }
 
+// gaugeBar is a read-only bar — a progress, a meter — filled to where
+// its value stands: the filled run and the rest, for two inks. Nothing
+// filled when the page gave no value: a progress still indeterminate.
+func gaugeBar(n *ir.Node) (filled, rest string) {
+	at := 0
+	if v, err := strconv.ParseFloat(strings.TrimSpace(n.Value), 64); err == nil && n.Max > n.Min {
+		f := math.Max(0, math.Min(1, (v-n.Min)/(n.Max-n.Min)))
+		at = int(math.Round(f * sliderW))
+	}
+	return strings.Repeat("━", at), strings.Repeat("─", sliderW-at)
+}
+
+// gaugeValue is the number beside a gauge: a share of one as a percent,
+// any other against its top; an ellipsis while a progress has no value.
+func gaugeValue(n *ir.Node) string {
+	v, err := strconv.ParseFloat(strings.TrimSpace(n.Value), 64)
+	if err != nil {
+		return "…"
+	}
+	if n.Min == 0 && n.Max == 1 {
+		return fmtNum(math.Round(v*100)) + "%"
+	}
+	return fmtNum(v) + "/" + fmtNum(n.Max)
+}
+
 // sliderItems is the list Enter opens on a slider: every number on the
 // bar, one a row, and the row where it stands now (user, 2026-09-23 —
 // typing a number into a box was the wrong tool for a bar). A span too

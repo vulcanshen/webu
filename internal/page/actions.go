@@ -2,6 +2,7 @@ package page
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -144,6 +145,28 @@ func Type(ctx context.Context, id cdp.BackendNodeID, text string) error {
 				WithWindowsVirtualKeyCode(8).Do(ctx)
 		}
 		return input.InsertText(text).Do(ctx)
+	})
+}
+
+// Fill sets a box's value whole and tells the page (input, change): a
+// date, a time, a colour — boxes whose value is one string in the
+// browser's shape, which Input.insertText cannot type into. The browser
+// drops a string not in that shape without a word, so the caller checks
+// first (ui fillOK). An empty value clears the box.
+func Fill(ctx context.Context, id cdp.BackendNodeID, value string) error {
+	v, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return run(ctx, func(ctx context.Context) error {
+		if err := reveal(ctx, id); err != nil {
+			return err
+		}
+		return call(ctx, id, `function() {
+			this.value = `+string(v)+`;
+			this.dispatchEvent(new Event("input", {bubbles: true}));
+			this.dispatchEvent(new Event("change", {bubbles: true}));
+		}`)
 	})
 }
 

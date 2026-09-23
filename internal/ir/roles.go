@@ -76,6 +76,21 @@ var Roles = map[string]Spec{
 	"textbox":    {Kind: Textbox, Action: Edit, Display: "name ____value____; Enter edits in a popup"},
 	"searchbox":  {Kind: Textbox, Action: Edit, Display: "name ____value____; Enter edits in a popup"},
 	"spinbutton": {Kind: Textbox, Action: Edit, Display: "a number field; edits like a textbox"},
+	// A gauge reads only — a progress, a meter, HTML's or ARIA's: a bar
+	// filled to where its value stands, and the value (ui render).
+	"progressbar": {Kind: Gauge, Display: "a filled bar with its value; reads only"},
+	"meter":       {Kind: Gauge, Display: "a filled bar with its value; reads only"},
+	// <details>: its summary is a button that opens and shuts what
+	// follows, a triangle saying which (ui render).
+	"DisclosureTriangle": {Kind: Button, Action: Click, Display: "a summary with its triangle; Enter opens or shuts what follows"},
+	// The value-typed boxes: a date, a time, a colour, whose value is one
+	// string in the browser's shape, set whole (page.Fill). Chromium
+	// hands each over with its picker's spinbuttons as children — its
+	// furniture, not the page's — and a Textbox keeps none.
+	"Date":      {Kind: Textbox, Action: Edit, Display: "a date box; Enter asks for YYYY-MM-DD"},
+	"DateTime":  {Kind: Textbox, Action: Edit, Display: "a date-and-time, month or week box; Enter asks for it in the browser's shape"},
+	"InputTime": {Kind: Textbox, Action: Edit, Display: "a time box; Enter asks for HH:MM"},
+	"ColorWell": {Kind: Textbox, Action: Edit, Display: "a colour box; Enter asks for #rrggbb"},
 	// A slider is its bar and where it stands; Enter lists its numbers,
 	// ten at a time, and webu moves it to the one chosen (user, 2026-09-23).
 	"slider":        {Kind: Textbox, Action: Edit, Display: "a bar with its value; Enter lists its numbers"},

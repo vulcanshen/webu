@@ -46,12 +46,14 @@ const (
 	Span                    // an inline run drawn with a text attribute; Role says which
 	Group                   // a container kept only for its line break (a layout-table row, a block div)
 	Unsupported             // a role the whitelist does not cover: name as text, children kept, glyph on
+	Gauge                   // progressbar / meter — a value on a range that reads only; Min, Max, Value
 )
 
 var kindNames = [...]string{
 	"document", "landmark", "heading", "paragraph", "text", "link", "button",
 	"textbox", "check", "combobox", "option", "list", "listitem", "table", "row",
 	"cell", "media", "separator", "code", "quote", "span", "group", "unsupported",
+	"gauge",
 }
 
 func (k Kind) String() string {
@@ -255,7 +257,7 @@ func Dump(n *Node) string {
 func dump(b *strings.Builder, n *Node, depth int) {
 	b.WriteString(strings.Repeat("  ", depth))
 	b.WriteString(n.Kind.String())
-	if n.Kind == Landmark || n.Kind == Unsupported || n.Kind == Media ||
+	if n.Kind == Landmark || n.Kind == Unsupported || n.Kind == Media || n.Kind == Gauge ||
 		(n.Kind == Check && n.Role != "checkbox") ||
 		(n.Kind == Textbox && n.Role != "textbox") ||
 		(n.Kind == Cell && n.Role != "cell") ||
