@@ -87,6 +87,10 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 	case t.root == nil:
 		out = append(out, emptyBody(innerW, rest, "nothing here yet",
 			emptyHint("Press R to load it", "R"))...)
+	case t.popupNode() != nil:
+		// The page under a popup: as it was, dimmed the way a page being
+		// left is, no cursor — the cursor is in the float (pagePopupView).
+		out = append(out, m.pageRows(t.backdrop(), innerW, rest)...)
 	case t.listing():
 		// A document is its sections before it is a sheet (section.go):
 		// the panel lists them, and Enter gives one the whole panel.
@@ -95,6 +99,42 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		out = append(out, m.pageRows(t, innerW, rest)...)
 	}
 	return out
+}
+
+// popupWidth is how wide a page's popup is laid out: a dialog's width,
+// inside the panel, never the panel's — a float as wide as what it
+// floats over is not a float.
+func popupWidth(panelW int) int {
+	return max(20, min(panelW-8, 76))
+}
+
+// popupVisible is how many of the popup's rows the float shows.
+func (m AppModel) popupVisible() int {
+	return max(3, m.panelH()-10)
+}
+
+// pagePopupView is the page's popup as a float over the page: the same
+// box every popup of webu's wears, the popup's rows inside it with the
+// cursor, and a hint that says the one thing it needs said — it is
+// answered, not left (pagepopup.go).
+func (m AppModel) pagePopupView(t *tab) string {
+	p := t.popupNode()
+	if p == nil {
+		return ""
+	}
+	w := popupWidth(m.pageW())
+	title := truncate(t.popupTitle(), w-6)
+	vis := m.popupVisible()
+	st := m.rowStyles(t)
+	gut := t.gutter
+	rows := make([]string, 0, vis)
+	lo, hi := t.rowRange()
+	end := min(hi+1, t.top+vis)
+	for i := max(t.top, lo); i < end; i++ {
+		rows = append(rows, lineNum(i-lo+1, gut, false)+m.rowLine(t, i, w-gut, st))
+	}
+	hint := hintLegend([][2]string{{"Enter", "act"}, {"Space", "menu"}, {"Esc", "does not close it"}})
+	return drawPopupBox(popupLayerColor(1), " "+glyphPopup+" "+title+" ", hint, rows, w)
 }
 
 // fitURL shrinks a URL to w cells. The host is kept whole; the path gives
@@ -350,6 +390,9 @@ func codeStyles() map[segKind]lipgloss.Style {
 
 // pageVisible is how many page rows panel [2] shows at the current size.
 func (m AppModel) pageVisible() int {
+	if t := m.shownTab(); t != nil && t.popupNode() != nil {
+		return m.popupVisible()
+	}
 	return max(1, m.panelH()-2-pageHeaderRows)
 }
 
@@ -426,16 +469,6 @@ func (m AppModel) pagetabRow(t *tab, innerW int) string {
 			return m.headRow(t, innerW, depth...)
 		}
 		return m.insideRow(t, t.drillTitle(), pageClick, innerW, depth...)
-	}
-	if p := t.popupNode(); p != nil {
-		// A popup is the panel until it is answered (popup.go): the row
-		// says so in the colour of "worth catching", and Esc has no
-		// part to go to.
-		title := oneLine(p.Name)
-		if title == "" {
-			title = oneLine(p.Text())
-		}
-		return m.insideRow(t, title, peachColor, innerW, "popup  ")
 	}
 	if t.read && t.sec < len(t.secs) {
 		return m.sectionHeadRow(t, innerW)

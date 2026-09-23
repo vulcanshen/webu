@@ -64,6 +64,13 @@ type tab struct {
 	popup      cdp.BackendNodeID
 	prevTop    map[cdp.BackendNodeID]bool
 	popupUntil time.Time
+	// back is the page under the popup, laid out for the backdrop the
+	// float sits on: the part as it was, dimmed, no cursor — kept from
+	// the moment the popup appeared when the page has since gone out of
+	// the tree (a modal dialog: Chromium prunes everything behind it).
+	// backParts is the pagetab for that same moment (noticePopup).
+	back      layout
+	backParts []part
 	// drillHead is the row of the drilled thing's first line, which the
 	// panel draws as its header row rather than in the page — the way a
 	// section's heading is the header while it is read; drillBody is
@@ -733,11 +740,24 @@ func (t *tab) relayout(width int) {
 	// without a second set of rules (user, 2026-09-22).
 	t.parts = splitParts(sansPopup(t.root, t.popup), t.boxes, t.viewport)
 	base := t.root
-	if p := t.popupNode(); p != nil {
-		// A popup is the panel until it is answered (popup.go).
-		base = &ir.Node{Kind: ir.Document, Children: []*ir.Node{p}}
-	} else if p := t.activePart(); p != nil {
+	if p := t.activePart(); p != nil {
 		base = &ir.Node{Kind: ir.Document, Children: p.nodes}
+	}
+	if p := t.popupNode(); p != nil {
+		// A popup floats over the page until it is answered
+		// (pagepopup.go): the page is laid out as it was, for the
+		// backdrop, and the popup is what the cursor walks — at a
+		// dialog's width, not the panel's, so the float reads as one.
+		// A page Chromium has pruned to the dialog alone keeps the
+		// backdrop it had when the popup appeared.
+		if len(sansPopup(t.root, t.popup).Children) > 0 {
+			t.back = renderWith(base, renderOpts{width: max(1, width), measure: t.measure, fold: t.fold})
+			t.backParts = t.parts
+		}
+		base = &ir.Node{Kind: ir.Document, Children: []*ir.Node{p}}
+		width = popupWidth(width)
+	} else {
+		t.back, t.backParts = layout{}, nil
 	}
 	root := base
 	inside := t.drillNode(base)
