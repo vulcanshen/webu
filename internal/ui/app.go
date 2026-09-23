@@ -1530,7 +1530,8 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Tab", key: "T", hint: "a new one, at a URL"},
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
-		menuItem{label: "[/] Search", key: "/", hint: "every part of the page; Enter goes there", disabled: t == nil},
+		menuItem{label: "[/] Search", key: "/", hint: "every part of the page; Enter goes there",
+			disabled: t == nil || t.popupNode() != nil},
 		menuItem{label: "Visual mode", key: "v", hint: "walk the text by character, copy some", disabled: t == nil},
 		menuItem{label: "Location", key: "L", hint: "a URL or a search; this page's own is offered"},
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
@@ -2750,10 +2751,12 @@ func (m AppModel) openFinder(kind finderKind) (tea.Model, tea.Cmd) {
 	if t == nil || t.root == nil {
 		return m, m.toast.show("no page to search", toastInfo)
 	}
+	if t.popupNode() != nil {
+		// A dialog is a few lines to answer: nothing in it is reached by
+		// number or by search (user, 2026-09-23).
+		return m, m.toast.show("a popup is answered, not searched", toastInfo)
+	}
 	if kind == finderGo {
-		if t.popupNode() != nil {
-			return m, m.toast.show("a popup has no lines to go to: answer it", toastInfo)
-		}
 		if t.lineCount() == 0 {
 			return m, m.toast.show("this page has no lines to go to", toastInfo)
 		}

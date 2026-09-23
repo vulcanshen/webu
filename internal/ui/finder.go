@@ -173,23 +173,6 @@ func indexPage(t *tab) []hit {
 	// A heading holds until the next one, or the next PART: a heading
 	// in the body says nothing about the footer, and a flat page — every
 	// paragraph a top-level node — is still one run of reading.
-	if only := t.popupNode(); only != nil {
-		// A popup is the panel until it is answered: the page under it
-		// is out of reach, so it is out of the index too. Its trail is
-		// read off its chain from the root, wherever the page hung it.
-		var trail []int
-		chain := chainTo(t.root, only)
-		for i := 1; i < len(chain); i++ {
-			for j, c := range chain[i-1].Children {
-				if c == chain[i] {
-					trail = append(trail, j)
-					break
-				}
-			}
-		}
-		walk(only, partMain, trail)
-		return out
-	}
 	last := partKind(255)
 	for i, c := range t.root.Children {
 		part, ok := partOf[c]
