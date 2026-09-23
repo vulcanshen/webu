@@ -85,6 +85,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `tabpanel` | group | — | a tab's content, in place |
 | `term` | group | — | <dt>: on its own line |
 | `textbox` | textbox | edit | name ____value____; Enter edits in a popup |
+| `tooltip` | group | — | a tooltip, drawn in place while the page shows it |
 | `tree` | group | — | a tree: its items, indented by level |
 | `treeitem` | group | click | indent + ▸/▾ for a branch + name; Enter clicks — opens a branch, picks a leaf |
 
@@ -110,6 +111,7 @@ These roles carry nothing a terminal can use; the node vanishes and its children
 | `subscript` | invisible |
 | `superscript` | invisible |
 | `time` | invisible |
+| `timer` | a timer: its text flows where it is, as it counts |
 
 ## Everything else
 

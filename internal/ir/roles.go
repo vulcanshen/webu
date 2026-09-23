@@ -153,6 +153,11 @@ var Roles = map[string]Spec{
 	"status": {Transparent: true, Display: "a status line (<output>, role=status): its text flows where it is, as it changes"},
 	"alert":  {Kind: Group, Display: "an alert, drawn in place as it appears"},
 	"log":    {Kind: Group, Display: "a log, drawn in place as it grows"},
+	"timer":  {Transparent: true, Display: "a timer: its text flows where it is, as it counts"},
+	// A tooltip is in the tree only while the page shows it — on hover,
+	// which Enter is (page.Click) — and is drawn then, as an aside (ui
+	// render). It has nothing to press, so it is never a popup.
+	"tooltip": {Kind: Group, Display: "a tooltip, drawn in place while the page shows it"},
 
 	// Tabs: the list is one strip, the way the pagetab is, the chosen
 	// tab lit in the colour of the section it sits in; a tab is a thing

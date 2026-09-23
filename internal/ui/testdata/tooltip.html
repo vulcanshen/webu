@@ -1,0 +1,17 @@
+<!doctype html><html><head><title>Tooltip</title></head><body>
+<h1>Editor</h1>
+<p>Time left <span role="timer" id="t">05:00</span> in this session.</p>
+<p><button id="save" aria-describedby="tip">Save</button>
+<div role="tooltip" id="tip" hidden>Saves your work to the server.</div></p>
+<div role="tooltip">Always shown: a tip the page never hides.</div>
+<script>
+var b = document.getElementById('save'), tip = document.getElementById('tip');
+b.addEventListener('mouseenter', function () { tip.hidden = false; });
+b.addEventListener('focus', function () { tip.hidden = false; });
+b.addEventListener('mouseleave', function () { tip.hidden = true; });
+b.addEventListener('blur', function () { tip.hidden = true; });
+var left = 300, t = document.getElementById('t');
+setInterval(function () { left = Math.max(0, left - 1);
+  t.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'); }, 1000);
+</script>
+</body></html>
