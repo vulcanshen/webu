@@ -402,6 +402,7 @@ Playwright、Puppeteer、Electron 都是自帶 Chromium，這是標準做法。
 | 執行模式 | 一律 `--headless=new`：完全沒有視窗、不進 Dock、在背景 offscreen render。與有視窗的 Chromium 是同一個引擎 |
 | profile | webu 自己的持久目錄，登入一次即記住；不碰使用者任何 Chrome profile |
 | 啟動 flag | 拿掉 chromedp 預設的 `--enable-automation`，否則 `navigator.webdriver` 為 true，Google 登入等站會擋 |
+| User-Agent | **webu 自己的名字，不是偽裝**（2026-09-23）：拿 Chromium 自報的字串，把引擎名從 `HeadlessChrome/<ver>` 寫成每個 Chromium 系瀏覽器都這樣寫的 `Chrome/<ver>`，尾巴簽 `webu/<version>`；client hints（`Sec-CH-UA`）同一套：brands 是 `Chromium` 與 `webu`。「Headless」是模式的名字不是瀏覽器的名字，而頁面看到它就回 bot-check 而不是頁面（Google 的 `/sorry/`）。每個分頁在 prepare 時套上（`Emulation.setUserAgentOverride`） |
 | 離開時 | 殺掉 Chromium，同 u-family「離開時放掉所有子行程」慣例 |
 | 安全更新 | Chrome 四週一版修安全漏洞，釘死的版本會老、且握著真實 session cookie。要有 `webu browser update` 並在版本過舊時提醒 |
 | Linux 無頭伺服器 | 二進位仍需 libnss3、libatk、字型等系統函式庫；附檢查腳本或 apt 清單 |
