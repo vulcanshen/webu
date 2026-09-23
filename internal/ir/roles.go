@@ -128,7 +128,7 @@ var Roles = map[string]Spec{
 	"Video":  {Kind: Media, Action: Click, Display: "placeholder; menu: yank url"},
 	"Audio":  {Kind: Media, Action: Click, Display: "placeholder; menu: yank url"},
 	"Canvas": {Kind: Media, Action: Click, Display: "placeholder; nothing inside can be read"},
-	"Iframe": {Kind: Media, Action: Click, Display: "one row; Enter opens the frame's document in place, Esc comes back out — a frame from another site cannot be entered and says so"},
+	"Iframe": {Kind: Media, Action: Click, Display: "one row; Enter opens the frame's document in place — another site's through a session of its own — and Esc comes back out"},
 
 	"separator": {Kind: Separator, Display: "a horizontal rule"},
 

@@ -48,6 +48,10 @@ type Capture struct {
 	// captured whole, spliced in under their owner (Build).
 	FrameOf map[cdp.BackendNodeID]string   `json:"frameOf,omitempty"`
 	Frames  map[cdp.BackendNodeID]*Capture `json:"-"`
+	// Base is the offset a frame's ids are carried at when the frame is
+	// another process's, whose ids start at 1 again (page.Sessions).
+	// Zero for the page and for a frame of its own process.
+	Base cdp.BackendNodeID `json:"-"`
 	// Viewport is the window the page was laid out in — not the page's
 	// own size, which Boxes gives. A page shorter than its viewport is
 	// whole: nothing is off screen for the chrome to be in the way of
@@ -450,7 +454,11 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 				n.URL = b.srcs[n.ID]
 			}
 			if fc := b.frames[n.ID]; fc != nil && n.Frame != "" {
-				n.Children = Build(*fc).Children
+				sub := Build(*fc)
+				if fc.Base != 0 {
+					offsetIDs(sub, fc.Base)
+				}
+				n.Children = sub.Children
 			}
 		}
 		if n.Kind == Textbox {
@@ -637,6 +645,17 @@ func num(v *accessibility.Value) int {
 		return 0
 	}
 	return int(f)
+}
+
+// offsetIDs carries every id under n at base: a frame from another
+// process numbers its nodes from 1, as the page does its own.
+func offsetIDs(n *Node, base cdp.BackendNodeID) {
+	n.Walk(func(c *Node) bool {
+		if c.ID != 0 {
+			c.ID += base
+		}
+		return true
+	})
 }
 
 // cleanNum rounds a number's text to six places and writes it plainly;
