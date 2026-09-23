@@ -25,18 +25,21 @@ import (
 // block with none of that is left where the page put it, and the parts
 // place it like anything else.
 //
-// popupGrace is how long after a press an appearing block can still be
-// the answer to it. A page that keeps building itself long after would
-// otherwise turn its every late arrival into a demand.
+// popupGrace is how long after a press — or a navigation — an appearing
+// block can still be the answer to it. A page that keeps building itself
+// long after would otherwise turn its every late arrival into a demand.
 const popupGrace = settleGrace
 
-// findPopup is the block a press just brought up, or nil. prev is every
-// node the last capture had, by Chromium's id: a popup is the root of a
-// subtree that was not there, wherever the page hung it — a dialog is
-// as often inside main as beside it (the ARIA practices' own examples
-// are), so the top of the tree is not where to look.
-func findPopup(prev map[cdp.BackendNodeID]bool, root *ir.Node, boxes map[cdp.BackendNodeID]ir.Box) *ir.Node {
-	if root == nil || len(prev) == 0 {
+// findPopup is the block the page just put up, or nil. prev is every
+// node the last capture had, by Chromium's id — empty right after a
+// navigation, when everything is new and a dialog the page opens on
+// load is a popup like any other (user, 2026-09-23). skip is what is
+// already taken: the popups on the stack. A block that is not a popup
+// is looked into, for the one it may be wrapped around — a dialog is as
+// often inside main as beside it, and as often inside a wrapper the
+// page made for it.
+func findPopup(prev, skip map[cdp.BackendNodeID]bool, root *ir.Node, boxes map[cdp.BackendNodeID]ir.Box) *ir.Node {
+	if root == nil {
 		return nil
 	}
 	var found *ir.Node
@@ -46,13 +49,9 @@ func findPopup(prev map[cdp.BackendNodeID]bool, root *ir.Node, boxes map[cdp.Bac
 			if found != nil {
 				return
 			}
-			if c.ID != 0 && !prev[c.ID] {
-				// A new subtree: its root is the candidate, and what is
-				// under it is new with it.
-				if isPopup(c, n.Children, boxes) {
-					found = c
-				}
-				continue
+			if c.ID != 0 && !skip[c.ID] && (len(prev) == 0 || !prev[c.ID]) && isPopup(c, n.Children, boxes) {
+				found = c
+				return
 			}
 			walk(c)
 		}
@@ -61,9 +60,16 @@ func findPopup(prev map[cdp.BackendNodeID]bool, root *ir.Node, boxes map[cdp.Bac
 	return found
 }
 
-// isPopup is the test on one new block, against the blocks beside it.
+// isPopup is the test on one block, against the blocks beside it: it
+// wants an answer — the page put the keyboard into it, or called it a
+// dialog — it has something to press, and unless it is declared modal
+// it is over something rather than after it.
 func isPopup(c *ir.Node, siblings []*ir.Node, boxes map[cdp.BackendNodeID]ir.Box) bool {
-	if countItems(c) == 0 || (!c.Modal && !hasFocus(c)) {
+	if countItems(c) == 0 {
+		return false
+	}
+	declared := c.Modal || (c.Kind == ir.Landmark && (c.Role == "dialog" || c.Role == "alertdialog"))
+	if !declared && !hasFocus(c) {
 		return false
 	}
 	if c.Modal {
@@ -126,51 +132,88 @@ func allIDs(root *ir.Node) map[cdp.BackendNodeID]bool {
 	return out
 }
 
-// popupNode is the popup the tab is inside, as the current tree has it,
-// or nil — gone from the tree is gone from the screen.
+// popupNode is the popup on top of the stack, as the current tree has
+// it, or nil — the page's popups stack the way webu's own do (VTP's
+// z-axis): a dialog opened from a dialog sits over it, and answering
+// the top one uncovers the one below.
 func (t *tab) popupNode() *ir.Node {
-	if t.popup == 0 || t.root == nil {
+	if len(t.popups) == 0 || t.root == nil {
 		return nil
 	}
-	return nodeByID(t.root, t.popup)
+	return nodeByID(t.root, t.popups[len(t.popups)-1])
 }
 
-// noticePopup runs after a capture is built: the popup the page just
-// took down is let go of, and one it just put up is taken. True when
-// which popup the tab is in changed, so the caller can start the cursor
-// over.
-func (t *tab) noticePopup(fresh bool) bool {
-	was := t.popup
-	if t.popupNode() == nil {
-		t.popup = 0
+// popupSet is the stack as a set, for what the diff must not take twice.
+func (t *tab) popupSet() map[cdp.BackendNodeID]bool {
+	out := map[cdp.BackendNodeID]bool{}
+	for _, id := range t.popups {
+		out[id] = true
 	}
-	if t.popup == 0 && !fresh && time.Now().Before(t.popupUntil) {
-		if p := findPopup(t.prevTop, t.root, t.boxes); p != nil {
-			t.popup = p.ID
+	return out
+}
+
+// noticePopup runs after a capture is built: the popups the page has
+// taken down are let go of, and one it has just put up is taken, on
+// top. True when the popup on top changed, so the caller can start the
+// cursor over.
+func (t *tab) noticePopup() bool {
+	was := cdp.BackendNodeID(0)
+	if len(t.popups) > 0 {
+		was = t.popups[len(t.popups)-1]
+	}
+	var p *ir.Node
+	if time.Now().Before(t.popupUntil) {
+		p = findPopup(t.prevTop, t.popupSet(), t.root, t.boxes)
+	}
+	switch {
+	case p != nil:
+		// One more on top. The ones under it are NOT let go of, though
+		// they may be gone from the tree: Chromium prunes everything
+		// behind a modal dialog, the dialog it was opened from included,
+		// and that one comes back when this one is answered.
+		if len(t.popups) == 0 {
 			// The page as it was the moment before: the backdrop, for
 			// as long as the page under the popup is not in the tree —
 			// and where the reader was on it, to come back to.
 			t.back, t.backParts, t.backSecs = t.lay, t.parts, t.secs
 			t.backRead, t.backSec, t.backTop = t.read, t.sec, t.top
 		}
+		t.popups = append(t.popups, p.ID)
+	default:
+		// Nothing new: whatever the page has taken down is let go of.
+		kept := t.popups[:0]
+		for _, id := range t.popups {
+			if nodeByID(t.root, id) != nil {
+				kept = append(kept, id)
+			}
+		}
+		t.popups = kept
 	}
 	t.prevTop = allIDs(t.root)
-	return t.popup != was
+	now := cdp.BackendNodeID(0)
+	if len(t.popups) > 0 {
+		now = t.popups[len(t.popups)-1]
+	}
+	return now != was
 }
 
 // sansPopup is the page without the popup over it: what the parts are
 // cut from while one is up, so that closing it puts the page back the
 // way it was.
-func sansPopup(root *ir.Node, popup cdp.BackendNodeID) *ir.Node {
-	if popup == 0 || root == nil {
+func sansPopup(root *ir.Node, popups []cdp.BackendNodeID) *ir.Node {
+	if len(popups) == 0 || root == nil {
 		return root
+	}
+	skip := map[cdp.BackendNodeID]bool{}
+	for _, id := range popups {
+		skip[id] = true
 	}
 	// Only the top level is copied: the parts are cut from the top-level
 	// blocks, and a popup deeper than that is inside one of them, whose
 	// box it does not change enough to matter.
 	out := &ir.Node{Kind: ir.Document, Name: root.Name, URL: root.URL, ID: root.ID}
 	for _, c := range root.Children {
-		if c.ID != popup {
+		if !skip[c.ID] {
 			out.Children = append(out.Children, c)
 		}
 	}
@@ -188,7 +231,7 @@ func (t *tab) backdrop() *tab {
 	bt.gutter = lineNumW(len(t.back.rows))
 	bt.cursor = -1
 	bt.loading = true
-	bt.popup = 0
+	bt.popups = nil
 	bt.drill = nil
 	if bt.sec >= len(bt.secs) {
 		bt.read = false
@@ -196,15 +239,16 @@ func (t *tab) backdrop() *tab {
 	return &bt
 }
 
-// popupTitle is what the float's border says: the popup's name, or its
-// first line when the page gave it none.
-func (t *tab) popupTitle() string {
-	p := t.popupNode()
-	if p == nil {
-		return ""
-	}
-	if s := oneLine(p.Name); s != "" {
-		return s
+// popupTitleOf is what a popup's border says: its name, or its first
+// line when the page gave it none.
+func (t *tab) popupTitleOf(p *ir.Node) string {
+	// p is nil for one Chromium has pruned out of the tree behind the
+	// popup over it: its layout, kept from when it was on top, still
+	// has its first line.
+	if p != nil {
+		if s := oneLine(p.Name); s != "" {
+			return s
+		}
 	}
 	for _, r := range t.lay.rows {
 		if s := strings.TrimSpace(r.plain()); s != "" {

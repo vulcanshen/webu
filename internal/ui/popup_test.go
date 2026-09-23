@@ -28,50 +28,133 @@ func TestAPopupIsToldByBehaviour(t *testing.T) {
 	sheet := &ir.Node{Kind: ir.Group, ID: 10, Children: []*ir.Node{para(text("Session expiring")), button(11, "Stay", true)}}
 	boxes[10] = box(200, 100, 600, 300)
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, sheet}}
-	if p := findPopup(prev, root, boxes); p != sheet {
+	if p := findPopup(prev, nil, root, boxes); p != sheet {
 		t.Errorf("a new block over the body with the keyboard in it is a popup: %v", p)
 	}
 	// The same block in the last capture already: not new, not a popup.
-	if p := findPopup(map[cdp.BackendNodeID]bool{1: true, 10: true}, root, boxes); p != nil {
+	if p := findPopup(map[cdp.BackendNodeID]bool{1: true, 10: true}, nil, root, boxes); p != nil {
 		t.Errorf("a block that was there already is not a popup: %v", p)
 	}
 	// Nothing to press: a toast, content.
 	toast := &ir.Node{Kind: ir.Group, ID: 20, Children: []*ir.Node{para(text("Saved."))}}
 	boxes[20] = box(800, 10, 150, 40)
-	if p := findPopup(prev, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, toast}}, boxes); p != nil {
+	if p := findPopup(prev, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, toast}}, boxes); p != nil {
 		t.Errorf("a block with nothing to press is not a popup: %v", p)
 	}
 	// Something to press but no keyboard and no declaration: a chat
 	// bubble, content.
 	bubble := &ir.Node{Kind: ir.Group, ID: 30, Children: []*ir.Node{button(31, "Chat", false)}}
 	boxes[30] = box(900, 1800, 80, 80)
-	if p := findPopup(prev, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, bubble}}, boxes); p != nil {
+	if p := findPopup(prev, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, bubble}}, boxes); p != nil {
 		t.Errorf("a block the page did not put the keyboard into is not a popup: %v", p)
 	}
 	// The keyboard in it, but laid out AFTER the body rather than over
 	// it: content that arrived, not a popup.
 	after := &ir.Node{Kind: ir.Group, ID: 40, Children: []*ir.Node{button(41, "Load more", true)}}
 	boxes[40] = box(0, 2000, 1000, 60)
-	if p := findPopup(prev, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, after}}, boxes); p != nil {
+	if p := findPopup(prev, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, after}}, boxes); p != nil {
 		t.Errorf("a block after the body is in the flow, not over it: %v", p)
 	}
 	// Declared modal: the declaration is the whole of the evidence, with
 	// no geometry at all.
 	dlg := &ir.Node{Kind: ir.Landmark, Role: "dialog", ID: 50, Modal: true, Children: []*ir.Node{para(text("Cookies?")), button(51, "Accept", false)}}
-	if p := findPopup(prev, &ir.Node{Kind: ir.Document, Children: []*ir.Node{dlg}}, map[cdp.BackendNodeID]ir.Box{}); p != dlg {
+	if p := findPopup(prev, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{dlg}}, map[cdp.BackendNodeID]ir.Box{}); p != dlg {
 		t.Errorf("a modal dialog is a popup on its word alone: %v", p)
 	}
 	// And wherever the page hung it: inside main, after the example it
 	// belongs to, the way the ARIA practices' own examples are built.
 	inner := &ir.Node{Kind: ir.Landmark, Role: "main", ID: 1, Children: []*ir.Node{para(text("the page")), dlg}}
-	if p := findPopup(prev, &ir.Node{Kind: ir.Document, Children: []*ir.Node{inner}}, map[cdp.BackendNodeID]ir.Box{}); p != dlg {
+	if p := findPopup(prev, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{inner}}, map[cdp.BackendNodeID]ir.Box{}); p != dlg {
 		t.Errorf("a dialog inside main is found there: %v", p)
 	}
 	// A new subtree's root is the candidate, not every new node under
 	// it: the dialog, not its Accept button.
-	if p := findPopup(map[cdp.BackendNodeID]bool{1: true}, &ir.Node{Kind: ir.Document, Children: []*ir.Node{inner}}, nil); p != dlg {
+	if p := findPopup(map[cdp.BackendNodeID]bool{1: true}, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{inner}}, nil); p != dlg {
 		t.Errorf("the root of the new subtree: %v", p)
 	}
+	// A wrapper the page made for its dialog is looked into.
+	wrap := &ir.Node{Kind: ir.Group, ID: 60, Children: []*ir.Node{dlg}}
+	if p := findPopup(prev, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, wrap}}, boxes); p != dlg {
+		t.Errorf("the dialog inside a new wrapper: %v", p)
+	}
+	// One already on the stack is not taken again; the one opened from
+	// it is.
+	second := &ir.Node{Kind: ir.Landmark, Role: "dialog", ID: 70, Modal: true, Children: []*ir.Node{button(71, "Back", true)}}
+	both := &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, dlg, second}}
+	if p := findPopup(map[cdp.BackendNodeID]bool{1: true, 50: true, 51: true}, map[cdp.BackendNodeID]bool{50: true}, both, boxes); p != second {
+		t.Errorf("the dialog over the dialog: %v", p)
+	}
+	// Right after a navigation nothing was there before, and a dialog
+	// the page opens on load is a popup like any other.
+	if p := findPopup(nil, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, dlg}}, boxes); p != dlg {
+		t.Errorf("a dialog open on load: %v", p)
+	}
+	if p := findPopup(nil, nil, &ir.Node{Kind: ir.Document, Children: []*ir.Node{body, bubble}}, boxes); p != nil {
+		t.Errorf("a chat bubble on load is still a bubble: %v", p)
+	}
+}
+
+// A dialog opened from a dialog stacks over it, and answering the top
+// one uncovers the one below; a page that opens a dialog on load opens
+// on it.
+func TestPopupsStackAndOpenOnLoad(t *testing.T) {
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	exe, ok := browser.Installed()
+	if !ok {
+		t.Skip("pinned Chromium not installed; run webu once")
+	}
+	b, err := browser.Launch(exe, t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	abs, _ := filepath.Abs("testdata/popup.html")
+	d := newDriver(t, New(b, "file://"+abs))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the popups page", d.loaded("Popups"))
+	p := d.page()
+	d.cursorOn(ir.Button, "Open dialog")
+	d.key("enter")
+	d.until("the dialog", func() bool { return p.popupNode() != nil })
+	d.cursorOn(ir.Button, "Details")
+	d.key("enter")
+	d.until("the second dialog", func() bool { return len(p.popups) == 2 })
+	if v := dumpLayout(p.lay); !strings.Contains(v, "Which cookies") || strings.Contains(v, "We use cookies") {
+		t.Errorf("the cursor walks the top dialog:\n%s", v)
+	}
+	if fl := d.m.pagePopupFloats(p); len(fl) != 2 || !strings.Contains(fl[1].box, "Which cookies") || !strings.Contains(fl[0].box, "We use cookies") {
+		t.Errorf("both floats are drawn, the second over the first: %d", len(fl))
+	}
+	if v := d.m.View(); !strings.Contains(v, "Which cookies") || !strings.Contains(v, "We use cookies") {
+		t.Errorf("the stack cascades, so the one under still shows:\n%s", v)
+	}
+	d.cursorOn(ir.Button, "Back")
+	d.key("enter")
+	d.until("back to the first", func() bool { return len(p.popups) == 1 })
+	if v := dumpLayout(p.lay); !strings.Contains(v, "We use cookies") {
+		t.Errorf("the first dialog is the panel again:\n%s", v)
+	}
+	d.cursorOn(ir.Button, "Accept")
+	d.key("enter")
+	d.until("answered", func() bool { return len(p.popups) == 0 })
+
+	// A page that opens a dialog on load.
+	abs2, _ := filepath.Abs("testdata/popupload.html")
+	d2 := newDriver(t, New(b, "file://"+abs2))
+	defer d2.m.Close()
+	d2.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d2.until("the wall", func() bool { return d2.page() != nil && d2.page().popupNode() != nil })
+	p2 := d2.page()
+	if v := dumpLayout(p2.lay); !strings.Contains(v, "Sign in to keep reading") {
+		t.Errorf("the wall is the popup:\n%s", v)
+	}
+	d2.cursorOn(ir.Button, "Not now")
+	d2.key("enter")
+	d2.until("through the wall", func() bool {
+		return p2.popupNode() == nil && strings.Contains(dumpLayout(p2.lay), "The article you came for")
+	})
 }
 
 // Against the pinned Chromium: a native modal dialog, a custom sheet
@@ -96,8 +179,8 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("the popups page", d.loaded("Popups"))
 	p := d.page()
-	if p.at != partMain || p.popup != 0 {
-		t.Fatalf("opens on the body with no popup: at=%s popup=%d", p.at.word(), p.popup)
+	if p.at != partMain || len(p.popups) != 0 {
+		t.Fatalf("opens on the body with no popup: at=%s popups=%d", p.at.word(), len(p.popups))
 	}
 
 	// The native modal.

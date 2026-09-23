@@ -113,28 +113,72 @@ func (m AppModel) popupVisible() int {
 	return max(3, m.panelH()-10)
 }
 
-// pagePopupView is the page's popup as a float over the page: the same
-// box every popup of webu's wears, the popup's rows inside it with the
-// cursor, and a hint that says the one thing it needs said — it is
-// answered, not left (pagepopup.go).
-func (m AppModel) pagePopupView(t *tab) string {
-	p := t.popupNode()
-	if p == nil {
-		return ""
+// popupFloat is one of the page's popups drawn as a float, and where it
+// sits: the stack cascades down and to the right, three cells and a row
+// a level, so the one under is still seen — its title, its edge — and
+// the border brightens as the stack climbs (VTP's z-axis).
+type popupFloat struct {
+	box    string
+	dx, dy int
+}
+
+// pagePopupFloats is the page's popups as floats over the page, bottom
+// to top: each in the box every popup of webu's wears, the one on top
+// with the cursor and a hint that says the one thing it needs said — it
+// is answered, not left — the ones under it dimmed, drawn as they were
+// when they were on top (pagepopup.go).
+func (m AppModel) pagePopupFloats(t *tab) []popupFloat {
+	if len(t.popups) == 0 || t.root == nil {
+		return nil
 	}
 	w := popupWidth(m.pageW())
-	title := truncate(t.popupTitle(), w-6)
 	vis := m.popupVisible()
-	st := m.rowStyles(t)
-	rows := make([]string, 0, vis)
-	lo, hi := t.rowRange()
-	end := min(hi+1, t.top+vis)
-	for i := max(t.top, lo); i < end; i++ {
-		// No line numbers: nothing in a dialog is reached by number.
-		rows = append(rows, m.rowLine(t, i, w, st))
+	var out []popupFloat
+	for i, id := range t.popups {
+		top := i == len(t.popups)-1
+		bt := t
+		if !top {
+			// Under the top one: the layout it had when it was on top,
+			// dimmed, no cursor — Chromium may have pruned it out of the
+			// tree behind the one over it.
+			lay, ok := t.popupLays[id]
+			if !ok {
+				continue
+			}
+			cp := *t
+			cp.lay, cp.gutter = lay, 0
+			cp.cursor, cp.loading, cp.top = -1, true, 0
+			cp.read, cp.drill = false, nil
+			bt = &cp
+		}
+		p := nodeByID(t.root, id)
+		st := m.rowStyles(bt)
+		rows := make([]string, 0, vis)
+		lo, hi := bt.rowRange()
+		end := min(hi+1, bt.top+vis)
+		for r := max(bt.top, lo); r < end; r++ {
+			// No line numbers: nothing in a dialog is reached by number.
+			rows = append(rows, m.rowLine(bt, r, w, st))
+		}
+		title := truncate(bt.popupTitleOf(p), w-6)
+		hint := ""
+		if top {
+			hint = hintLegend([][2]string{{"Enter", "act"}, {"Space", "menu"}, {"Esc", "does not close it"}})
+		}
+		out = append(out, popupFloat{
+			box: drawPopupBox(popupLayerColor(i+1), " "+glyphPopup+" "+title+" ", hint, rows, w),
+			dx:  3 * i, dy: i})
 	}
-	hint := hintLegend([][2]string{{"Enter", "act"}, {"Space", "menu"}, {"Esc", "does not close it"}})
-	return drawPopupBox(popupLayerColor(1), " "+glyphPopup+" "+title+" ", hint, rows, w)
+	return out
+}
+
+// pagePopupView is the float on top of the stack alone.
+func (m AppModel) pagePopupView(t *tab) string {
+	fl := m.pagePopupFloats(t)
+	if len(fl) == 0 {
+		return ""
+	}
+	return fl[len(fl)-1].box
 }
 
 // fitURL shrinks a URL to w cells. The host is kept whole; the path gives

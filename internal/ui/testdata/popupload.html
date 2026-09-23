@@ -1,0 +1,12 @@
+<!doctype html><html><head><title>Wall</title><style>
+  body { margin: 0; font: 16px/1.4 sans-serif; }
+  main { min-height: 1400px; padding: 20px; }
+</style></head><body>
+<main>
+<h1>Behind a wall</h1>
+<p>The article you came for, with <a href="#x">a link</a>.</p>
+</main>
+<dialog id="wall"><p>Sign in to keep reading.</p>
+<button type="button" onclick="document.getElementById('wall').close()">Not now</button></dialog>
+<script>document.getElementById('wall').showModal()</script>
+</body></html>
