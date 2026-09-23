@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/webu/internal/browser"
@@ -405,5 +406,39 @@ func TestAPDFSaysItIsUnsupported(t *testing.T) {
 	})
 	if v := dumpLayout(d.page().lay); !strings.Contains(v, "Y yanks its URL") {
 		t.Errorf("and what to do about it:\n%s", v)
+	}
+}
+
+// A menu that opens on hover opens on Enter: the mouse arrives before it
+// presses, and a terminal's Enter is both (user, 2026-09-23).
+func TestEnterHoversThenClicks(t *testing.T) {
+	b := hookBrowser(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<title>Hover</title><style>
+.menu { position: relative; display: inline-block; }
+.menu ul { display: none; position: absolute; }
+.menu:hover ul { display: block; }
+</style>
+<div class="menu"><button type="button" onclick="document.getElementById('out').textContent='clicked'">Products</button>
+<ul><li><a href="#a">Alpha</a></li><li><a href="#b">Beta</a></li></ul></div>
+<p id="out">after</p>`))
+	}))
+	defer srv.Close()
+	d := startAt(t, b, srv.URL, store.Config{})
+	d.until("hover page", d.loaded("Hover"))
+	p := d.page()
+	if strings.Contains(dumpLayout(p.lay), "Alpha") {
+		t.Fatal("the menu is shut to begin with")
+	}
+	d.cursorOn(ir.Button, "Products")
+	start := time.Now()
+	d.key("enter")
+	d.until("the menu is open and the button pressed", func() bool {
+		v := dumpLayout(p.lay)
+		return strings.Contains(v, "Alpha") && strings.Contains(v, "clicked")
+	})
+	if took := time.Since(start); took > 3*time.Second {
+		t.Errorf("the hover must not wait for headless Chromium's five-second acknowledgement: %v", took)
 	}
 }
