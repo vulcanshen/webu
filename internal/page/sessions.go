@@ -8,6 +8,7 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
+	"github.com/vulcanshen/webu/internal/ir"
 )
 
 // A frame from another site is another process, and another target: the
@@ -34,13 +35,13 @@ type Sessions struct {
 	next    int64
 }
 
-// idShift is where a frame's slot sits in a carried id: ids below 2^40
-// are the page's own.
-const idShift = 40
-
 func NewSessions(tab context.Context) *Sessions {
-	return &Sessions{tab: tab, ctxs: map[cdp.FrameID]context.Context{},
+	s := &Sessions{ctxs: map[cdp.FrameID]context.Context{},
 		cancels: map[cdp.FrameID]context.CancelFunc{}, slots: map[cdp.FrameID]int64{}}
+	// A frame's session derives from a context that carries these
+	// sessions, so a frame inside the frame is reached the same way.
+	s.tab = WithSessions(tab, s)
+	return s
 }
 
 type sessionsKey struct{}
@@ -64,7 +65,7 @@ func (s *Sessions) frame(id cdp.FrameID) (context.Context, cdp.BackendNodeID, er
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if ctx, ok := s.ctxs[id]; ok {
-		return ctx, cdp.BackendNodeID(s.slots[id] << idShift), nil
+		return ctx, cdp.BackendNodeID(s.slots[id]) * ir.CarriedFrom, nil
 	}
 	ctx, cancel := chromedp.NewContext(s.tab, chromedp.WithTargetID(target.ID(id)))
 	done := make(chan error, 1)
@@ -81,7 +82,7 @@ func (s *Sessions) frame(id cdp.FrameID) (context.Context, cdp.BackendNodeID, er
 	}
 	s.next++
 	s.ctxs[id], s.cancels[id], s.slots[id] = ctx, cancel, s.next
-	return ctx, cdp.BackendNodeID(s.next << idShift), nil
+	return ctx, cdp.BackendNodeID(s.next) * ir.CarriedFrom, nil
 }
 
 // forget drops a frame's session.
@@ -99,7 +100,7 @@ func (s *Sessions) forget(id cdp.FrameID) {
 // resolve turns an id as the IR carries it into the session it belongs
 // to and the id that session knows: the tab's own for the page's ids.
 func (s *Sessions) resolve(ctx context.Context, id cdp.BackendNodeID) (context.Context, cdp.BackendNodeID) {
-	slot := int64(id) >> idShift
+	slot := int64(id / ir.CarriedFrom)
 	if slot == 0 {
 		return ctx, id
 	}
@@ -107,7 +108,7 @@ func (s *Sessions) resolve(ctx context.Context, id cdp.BackendNodeID) (context.C
 	defer s.mu.Unlock()
 	for fid, sl := range s.slots {
 		if sl == slot {
-			return s.ctxs[fid], id - cdp.BackendNodeID(slot<<idShift)
+			return s.ctxs[fid], id % ir.CarriedFrom
 		}
 	}
 	return ctx, id

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/chromedp/cdproto/cdp"
+	"github.com/vulcanshen/webu/internal/ir"
 )
 
 // An id carried at a frame's offset resolves to that frame's session and
@@ -17,10 +17,10 @@ func TestASessionResolvesItsIDs(t *testing.T) {
 	if ctx, id := s.resolve(tab, 7); ctx != tab || id != 7 {
 		t.Errorf("the page's own: %v %d", ctx, id)
 	}
-	if ctx, id := s.resolve(tab, cdp.BackendNodeID(2<<idShift)+7); ctx != fctx || id != 7 {
+	if ctx, id := s.resolve(tab, 2*ir.CarriedFrom+7); ctx != fctx || id != 7 {
 		t.Errorf("the frame's: %v %d", ctx, id)
 	}
-	if ctx, id := s.resolve(tab, cdp.BackendNodeID(3<<idShift)+7); ctx != tab {
+	if ctx, id := s.resolve(tab, 3*ir.CarriedFrom+7); ctx != tab {
 		t.Errorf("a slot nobody holds falls back to the tab: %v %d", ctx, id)
 	}
 }

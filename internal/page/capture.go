@@ -52,60 +52,10 @@ func Capture(ctx context.Context, frames []cdp.FrameID) (ir.Capture, error) {
 			return errors.New("snapshot: no document")
 		}
 		c = captureDoc(nodes, docs[0], strs)
-		// The frames the page holds, by the element that holds each: the
-		// snapshot has every same-process document, and says which
-		// element owns which. The ones the reader has opened are
-		// captured whole, under their owner (ir.Build splices them in);
-		// the rest are known by their frame id alone, so Enter can open
-		// them (ui tab.frames).
-		owners := frameOwners(docs, strs)
-		c.FrameOf = map[cdp.BackendNodeID]string{}
-		for owner, fr := range owners {
-			c.FrameOf[owner] = string(fr.id)
-		}
-		// A frame from another site is in another process, so not in
-		// the snapshot — its <iframe> is, and DOM.describeNode says which
-		// frame it holds: the id of a target of its own (sessions.go).
-		remote := map[cdp.BackendNodeID]cdp.FrameID{}
-		for owner := range c.Srcs {
-			if _, ok := owners[owner]; ok {
-				continue
-			}
-			if n, err := dom.DescribeNode().WithBackendNodeID(owner).Do(ctx); err == nil && n != nil && n.FrameID != "" {
-				remote[owner] = n.FrameID
-				c.FrameOf[owner] = string(n.FrameID)
-			}
-		}
-		for _, want := range frames {
-			for owner, fr := range owners {
-				if fr.id != want {
-					continue
-				}
-				fnodes, err := accessibility.GetFullAXTree().WithFrameID(fr.id).Do(ctx)
-				if err != nil {
-					continue
-				}
-				if c.Frames == nil {
-					c.Frames = map[cdp.BackendNodeID]*ir.Capture{}
-				}
-				fc := captureDoc(fnodes, docs[fr.doc], strs)
-				c.Frames[owner] = &fc
-			}
-			for owner, fid := range remote {
-				if fid != want {
-					continue
-				}
-				fc, err := captureRemote(ctx, fid)
-				if err != nil {
-					// It answered nothing: the row stays shut, and says so.
-					continue
-				}
-				if c.Frames == nil {
-					c.Frames = map[cdp.BackendNodeID]*ir.Capture{}
-				}
-				c.Frames[owner] = fc
-			}
-		}
+		// The frames the page holds, by the element that holds each, and
+		// the opened ones captured whole under their owner (ir.Build
+		// splices them in).
+		attachFrames(ctx, &c, docs, strs, 0, frames)
 		// The window the page was laid out in. A page that fits inside it
 		// has no parts: the four exist so the reader does not wade through
 		// chrome to reach content, and there is no wading on a page that
@@ -126,11 +76,69 @@ func Capture(ctx context.Context, frames []cdp.FrameID) (ir.Capture, error) {
 	return c, err
 }
 
+// attachFrames fills in the frames a document holds, by the element that
+// holds each. The snapshot has every same-process document and says
+// which element owns which; a frame from another site is in another
+// process, so not in the snapshot — its <iframe> is, and DOM.describeNode
+// says which frame it holds: the id of a target of its own (sessions.go).
+// The frames the reader has opened are captured whole, under their owner
+// — a same-process one from here, another site's through its session —
+// and each of those has its own frames looked at the same way, so a
+// frame inside a frame is reached too.
+func attachFrames(ctx context.Context, c *ir.Capture, docs []*domsnapshot.DocumentSnapshot, strs []string, cur int, frames []cdp.FrameID) {
+	owners := frameOwners(docs, strs, cur)
+	c.FrameOf = map[cdp.BackendNodeID]string{}
+	for owner, fr := range owners {
+		c.FrameOf[owner] = string(fr.id)
+	}
+	remote := map[cdp.BackendNodeID]cdp.FrameID{}
+	for owner := range c.Srcs {
+		if _, ok := owners[owner]; ok {
+			continue
+		}
+		if n, err := dom.DescribeNode().WithBackendNodeID(owner).Do(ctx); err == nil && n != nil && n.FrameID != "" {
+			remote[owner] = n.FrameID
+			c.FrameOf[owner] = string(n.FrameID)
+		}
+	}
+	keep := func(owner cdp.BackendNodeID, fc *ir.Capture) {
+		if c.Frames == nil {
+			c.Frames = map[cdp.BackendNodeID]*ir.Capture{}
+		}
+		c.Frames[owner] = fc
+	}
+	for _, want := range frames {
+		for owner, fr := range owners {
+			if fr.id != want {
+				continue
+			}
+			fnodes, err := accessibility.GetFullAXTree().WithFrameID(fr.id).Do(ctx)
+			if err != nil {
+				continue
+			}
+			fc := captureDoc(fnodes, docs[fr.doc], strs)
+			attachFrames(ctx, &fc, docs, strs, int(fr.doc), frames)
+			keep(owner, &fc)
+		}
+		for owner, fid := range remote {
+			if fid != want {
+				continue
+			}
+			fc, err := captureRemote(ctx, fid, frames)
+			if err != nil {
+				// It answered nothing: the row stays shut, and says so.
+				continue
+			}
+			keep(owner, fc)
+		}
+	}
+}
+
 // captureRemote reads a frame from another site through the tab's session
 // on it (Sessions): its AX tree and snapshot, the way the page's own are
 // read, with its ids carried at the session's offset. A session that
 // answers nothing is dropped, for the next capture to attach afresh.
-func captureRemote(ctx context.Context, id cdp.FrameID) (*ir.Capture, error) {
+func captureRemote(ctx context.Context, id cdp.FrameID, frames []cdp.FrameID) (*ir.Capture, error) {
 	s := sessionsFrom(ctx)
 	if s == nil {
 		return nil, errors.New("no sessions for another site's frames")
@@ -156,6 +164,7 @@ func captureRemote(ctx context.Context, id cdp.FrameID) (*ir.Capture, error) {
 		}
 		fc = captureDoc(nodes, docs[0], strs)
 		fc.Base = base
+		attachFrames(ctx, &fc, docs, strs, 0, frames)
 		return nil
 	})
 	if err != nil {
@@ -214,7 +223,7 @@ type frame struct {
 // frameOwners is every frame in the snapshot by the element that holds
 // it, whatever document that element is in: an iframe inside an iframe
 // is owned inside the inner document.
-func frameOwners(docs []*domsnapshot.DocumentSnapshot, strs []string) map[cdp.BackendNodeID]frame {
+func frameOwners(docs []*domsnapshot.DocumentSnapshot, strs []string, cur int) map[cdp.BackendNodeID]frame {
 	out := map[cdp.BackendNodeID]frame{}
 	str := func(i int64) string {
 		if i < 0 || int(i) >= len(strs) {
@@ -222,21 +231,27 @@ func frameOwners(docs []*domsnapshot.DocumentSnapshot, strs []string) map[cdp.Ba
 		}
 		return strs[i]
 	}
-	for _, doc := range docs {
-		if doc.Nodes == nil || doc.Nodes.ContentDocumentIndex == nil {
+	// Only the owners in document cur: the snapshot holds every document
+	// of the process, and a frame's own frames are the ones its document
+	// holds — the whole table read from inside a frame found the frame's
+	// own owner, and captured the frame inside itself without end.
+	if cur < 0 || cur >= len(docs) {
+		return out
+	}
+	doc := docs[cur]
+	if doc.Nodes == nil || doc.Nodes.ContentDocumentIndex == nil {
+		return out
+	}
+	cdi := doc.Nodes.ContentDocumentIndex
+	for j, ni := range cdi.Index {
+		if j >= len(cdi.Value) || int(ni) >= len(doc.Nodes.BackendNodeID) {
 			continue
 		}
-		cdi := doc.Nodes.ContentDocumentIndex
-		for j, ni := range cdi.Index {
-			if j >= len(cdi.Value) || int(ni) >= len(doc.Nodes.BackendNodeID) {
-				continue
-			}
-			di := cdi.Value[j]
-			if di < 0 || int(di) >= len(docs) {
-				continue
-			}
-			out[doc.Nodes.BackendNodeID[ni]] = frame{id: cdp.FrameID(str(int64(docs[di].FrameID))), doc: di}
+		di := cdi.Value[j]
+		if di < 0 || int(di) >= len(docs) {
+			continue
 		}
+		out[doc.Nodes.BackendNodeID[ni]] = frame{id: cdp.FrameID(str(int64(docs[di].FrameID))), doc: di}
 	}
 	return out
 }
