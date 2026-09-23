@@ -1520,8 +1520,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
 		pagetabItem(t),
 		sectionsItem(t),
-		menuItem{label: "[go] Go to section", key: "go", hint: "by its number",
-			disabled: t == nil || len(t.secs) == 0},
+		goItem(t),
 		menuItem{label: "[n] Next section", key: "n", hint: "the one after this, at the same depth",
 			disabled: t == nil || !t.read},
 		menuItem{label: "[p] Previous section", key: "p", hint: "the one before this, at the same depth",
@@ -1551,6 +1550,22 @@ func pagetabItem(t *tab) menuItem {
 	}
 	return menuItem{label: "[Esc] Page parts", key: "pagetab",
 		hint: "header, body, others, footer"}
+}
+
+// goItem is the go chord's row, which names what the chord reaches from
+// where you are: the section list has section numbers, every other
+// screen of the panel has line numbers (user, 2026-09-23).
+func goItem(t *tab) menuItem {
+	switch {
+	case t == nil:
+		return menuItem{label: "[go] Go to line", key: "go", hint: "by its number", disabled: true}
+	case t.listing():
+		return menuItem{label: "[go] Go to section", key: "go",
+			hint: "by its number, 1 to " + itoa(len(t.secs))}
+	}
+	n := t.lineCount()
+	return menuItem{label: "[go] Go to line", key: "go",
+		hint: "by its number, 1 to " + itoa(n), disabled: n == 0}
 }
 
 // sectionOpenHint says what opening the section under the list cursor
@@ -1816,14 +1831,25 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "go":
-		// The section's own number, typed. A number earns its column only
-		// when a key takes you to it (user, 2026-09-22); this is that key.
-		if t == nil || len(t.secs) == 0 {
-			return m, m.toast.show("this page has no sections to go to", toastInfo)
+		// A number earns its column only when a key takes you to it
+		// (user, 2026-09-22); this is that key, for both columns that
+		// have one. On the section list it is a section's number; on a
+		// page — or inside a section, or inside a list item — it is a
+		// line of what is on screen (user, 2026-09-23).
+		if t == nil {
+			return m, nil
 		}
-		return m, m.input.ask(inputPopup{title: "Go to section", glyph: glyphList,
-			prompt: "number", accept: "go", action: inputSection,
-			placeholder: "1-" + itoa(len(t.secs))}, m.layer())
+		if t.listing() {
+			return m, m.input.ask(inputPopup{title: "Go to section", glyph: glyphList,
+				prompt: "number", accept: "go", action: inputSection,
+				placeholder: "1-" + itoa(len(t.secs))}, m.layer())
+		}
+		if n := t.lineCount(); n > 0 {
+			return m, m.input.ask(inputPopup{title: "Go to line", glyph: glyphList,
+				prompt: "number", accept: "go", action: inputLine,
+				placeholder: "1-" + itoa(n)}, m.layer())
+		}
+		return m, m.toast.show("this page has no lines to go to", toastInfo)
 	case "sections":
 		// The page as one sheet, or cut into sections: the way out when
 		// the cut is wrong for this page, and the way in when a page was
@@ -2131,14 +2157,48 @@ func (m *AppModel) editField(n *ir.Node) tea.Cmd {
 // written into a search box is then offered to the page's Enter
 // (inputKey) — that being what typing into one is for.
 func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
-	value, prompt := n.Value, "value"
+	value := n.Value
 	if n.Protected {
 		// Never the old value: Chromium hands over dots, not the secret.
-		value, prompt = "", "password"
+		value = ""
 	}
 	return m.input.ask(inputPopup{title: oneLine(nameOr(n.Name, "field")), glyph: glyphPencil,
-		prompt: prompt, accept: "set", action: inputField, node: n.ID, value: value,
+		prompt: fieldTakes(n), accept: "set", action: inputField, node: n.ID, value: value,
 		masked: n.Protected, search: search}, m.layer())
+}
+
+// fieldTakes is what the box over a field says it wants. The page's own
+// word for it, where the page gave one: "email" over an email box, not
+// "value" (user, 2026-09-23) — a terminal shows nothing of a field's
+// type, where a browser shows a date picker or a number stepper, so the
+// one line above the box is where it has to be said.
+//
+// Chromium's own default is text, and "text" is worth saying: it is the
+// answer to "what does this want?", and a blank there would read as
+// webu not knowing.
+func fieldTakes(n *ir.Node) string {
+	if n.Protected {
+		return "password"
+	}
+	switch t := n.InputType; t {
+	case "":
+		// Not an <input>, or one that declared nothing.
+		switch {
+		case n.Multiline:
+			return "text, several lines"
+		case n.Role == "searchbox":
+			return "search"
+		case n.Role == "spinbutton":
+			return "number"
+		}
+		return "text"
+	case "tel":
+		return "phone number"
+	case "datetime-local":
+		return "date and time"
+	default:
+		return t
+	}
 }
 
 func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -2196,6 +2256,8 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.renameGiven(value)
 	case inputSection:
 		return m.sectionGiven(t, value)
+	case inputLine:
+		return m.lineGiven(t, value)
 	case inputEval:
 		// The prompt stays; the expression and, when it comes, its result
 		// go to the console list behind it.

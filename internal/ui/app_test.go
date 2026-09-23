@@ -233,6 +233,12 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	d.cursorOn(ir.Textbox, "Name")
 	d.key("enter")
 	d.until("input popup", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
+	// And the line above it says what the box takes, in the page's own
+	// word for it: a terminal shows nothing of a field's type where a
+	// browser shows a picker or a stepper (user, 2026-09-23).
+	if d.m.input.prompt != "text" {
+		t.Errorf("a plain input takes text, the box says %q", d.m.input.prompt)
+	}
 	d.key("hi there")
 	d.key("enter")
 	d.until("value written", func() bool {

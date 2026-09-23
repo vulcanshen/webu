@@ -448,9 +448,14 @@ func (m AppModel) selectRows(t *tab, innerW, innerH int) []string {
 
 	out := make([]string, 0, innerH)
 	end := min(len(t.lay.rows), t.top+innerH)
+	// The same line numbers the page has: the sheet is the page, and
+	// entering this mode must not shift every line a column left.
+	gut := t.gutter
+	innerW -= gut
 	for r := t.top; r < end; r++ {
 		var b strings.Builder
 		used, col := 0, 0
+		b.WriteString(lineNum(r+1, gut, false))
 		for _, sg := range t.lay.rows[r].segs {
 			for _, ch := range sg.text {
 				w := dispW(string(ch))
@@ -484,7 +489,7 @@ func (m AppModel) selectRows(t *tab, innerW, innerH int) []string {
 		out = append(out, b.String())
 	}
 	for len(out) < innerH {
-		out = append(out, strings.Repeat(" ", innerW))
+		out = append(out, strings.Repeat(" ", innerW+gut))
 	}
 	return out
 }

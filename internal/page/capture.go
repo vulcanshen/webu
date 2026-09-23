@@ -67,6 +67,12 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 				return (name == "class" || name == "id" || name == "aria-label") && strings.Contains(value, "skip")
 			}),
 		}
+		// What a field takes, as the page declared it: the input popup
+		// says "email" over an email box rather than "value", which is
+		// the one thing the box itself cannot show (user, 2026-09-23).
+		c.Types = attrValues(docs, strs, func(tag, name string) bool {
+			return tag == "input" && name == "type"
+		})
 		c.Anchors, c.Parents = anchors(docs, strs)
 		// The window the page was laid out in. A page that fits inside it
 		// has no parts: the four exist so the reader does not wade through
@@ -151,6 +157,36 @@ func attrMarks(docs []*domsnapshot.DocumentSnapshot, strs []string, pick func(ta
 		for j := 0; j+1 < len(attrs); j += 2 {
 			if pick(tag, str(attrs[j]), str(attrs[j+1])) {
 				out[nodes.BackendNodeID[i]] = true
+				break
+			}
+		}
+	}
+	return out
+}
+
+// attrValues is attrMarks for an attribute's VALUE rather than its
+// presence: what a field's type attribute says it takes.
+func attrValues(docs []*domsnapshot.DocumentSnapshot, strs []string, pick func(tag, name string) bool) map[cdp.BackendNodeID]string {
+	out := map[cdp.BackendNodeID]string{}
+	if len(docs) == 0 || docs[0].Nodes == nil {
+		return out
+	}
+	nodes := docs[0].Nodes
+	str := func(i int64) string {
+		if i < 0 || int(i) >= len(strs) {
+			return ""
+		}
+		return strings.ToLower(strs[i])
+	}
+	for i, name := range nodes.NodeName {
+		if i >= len(nodes.Attributes) || i >= len(nodes.BackendNodeID) {
+			continue
+		}
+		tag := str(int64(name))
+		attrs := nodes.Attributes[i]
+		for j := 0; j+1 < len(attrs); j += 2 {
+			if pick(tag, str(attrs[j])) {
+				out[nodes.BackendNodeID[i]] = str(attrs[j+1])
 				break
 			}
 		}

@@ -51,6 +51,9 @@ type tab struct {
 	// viewport is the window it was laid out in: a page no taller than
 	// that one has no parts at all (parts.splitParts).
 	viewport ir.Box
+	// gutter is how many columns the line-number column takes off the
+	// left of the panel; the layout was made at what it left (relayout).
+	gutter int
 	// pending: restored from the last session but not loaded yet — it loads
 	// when it is switched to (ux.md §6).
 	pending bool
@@ -695,8 +698,22 @@ func (t *tab) relayout(width int) {
 	if inside != base {
 		root = &ir.Node{Kind: ir.Document, Children: inside.Children}
 	}
-	t.lay = renderWith(root, renderOpts{width: max(1, width), measure: t.measure,
-		fold: t.fold, drill: inside.ID})
+	// The page is drawn behind a column of line numbers, so the text is
+	// laid out into what that column leaves. How wide it is depends on
+	// how many lines there are, which depends on how wide the text is —
+	// so it is measured: laid out once at the width the last page
+	// needed, and again when that turns out to be the wrong number of
+	// digits. Twice at most, and only ever at a power of ten.
+	draw := func(g int) layout {
+		return renderWith(root, renderOpts{width: max(1, width-g), measure: t.measure,
+			fold: t.fold, drill: inside.ID})
+	}
+	g := t.gutter
+	lay := draw(g)
+	if g2 := lineNumW(len(lay.rows)); g2 != g {
+		g, lay = g2, draw(g2)
+	}
+	t.lay, t.gutter = lay, g
 	t.layW = width
 	// The page may have lost the part the hand was on.
 	if i := t.pagetabIndex(); i >= len(t.parts) {
@@ -1123,4 +1140,31 @@ func treePrint(n *ir.Node) uint64 {
 	}
 	walk(n)
 	return h
+}
+
+// lineCount is how many lines the panel is showing: the page, or the one
+// section open in it, or the one list item drilled into. The number in
+// the gutter counts from the top of that, so this is what it counts to
+// (pagepanel.pageRows).
+func (t *tab) lineCount() int {
+	lo, hi := t.rowRange()
+	return max(0, hi-lo+1)
+}
+
+// goToLine puts the reader on a line of what is on screen, one-based,
+// and the cursor on the nearest item at or after it — a line with
+// nothing to stop on is still somewhere to look, so the window moves
+// whether or not the cursor can follow.
+func (t *tab) goToLine(n, visible int) bool {
+	lo, hi := t.rowRange()
+	row := lo + n - 1
+	if n < 1 || row > hi {
+		return false
+	}
+	t.leavePagetab()
+	t.top = clamp(row, lo, max(lo, hi-visible+1))
+	if at := t.itemAtOrAfter(row, true); at >= 0 && t.lay.items[at].first <= hi {
+		t.cursor = at
+	}
+	return true
 }
