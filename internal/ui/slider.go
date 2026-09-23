@@ -33,7 +33,35 @@ func sliderValue(n *ir.Node) string {
 	return "–"
 }
 
-// sliderRange says the ends of the bar the way the popup's border says
+// sliderItems is the list Enter opens on a slider: every number on the
+// bar, one a row, and the row where it stands now (user, 2026-09-23 —
+// typing a number into a box was the wrong tool for a bar). A span too
+// long for one number a row is walked in tens, hundreds…, so the list
+// stays a list. A slider with no range is 0–100, Chromium's own default.
+func sliderItems(n *ir.Node) (items []menuItem, at int) {
+	lo, hi := math.Ceil(n.Min), math.Floor(n.Max)
+	if hi < lo {
+		lo, hi = 0, 100
+	}
+	step := 1.0
+	for (hi-lo)/step > 10000 {
+		step *= 10
+	}
+	now, _ := strconv.ParseFloat(strings.TrimSpace(n.Value), 64)
+	for v := lo; v <= hi; v += step {
+		hint := ""
+		if v == now {
+			hint = "current"
+		}
+		// The key is never a keystroke: "5" must not choose 5 on its way
+		// past (spaceMenu.update's letter hotkeys).
+		items = append(items, menuItem{label: fmtNum(v), key: "v:" + fmtNum(v), hint: hint})
+	}
+	at = int(math.Round((math.Max(lo, math.Min(hi, now)) - lo) / step))
+	return items, max(0, min(at, len(items)-1))
+}
+
+// sliderRange says the ends of the bar the way the list's title says
 // them: "0–255".
 func sliderRange(n *ir.Node) string {
 	return fmtNum(n.Min) + "–" + fmtNum(n.Max)

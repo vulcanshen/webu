@@ -28,10 +28,14 @@ type menuItem struct {
 
 // spaceMenu is the §A.1 contextual entry point: "what can I do, here, now".
 type spaceMenu struct {
-	anim    popupAnimator
-	items   []menuItem
-	cursor  int
-	top     int // first row shown: the window follows the cursor (scroll)
+	anim   popupAnimator
+	items  []menuItem
+	cursor int
+	top    int // first row shown: the window follows the cursor (scroll)
+	// rows is a window of that many rows, when the menu asked for one —
+	// a slider's numbers show ten at a time (user, 2026-09-23). Zero is
+	// what the screen holds. setItems clears it.
+	rows    int
 	title   string
 	layer   int
 	screenW int
@@ -56,7 +60,7 @@ func newCredPicker() spaceMenu {
 
 func (m *spaceMenu) setItems(items []menuItem, title string, layer int) {
 	m.items, m.title, m.layer = items, title, layer
-	m.cursor, m.top = m.firstSelectable(), 0
+	m.cursor, m.top, m.rows = m.firstSelectable(), 0, 0
 }
 
 func (m spaceMenu) isActive() bool      { return m.anim.isActive() }
@@ -93,8 +97,15 @@ func (m *spaceMenu) step(d int) {
 	}
 }
 
-// visible is how many rows the box shows: capRows' budget.
-func (m spaceMenu) visible() int { return max(1, m.screenH-6) }
+// visible is how many rows the box shows: capRows' budget, or the window
+// the menu asked for when that is smaller.
+func (m spaceMenu) visible() int {
+	v := max(1, m.screenH-6)
+	if m.rows > 0 {
+		v = min(v, m.rows)
+	}
+	return v
+}
 
 // scroll keeps the cursor's row in the window, so a menu taller than the
 // terminal — a navigation's fifty links — shows the row the cursor is
@@ -121,6 +132,11 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string, tea.Cmd) {
 		m.step(1)
 	case "k", "up":
 		m.step(-1)
+	case "d", "ctrl+d":
+		// Half a window, the way every list in the app pages (nav.go).
+		m.step(max(1, m.visible()/2))
+	case "u", "ctrl+u":
+		m.step(-max(1, m.visible()/2))
 	case "enter":
 		if m.cursor < len(m.items) {
 			return m, m.items[m.cursor].key, nil

@@ -76,9 +76,9 @@ var Roles = map[string]Spec{
 	"textbox":    {Kind: Textbox, Action: Edit, Display: "name ____value____; Enter edits in a popup"},
 	"searchbox":  {Kind: Textbox, Action: Edit, Display: "name ____value____; Enter edits in a popup"},
 	"spinbutton": {Kind: Textbox, Action: Edit, Display: "a number field; edits like a textbox"},
-	// A slider is its bar and where it stands; Enter asks for a number
-	// and webu moves it there (user, 2026-09-23).
-	"slider":        {Kind: Textbox, Action: Edit, Display: "a bar with its value; Enter asks for a number"},
+	// A slider is its bar and where it stands; Enter lists its numbers,
+	// ten at a time, and webu moves it to the one chosen (user, 2026-09-23).
+	"slider":        {Kind: Textbox, Action: Edit, Display: "a bar with its value; Enter lists its numbers"},
 	"checkbox":      {Kind: Check, Action: Click, Display: "box glyph, ticked or not, + name; Enter toggles"},
 	"radio":         {Kind: Check, Action: Click, Display: "dot glyph, filled or not, + name; Enter selects"},
 	"switch":        {Kind: Check, Action: Click, Display: "box glyph, ticked or not, + name; Enter toggles"},
