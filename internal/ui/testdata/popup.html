@@ -19,7 +19,10 @@
 <footer><a href="#">Bottom link</a></footer>
 <dialog id="dlg"><p>We use cookies on this site.</p>
 <button type="button" onclick="document.getElementById('out').textContent='accepted'; document.getElementById('dlg').close()">Accept</button>
-<button type="button" onclick="document.getElementById('out').textContent='later'; document.getElementById('dlg').close()">Later</button></dialog>
+<button type="button" onclick="document.getElementById('out').textContent='later'; document.getElementById('dlg').close()">Later</button>
+<button type="button" onclick="document.getElementById('dlg2').showModal()">Details</button></dialog>
+<dialog id="dlg2"><p>Which cookies, exactly.</p>
+<button type="button" onclick="document.getElementById('dlg2').close()">Back</button></dialog>
 <div id="sheet" class="sheet" hidden><p>Your session is about to expire.</p>
 <button type="button" onclick="document.getElementById('out').textContent='extended'; document.getElementById('sheet').hidden=true">Stay signed in</button></div>
 </body></html>

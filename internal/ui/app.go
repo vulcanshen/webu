@@ -2626,7 +2626,9 @@ func (m AppModel) View() string {
 	// Bottom to top. The page's own popup first, under everything of
 	// webu's: a menu opened on it lands above it (pagepopup.go).
 	if t := m.shownTab(); t != nil && m.screen == screenWeb && t.popupNode() != nil {
-		out = overlay.Composite(m.pagePopupView(t), out, overlay.Center, overlay.Center, 0, 0)
+		for _, f := range m.pagePopupFloats(t) {
+			out = overlay.Composite(f.box, out, overlay.Center, overlay.Center, f.dx, f.dy)
+		}
 	}
 	// Then the menu, so what it opened lands above it.
 	if m.spaceMenu.isActive() {

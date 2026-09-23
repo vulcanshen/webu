@@ -56,15 +56,19 @@ type tab struct {
 	// gutter is how many columns the line-number column takes off the
 	// left of the panel; the layout was made at what it left (relayout).
 	gutter int
-	// popup is the block the page put up after a press and that wants an
-	// answer, by Chromium's id; the panel is that block until the page
-	// takes it down (pagepopup.go). prevTop is every node of the tree at
+	// popups is the stack of blocks the page put up and that want an
+	// answer, by Chromium's id, the top one last; the float is that one
+	// until the page takes it down (pagepopup.go). prevTop is every node of the tree at
 	// the last capture, which is what an appearing block is told
 	// against, and popupUntil how long after a press one can still be
 	// its answer.
-	popup      cdp.BackendNodeID
+	popups     []cdp.BackendNodeID
 	prevTop    map[cdp.BackendNodeID]bool
 	popupUntil time.Time
+	// popupLays is each popup's layout as it was last drawn on top, so
+	// the ones under the top one can still be drawn when Chromium has
+	// pruned them out of the tree behind it (pagepanel.pagePopupView).
+	popupLays map[cdp.BackendNodeID]layout
 	// back is the page under the popup, laid out for the backdrop the
 	// float sits on: the part as it was, dimmed, no cursor — kept from
 	// the moment the popup appeared when the page has since gone out of
@@ -404,6 +408,7 @@ func waitEvent(ch <-chan tea.Msg) tea.Cmd {
 func (t *tab) adopt() tea.Cmd {
 	t.gen++
 	t.loading, t.prepared = true, true
+	t.popupUntil = time.Now().Add(popupGrace)
 	gen, id, ctx := t.gen, t.id, t.ctx
 	ua, meta := t.ua, t.uaMeta
 	return func() tea.Msg {
@@ -433,6 +438,8 @@ func (t *tab) load(url string) tea.Cmd {
 	t.loading, t.navigating, t.pending, t.errText = true, true, false, ""
 	t.blankUntil = time.Now().Add(blankGrace)
 	t.settlingUntil = time.Now().Add(settleGrace)
+	t.popupUntil = time.Now().Add(popupGrace)
+	t.popups, t.prevTop = nil, nil
 	t.url = url
 	gen, id, ctx := t.gen, t.id, t.ctx
 	ua, meta := t.ua, t.uaMeta
@@ -469,6 +476,8 @@ func (t *tab) navigate(what string, fn func(context.Context) error) tea.Cmd {
 	t.loading, t.navigating, t.errText = true, true, ""
 	t.blankUntil = time.Now().Add(blankGrace)
 	t.settlingUntil = time.Now().Add(settleGrace)
+	t.popupUntil = time.Now().Add(popupGrace)
+	t.popups, t.prevTop = nil, nil
 	gen, id, ctx := t.gen, t.id, t.ctx
 	return func() tea.Msg {
 		if err := fn(ctx); err != nil {
@@ -623,7 +632,7 @@ func (t *tab) apply(msg pageMsg, width int) {
 	t.changed = t.print != was
 	t.anchors, t.parents, t.boxes = msg.cap.Anchors, msg.cap.Parents, msg.cap.Boxes
 	t.viewport = msg.cap.Viewport
-	popped := t.noticePopup(fresh)
+	popped := t.noticePopup()
 	t.relayout(width)
 	if popped {
 		// Into the popup, or back out of it: the page on screen is
@@ -632,7 +641,7 @@ func (t *tab) apply(msg pageMsg, width int) {
 		// the section open and the window where it stood.
 		t.drill = nil
 		t.relayout(width)
-		if t.popup == 0 && t.backRead && t.backSec < len(t.secs) {
+		if len(t.popups) == 0 && t.backRead && t.backSec < len(t.secs) {
 			t.read, t.sec = true, t.backSec
 			t.cursor, t.top = t.firstItem(), t.backTop
 			t.leavePagetab()
@@ -788,7 +797,7 @@ func (t *tab) relayout(width int) {
 	// shows that item: either way its contents are the page, so the
 	// cursor, the scrolling and the row window all work against them
 	// without a second set of rules (user, 2026-09-22).
-	t.parts = splitParts(sansPopup(t.root, t.popup), t.boxes, t.viewport)
+	t.parts = splitParts(sansPopup(t.root, t.popups), t.boxes, t.viewport)
 	base := t.root
 	if p := t.activePart(); p != nil {
 		base = &ir.Node{Kind: ir.Document, Children: p.nodes}
@@ -800,7 +809,7 @@ func (t *tab) relayout(width int) {
 		// dialog's width, not the panel's, so the float reads as one.
 		// A page Chromium has pruned to the dialog alone keeps the
 		// backdrop it had when the popup appeared.
-		if len(sansPopup(t.root, t.popup).Children) > 0 {
+		if len(sansPopup(t.root, t.popups).Children) > 0 {
 			t.back = renderWith(base, renderOpts{width: max(1, width), measure: t.measure, fold: t.fold})
 			t.backParts = t.parts
 		}
@@ -836,6 +845,12 @@ func (t *tab) relayout(width int) {
 		g, lay = g2, draw(g2)
 	}
 	t.lay, t.gutter = lay, g
+	if p := t.popupNode(); p != nil {
+		if t.popupLays == nil {
+			t.popupLays = map[cdp.BackendNodeID]layout{}
+		}
+		t.popupLays[p.ID] = lay
+	}
 	t.layW = width
 	t.drillHead, t.drillBody = -1, 0
 	if inside != base {
