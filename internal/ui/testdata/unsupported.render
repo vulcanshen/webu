@@ -1,12 +1,13 @@
-󰮦 slider Volume
-󰮦 slider Range
+Volume ──────●───── 5
+Range ●─────────── 3
 󰮦 DisclosureTriangle Show more Show more
 󰮦 DisclosureTriangle Already open Already open
 Visible text.
 
 󰮦 progressbar Loading
-󰮦 tablist󰮦 tab Tab ATab A 󰮦 tab Tab BTab B
-󰮦 tabpanelPanel A content
+ Tab A  Tab B 
+
+Panel A content
 Saved.
 Something happened.
 Dialog text
@@ -23,20 +24,20 @@ Caption
 / 󰘎 Month Month 0   / 󰘎 Day Day 0   󱊨 Show date picker Show
 date picker 󱊨 File
 -- items --
-0 unsupported "Volume" rows 0-0
-1 unsupported "Range" rows 1-1
+0 textbox "Volume" rows 0-0
+1 textbox "Range" rows 1-1
 2 unsupported "Show more" rows 2-2
 3 unsupported "Already open" rows 3-3
-4 unsupported "Tab A" rows 7-7
-5 unsupported "Tab B" rows 7-7
-6 button "OK" rows 13-13
-7 group "Leaf" rows 15-15
-8 media "Fig" rows 17-17
-9 listitem "Menu button" rows 19-19
-10 unsupported "Colour" rows 21-21
-11 unsupported "Year Year/Month Month/Day DayShow date picker Show date picker" rows 21-22
-12 textbox "Year Year" rows 21-21
-13 textbox "Month Month" rows 22-22
-14 textbox "Day Day" rows 22-22
-15 button "Show date picker Show date picker" rows 22-23
-16 button "File" rows 23-23
+4 button "Tab A" rows 7-7
+5 button "Tab B" rows 7-7
+6 button "OK" rows 14-14
+7 group "Leaf" rows 16-16
+8 media "Fig" rows 18-18
+9 listitem "Menu button" rows 20-20
+10 unsupported "Colour" rows 22-22
+11 unsupported "Year Year/Month Month/Day DayShow date picker Show date picker" rows 22-23
+12 textbox "Year Year" rows 22-22
+13 textbox "Month Month" rows 23-23
+14 textbox "Day Day" rows 23-23
+15 button "Show date picker Show date picker" rows 23-24
+16 button "File" rows 24-24

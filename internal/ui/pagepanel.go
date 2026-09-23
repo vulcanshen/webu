@@ -304,9 +304,11 @@ func (m AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 		case s.item >= 0 && s.item == t.cursor && m.focus == panelPage && !t.onPagetab():
 			// On a heading the cursor wears that level's colour, the
 			// way the section list's does: being under the hand must
-			// not cost a row the one thing it was saying.
+			// not cost a row the one thing it was saying. Not on a
+			// tab: the strip's chosen segment already wears it, and
+			// the cursor has to read apart from that.
 			lit := st.cur
-			if row.heading > 0 && !t.loading {
+			if row.heading > 0 && !t.loading && s.kind != segTabOn && s.kind != segTabOff {
 				lit = st.cur.Background(levelColor(row.heading))
 			}
 			b.WriteString(withAttr(lit, s.attr).Render(text))
@@ -318,6 +320,21 @@ func (m AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 				style = st.codeStyles[segCode]
 			}
 			b.WriteString(withAttr(style, s.attr).Render(text))
+		case s.kind == segTabOn || s.kind == segTabOff || s.kind == segTabCap:
+			// A tablist's strip, in the colour of the section it sits
+			// in — the level the reader came in at — the chosen tab
+			// filled with it, the rest inked with it, the caps and
+			// seams the same (user, 2026-09-23). Dimmed with the page.
+			ink := levelColor(max(1, row.heading))
+			if t.loading {
+				ink = dimColor
+			}
+			switch s.kind {
+			case segTabOn:
+				b.WriteString(withAttr(lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(ink).Bold(true), s.attr).Render(text))
+			default:
+				b.WriteString(withAttr(lipgloss.NewStyle().Foreground(ink), s.attr).Render(text))
+			}
 		case row.heading > 0 && !t.loading:
 			// The page's own outline, drawn on the ink: one bright hue
 			// per depth, cycling (theme.levelColor). It used to be a
@@ -406,6 +423,9 @@ func segStyles() map[segKind]lipgloss.Style {
 		segCode:        lipgloss.NewStyle().Foreground(pageCode),
 		segUnsupported: lipgloss.NewStyle().Foreground(pageDim),
 		segInvalid:     lipgloss.NewStyle().Foreground(pageInvalid),
+		segTabOff:      lipgloss.NewStyle().Foreground(pageText),
+		segTabOn:       lipgloss.NewStyle().Foreground(pageText).Bold(true),
+		segTabCap:      lipgloss.NewStyle().Foreground(pageDim),
 		segLandmark:    lipgloss.NewStyle().Foreground(pageDim).Bold(true),
 		segTableHeader: lipgloss.NewStyle().Foreground(pageText).Bold(true), // the header row's ground tells it apart (pagepanel)
 	}

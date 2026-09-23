@@ -1,0 +1,17 @@
+<!doctype html><html><head><title>Tabs</title></head><body>
+<h1>Composers</h1>
+<div role="tablist" aria-label="Composers">
+<button type="button" role="tab" aria-selected="true" aria-controls="p1" id="t1" onclick="show(0)">Maria</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="p2" id="t2" onclick="show(1)">Carl</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="p3" id="t3" onclick="show(2)">Ida</button>
+</div>
+<div role="tabpanel" id="p1" aria-labelledby="t1"><p>Maria was a composer.</p></div>
+<div role="tabpanel" id="p2" aria-labelledby="t2" hidden><p>Carl was a composer too.</p></div>
+<div role="tabpanel" id="p3" aria-labelledby="t3" hidden><p>Ida as well.</p></div>
+<p>After the tabs.</p>
+<script>
+function show(i) { var tabs = document.querySelectorAll('[role=tab]'), panels = document.querySelectorAll('[role=tabpanel]');
+  tabs.forEach((t, j) => t.setAttribute('aria-selected', j === i ? 'true' : 'false'));
+  panels.forEach((p, j) => p.hidden = j !== i); }
+</script>
+</body></html>

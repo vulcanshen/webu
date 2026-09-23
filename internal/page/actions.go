@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -146,6 +147,93 @@ func Type(ctx context.Context, id cdp.BackendNodeID, text string) error {
 	})
 }
 
+// Slide moves a slider to value (ui, 2026-09-23). An <input type=range>
+// takes the number as its value and the page is told (input, change).
+// An ARIA slider has no value to set — the page moves it on its own
+// keys — so it is focused and stepped with the arrows until
+// aria-valuenow reaches the number, or stops moving.
+func Slide(ctx context.Context, id cdp.BackendNodeID, value string) error {
+	want, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return err
+	}
+	num := strconv.FormatFloat(want, 'f', -1, 64)
+	return run(ctx, func(ctx context.Context) error {
+		if err := reveal(ctx, id); err != nil {
+			return err
+		}
+		native, err := eval(ctx, id, `function() {
+			if (!(this instanceof HTMLInputElement)) return false;
+			this.value = "`+num+`";
+			this.dispatchEvent(new Event("input", {bubbles: true}));
+			this.dispatchEvent(new Event("change", {bubbles: true}));
+			return true;
+		}`)
+		if err != nil || native == "true" {
+			return err
+		}
+		if err := dom.Focus().WithBackendNodeID(id).Do(ctx); err != nil {
+			return err
+		}
+		now := func() (float64, error) {
+			s, err := eval(ctx, id, `function() { return this.getAttribute("aria-valuenow") || ""; }`)
+			if err != nil {
+				return 0, err
+			}
+			if u, err := strconv.Unquote(s); err == nil {
+				s = u
+			}
+			return strconv.ParseFloat(s, 64)
+		}
+		last, err := now()
+		if err != nil {
+			return err
+		}
+		// Bounded: a page that ignores the arrows stops the walk on the
+		// first press that moved nothing.
+		for i := 0; i < 4096 && last != want; i++ {
+			k := "ArrowRight"
+			if want < last {
+				k = "ArrowLeft"
+			}
+			if err := key(ctx, k); err != nil {
+				return err
+			}
+			v, err := now()
+			if err != nil {
+				return err
+			}
+			if v == last || (k == "ArrowRight" && v >= want) || (k == "ArrowLeft" && v <= want) {
+				return nil
+			}
+			last = v
+		}
+		return nil
+	})
+}
+
+// eval is call with an answer: what the function returned, as JSON.
+func eval(ctx context.Context, id cdp.BackendNodeID, fn string) (string, error) {
+	obj, err := dom.ResolveNode().WithBackendNodeID(id).Do(ctx)
+	if err != nil {
+		return "", err
+	}
+	if obj == nil || obj.ObjectID == "" {
+		return "", errors.New("node is gone")
+	}
+	res, exc, err := runtime.CallFunctionOn(fn).WithObjectID(obj.ObjectID).WithReturnByValue(true).Do(ctx)
+	if err != nil {
+		return "", err
+	}
+	if exc != nil {
+		return "", fmt.Errorf("page script: %s", exc.Text)
+	}
+	if res == nil || res.Value == nil {
+		return "", nil
+	}
+	return string(res.Value), nil
+}
+
 // Choose selects one option of a <select> and tells the page (function.md
 // §4): the option element is marked selected and the select dispatches the
 // input and change events a listener expects.
@@ -174,7 +262,7 @@ func Submit(ctx context.Context, id cdp.BackendNodeID) error {
 }
 
 // Key sends one key press to the page. Only the keys webu needs are known:
-// Enter and Escape.
+// Enter and Escape, and the two arrows a slider is stepped with (Slide).
 func Key(ctx context.Context, name string) error {
 	return run(ctx, func(ctx context.Context) error { return key(ctx, name) })
 }
@@ -186,6 +274,10 @@ func key(ctx context.Context, name string) error {
 		vk = 13
 	case "Escape":
 		vk = 27
+	case "ArrowLeft":
+		vk = 37
+	case "ArrowRight":
+		vk = 39
 	default:
 		return fmt.Errorf("key %q is not one webu sends", name)
 	}

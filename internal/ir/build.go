@@ -412,6 +412,10 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 			if n.Value == "" {
 				n.Value = str(p.Value)
 			}
+		case accessibility.PropertyNameValuemin:
+			n.Min = flt(p.Value)
+		case accessibility.PropertyNameValuemax:
+			n.Max = flt(p.Value)
 		}
 	}
 	// An inline kind the page put on a line of its own keeps that line.
@@ -626,6 +630,17 @@ func num(v *accessibility.Value) int {
 		return 0
 	}
 	return int(f)
+}
+
+func flt(v *accessibility.Value) float64 {
+	if v == nil || v.Value == nil {
+		return 0
+	}
+	var f float64
+	if err := json.Unmarshal(v.Value, &f); err != nil {
+		return 0
+	}
+	return f
 }
 
 func boolean(v *accessibility.Value) bool {

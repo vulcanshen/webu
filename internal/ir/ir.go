@@ -127,6 +127,9 @@ type Node struct {
 	// (Capture.FrameOf): the one Media that is a thing to go into. Its
 	// Children are that frame's document once it has been opened.
 	Frame string
+	// Min and Max are a slider's range — aria-valuemin/valuemax, or an
+	// <input type=range>'s min and max — and Value is where it stands.
+	Min, Max float64
 	// InputType is what an <input> declared it takes — "email", "date",
 	// "number" — lower-cased, empty when the page said nothing or the
 	// field is not an <input> (Capture.Types).
@@ -267,6 +270,9 @@ func dump(b *strings.Builder, n *Node, depth int) {
 	}
 	if n.URL != "" {
 		fmt.Fprintf(b, " url=%s", n.URL)
+	}
+	if n.Max > n.Min {
+		fmt.Fprintf(b, " range=%v..%v", n.Min, n.Max)
 	}
 	if n.Level > 0 {
 		fmt.Fprintf(b, " level=%d", n.Level)

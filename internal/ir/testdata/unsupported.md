@@ -1,6 +1,6 @@
-Volume
+[Volume: 5]
 
-Range
+[Range: 3]
 
 Show more
 
@@ -10,7 +10,7 @@ Visible text.
 
 Loading
 
-Tab A Tab B
+[Tab A] [Tab B]
 
 Panel A content
 

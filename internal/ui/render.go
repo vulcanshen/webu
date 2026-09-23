@@ -36,6 +36,12 @@ const (
 	// segInvalid is a field's value the page marked wrong: the one seg
 	// kind in the colour of "is wrong" (theme pageInvalid).
 	segInvalid
+	// A tablist's strip (tabChain): a tab not chosen, the chosen one,
+	// and the caps and seams between. Drawn in the colour of the
+	// section the strip sits in (pagepanel rowLine).
+	segTabOff
+	segTabOn
+	segTabCap
 	segLandmark    // a landmark's rule row: its role and name
 	segTableHeader // a table's header cells
 	// Inside a code block with a language (highlight.go).
@@ -483,6 +489,10 @@ func formValueW(form *ir.Node) int {
 	form.Walk(func(n *ir.Node) bool {
 		switch n.Kind {
 		case ir.Textbox:
+			if n.Role == "slider" {
+				w = max(w, dispW(sliderBar(n))+1+dispW(sliderValue(n)))
+				break
+			}
 			w = max(w, dispW(fieldValue(n)))
 		case ir.Combobox:
 			w = max(w, dispW(oneLine(n.Value)))
@@ -561,6 +571,43 @@ func (r *renderer) formField(n *ir.Node, id int, value func()) {
 	}
 	value()
 	r.flush()
+}
+
+// tabChain draws a tablist the way the pagetab is drawn (pagepanel
+// partChain): one strip, the tabs its segments, the chosen one filled
+// (user, 2026-09-23). Every tab is an item, so the cursor stops on it
+// and Enter is the page's own click. The strip is one row and never
+// wraps; the panel clips it at its edge.
+func (r *renderer) tabChain(n *ir.Node) {
+	r.flush()
+	var tabs []*ir.Node
+	for _, c := range n.Children {
+		if c.Role == "tab" {
+			tabs = append(tabs, c)
+		}
+	}
+	if len(tabs) == 0 {
+		r.inlineChildren(n, -1, segPlain)
+		r.flush()
+		return
+	}
+	segs := []seg{{text: r.indent, item: -1, kind: segPlain}, {text: capLeft, item: -1, kind: segTabCap}}
+	for i, tb := range tabs {
+		if i > 0 {
+			segs = append(segs, seg{text: dividerSoft, item: -1, kind: segTabCap})
+		}
+		kind := segTabOff
+		if tb.Selected {
+			kind = segTabOn
+		}
+		segs = append(segs, seg{text: " " + oneLine(tb.Name) + " ", item: r.newItem(tb), kind: kind})
+	}
+	segs = append(segs, seg{text: capRight, item: -1, kind: segTabCap})
+	// The strip wears the colour of the section it sits in — the depth
+	// the reader came in at, the same ink its head row wears (pagepanel
+	// sectionHeadRow) — so stamped the way a heading's rows are.
+	r.emit(row{segs: segs, heading: max(1, len(r.heads))})
+	r.gap = true
 }
 
 // treeItem draws one item of a tree the way the Bookmarks folder tree
@@ -882,6 +929,10 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			r.treeItem(n, depth)
 			return
 		}
+		if n.Role == "tablist" {
+			r.tabChain(n)
+			return
+		}
 		r.inlineChildren(n, -1, segPlain)
 		r.flush()
 	case ir.Code:
@@ -1188,6 +1239,25 @@ func (r *renderer) inline(n *ir.Node, item int, kind segKind) {
 	case ir.Textbox:
 		r.dropLabel(n.Name)
 		id := r.itemOf(n)
+		if n.Role == "slider" {
+			// A slider is its bar and where it stands (user,
+			// 2026-09-23): the track with the thumb on it, then the
+			// number. Enter asks for a number (app editFieldAs).
+			bar := func() {
+				r.add(atom{text: sliderBar(n) + " ", item: id, kind: segInput})
+				r.words(sliderValue(n), id, valueKind(n))
+			}
+			if r.inForm {
+				r.formField(n, id, bar)
+				break
+			}
+			if n.Name != "" {
+				r.words(n.Name, id, segInput)
+				r.add(atom{text: " ", item: id, kind: segInput, space: true})
+			}
+			bar()
+			break
+		}
 		if r.inForm {
 			r.formField(n, id, func() {
 				r.add(atom{text: glyphInput + " ", item: id, kind: segInput})

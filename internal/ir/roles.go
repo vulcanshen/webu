@@ -3,7 +3,7 @@ package ir
 // The support table: every AX role webu understands, in one place. It is the
 // single declaration function.md §3 asks for — docs/support.md is generated
 // from it (SupportDoc), the translator dispatches on it, and the Space
-// menu's "role: slider, not supported yet" line is what happens when a role
+// menu's "role: timer, not supported yet" line is what happens when a role
 // is NOT in it.
 //
 // A role's entry says what Kind it becomes and how the user acts on it. What
@@ -71,11 +71,14 @@ var Roles = map[string]Spec{
 	"StaticText": {Kind: Text, Display: "a run of text"},
 	"LineBreak":  {Kind: Text, Display: "a line break inside text"},
 
-	"link":          {Kind: Link, Action: Click, Display: "glyph + name; Enter opens, menu: open in new tab, yank url"},
-	"button":        {Kind: Button, Action: Click, Display: "tap glyph + name; Enter presses"},
-	"textbox":       {Kind: Textbox, Action: Edit, Display: "name ____value____; Enter edits in a popup"},
-	"searchbox":     {Kind: Textbox, Action: Edit, Display: "name ____value____; Enter edits in a popup"},
-	"spinbutton":    {Kind: Textbox, Action: Edit, Display: "a number field; edits like a textbox"},
+	"link":       {Kind: Link, Action: Click, Display: "glyph + name; Enter opens, menu: open in new tab, yank url"},
+	"button":     {Kind: Button, Action: Click, Display: "tap glyph + name; Enter presses"},
+	"textbox":    {Kind: Textbox, Action: Edit, Display: "name ____value____; Enter edits in a popup"},
+	"searchbox":  {Kind: Textbox, Action: Edit, Display: "name ____value____; Enter edits in a popup"},
+	"spinbutton": {Kind: Textbox, Action: Edit, Display: "a number field; edits like a textbox"},
+	// A slider is its bar and where it stands; Enter asks for a number
+	// and webu moves it there (user, 2026-09-23).
+	"slider":        {Kind: Textbox, Action: Edit, Display: "a bar with its value; Enter asks for a number"},
 	"checkbox":      {Kind: Check, Action: Click, Display: "box glyph, ticked or not, + name; Enter toggles"},
 	"radio":         {Kind: Check, Action: Click, Display: "dot glyph, filled or not, + name; Enter selects"},
 	"switch":        {Kind: Check, Action: Click, Display: "box glyph, ticked or not, + name; Enter toggles"},
@@ -135,6 +138,14 @@ var Roles = map[string]Spec{
 	"status": {Transparent: true, Display: "a status line (<output>, role=status): its text flows where it is, as it changes"},
 	"alert":  {Kind: Group, Display: "an alert, drawn in place as it appears"},
 	"log":    {Kind: Group, Display: "a log, drawn in place as it grows"},
+
+	// Tabs: the list is one strip, the way the pagetab is, the chosen
+	// tab lit in the colour of the section it sits in; a tab is a thing
+	// to press, and the page shows the panel it opens (ui render,
+	// 2026-09-23).
+	"tablist":  {Kind: Group, Display: "a strip of tabs, the chosen one lit"},
+	"tab":      {Kind: Button, Action: Click, Display: "one tab of the strip; Enter chooses it"},
+	"tabpanel": {Kind: Group, Display: "a tab's content, in place"},
 
 	// A tree: its items indented by level, a branch with a triangle
 	// for open or shut, a leaf without; Enter is the page's own click —

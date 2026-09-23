@@ -1,6 +1,6 @@
 document "unsupported" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/unsupported.html focusable #4
-  unsupported:slider "Volume" focusable block #10
-  unsupported:slider "Range" focusable #11
+  textbox:slider "Volume" value="5" range=0..10 focusable block #10
+  textbox:slider "Range" value="3" range=0..100 focusable #11
   group #15
     unsupported:DisclosureTriangle "Show more" focusable block #19
       text "Show more" #72
@@ -9,13 +9,11 @@ document "unsupported" url=file:///Users/vulcan/Documents/sideproj/webu/internal
       text "Already open" #74
     paragraph #26
       text "Visible text." #75
-  unsupported:progressbar "Loading" #27
-  unsupported:tablist block #31
-    unsupported:tab "Tab A" focusable selected #32
-      text "Tab A" #76
-    unsupported:tab "Tab B" focusable #33
-      text "Tab B" #77
-  unsupported:tabpanel block #34
+  unsupported:progressbar "Loading" range=0..1 #27
+  group:tablist #31
+    button "Tab A" focusable selected #32
+    button "Tab B" focusable #33
+  group:tabpanel #34
     text "Panel A content" #78
   group:status #35
     text "Saved." #79
@@ -37,13 +35,13 @@ document "unsupported" url=file:///Users/vulcan/Documents/sideproj/webu/internal
   list #49
     listitem marker="• " #50
       button "Menu button" focusable #51
-  unsupported:meter "Meter" #52
+  unsupported:meter "Meter" range=0..1 #52
   unsupported:ColorWell "Colour" focusable #56
   unsupported:Date "Date" focusable #3
-    textbox:spinbutton "Year Year" value="0" focusable #62
+    textbox:spinbutton "Year Year" value="0" range=1..275760 focusable #62
     text "/" #89
-    textbox:spinbutton "Month Month" value="0" focusable #64
+    textbox:spinbutton "Month Month" value="0" range=1..12 focusable #64
     text "/" #91
-    textbox:spinbutton "Day Day" value="0" focusable #66
+    textbox:spinbutton "Day Day" value="0" range=1..31 focusable #66
     button "Show date picker Show date picker" focusable #67
   button "File" value="No file chosen" focusable #68
