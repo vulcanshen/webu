@@ -236,8 +236,9 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	// And the line above it says what the box takes, in the page's own
 	// word for it: a terminal shows nothing of a field's type where a
 	// browser shows a picker or a stepper (user, 2026-09-23).
-	if d.m.input.prompt != "text" {
-		t.Errorf("a plain input takes text, the box says %q", d.m.input.prompt)
+	if d.m.input.title != "text" || d.m.input.prompt != "Name" {
+		t.Errorf("the type on the border, the field's name over the box: %q / %q",
+			d.m.input.title, d.m.input.prompt)
 	}
 	d.key("hi there")
 	d.key("enter")
@@ -263,8 +264,8 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	d.cursorOn(ir.Textbox, "Secret")
 	d.key("enter")
 	d.until("password box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
-	if !d.m.input.masked || d.m.input.prompt != "password" {
-		t.Errorf("an empty password field's box should be masked and say so: masked=%v prompt=%q", d.m.input.masked, d.m.input.prompt)
+	if !d.m.input.masked || d.m.input.title != "password" {
+		t.Errorf("an empty password field's box should be masked and say so: masked=%v title=%q", d.m.input.masked, d.m.input.title)
 	}
 	d.key("s3cret")
 	d.key("enter")
