@@ -80,17 +80,44 @@ func TestLineNumbersCountWhatIsShown(t *testing.T) {
 	if whole != len(p.lay.rows) {
 		t.Errorf("the page's own lines: %d of %d rows", whole, len(p.lay.rows))
 	}
-	// Into the first list item: the count becomes that item's.
+	// A list item that is nothing but its first line has no inside to
+	// go to: Enter on it is Enter on the link it holds (2026-09-23).
 	d.cursorOn(ir.ListItem, "B via nav")
 	d.key("enter")
-	if !p.drilled() {
-		t.Fatal("Enter on a list item drills into it")
+	if p.drilled() {
+		t.Fatal("a one-line item does not drill")
 	}
-	if n := p.lineCount(); n <= 0 || n >= whole {
-		t.Errorf("inside one item the count is that item's: %d, page has %d", n, whole)
+	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
+	d.key("esc")
+
+	// Inside an item with more than its first line, the count is that
+	// item's — past the first line, which is the header row now.
+	li := &ir.Node{Kind: ir.ListItem, ID: 900, Children: []*ir.Node{
+		para(text("Card one")), para(text("first of the body")), para(text("second of the body"))}}
+	tb := &tab{cursor: -1, root: &ir.Node{Kind: ir.Document, Children: []*ir.Node{
+		hd(1, "Cards"), {Kind: ir.List, Children: []*ir.Node{li}}}}}
+	tb.relayout(60)
+	if !tb.drillInto(li, 60, 10) {
+		t.Fatal("an item with a body drills")
 	}
-	if !p.goToLine(1, 10) {
-		t.Error("its first line is line 1")
+	if tb.drillHead != 0 || tb.drillBody <= 0 {
+		t.Errorf("its first line is the header row: head %d body %d", tb.drillHead, tb.drillBody)
+	}
+	if n := tb.lineCount(); n <= 0 || n != len(tb.lay.rows)-tb.drillBody {
+		t.Errorf("inside one item the count is its body's: %d of %d rows, body from %d", n, len(tb.lay.rows), tb.drillBody)
+	}
+	if !tb.goToLine(1, 10) || tb.top != tb.drillBody {
+		t.Errorf("its first line is line 1, the row after the header: top %d", tb.top)
+	}
+	// And the first line is drawn once: on the header row, not below it.
+	m := AppModel{focus: panelPage, tabs: []*tab{tb}, w: 100, h: 30}
+	if h := m.pagetabRow(tb, 60); !strings.Contains(h, "Card one") {
+		t.Errorf("the header row is the item's first line:\n%s", h)
+	}
+	for _, r := range m.pageRows(tb, 60, 8) {
+		if strings.Contains(r, "Card one") {
+			t.Errorf("and the page does not say it again:\n%s", r)
+		}
 	}
 }
 
