@@ -139,8 +139,9 @@ type item struct {
 type layout struct {
 	rows  []row
 	items []item
-	// marks is the first row of every landmark and heading, for the
-	// outline to jump to (ui.md §3.1).
+	// marks is the first row of every landmark, heading and block — a
+	// paragraph, a list item, a table — so a jump to one (the section
+	// list, a search hit) has a row to land on.
 	marks map[*ir.Node]int
 }
 
@@ -661,8 +662,10 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			// Nothing to name it with: a rule that says only "▾" is a
 			// line across the page for no reason. It is drawn the way
 			// main is — its content, in place — and it claims no row,
-			// because it has none.
+			// because it has none. It is still marked, so a search hit
+			// among its bare children has a row to land on (finder.go).
 			r.lmDepth++
+			r.markNext = append(r.markNext, n)
 			r.formChildren(n, depth)
 			r.flush()
 			r.leaveLandmark()
@@ -726,6 +729,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		}
 	case ir.Paragraph:
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		r.inlineChildren(n, -1, segPlain)
 		r.flush()
 		r.gap = true
@@ -738,6 +742,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		}
 	case ir.ListItem:
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		marker := n.Marker
 		if marker == "" {
 			marker = "  "
@@ -755,6 +760,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.indent = saved
 	case ir.Table:
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		if hasHeader(n) {
 			r.table(n)
 			r.gap = true
@@ -765,6 +771,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			// (function.md §3 heuristics).
 			for _, tr := range n.Children {
 				r.flush()
+				r.markNext = append(r.markNext, tr)
 				// One line per row, wrapped: the cells and whatever blocks
 				// they hold flatten into it, the same as inside a data cell.
 				r.inCell = true
@@ -777,6 +784,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		// A row outside a table (a grid we did not recognise as one): one
 		// line, cells run together.
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		r.inlineChildren(n, -1, segPlain)
 		r.flush()
 	case ir.Separator:
@@ -785,6 +793,7 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		r.gap = true
 	case ir.Quote:
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		saved := r.indent
 		r.indent += "│ "
 		r.inlineChildren(n, -1, segPlain)
@@ -795,14 +804,17 @@ func (r *renderer) block(n *ir.Node, depth int) {
 		}
 	case ir.Group:
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		r.inlineChildren(n, -1, segPlain)
 		r.flush()
 	case ir.Code:
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		r.codeBlock(n)
 		r.gap = true
 	case ir.Unsupported:
 		r.flush()
+		r.markNext = append(r.markNext, n)
 		id := -1
 		if n.Focusable {
 			id = r.newItem(n)
@@ -1296,9 +1308,20 @@ func (r *renderer) dropLabelRow(name string) {
 			return
 		}
 	}
-	for _, mark := range r.marks {
-		if mark == at {
+	// A landmark's or a heading's row is what the outline opens on and
+	// stays. A block's own mark — the label's paragraph — is the thing
+	// being dropped, and goes with it.
+	for n, mark := range r.marks {
+		if mark != at {
+			continue
+		}
+		if n.Kind == ir.Landmark || n.Kind == ir.Heading {
 			return
+		}
+	}
+	for n, mark := range r.marks {
+		if mark == at {
+			delete(r.marks, n)
 		}
 	}
 	r.rows = r.rows[:at]

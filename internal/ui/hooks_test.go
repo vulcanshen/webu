@@ -272,25 +272,32 @@ func TestSearchThenEnterClicks(t *testing.T) {
 	abs, _ := filepath.Abs("testdata/nav.html")
 	d := startAt(t, b, "file://"+abs, store.Config{})
 	d.until("page A", d.loaded("Page A"))
+	// [/] is the finder now, not selection mode (user, 2026-09-23): the
+	// page under it is untouched, and the keyboard is on the query.
 	d.key("/")
-	if !d.m.sel.on || !d.m.sel.typing {
-		t.Fatalf("/ enters selection mode typing: %+v", d.m.sel)
+	d.until("the finder", func() bool { return d.m.finder.isInteractive() })
+	if d.m.sel.on {
+		t.Fatal("/ does not enter selection mode")
 	}
 	d.key("link to b")
+	if n := len(d.m.finder.hits); n == 0 {
+		t.Fatalf("no match found: %+v", d.m.finder.hits)
+	}
+	// Enter to the list, Enter on the hit: the cursor lands on the
+	// paragraph's link and NOTHING is pressed — a hit on a link's text
+	// must not leave the page.
 	d.key("enter")
-	if d.m.sel.cur != 0 {
-		t.Fatalf("no match found: %+v", d.m.sel)
+	d.key("enter")
+	d.until("finder gone", func() bool { return !d.m.finder.isActive() })
+	if n := d.page().current(); n == nil || n.Kind != ir.Link || n.Name != "a link to B" {
+		t.Fatalf("the cursor should be on the link: %+v", n)
 	}
-	if v := d.m.View(); !strings.Contains(v, "/link to b") {
-		t.Errorf("the query is not on the URL row:\n%s", v)
+	if d.m.confirm.isActive() || d.page().loading {
+		t.Error("the finder pressed the link")
 	}
-	// Enter on the match leaves the mode and asks to open the link; Enter
-	// again opens it.
+	// Enter on the page is the press, as ever: asks, then opens.
 	d.key("enter")
 	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
-	if d.m.sel.on {
-		t.Error("Enter out of selection mode should leave it")
-	}
 	d.key("enter")
 	d.until("page B", d.loaded("Page B"))
 }

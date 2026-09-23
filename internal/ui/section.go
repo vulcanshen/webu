@@ -1,10 +1,8 @@
 package ui
 
 import (
-	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
@@ -408,31 +406,6 @@ func (t *tab) readPct(visible int) int {
 	return clamp((t.top-s.first+visible)*100/s.lines(), 0, 100)
 }
 
-// sectionGiven is the go chord's box answered: a section's number puts
-// the hand on it. A number outside the list, or anything that is not one,
-// keeps the box open and says why — the same shape the Settings box uses
-// for a value it cannot take.
-func (m AppModel) sectionGiven(t *tab, value string) (tea.Model, tea.Cmd) {
-	if t == nil || len(t.secs) == 0 {
-		return m, m.input.close()
-	}
-	n, err := strconv.Atoi(strings.TrimSpace(value))
-	if err != nil {
-		return m, m.toast.show("a section's number, 1 to "+itoa(len(t.secs)), toastInfo)
-	}
-	if n < 1 || n > len(t.secs) {
-		return m, m.toast.show("this page has sections 1 to "+itoa(len(t.secs)), toastInfo)
-	}
-	t.sec = n - 1
-	t.clampSecTop(m.pageVisible())
-	if t.read {
-		// Reading one already: the number opens that one instead of
-		// dropping back to the list to choose it.
-		t.openSection(m.pageVisible())
-	}
-	return m, m.input.close()
-}
-
 // nodeByID finds the node Chromium gave this backend id, or nil when the
 // page has rebuilt that part of itself and it is gone.
 func nodeByID(root *ir.Node, id cdp.BackendNodeID) *ir.Node {
@@ -630,23 +603,4 @@ func siblingSection(secs []section, at, step int) int {
 		}
 	}
 	return clamp(at+step, 0, len(secs)-1)
-}
-
-// lineGiven is the go chord's box answered on a page rather than on the
-// section list: a line number of what the panel is showing. Out of range,
-// or not a number, keeps the box open and says why — the same shape
-// sectionGiven uses.
-func (m AppModel) lineGiven(t *tab, value string) (tea.Model, tea.Cmd) {
-	if t == nil {
-		return m, m.input.close()
-	}
-	last := t.lineCount()
-	n, err := strconv.Atoi(strings.TrimSpace(value))
-	if err != nil {
-		return m, m.toast.show("a line number, 1 to "+itoa(last), toastInfo)
-	}
-	if !t.goToLine(n, m.pageVisible()) {
-		return m, m.toast.show("this page has lines 1 to "+itoa(last), toastInfo)
-	}
-	return m, m.input.close()
 }
