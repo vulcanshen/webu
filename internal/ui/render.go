@@ -935,6 +935,15 @@ func (r *renderer) block(n *ir.Node, depth int) {
 			r.tabChain(n)
 			return
 		}
+		if n.Role == "tooltip" {
+			// An aside the page put up on hover: marked as one, dim,
+			// so it reads as the page speaking about a thing and not
+			// as a line of the page.
+			r.add(atom{text: glyphInfo + " ", item: -1, kind: segDim})
+			r.inlineChildren(n, -1, segDim)
+			r.flush()
+			return
+		}
 		r.inlineChildren(n, -1, segPlain)
 		r.flush()
 	case ir.Code:

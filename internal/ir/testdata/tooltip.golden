@@ -1,0 +1,11 @@
+document "Tooltip" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/tooltip.html focusable #1
+  heading "Editor" level=1 #7
+    text "Editor" #16
+  paragraph #8
+    text "Time left " #17
+    text "05:00" #18
+    text " in this session." #19
+  paragraph #10
+    button "Save" focusable #11
+  group:tooltip "Always shown: a tip the page never hides." #14
+    text "Always shown: a tip the page never hides." #22
