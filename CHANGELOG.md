@@ -1,5 +1,127 @@
 # Changelog
 
+## [0.3.0] — 2026-09-23
+
+The page, redefined as a document. 0.2.x drew the accessibility tree as
+one long page; 0.3.0 reads it — a table of contents, one section at a
+time, or the whole sheet; four parts told apart by where they sit; a
+finder over all of it; forms as forms; the page's own popups floating;
+frames you step into, other sites' included; every role a real page
+leans on. The design docs and the README were rewritten for it.
+
+### Added
+
+- **Three screens for a document.** A page with three or more headings
+  opens on its table of contents: one row per section, indented by
+  depth in one of five hues, with how many tables, code blocks and
+  media it holds and how many lines. `Enter` reads one section, whose
+  header takes the panel's second row and whose bottom border fills as
+  you read; a section holds its sub-sections, the way a chapter holds
+  its parts. `n`/`p` step to the next and previous section at the same
+  depth, `Esc` is back to the list; `Space` › `One sheet` reads the
+  page in one run and `Sections` cuts it again. A column of links
+  under a heading is not a section. The Outline popup is gone: the
+  list is that screen.
+- **Four parts, by geometry.** The biggest top-level block is the body;
+  what sits beside it is others; what comes before is the header,
+  after it the footer — no tag names consulted. The pagetab under the
+  URL is these four, one glyph each: `Esc` goes up to it and the whole
+  strip lights, `h`/`l` walk it and the panel switches as you go,
+  `Enter` comes back down. A page that fits its window, or has no
+  block holding a quarter of it, is one part.
+- **A finder.** `/` is a three-column popup — input, hits, preview —
+  over every block on the page that carries text, from all four parts,
+  literal matches first and fuzzy ones after. `Enter` moves into the
+  list and `Enter` there goes there: switches part, opens the section,
+  steps into the item, lands the cursor; it presses nothing. `go` and a number jumps to a line.
+- **Line numbers on every screen**, counting what is shown; on the
+  table of contents they are the sections.
+- **A list item is one thing.** An item or article that runs over
+  several lines is its first line; `Enter` steps into it, its first
+  line becoming the panel's header, `Esc` steps out, as deep as the
+  page nests. A one-line item is the link or button it holds.
+- **Forms drawn as forms.** A `<form>` is a box drawn into the page:
+  labels in one column, values against one edge, labels never cut (the
+  row stacks), a fieldset's legend in bold, a required field marked,
+  an invalid value in red.
+- **Every input, defined.** A one-line box whose border names what it
+  takes (`email`, `number`, `phone number`, `password`, `email ·
+  invalid`) and whose line names the field; a textarea in an editor
+  popup with a writing mode and a moving mode; a slider as a bar with
+  its value, `Enter` listing its numbers ten to a window with the
+  current one under the cursor; date, time, month, week and colour
+  boxes that say their shape on the border and refuse a value not in
+  it; a file input answered with the file picker; a search box that
+  offers to search; a checkbox or radio that toggles.
+- **The page's own popups float.** A modal, an alert dialog, a menu
+  opened from a button, a cookie banner — recognised by behaviour: it
+  appeared after a press (or on load), it holds something to press,
+  and it takes focus, declares itself, or sits over something. It
+  floats over the dimmed page in webu's frame, stacks as the page
+  stacks them, carries no line numbers, finder or go, and wants an
+  answer — `Esc` does not close it. When it goes, the reader is back
+  where they were.
+- **Frames are a level.** An `<iframe>` is one row; `Enter` steps into
+  its document, `Esc` steps out. A frame from another site is another
+  process: webu opens a session of its own on that target and reads,
+  lays out and clicks inside it; a frame inside a frame is reached the
+  same way; a frame that answers nothing stays one row that says so.
+- **Roles.** Tabs as a strip like the pagetab, the chosen one lit in
+  its section's colour; menus and menu items; trees indented with
+  `▾`/`▸`; listboxes as radio or check rows; sliders; progress bars and
+  meters as filled bars; `<details>` with its triangle; tooltips as a
+  dim aside that appears when `Enter` hovers; timers and status lines
+  flowing in place; date, time and colour inputs.
+- **The place is kept.** Going back lands where the reader left —
+  part, section, scroll, cursor — per history entry.
+- **A page still building keeps the spinner turning** until two looks
+  agree, and a page that arrives empty is still on its way.
+- **Enter hovers before it clicks**, so a menu that opens on
+  mouse-over opens.
+- **One action at a time** on a page, so a fast walk cannot pull a
+  click off its target.
+- **webu signs its own user agent**: Chromium's own string with
+  `Chrome/` where a headless build says `HeadlessChrome/`, and
+  `webu/<version>` on the end; client hints name `Chromium` and `webu`.
+- **A PDF says it is not supported**, with its URL a Yank away.
+- **A combobox with no options is a text box** — Google's search box
+  calls itself one.
+
+### Changed
+
+- **Colour stands for a concept, not an element**: things you press
+  are sapphire, things you fill are mauve, code pink, media grey, the
+  pagetab rosewater, a wrong value red; headings and the table of
+  contents wear five hues by depth. No brackets, no emoji; every
+  control leads with its glyph, read from the font's own table.
+- **The default search is DuckDuckGo's HTML endpoint.** Google answers
+  a headless browser's search with a reCAPTCHA, whatever the user
+  agent says.
+- **There is no hand-off.** The design note that reserved a window for
+  a CAPTCHA is withdrawn: webu has to run where there is no display.
+  A CAPTCHA is a placeholder and a URL.
+- **`Esc` is one step up**: popup, then item or frame, then the table
+  of contents, then the pagetab, then the page. Inside a page popup it
+  says the popup wants an answer.
+- **A name is printed once.** A region named by its first heading
+  draws no rule; a drilled item's first line is its header, not its
+  first row again; an empty section is only its title.
+- **Elements laid out at a point are dropped** — the sr-only pattern,
+  written for screen readers alone.
+- **Menus know `u`/`d` and `gg`/`G`.**
+- **The design docs and both READMEs were rewritten** to describe this
+  version rather than the one before it.
+
+### Fixed
+
+- A form's widest value wrapped its caret to a row of its own.
+- A same-process frame read from inside itself captured itself without
+  end.
+- A click landed off its target one time in six after a fast cursor
+  walk.
+- A settle re-capture reset the cursor on every mutation of a page
+  that kept mutating.
+
 ## [0.2.1] — 2026-09-22
 
 ### Added
