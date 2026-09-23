@@ -159,6 +159,35 @@ func asText(root *Node, ct string) *Node {
 			Children: []*Node{{Kind: Text, Role: "StaticText", Name: body}}}}}
 }
 
+// unsupportedDocument is a response webu cannot show and Chromium does
+// not download: a PDF, which headless Chromium has no viewer for and
+// hands over as an empty page (user, 2026-09-23: not supported, said
+// so; a viewer, if ever, is a patch of its own).
+func unsupportedDocument(ct string) bool {
+	ct = strings.ToLower(ct)
+	if i := strings.IndexByte(ct, ';'); i >= 0 {
+		ct = strings.TrimSpace(ct[:i])
+	}
+	return ct == "application/pdf"
+}
+
+// asUnsupported is the page for one: what it is, that webu cannot show
+// it, and that Y has its URL — the same two lines a placeholder for
+// media says (function.md §9.1).
+func asUnsupported(root *Node, ct string) *Node {
+	if i := strings.IndexByte(ct, ';'); i >= 0 {
+		ct = strings.TrimSpace(ct[:i])
+	}
+	para := func(s string) *Node {
+		return &Node{Kind: Paragraph, Role: "paragraph", Children: []*Node{{Kind: Text, Role: "StaticText", Name: s}}}
+	}
+	return &Node{Kind: Document, Role: "RootWebArea", Name: root.Name, URL: root.URL,
+		Children: []*Node{
+			para("unsupported media type: " + ct),
+			para("webu cannot show this document; Y yanks its URL to open it elsewhere."),
+		}}
+}
+
 // Build turns a capture into an IR tree.
 //
 // The AX list is flat, parent-to-child by ID, root first. Nodes Chromium
@@ -190,6 +219,9 @@ func Build(c Capture) *Node {
 	}
 	if textDocument(c.ContentType) {
 		return asText(root, c.ContentType)
+	}
+	if unsupportedDocument(c.ContentType) {
+		return asUnsupported(root, c.ContentType)
 	}
 	return root
 }

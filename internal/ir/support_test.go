@@ -140,3 +140,14 @@ func TestAnInvalidFieldIsMarked(t *testing.T) {
 		t.Error("the dump says so")
 	}
 }
+
+// A PDF is not shown and says so: headless Chromium has no viewer for
+// one and hands over an empty page (2026-09-23).
+func TestAPDFIsUnsupportedAndSaysSo(t *testing.T) {
+	c := ir.Capture{Nodes: []*accessibility.Node{axNode(1, "RootWebArea", "doc.pdf", 1)},
+		ContentType: "application/pdf"}
+	got := ir.Dump(ir.Build(c))
+	if !strings.Contains(got, "unsupported media type: application/pdf") || !strings.Contains(got, "Y yanks its URL") {
+		t.Errorf("the page says what it is and what to do:\n%s", got)
+	}
+}
