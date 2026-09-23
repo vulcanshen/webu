@@ -126,12 +126,12 @@ func (m AppModel) pagePopupView(t *tab) string {
 	title := truncate(t.popupTitle(), w-6)
 	vis := m.popupVisible()
 	st := m.rowStyles(t)
-	gut := t.gutter
 	rows := make([]string, 0, vis)
 	lo, hi := t.rowRange()
 	end := min(hi+1, t.top+vis)
 	for i := max(t.top, lo); i < end; i++ {
-		rows = append(rows, lineNum(i-lo+1, gut, false)+m.rowLine(t, i, w-gut, st))
+		// No line numbers: nothing in a dialog is reached by number.
+		rows = append(rows, m.rowLine(t, i, w, st))
 	}
 	hint := hintLegend([][2]string{{"Enter", "act"}, {"Space", "menu"}, {"Esc", "does not close it"}})
 	return drawPopupBox(popupLayerColor(1), " "+glyphPopup+" "+title+" ", hint, rows, w)

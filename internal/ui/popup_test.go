@@ -120,6 +120,17 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 	if p.popupNode() == nil || !d.m.toast.isActive() {
 		t.Error("Esc does not leave a popup; it says so")
 	}
+	d.key("esc") // the toast
+	// No line numbers in a dialog, and nowhere for [go] to go.
+	if p.gutter != 0 {
+		t.Errorf("a popup has no gutter: %d", p.gutter)
+	}
+	d.key("g")
+	d.key("o")
+	if d.m.finder.isActive() || !d.m.toast.isActive() {
+		t.Error("[go] in a popup says there is nowhere to go")
+	}
+	d.key("esc")
 	d.cursorOn(ir.Button, "Accept")
 	d.key("enter")
 	d.until("answered", func() bool { return p.popupNode() == nil && strings.Contains(dumpLayout(p.lay), "accepted") })
