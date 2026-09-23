@@ -431,12 +431,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if id := t.wantDrill; id != 0 && !t.working() {
 			// The frame Enter asked for: in, now that its document is
-			// here — or not, when it is another site's and could not be.
+			// here — or not, when the frame answered nothing.
 			t.wantDrill = 0
 			if n := nodeByID(t.root, id); n != nil && len(n.Children) > 0 {
 				t.drillInto(n, m.pageW(), m.pageVisible())
 			} else {
-				return m, m.toast.show("a frame from another site: webu cannot enter it; its address is a Yank away", toastInfo)
+				return m, m.toast.show("the frame could not be entered; its address is a Yank away", toastInfo)
 			}
 		}
 		if t.stillComing() {

@@ -344,6 +344,10 @@ func (m *AppModel) newTabFor(id target.ID) *tab {
 }
 
 func (m *AppModel) newTabWith(ctx context.Context, cancel context.CancelFunc) *tab {
+	// The tab's sessions on other sites' frames ride in its context
+	// (page.Sessions): a capture reads such a frame through them, an
+	// action finds the session its node belongs to. They die with it.
+	ctx = page.WithSessions(ctx, page.NewSessions(ctx))
 	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1, dev: &page.DevLog{},
 		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth(),
 		ua: m.browser.UserAgent, uaMeta: m.browser.UAMeta, acting: &sync.Mutex{}}

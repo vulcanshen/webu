@@ -67,7 +67,7 @@ func CancelAuth(ctx context.Context, id fetch.RequestID) error {
 // SetFiles answers an intercepted file chooser: the paths become the
 // input's files and the page sees its change event.
 func SetFiles(ctx context.Context, node cdp.BackendNodeID, files []string) error {
-	return run(ctx, func(ctx context.Context) error {
+	return on(ctx, node, func(ctx context.Context, node cdp.BackendNodeID) error {
 		return dom.SetFileInputFiles(files).WithBackendNodeID(node).Do(ctx)
 	})
 }

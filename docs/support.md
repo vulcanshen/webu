@@ -15,7 +15,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `DateTime` | textbox | edit | a date-and-time, month or week box; Enter asks for it in the browser's shape |
 | `DescriptionList` | list | — | <dl>: terms and definitions |
 | `DisclosureTriangle` | button | click | a summary with its triangle; Enter opens or shuts what follows |
-| `Iframe` | media | click | one row; Enter opens the frame's document in place, Esc comes back out — a frame from another site cannot be entered and says so |
+| `Iframe` | media | click | one row; Enter opens the frame's document in place — another site's through a session of its own — and Esc comes back out |
 | `InputTime` | textbox | edit | a time box; Enter asks for HH:MM |
 | `LayoutTableCell` | cell | — | a layout-table cell: its content, a space apart from the next |
 | `LayoutTableRow` | group | — | a layout-table row: one line of flow (the Hacker News shape) |

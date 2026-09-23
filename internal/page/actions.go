@@ -19,14 +19,16 @@ import (
 
 // Every action is addressed by backendDOMNodeId — the one link the IR keeps
 // to Chromium (function.md §2). None of them waits for what the page does
-// next; the caller re-captures when it is ready to look.
+// next; the caller re-captures when it is ready to look. A node inside a
+// frame from another site is reached through the session on that frame,
+// which is what on() resolves (sessions.go).
 
 // Reveal scrolls the node into the viewport. The TUI's scrolling is not
 // Chromium's, and a page lazy-loads on "did this enter the viewport" — so
 // the cursor landing on a node is what has to move the real viewport
 // (function.md §4). A node with no box is not an error.
 func Reveal(ctx context.Context, id cdp.BackendNodeID) error {
-	return run(ctx, func(ctx context.Context) error { return reveal(ctx, id) })
+	return on(ctx, id, func(ctx context.Context, id cdp.BackendNodeID) error { return reveal(ctx, id) })
 }
 
 func reveal(ctx context.Context, id cdp.BackendNodeID) error {
@@ -52,7 +54,7 @@ func reveal(ctx context.Context, id cdp.BackendNodeID) error {
 // webu yet (function.md §4 asked for it; webu-implementation.md §4 says
 // why not).
 func Click(ctx context.Context, id cdp.BackendNodeID) error {
-	return run(ctx, func(ctx context.Context) error {
+	return on(ctx, id, func(ctx context.Context, id cdp.BackendNodeID) error {
 		if err := reveal(ctx, id); err != nil {
 			return err
 		}
@@ -126,7 +128,7 @@ func call(ctx context.Context, id cdp.BackendNodeID, fn string) error {
 // input events a framework listens for, where setting .value would not.
 // An empty text clears the field.
 func Type(ctx context.Context, id cdp.BackendNodeID, text string) error {
-	return run(ctx, func(ctx context.Context) error {
+	return on(ctx, id, func(ctx context.Context, id cdp.BackendNodeID) error {
 		if err := reveal(ctx, id); err != nil {
 			return err
 		}
@@ -158,7 +160,7 @@ func Fill(ctx context.Context, id cdp.BackendNodeID, value string) error {
 	if err != nil {
 		return err
 	}
-	return run(ctx, func(ctx context.Context) error {
+	return on(ctx, id, func(ctx context.Context, id cdp.BackendNodeID) error {
 		if err := reveal(ctx, id); err != nil {
 			return err
 		}
@@ -181,7 +183,7 @@ func Slide(ctx context.Context, id cdp.BackendNodeID, value string) error {
 		return err
 	}
 	num := strconv.FormatFloat(want, 'f', -1, 64)
-	return run(ctx, func(ctx context.Context) error {
+	return on(ctx, id, func(ctx context.Context, id cdp.BackendNodeID) error {
 		if err := reveal(ctx, id); err != nil {
 			return err
 		}
@@ -261,7 +263,7 @@ func eval(ctx context.Context, id cdp.BackendNodeID, fn string) (string, error) 
 // §4): the option element is marked selected and the select dispatches the
 // input and change events a listener expects.
 func Choose(ctx context.Context, option cdp.BackendNodeID) error {
-	return run(ctx, func(ctx context.Context) error {
+	return on(ctx, option, func(ctx context.Context, option cdp.BackendNodeID) error {
 		return call(ctx, option, `function() {
 			this.selected = true;
 			const s = this.closest("select");
@@ -276,7 +278,7 @@ func Choose(ctx context.Context, option cdp.BackendNodeID) error {
 // Submit presses Enter in the field — implicit submission, the way a search
 // box with no button is sent (ux.md §2.2).
 func Submit(ctx context.Context, id cdp.BackendNodeID) error {
-	return run(ctx, func(ctx context.Context) error {
+	return on(ctx, id, func(ctx context.Context, id cdp.BackendNodeID) error {
 		if err := dom.Focus().WithBackendNodeID(id).Do(ctx); err != nil {
 			return err
 		}

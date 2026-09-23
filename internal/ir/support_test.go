@@ -190,4 +190,20 @@ func TestAnOpenedFrameIsSplicedIn(t *testing.T) {
 	if shut == nil || shut.Frame != "F2" || len(shut.Children) != 0 || shut.URL != "https://other.test/embed" {
 		t.Errorf("a frame not opened is one row with its address: %+v", shut)
 	}
+
+	// A frame from another process numbers its nodes from 1, as the
+	// page does: carried at the session's offset, none collides.
+	inner.Base = 1 << 40
+	root = ir.Build(outer)
+	root.Walk(func(n *ir.Node) bool {
+		if n.ID == 8 {
+			n.Walk(func(c *ir.Node) bool {
+				if c != n && c.ID != 0 && c.ID < 1<<40 {
+					t.Errorf("a frame node carried below the offset: %+v", c)
+				}
+				return true
+			})
+		}
+		return true
+	})
 }

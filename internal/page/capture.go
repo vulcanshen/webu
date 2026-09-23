@@ -9,9 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/domsnapshot"
 	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
@@ -61,6 +63,19 @@ func Capture(ctx context.Context, frames []cdp.FrameID) (ir.Capture, error) {
 		for owner, fr := range owners {
 			c.FrameOf[owner] = string(fr.id)
 		}
+		// A frame from another site is in another process, so not in
+		// the snapshot — its <iframe> is, and DOM.describeNode says which
+		// frame it holds: the id of a target of its own (sessions.go).
+		remote := map[cdp.BackendNodeID]cdp.FrameID{}
+		for owner := range c.Srcs {
+			if _, ok := owners[owner]; ok {
+				continue
+			}
+			if n, err := dom.DescribeNode().WithBackendNodeID(owner).Do(ctx); err == nil && n != nil && n.FrameID != "" {
+				remote[owner] = n.FrameID
+				c.FrameOf[owner] = string(n.FrameID)
+			}
+		}
 		for _, want := range frames {
 			for owner, fr := range owners {
 				if fr.id != want {
@@ -68,8 +83,6 @@ func Capture(ctx context.Context, frames []cdp.FrameID) (ir.Capture, error) {
 				}
 				fnodes, err := accessibility.GetFullAXTree().WithFrameID(fr.id).Do(ctx)
 				if err != nil {
-					// A frame from another site lives in another process
-					// and answers no call from this one: it stays shut.
 					continue
 				}
 				if c.Frames == nil {
@@ -77,6 +90,20 @@ func Capture(ctx context.Context, frames []cdp.FrameID) (ir.Capture, error) {
 				}
 				fc := captureDoc(fnodes, docs[fr.doc], strs)
 				c.Frames[owner] = &fc
+			}
+			for owner, fid := range remote {
+				if fid != want {
+					continue
+				}
+				fc, err := captureRemote(ctx, fid)
+				if err != nil {
+					// It answered nothing: the row stays shut, and says so.
+					continue
+				}
+				if c.Frames == nil {
+					c.Frames = map[cdp.BackendNodeID]*ir.Capture{}
+				}
+				c.Frames[owner] = fc
 			}
 		}
 		// The window the page was laid out in. A page that fits inside it
@@ -97,6 +124,45 @@ func Capture(ctx context.Context, frames []cdp.FrameID) (ir.Capture, error) {
 		return nil
 	})
 	return c, err
+}
+
+// captureRemote reads a frame from another site through the tab's session
+// on it (Sessions): its AX tree and snapshot, the way the page's own are
+// read, with its ids carried at the session's offset. A session that
+// answers nothing is dropped, for the next capture to attach afresh.
+func captureRemote(ctx context.Context, id cdp.FrameID) (*ir.Capture, error) {
+	s := sessionsFrom(ctx)
+	if s == nil {
+		return nil, errors.New("no sessions for another site's frames")
+	}
+	fctx, base, err := s.frame(id)
+	if err != nil {
+		return nil, err
+	}
+	fctx, cancel := context.WithTimeout(fctx, 10*time.Second)
+	defer cancel()
+	var fc ir.Capture
+	err = run(fctx, func(ctx context.Context) error {
+		nodes, err := accessibility.GetFullAXTree().Do(ctx)
+		if err != nil {
+			return err
+		}
+		docs, strs, err := domsnapshot.CaptureSnapshot([]string{"display"}).Do(ctx)
+		if err != nil {
+			return err
+		}
+		if len(docs) == 0 {
+			return errors.New("snapshot: no document")
+		}
+		fc = captureDoc(nodes, docs[0], strs)
+		fc.Base = base
+		return nil
+	})
+	if err != nil {
+		s.forget(id)
+		return nil, err
+	}
+	return &fc, nil
 }
 
 // captureDoc is everything the translator needs about one document: its
