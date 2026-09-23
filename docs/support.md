@@ -27,7 +27,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `checkbox` | check | click | box glyph, ticked or not, + name; Enter toggles |
 | `code` | code | — | monospace; a block when it spans lines |
 | `columnheader` | cell | — | a header cell |
-| `combobox` | combobox | choose | name + dropdown glyph + value; Enter lists the options |
+| `combobox` | combobox | choose | name + dropdown glyph + value; Enter lists the options — one with no options is a textbox (Google's search box) |
 | `complementary` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `contentinfo` | landmark | — | page chrome: a capsule on the bar under the URL; what it holds is behind Enter |
 | `definition` | quote | — | <dd>: indented under its term |

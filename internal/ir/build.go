@@ -379,6 +379,18 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 	case Combobox:
 		n.Name = strings.TrimSpace(n.Name)
 		n.Children = b.options(ax)
+		if len(n.Children) == 0 {
+			// Nothing to choose from: an ARIA combobox is an input whose
+			// popup appears as you type — Google's search box is a
+			// textarea calling itself one — and webu cannot drive that
+			// popup, so the box is a box to type in. Left a Combobox it
+			// answered Enter with "no options to choose from" (user,
+			// 2026-09-23).
+			n.Kind = Textbox
+			n.Value = strings.ReplaceAll(n.Value, "\r\n", "\n")
+			n.Protected = b.protected[n.ID]
+			n.InputType = b.types[n.ID]
+		}
 		return []*Node{n}
 	case Option:
 		return []*Node{n}

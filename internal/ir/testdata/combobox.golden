@@ -17,4 +17,4 @@ document "combobox" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir
       option "m1" focusable selected block #63
       option "m2" focusable block #66
     text "Datalist " #86
-    combobox "Datalist" focusable #70
+    textbox:combobox "Datalist" focusable #70
