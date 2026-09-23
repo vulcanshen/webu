@@ -29,41 +29,62 @@ import (
 // otherwise turn its every late arrival into a demand.
 const popupGrace = settleGrace
 
-// findPopup is the block a press just brought up, or nil. prev is the
-// top of the tree as the last capture had it, by Chromium's id.
+// findPopup is the block a press just brought up, or nil. prev is every
+// node the last capture had, by Chromium's id: a popup is the root of a
+// subtree that was not there, wherever the page hung it — a dialog is
+// as often inside main as beside it (the ARIA practices' own examples
+// are), so the top of the tree is not where to look.
 func findPopup(prev map[cdp.BackendNodeID]bool, root *ir.Node, boxes map[cdp.BackendNodeID]ir.Box) *ir.Node {
 	if root == nil || len(prev) == 0 {
 		return nil
 	}
-	for _, c := range root.Children {
-		if c.ID == 0 || prev[c.ID] || countItems(c) == 0 {
-			continue
-		}
-		if !c.Modal && !hasFocus(c) {
-			continue
-		}
-		if c.Modal {
-			// Chromium prunes the tree behind a modal dialog, so there
-			// may be nothing left for it to overlap: the declaration is
-			// the whole of the evidence, and it is enough.
-			return c
-		}
-		b := boxOf(c, boxes)
-		if b.Area() <= 0 {
-			continue
-		}
-		for _, o := range root.Children {
-			if o == c {
+	var found *ir.Node
+	var walk func(n *ir.Node)
+	walk = func(n *ir.Node) {
+		for _, c := range n.Children {
+			if found != nil {
+				return
+			}
+			if c.ID != 0 && !prev[c.ID] {
+				// A new subtree: its root is the candidate, and what is
+				// under it is new with it.
+				if isPopup(c, n.Children, boxes) {
+					found = c
+				}
 				continue
 			}
-			if ob := boxOf(o, boxes); ob.Area() > 0 && overlap(b, ob) >= b.Area()/2 {
-				// Over something rather than after it: a block the
-				// page laid out in its flow overlaps nothing.
-				return c
-			}
+			walk(c)
 		}
 	}
-	return nil
+	walk(root)
+	return found
+}
+
+// isPopup is the test on one new block, against the blocks beside it.
+func isPopup(c *ir.Node, siblings []*ir.Node, boxes map[cdp.BackendNodeID]ir.Box) bool {
+	if countItems(c) == 0 || (!c.Modal && !hasFocus(c)) {
+		return false
+	}
+	if c.Modal {
+		// Declared modal: the declaration is the whole of the evidence,
+		// and it is enough — the page said this is over everything.
+		return true
+	}
+	b := boxOf(c, boxes)
+	if b.Area() <= 0 {
+		return false
+	}
+	for _, o := range siblings {
+		if o == c {
+			continue
+		}
+		if ob := boxOf(o, boxes); ob.Area() > 0 && overlap(b, ob) >= b.Area()/2 {
+			// Over something rather than after it: a block the page
+			// laid out in its flow overlaps nothing.
+			return true
+		}
+	}
+	return false
 }
 
 // hasFocus reports whether the page's keyboard is somewhere under n.
@@ -88,18 +109,19 @@ func overlap(a, b ir.Box) float64 {
 	return w * h
 }
 
-// topIDs is the top of the tree by Chromium's id: what the next capture
-// is diffed against.
-func topIDs(root *ir.Node) map[cdp.BackendNodeID]bool {
+// allIDs is every node of the tree by Chromium's id: what the next
+// capture is diffed against.
+func allIDs(root *ir.Node) map[cdp.BackendNodeID]bool {
 	out := map[cdp.BackendNodeID]bool{}
 	if root == nil {
 		return out
 	}
-	for _, c := range root.Children {
-		if c.ID != 0 {
-			out[c.ID] = true
+	root.Walk(func(n *ir.Node) bool {
+		if n.ID != 0 {
+			out[n.ID] = true
 		}
-	}
+		return true
+	})
 	return out
 }
 
@@ -109,12 +131,7 @@ func (t *tab) popupNode() *ir.Node {
 	if t.popup == 0 || t.root == nil {
 		return nil
 	}
-	for _, c := range t.root.Children {
-		if c.ID == t.popup {
-			return c
-		}
-	}
-	return nil
+	return nodeByID(t.root, t.popup)
 }
 
 // noticePopup runs after a capture is built: the popup the page just
@@ -131,7 +148,7 @@ func (t *tab) noticePopup(fresh bool) bool {
 			t.popup = p.ID
 		}
 	}
-	t.prevTop = topIDs(t.root)
+	t.prevTop = allIDs(t.root)
 	return t.popup != was
 }
 
@@ -142,6 +159,9 @@ func sansPopup(root *ir.Node, popup cdp.BackendNodeID) *ir.Node {
 	if popup == 0 || root == nil {
 		return root
 	}
+	// Only the top level is copied: the parts are cut from the top-level
+	// blocks, and a popup deeper than that is inside one of them, whose
+	// box it does not change enough to matter.
 	out := &ir.Node{Kind: ir.Document, Name: root.Name, URL: root.URL, ID: root.ID}
 	for _, c := range root.Children {
 		if c.ID != popup {

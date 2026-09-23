@@ -57,9 +57,10 @@ type tab struct {
 	gutter int
 	// popup is the block the page put up after a press and that wants an
 	// answer, by Chromium's id; the panel is that block until the page
-	// takes it down (popup.go). prevTop is the top of the tree at the
-	// last capture, which is what an appearing block is told against,
-	// and popupUntil how long after a press one can still be its answer.
+	// takes it down (pagepopup.go). prevTop is every node of the tree at
+	// the last capture, which is what an appearing block is told
+	// against, and popupUntil how long after a press one can still be
+	// its answer.
 	popup      cdp.BackendNodeID
 	prevTop    map[cdp.BackendNodeID]bool
 	popupUntil time.Time
