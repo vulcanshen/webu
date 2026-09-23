@@ -151,3 +151,43 @@ func TestAPDFIsUnsupportedAndSaysSo(t *testing.T) {
 		t.Errorf("the page says what it is and what to do:\n%s", got)
 	}
 }
+
+// An iframe knows which frame it holds, and an opened one holds that
+// frame's document as its children — one thing to go into (2026-09-23).
+func TestAnOpenedFrameIsSplicedIn(t *testing.T) {
+	inner := &ir.Capture{Nodes: []*accessibility.Node{
+		axNode(1, "RootWebArea", "Inner", 100, 2, 3),
+		axNode(2, "heading", "Inside the frame", 101),
+		axNode(3, "paragraph", "", 102, 4),
+		axNode(4, "StaticText", "frame text", 103),
+	}}
+	outer := ir.Capture{Nodes: []*accessibility.Node{
+		axNode(1, "RootWebArea", "Outer", 1, 2, 3),
+		axNode(2, "Iframe", "The embed", 8),
+		axNode(3, "Iframe", "Elsewhere", 9),
+	},
+		FrameOf: map[cdp.BackendNodeID]string{8: "F1", 9: "F2"},
+		Frames:  map[cdp.BackendNodeID]*ir.Capture{8: inner},
+		Srcs:    map[cdp.BackendNodeID]string{9: "https://other.test/embed"},
+	}
+	root := ir.Build(outer)
+	var opened, shut *ir.Node
+	root.Walk(func(n *ir.Node) bool {
+		switch n.ID {
+		case 8:
+			opened = n
+		case 9:
+			shut = n
+		}
+		return true
+	})
+	if opened == nil || opened.Frame != "F1" || len(opened.Children) != 2 {
+		t.Fatalf("the opened frame holds its document: %+v", opened)
+	}
+	if !strings.Contains(ir.Dump(root), "Inside the frame") {
+		t.Errorf("the frame's heading is in the tree:\n%s", ir.Dump(root))
+	}
+	if shut == nil || shut.Frame != "F2" || len(shut.Children) != 0 || shut.URL != "https://other.test/embed" {
+		t.Errorf("a frame not opened is one row with its address: %+v", shut)
+	}
+}

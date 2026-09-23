@@ -425,7 +425,8 @@ func isThing(n *ir.Node) bool {
 	if n == nil || n.ID == 0 {
 		return false
 	}
-	return n.Kind == ir.ListItem || (n.Kind == ir.Landmark && n.Role == "article")
+	return n.Kind == ir.ListItem || (n.Kind == ir.Landmark && n.Role == "article") ||
+		(n.Kind == ir.Media && n.Frame != "")
 }
 
 // drillNode is the node the panel is showing: the root, or as far down

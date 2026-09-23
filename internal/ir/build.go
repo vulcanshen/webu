@@ -37,6 +37,15 @@ type Capture struct {
 	// textbox, and a terminal has to say which, because a box on screen
 	// shows nothing of what it expects.
 	Types map[cdp.BackendNodeID]string `json:"types,omitempty"`
+	// Srcs is an <iframe>'s src by backend id: the address of a frame,
+	// for the row that stands for one webu cannot enter.
+	Srcs map[cdp.BackendNodeID]string `json:"srcs,omitempty"`
+	// FrameOf is the frame each frame-owning element holds, by the
+	// element's backend id (page.Capture): an iframe with a frame is a
+	// thing the reader can open (ui). Frames is the opened ones,
+	// captured whole, spliced in under their owner (Build).
+	FrameOf map[cdp.BackendNodeID]string   `json:"frameOf,omitempty"`
+	Frames  map[cdp.BackendNodeID]*Capture `json:"-"`
 	// Viewport is the window the page was laid out in — not the page's
 	// own size, which Boxes gives. A page shorter than its viewport is
 	// whole: nothing is off screen for the chrome to be in the way of
@@ -204,6 +213,9 @@ func Build(c Capture) *Node {
 		display:    c.Display,
 		protected:  c.Protected,
 		types:      c.Types,
+		srcs:       c.Srcs,
+		frameOf:    c.FrameOf,
+		frames:     c.Frames,
 		current:    c.Current,
 		hidden:     c.Hidden,
 		skip:       maps.Clone(c.Skip),
@@ -231,6 +243,9 @@ type builder struct {
 	display    map[cdp.BackendNodeID]string
 	protected  map[cdp.BackendNodeID]bool
 	types      map[cdp.BackendNodeID]string
+	srcs       map[cdp.BackendNodeID]string
+	frameOf    map[cdp.BackendNodeID]string
+	frames     map[cdp.BackendNodeID]*Capture
 	current    map[cdp.BackendNodeID]bool
 	hidden     map[cdp.BackendNodeID]bool
 	skip       map[cdp.BackendNodeID]bool
@@ -398,6 +413,18 @@ func (b *builder) convert(ax *accessibility.Node) []*Node {
 		// (an image in a link, the text of a button, the editable div under
 		// a textbox) has already been folded into it by Chromium.
 		n.Name = strings.TrimSpace(n.Name)
+		if n.Kind == Media {
+			// An iframe is a frame the reader can open: it knows which,
+			// and once opened it holds that frame's document as its
+			// children — one thing, one row, Enter goes in (ui, 2026-09-23).
+			n.Frame = b.frameOf[n.ID]
+			if n.URL == "" {
+				n.URL = b.srcs[n.ID]
+			}
+			if fc := b.frames[n.ID]; fc != nil && n.Frame != "" {
+				n.Children = Build(*fc).Children
+			}
+		}
 		if n.Kind == Textbox {
 			if editableDiv {
 				// contenteditable: the text is the children, not a value.

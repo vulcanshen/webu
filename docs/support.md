@@ -11,7 +11,7 @@ webu guarantees its translation per AX role, not per site (function.md §3). A r
 | `Audio` | media | click | placeholder; menu: yank url |
 | `Canvas` | media | click | placeholder; nothing inside can be read |
 | `DescriptionList` | list | — | <dl>: terms and definitions |
-| `Iframe` | media | click | placeholder; the frame's content is not entered (v1) |
+| `Iframe` | media | click | one row; Enter opens the frame's document in place, Esc comes back out — a frame from another site cannot be entered and says so |
 | `LayoutTableCell` | cell | — | a layout-table cell: its content, a space apart from the next |
 | `LayoutTableRow` | group | — | a layout-table row: one line of flow (the Hacker News shape) |
 | `LineBreak` | text | — | a line break inside text |

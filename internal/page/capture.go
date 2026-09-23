@@ -7,6 +7,7 @@ package page
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/chromedp/cdproto/accessibility"
@@ -34,7 +35,7 @@ func run(ctx context.Context, fn func(context.Context) error) error {
 // block or an inline; without this, two adjacent <div>s of text would run
 // together on one line (ir.Build). DOMSnapshot is one call for the whole
 // page, which is what makes it affordable on every redraw.
-func Capture(ctx context.Context) (ir.Capture, error) {
+func Capture(ctx context.Context, frames []cdp.FrameID) (ir.Capture, error) {
 	var c ir.Capture
 	err := run(ctx, func(ctx context.Context) error {
 		nodes, err := accessibility.GetFullAXTree().Do(ctx)
@@ -45,35 +46,39 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 		if err != nil {
 			return err
 		}
-		boxes, hidden := layoutMaps(docs)
-		c = ir.Capture{Nodes: nodes, Display: displayMap(docs, strs), Boxes: boxes, Hidden: hidden,
-			// What the AX tree does not say, the DOM does (ir.Build).
-			Protected: attrMarks(docs, strs, func(tag, name, value string) bool {
-				return tag == "input" && name == "type" && value == "password"
-			}),
-			Current: attrMarks(docs, strs, func(_, name, value string) bool {
-				return name == "aria-current" && value != "" && value != "false"
-			}),
-			Breadcrumb: attrMarks(docs, strs, func(_, name, value string) bool {
-				switch name {
-				case "class", "aria-label":
-					return strings.Contains(value, "breadcrumb")
-				case "itemtype":
-					return strings.Contains(value, "breadcrumblist")
-				}
-				return false
-			}),
-			Skip: attrMarks(docs, strs, func(_, name, value string) bool {
-				return (name == "class" || name == "id" || name == "aria-label") && strings.Contains(value, "skip")
-			}),
+		if len(docs) == 0 {
+			return errors.New("snapshot: no document")
 		}
-		// What a field takes, as the page declared it: the input popup
-		// says "email" over an email box rather than "value", which is
-		// the one thing the box itself cannot show (user, 2026-09-23).
-		c.Types = attrValues(docs, strs, func(tag, name string) bool {
-			return tag == "input" && name == "type"
-		})
-		c.Anchors, c.Parents = anchors(docs, strs)
+		c = captureDoc(nodes, docs[0], strs)
+		// The frames the page holds, by the element that holds each: the
+		// snapshot has every same-process document, and says which
+		// element owns which. The ones the reader has opened are
+		// captured whole, under their owner (ir.Build splices them in);
+		// the rest are known by their frame id alone, so Enter can open
+		// them (ui tab.frames).
+		owners := frameOwners(docs, strs)
+		c.FrameOf = map[cdp.BackendNodeID]string{}
+		for owner, fr := range owners {
+			c.FrameOf[owner] = string(fr.id)
+		}
+		for _, want := range frames {
+			for owner, fr := range owners {
+				if fr.id != want {
+					continue
+				}
+				fnodes, err := accessibility.GetFullAXTree().WithFrameID(fr.id).Do(ctx)
+				if err != nil {
+					// A frame from another site lives in another process
+					// and answers no call from this one: it stays shut.
+					continue
+				}
+				if c.Frames == nil {
+					c.Frames = map[cdp.BackendNodeID]*ir.Capture{}
+				}
+				fc := captureDoc(fnodes, docs[fr.doc], strs)
+				c.Frames[owner] = &fc
+			}
+		}
 		// The window the page was laid out in. A page that fits inside it
 		// has no parts: the four exist so the reader does not wade through
 		// chrome to reach content, and there is no wading on a page that
@@ -94,6 +99,82 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 	return c, err
 }
 
+// captureDoc is everything the translator needs about one document: its
+// AX tree, and what the DOM says that the tree does not (ir.Build).
+func captureDoc(nodes []*accessibility.Node, doc *domsnapshot.DocumentSnapshot, strs []string) ir.Capture {
+	boxes, hidden := layoutMaps(doc)
+	c := ir.Capture{Nodes: nodes, Display: displayMap(doc, strs), Boxes: boxes, Hidden: hidden,
+		// What the AX tree does not say, the DOM does (ir.Build).
+		Protected: attrMarks(doc, strs, func(tag, name, value string) bool {
+			return tag == "input" && name == "type" && value == "password"
+		}),
+		Current: attrMarks(doc, strs, func(_, name, value string) bool {
+			return name == "aria-current" && value != "" && value != "false"
+		}),
+		Breadcrumb: attrMarks(doc, strs, func(_, name, value string) bool {
+			switch name {
+			case "class", "aria-label":
+				return strings.Contains(value, "breadcrumb")
+			case "itemtype":
+				return strings.Contains(value, "breadcrumblist")
+			}
+			return false
+		}),
+		Skip: attrMarks(doc, strs, func(_, name, value string) bool {
+			return (name == "class" || name == "id" || name == "aria-label") && strings.Contains(value, "skip")
+		}),
+		// What a field takes, as the page declared it: the input popup
+		// says "email" over an email box rather than "value", which is
+		// the one thing the box itself cannot show (user, 2026-09-23).
+		Types: attrValues(doc, strs, func(tag, name string) bool {
+			return tag == "input" && name == "type"
+		}),
+		// A frame's address, for the row that stands for one that cannot
+		// be entered: Yank media url has it.
+		Srcs: attrValues(doc, strs, func(tag, name string) bool {
+			return tag == "iframe" && name == "src"
+		}),
+	}
+	c.Anchors, c.Parents = anchors(doc, strs)
+	return c
+}
+
+// frame is a child document of the snapshot: its id and its index.
+type frame struct {
+	id  cdp.FrameID
+	doc int64
+}
+
+// frameOwners is every frame in the snapshot by the element that holds
+// it, whatever document that element is in: an iframe inside an iframe
+// is owned inside the inner document.
+func frameOwners(docs []*domsnapshot.DocumentSnapshot, strs []string) map[cdp.BackendNodeID]frame {
+	out := map[cdp.BackendNodeID]frame{}
+	str := func(i int64) string {
+		if i < 0 || int(i) >= len(strs) {
+			return ""
+		}
+		return strs[i]
+	}
+	for _, doc := range docs {
+		if doc.Nodes == nil || doc.Nodes.ContentDocumentIndex == nil {
+			continue
+		}
+		cdi := doc.Nodes.ContentDocumentIndex
+		for j, ni := range cdi.Index {
+			if j >= len(cdi.Value) || int(ni) >= len(doc.Nodes.BackendNodeID) {
+				continue
+			}
+			di := cdi.Value[j]
+			if di < 0 || int(di) >= len(docs) {
+				continue
+			}
+			out[doc.Nodes.BackendNodeID[ni]] = frame{id: cdp.FrameID(str(int64(docs[di].FrameID))), doc: di}
+		}
+	}
+	return out
+}
+
 // hiddenMap is every element the page laid out at a point: a box of 1×1
 // or less. That is the sr-only pattern — position:absolute, width:1px,
 // height:1px, clip — which a page uses to write for a screen reader
@@ -106,13 +187,13 @@ func Capture(ctx context.Context) (ir.Capture, error) {
 //
 // A node with no box at all is not hidden, it is unmeasured: the layout
 // tree only lists what was laid out, and absent data is not evidence.
-func layoutMaps(docs []*domsnapshot.DocumentSnapshot) (map[cdp.BackendNodeID]ir.Box, map[cdp.BackendNodeID]bool) {
+func layoutMaps(doc *domsnapshot.DocumentSnapshot) (map[cdp.BackendNodeID]ir.Box, map[cdp.BackendNodeID]bool) {
 	boxes, hidden := map[cdp.BackendNodeID]ir.Box{}, map[cdp.BackendNodeID]bool{}
-	if len(docs) == 0 || docs[0].Nodes == nil || docs[0].Layout == nil {
+	if doc == nil || doc.Nodes == nil || doc.Layout == nil {
 		return boxes, hidden
 	}
-	ids := docs[0].Nodes.BackendNodeID
-	lay := docs[0].Layout
+	ids := doc.Nodes.BackendNodeID
+	lay := doc.Layout
 	for j, ni := range lay.NodeIndex {
 		if ni < 0 || int(ni) >= len(ids) || j >= len(lay.Bounds) {
 			continue
@@ -136,12 +217,12 @@ func layoutMaps(docs []*domsnapshot.DocumentSnapshot) (map[cdp.BackendNodeID]ir.
 // backend node ids. The AX tree carries no attributes: which input is a
 // password, which link is aria-current, which list is a breadcrumb, all
 // come from here (ir.Build).
-func attrMarks(docs []*domsnapshot.DocumentSnapshot, strs []string, pick func(tag, name, value string) bool) map[cdp.BackendNodeID]bool {
+func attrMarks(doc *domsnapshot.DocumentSnapshot, strs []string, pick func(tag, name, value string) bool) map[cdp.BackendNodeID]bool {
 	out := map[cdp.BackendNodeID]bool{}
-	if len(docs) == 0 || docs[0].Nodes == nil {
+	if doc == nil || doc.Nodes == nil {
 		return out
 	}
-	nodes := docs[0].Nodes
+	nodes := doc.Nodes
 	str := func(i int64) string {
 		if i < 0 || int(i) >= len(strs) {
 			return ""
@@ -166,12 +247,12 @@ func attrMarks(docs []*domsnapshot.DocumentSnapshot, strs []string, pick func(ta
 
 // attrValues is attrMarks for an attribute's VALUE rather than its
 // presence: what a field's type attribute says it takes.
-func attrValues(docs []*domsnapshot.DocumentSnapshot, strs []string, pick func(tag, name string) bool) map[cdp.BackendNodeID]string {
+func attrValues(doc *domsnapshot.DocumentSnapshot, strs []string, pick func(tag, name string) bool) map[cdp.BackendNodeID]string {
 	out := map[cdp.BackendNodeID]string{}
-	if len(docs) == 0 || docs[0].Nodes == nil {
+	if doc == nil || doc.Nodes == nil {
 		return out
 	}
-	nodes := docs[0].Nodes
+	nodes := doc.Nodes
 	str := func(i int64) string {
 		if i < 0 || int(i) >= len(strs) {
 			return ""
@@ -198,13 +279,13 @@ func attrValues(docs []*domsnapshot.DocumentSnapshot, strs []string, pick func(t
 // into the page needs (ui tab.jumpToAnchor): every element's id, as the
 // page wrote it, and every node's parent — so the item nearest under
 // the element a fragment names can be found from the outside.
-func anchors(docs []*domsnapshot.DocumentSnapshot, strs []string) (map[string]cdp.BackendNodeID, map[cdp.BackendNodeID]cdp.BackendNodeID) {
+func anchors(doc *domsnapshot.DocumentSnapshot, strs []string) (map[string]cdp.BackendNodeID, map[cdp.BackendNodeID]cdp.BackendNodeID) {
 	ids := map[string]cdp.BackendNodeID{}
 	parents := map[cdp.BackendNodeID]cdp.BackendNodeID{}
-	if len(docs) == 0 || docs[0].Nodes == nil {
+	if doc == nil || doc.Nodes == nil {
 		return ids, parents
 	}
-	nodes := docs[0].Nodes
+	nodes := doc.Nodes
 	str := func(i int64) string {
 		if i < 0 || int(i) >= len(strs) {
 			return ""
@@ -236,13 +317,13 @@ func anchors(docs []*domsnapshot.DocumentSnapshot, strs []string) (map[string]cd
 // j belongs to node NodeIndex[j], whose backendNodeId is the key webu's IR
 // already uses. Only the main document — an iframe's nodes are not in the
 // main AX tree either (v1).
-func displayMap(docs []*domsnapshot.DocumentSnapshot, strs []string) map[cdp.BackendNodeID]string {
+func displayMap(doc *domsnapshot.DocumentSnapshot, strs []string) map[cdp.BackendNodeID]string {
 	out := map[cdp.BackendNodeID]string{}
-	if len(docs) == 0 || docs[0].Nodes == nil || docs[0].Layout == nil {
+	if doc == nil || doc.Nodes == nil || doc.Layout == nil {
 		return out
 	}
-	ids := docs[0].Nodes.BackendNodeID
-	lay := docs[0].Layout
+	ids := doc.Nodes.BackendNodeID
+	lay := doc.Layout
 	for j, ni := range lay.NodeIndex {
 		if ni < 0 || int(ni) >= len(ids) || j >= len(lay.Styles) || len(lay.Styles[j]) == 0 {
 			continue

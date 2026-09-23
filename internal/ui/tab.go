@@ -61,6 +61,12 @@ type tab struct {
 	// browser restores its scroll (user, 2026-09-23).
 	entry  int64
 	places map[int64]place
+	// frames is the iframes the reader has opened, by frame id: each
+	// capture brings their documents along (page.Capture). wantDrill is
+	// the iframe Enter was pressed on, to go into once its document has
+	// come (app pageMsg).
+	frames    []cdp.FrameID
+	wantDrill cdp.BackendNodeID
 	// popups is the stack of blocks the page put up and that want an
 	// answer, by Chromium's id, the top one last; the float is that one
 	// until the page takes it down (pagepopup.go). prevTop is every node of the tree at
@@ -431,7 +437,7 @@ func (t *tab) adopt() tea.Cmd {
 	t.gen++
 	t.loading, t.prepared = true, true
 	t.popupUntil = time.Now().Add(popupGrace)
-	gen, id, ctx := t.gen, t.id, t.ctx
+	gen, id, ctx, frames := t.gen, t.id, t.ctx, t.frames
 	ua, meta := t.ua, t.uaMeta
 	return func() tea.Msg {
 		if err := chromedp.Run(ctx); err != nil {
@@ -443,7 +449,7 @@ func (t *tab) adopt() tea.Cmd {
 		if err := chromedp.Run(ctx, chromedp.WaitReady("body")); err != nil {
 			return pageMsg{tabID: id, gen: gen, err: fmt.Errorf("wait: %w", err)}
 		}
-		return capture(ctx, id, gen)
+		return capture(ctx, id, gen, frames)
 	}
 }
 
@@ -462,8 +468,9 @@ func (t *tab) load(url string) tea.Cmd {
 	t.settlingUntil = time.Now().Add(settleGrace)
 	t.popupUntil = time.Now().Add(popupGrace)
 	t.popups, t.prevTop = nil, nil
+	t.frames = nil // another page: its frames are its own
 	t.url = url
-	gen, id, ctx := t.gen, t.id, t.ctx
+	gen, id, ctx, frames := t.gen, t.id, t.ctx, t.frames
 	ua, meta := t.ua, t.uaMeta
 	prepare := !t.prepared
 	t.prepared = true
@@ -476,7 +483,7 @@ func (t *tab) load(url string) tea.Cmd {
 		if err := page.Navigate(ctx, url); err != nil {
 			return pageMsg{tabID: id, gen: gen, url: url, err: fmt.Errorf("navigate: %w", err)}
 		}
-		return capture(ctx, id, gen)
+		return capture(ctx, id, gen, frames)
 	}
 }
 
@@ -500,20 +507,21 @@ func (t *tab) navigate(what string, fn func(context.Context) error) tea.Cmd {
 	t.settlingUntil = time.Now().Add(settleGrace)
 	t.popupUntil = time.Now().Add(popupGrace)
 	t.popups, t.prevTop = nil, nil
-	gen, id, ctx := t.gen, t.id, t.ctx
+	t.frames = nil
+	gen, id, ctx, frames := t.gen, t.id, t.ctx, t.frames
 	return func() tea.Msg {
 		if err := fn(ctx); err != nil {
 			return navFailMsg{tabID: id, gen: gen, what: what, err: err}
 		}
-		return capture(ctx, id, gen)
+		return capture(ctx, id, gen, frames)
 	}
 }
 
 // refresh captures the page as it is now, without navigating.
 func (t *tab) refresh() tea.Cmd {
 	t.gen++
-	gen, id, ctx := t.gen, t.id, t.ctx
-	return func() tea.Msg { return capture(ctx, id, gen) }
+	gen, id, ctx, frames := t.gen, t.id, t.ctx, t.frames
+	return func() tea.Msg { return capture(ctx, id, gen, frames) }
 }
 
 // settle asks for a capture a little later, so a click has had time to
@@ -591,14 +599,14 @@ func (t *tab) run(fn func(context.Context) error, lock bool) tea.Cmd {
 
 type actionErrMsg struct{ err error }
 
-func capture(ctx context.Context, id, gen int) tea.Msg {
+func capture(ctx context.Context, id, gen int, frames []cdp.FrameID) tea.Msg {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	url, title, err := page.Location(ctx)
 	if err != nil {
 		return pageMsg{tabID: id, gen: gen, err: fmt.Errorf("location: %w", err)}
 	}
-	c, err := page.Capture(ctx)
+	c, err := page.Capture(ctx, frames)
 	if err != nil {
 		err = fmt.Errorf("capture: %w", err)
 	}
@@ -1497,4 +1505,20 @@ func (t *tab) chainOf(h hit) []*ir.Node {
 		return nil
 	}
 	return chain
+}
+
+// openFrame is Enter on an iframe: its document is asked for with the
+// next capture, and the panel goes into it when that lands (app pageMsg).
+// A frame from another site answers no call from this process and stays
+// shut; the capture says so by bringing nothing, and the app says so.
+func (t *tab) openFrame(n *ir.Node) tea.Cmd {
+	for _, f := range t.frames {
+		if string(f) == n.Frame {
+			return nil
+		}
+	}
+	t.frames = append(t.frames, cdp.FrameID(n.Frame))
+	t.wantDrill = n.ID
+	t.loading = true
+	return t.refresh()
 }
