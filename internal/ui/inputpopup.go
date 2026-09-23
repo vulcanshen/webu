@@ -19,7 +19,6 @@ const (
 	inputPrompt                    // answer a page's prompt() (function.md §5)
 	inputAuthUser                  // an HTTP challenge: the name, then…
 	inputAuthPass                  // …the password, masked
-	inputFile                      // a path for a file chooser
 	inputEval                      // the console prompt: JavaScript, run in the page
 	inputSetting                   // a value for config.yaml, from the Settings screen
 	inputFolder                    // a new bookmark folder's name, or a path of them

@@ -346,14 +346,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			action: inputAuthUser}, m.layer()))
 
 	case fileMsg:
+		// The page asks for a file: the file picker, the way the
+		// Bookmarks import chooses one — walked, not typed (user,
+		// 2026-09-23). One file at a time, even where the page would
+		// take several.
 		m.upload = &msg
-		prompt := "path of the file to upload"
-		if msg.multiple {
-			prompt = "paths of the files to upload, separated by spaces"
-		}
-		return m, tea.Batch(waitEvent(m.events), m.input.ask(inputPopup{
-			title: "Upload", glyph: glyphPencil, prompt: prompt + " (~ is home)",
-			accept: "upload", action: inputFile}, m.layer()))
+		return m, tea.Batch(waitEvent(m.events),
+			m.picker.open(glyphUpload, "Upload", importDir(), m.layer()))
 
 	case toastExpireMsg:
 		return m, m.toast.expire(msg)
@@ -834,11 +833,10 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.input.close(), m.answerDialog(false, ""))
 		case inputAuthUser, inputAuthPass:
 			return m, tea.Batch(m.input.close(), m.cancelAuth())
-		case inputFile:
-			m.upload = nil // the chooser is simply left unanswered: nothing is chosen
 		}
 		return m, m.input.close()
 	case m.picker.anim.owns():
+		m.upload = nil // a page's chooser is simply left unanswered: nothing is chosen
 		return m, m.picker.close()
 	case m.finder.anim.owns():
 		// Layered: from the list Esc goes back up to the query, and from
@@ -2356,42 +2354,8 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.input.close()
 		}
 		return m, tea.Batch(m.input.close(), at.unblock(func(ctx context.Context) error { return page.Auth(ctx, a.id, user, value) }))
-	case inputFile:
-		f := m.upload
-		m.upload = nil
-		if f == nil {
-			return m, m.input.close()
-		}
-		_, ft := m.tabByID(f.tabID)
-		if ft == nil {
-			return m, m.input.close()
-		}
-		var files []string
-		for _, p := range strings.Fields(value) {
-			files = append(files, expandHome(p))
-		}
-		if len(files) == 0 {
-			return m, m.input.close()
-		}
-		for _, p := range files {
-			if _, err := os.Stat(p); err != nil {
-				return m, m.toast.show("no such file: "+p, toastError)
-			}
-		}
-		node := f.node
-		return m, tea.Batch(m.input.close(), ft.press(func(ctx context.Context) error { return page.SetFiles(ctx, node, files) }))
 	}
 	return m, m.closeStack()
-}
-
-// expandHome turns a leading ~ into the home directory.
-func expandHome(p string) string {
-	if p == "~" || strings.HasPrefix(p, "~/") {
-		if home, err := os.UserHomeDir(); err == nil {
-			return filepath.Join(home, strings.TrimPrefix(p, "~"))
-		}
-	}
-	return p
 }
 
 // cancelAuth is Esc on a challenge: the page gets its 401.
