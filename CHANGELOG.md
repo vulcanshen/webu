@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **The icon is redrawn**: the W is now a frame of its own, the E and
+  the B standing between its strokes, inside the navy U. The `V` splash
+  and the social preview draw the new mark.
+
 ## [0.3.0] — 2026-09-23
 
 The page, redefined as a document. 0.2.x drew the accessibility tree as
