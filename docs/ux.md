@@ -2,7 +2,7 @@
 
 > 本文件講**互動語意**：core-key、Space menu 內容、hotkey 分層、兩種游標、每種輸入怎麼填、
 > 浮層行為、時間軸。版面與 surface 在 `ui.md`，功能邊界在 `function.md`。
-> 依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.4/principle)（tdp）撰寫，章節編號對齊 kbu / filu / sshu（§A、§B 沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。
+> 依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.5/principle)（tdp）撰寫，章節編號對齊 kbu / filu / sshu（§A、§B 沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。
 
 ---
 
@@ -208,7 +208,7 @@ Enter：像 URL（有 scheme 或 `host.tld`）→ 補 `https://`；不像 → �
 
 ### §2.3 editor popup（textarea）
 
-大框、多行。**寫**的狀態：打字、Enter 換行、Backspace 跨行合併；`Esc` 出到**移**的狀態：`hjkl`、`u`/`d`、
+大框、多行。**寫**的狀態：打字、Enter 換行、`Tab` 縮排（插四個空白；多行文字的寫入狀態裡 `Tab` 是字元，tdp K8、K2）、Backspace 跨行合併；`Esc` 出到**移**的狀態：`hjkl`、`u`/`d`、
 `g`/`G`/`0`/`$` 走，`i`/`a`/`A`/`o` 回到寫，`Enter` 設值寫回，再 `Esc` 取消。`Space` 永不關框。
 `$EDITOR` 鏈未做。
 
