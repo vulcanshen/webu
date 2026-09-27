@@ -161,17 +161,23 @@ func TestHTTPAuthIsAsked(t *testing.T) {
 	}))
 	defer srv.Close()
 	d := startAt(t, b, srv.URL, store.Config{})
-	d.until("name asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputAuthUser })
+	// Name and password are one group (tdp K3): Tab between them, one Enter.
+	d.until("sign in asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputAuth })
 	if !strings.Contains(d.m.input.prompt, "the vault") {
 		t.Errorf("prompt names the realm: %q", d.m.input.prompt)
 	}
-	d.key("ann")
-	d.key("enter")
-	d.until("password asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputAuthPass })
-	if !d.m.input.masked {
-		t.Error("the password box is not masked")
+	if len(d.m.input.more) != 1 || !d.m.input.more[0].masked {
+		t.Fatalf("the password should be the same box's second field, masked: %+v", d.m.input.more)
 	}
+	d.key("ann")
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
 	d.key("secret")
+	if d.m.input.value != "ann" || d.m.input.more[0].value != "secret" {
+		t.Fatalf("Tab should move to the password: name %q password %q", d.m.input.value, d.m.input.more[0].value)
+	}
+	if v := d.m.View(); strings.Contains(v, "secret") {
+		t.Errorf("the password should be drawn masked:\n%s", v)
+	}
 	d.key("enter")
 	d.until("inside", d.loaded("Inside"))
 	if !strings.Contains(d.m.View(), "Welcome ann") {

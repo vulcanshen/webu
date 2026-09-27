@@ -197,9 +197,15 @@ menu-only 的列不列），照 menu 的區塊標題分組，最後接 core key�
 
 打字中屏蔽所有 hotkey：`Space` 是空白、`?` 是問號。
 
+**input group**（2026-09-27，tdp K3）：幾個欄位一起才有意義的，放進同一個 input popup —— 加書籤是 URL + 標題，HTTP 驗證是
+帳號 + 密碼（遮罩）。`Tab` / `Shift-Tab` 在欄位之間移動，`Enter` 一律送出整組；送出不成立時框留著、焦點回到那一欄、
+框裡寫出原因（加書籤的 URL 不可空）。所有 input popup 的 `Tab` 都只換欄，單欄時不作用；空欄位上的提議用 `→` 接下。
+加書籤的標題提議跟著 URL 欄：URL 是目前這頁就提議頁面標題，否則提議 URL；欄位空著送出就用提議。`Esc` 取消整組。
+
 ### §2.2 Location（`L`）
 
-開啟時輸入列空的、目前分頁的 URL dim 當提議：`Tab` 接進來編輯、`Backspace` 整個清掉、直接打字從頭來。
+開啟時輸入列空的、目前分頁的 URL dim 當提議：`→` 接進來編輯、`Backspace` 整個清掉、直接打字從頭來
+（`Tab` 只在欄位之間移動，2026-09-27，tdp K3）。
 Enter：像 URL（有 scheme 或 `host.tld`）→ 補 `https://`；不像 → 當搜尋（`search_engine`）。`L` 開在
 目前分頁，`T` 開新分頁。
 
