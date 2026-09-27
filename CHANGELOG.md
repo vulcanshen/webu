@@ -8,6 +8,9 @@
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The
   global operations are the list the last row of every Space menu opens.
+- **The global operations open over the Space menu** instead of in its
+  place: `Esc` goes back to the Space menu, and running one closes both.
+  The row is called `Global operation`.
 
 ### Fixed
 

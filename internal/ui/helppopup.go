@@ -189,7 +189,8 @@ func (m AppModel) floatHelp() (string, []helpEntry) {
 	case m.message.anim.owns():
 		return "Message", helpMessage
 	case m.globalMenu.anim.owns():
-		return "Global operation", helpMenu
+		return "Global operation", append(append([]helpEntry{}, helpMenu[:len(helpMenu)-1]...),
+			helpEntry{"Esc", "back to the Space menu"})
 	}
 	return m.spaceMenu.title, append(append([]helpEntry{}, helpMenu[:len(helpMenu)-1]...),
 		helpEntry{"Space · Esc", "close"})
@@ -252,7 +253,6 @@ func (m helpPopup) view() string {
 // 偏離 tdp).
 func globalMenuItems() []menuItem {
 	return []menuItem{
-		{header: true, label: "global operation"},
 		{label: "Web", key: "W", hint: "the tabs and the page"},
 		{label: "Bookmarks", key: "B", hint: "the folder tree"},
 		{label: "History", key: "H", hint: "every page visited"},

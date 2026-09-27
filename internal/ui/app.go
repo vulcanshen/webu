@@ -232,7 +232,10 @@ func (m AppModel) Close() {
 func (m AppModel) narrow() bool { return m.w < narrowW }
 func (m AppModel) panelH() int  { return m.h - 3 } // the header row, its rule, and the footer row
 func (m AppModel) layer() int {
-	if m.spaceMenu.isActive() || m.globalMenu.isActive() || m.options.isActive() ||
+	if m.globalMenu.isActive() {
+		return 3 // over the Space menu it opened from
+	}
+	if m.spaceMenu.isActive() || m.options.isActive() ||
 		m.devtools.isActive() {
 		return 2
 	}
@@ -780,17 +783,19 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return am, cmd
 }
 
-// stackTop is the level of the topmost float of a menu's stack — 3 a
-// float an action opened, 2 the options, 1 a menu — and whether one of a
-// lower level lies under it.
+// stackTop is the level of the topmost float of a menu's stack — 4 a
+// float an action opened, 3 the options, 2 the global operation popup, 1
+// the Space menu — and whether one of a lower level lies under it.
 func (m AppModel) stackTop() (int, bool) {
 	menu := m.spaceMenu.anim.owns() || m.globalMenu.anim.owns()
 	switch {
 	case m.errandFloat():
-		return 3, menu || m.options.anim.owns()
+		return 4, menu || m.options.anim.owns()
 	case m.options.anim.owns():
-		return 2, menu
-	case menu:
+		return 3, menu
+	case m.globalMenu.anim.owns():
+		return 2, m.spaceMenu.anim.owns()
+	case m.spaceMenu.anim.owns():
 		return 1, false
 	}
 	return 0, false
@@ -886,8 +891,6 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.quitHelp.open(m.quitAsk.title, helpConfirm, m.layer()+2)
 		case m.help.anim.owns():
 			return m, m.help.close()
-		case m.globalMenu.anim.owns() && !m.floatAboveGlobalMenu():
-			return m, m.globalMenu.close()
 		case m.floatAboveMenu() || m.spaceMenu.anim.owns():
 			title, entries := m.floatHelp()
 			return m, m.help.open(title, entries, m.layer()+1)
@@ -1569,12 +1572,13 @@ func withGlobal(items []menuItem) []menuItem {
 	return append(items,
 		menuItem{separator: true},
 		menuItem{header: true, label: "global operation"},
-		menuItem{label: "Global operation…", key: "globalmenu", hint: "everything the app can do"})
+		menuItem{label: "Global operation", key: "globalmenu", hint: "everything the app can do"})
 }
 
-// openGlobalMenu is the ? menu (helppopup.go globalMenuItems).
+// openGlobalMenu is the global operation popup (tdp M4), over the Space
+// menu whose last row opened it: Esc goes back to that menu (tdp F4).
 func (m AppModel) openGlobalMenu() (tea.Model, tea.Cmd) {
-	m.globalMenu.setItems(globalMenuItems(), "Global operation", 1)
+	m.globalMenu.setItems(globalMenuItems(), "Global operation", 2)
 	return m, m.globalMenu.open()
 }
 
@@ -1602,6 +1606,8 @@ func (m AppModel) globalMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		mm, cmd = m.panelKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)})
 	}
+	// The Space menu under it closes with it when the row was the whole
+	// errand: handleKey sees the stack drop (tdp T1).
 	return keepSource(mm, cmd, func(a *AppModel) *spaceMenu { return &a.globalMenu })
 }
 
@@ -1857,11 +1863,8 @@ func (m AppModel) menuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	if key == "globalmenu" {
-		// The ? menu takes the Space menu's place rather than stacking on
-		// it: it is the same kind of float, one level wider.
-		closeCmd := m.spaceMenu.close()
-		mm, cmd := m.openGlobalMenu()
-		return mm, tea.Batch(closeCmd, cmd)
+		// Not dispatched: the popup stacks on this menu (tdp M4, F4).
+		return m.openGlobalMenu()
 	}
 	mm, cmd := m.dispatch(key)
 	return keepSource(mm, cmd, func(a *AppModel) *spaceMenu { return &a.spaceMenu })

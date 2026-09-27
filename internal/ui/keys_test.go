@@ -183,9 +183,10 @@ func TestKeyReferenceFromTheMenu(t *testing.T) {
 	}
 }
 
-// Every Space menu ends in the global region: one row into the ? menu
-// (tdp M2; the one row is webu's deviation, dev-remarks.md). A menu that
-// was a single flat region is labelled, since it is one of two now.
+// Every Space menu ends in the global region, always one row (tdp M2). A
+// menu that was a single flat region is labelled, since it is one of two
+// now. The row opens the global operation popup over the menu (tdp M4,
+// F4): Esc goes back to the menu, a row run closes both (tdp T1).
 func TestSpaceMenuEndsInGlobal(t *testing.T) {
 	d := keysDriver(t)
 
@@ -208,9 +209,24 @@ func TestSpaceMenuEndsInGlobal(t *testing.T) {
 	d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
 	d.key("G")
 	d.key("enter")
-	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
-	if d.m.spaceMenu.anim.owns() {
-		t.Error("the global row should open the ? menu in the Space menu's place")
+	d.until("the global operation popup", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	if !d.m.spaceMenu.anim.owns() {
+		t.Fatal("the global operation popup should stack on the Space menu")
+	}
+	if d.m.globalMenu.items[0].header || !menuHas(d.m.globalMenu.items, "Quit") {
+		t.Errorf("the popup should list the global operations, runnable from the first row: %+v", d.m.globalMenu.items[0])
+	}
+	d.key("esc")
+	if d.m.globalMenu.anim.owns() || !d.m.spaceMenu.anim.owns() {
+		t.Fatal("Esc should go back to the Space menu")
+	}
+
+	d.key("G")
+	d.key("enter")
+	d.until("the global operation popup again", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	d.key("B")
+	if d.m.screen != screenBookmarks || d.m.globalMenu.anim.owns() || d.m.spaceMenu.anim.owns() {
+		t.Errorf("a row run should close the whole stack: screen %v", d.m.screen)
 	}
 }
 

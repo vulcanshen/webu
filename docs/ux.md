@@ -13,7 +13,7 @@
 | Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
 |---|---|---|---|
 | **Contextual** | `Space` | footer 常駐 `space menu` | 當前 focus 的 contextual 動作 100% 在 Space menu 內；`[2]` 的 item operation menu-only、沒有 letter hotkey |
-| **Non-contextual** | `?` | footer 常駐 `? help` | `?` 是最前端 surface 的 key reference，唯讀；全域動作 100% 在 global operation 清單內、可直接執行，由每個 Space menu 最後一列打開；header 五個 screen 的 chip 是 Layer 2 ambient 揭露 |
+| **Non-contextual** | `?` | footer 常駐 `? help` | `?` 是最前端 surface 的 key reference，唯讀；全域動作 100% 在 global operation popup內、可直接執行，由每個 Space menu 最後一列打開；header 五個 screen 的 chip 是 Layer 2 ambient 揭露 |
 
 **規則（2026-09-22）：一個面板操作沒進 Space menu 就等於不存在。** core key（Enter / Esc / `/` / `go`）
 沒有字母可以括，所以鍵寫進 label 自己：`[Esc] Page parts`、`[Enter] Open section`、`[/] Search`、
@@ -60,7 +60,7 @@
 ### §A.1 Contextual track — Space menu（tdp K5、M2）
 
 region 固定叫 `item operation` / `panel operation` / `global operation`。每個 Space menu 最後都是 `global operation`，
-只有一列 `Global operation…`，`Enter` 打開 global operation 清單（§A.2；tdp M2）。
+固定一列 `Global operation`，`Enter` 打開 global operation popup（§A.2；tdp M2）。
 所以 region 至少兩個，一律有標題（2026-09-27）。menu 本身：`j`/`k` 走（環繞）、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23）、Enter 執行、
 letter hotkey 在 menu 裡也有效。
 
@@ -115,7 +115,8 @@ delete 用 `x` 不用 `d`：`d` 是半頁。
 menu-only 的列不列），照 menu 的區塊標題分組，最後接 core key；面板自己寫了 `Enter` 做什麼時，core key 不再重複
 通用的 `Enter`。浮層上是那個浮層自己的鍵。`Esc` 或再按 `?` 關掉。框的寬度依最長的一行（tdp D4）。
 
-**全域動作在 global operation 清單**：每個 Space menu 最後一列 `Global operation…` 打開它，列出下表的動作，一列一個，
+**全域動作在 global operation popup**（2026-09-27，tdp M4、F4、T1）：每個 Space menu 最後一列 `Global operation` 打開它，
+**疊在 Space menu 上**；`Esc` 回到 Space menu，執行一列就關掉整疊（開出新框的列除外，那個框疊上去）。列出下表的動作，一列一個，
 `j`/`k`、`Enter`、熱鍵照 Space menu 執行。從 list screen 執行 `P` / `N` / `L` / `/` / `v` 會先回到 web；visual mode
 開著時先離開。
 
@@ -262,7 +263,7 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 **離開的 confirm 疊在最上面**（2026-09-27，tdp D3、K4）：有下載進行中時 `q` / `Ctrl-C` 問的那一題是自己的浮層，疊在整疊
 之上，不取代底下正在回答的 confirm；`Esc` 回到那一題。它的 `?` 也是自己的 help，順序 quit help > quit confirm > help > 其他。
 
-**source 留在底下**（2026-09-27，tdp F4、T1、D3）：從 Space menu、global operation 清單或 options 開出的框（confirm、
+**source 留在底下**（2026-09-27，tdp F4、T1、D3）：從 Space menu、global operation popup或 options 開出的框（confirm、
 input、finder、DevTools……）疊在 menu 上，menu 留在底下；`Esc` 回到 menu，完成動作才整疊清掉。
 
 **Context shift 清 source**：Space menu 裡點了會換頁的動作，menu 這個 source 清掉。
