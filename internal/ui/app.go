@@ -751,7 +751,59 @@ func (m AppModel) typing() bool {
 		(m.sel.on && m.sel.typing && !m.popupOpen())
 }
 
+// handleKey routes a key, then settles the float stack (tdp F4, D3). A
+// float opened from a menu sits on top of it; a key other than Esc that
+// closes that float without opening another has finished the errand, and
+// the menus under it close too. Esc pops one level: back to the menu.
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	lvl, under := m.stackTop()
+	mm, cmd := m.routeKey(msg)
+	am, ok := mm.(AppModel)
+	if !ok || !under || msg.Type == tea.KeyEscape {
+		return mm, cmd
+	}
+	if l, _ := am.stackTop(); l < lvl {
+		return am, tea.Batch(cmd, am.closeMenus())
+	}
+	return am, cmd
+}
+
+// stackTop is the level of the topmost float of a menu's stack — 3 a
+// float an action opened, 2 the options, 1 a menu — and whether one of a
+// lower level lies under it.
+func (m AppModel) stackTop() (int, bool) {
+	menu := m.spaceMenu.anim.owns() || m.globalMenu.anim.owns()
+	switch {
+	case m.errandFloat():
+		return 3, menu || m.options.anim.owns()
+	case m.options.anim.owns():
+		return 2, menu
+	case menu:
+		return 1, false
+	}
+	return 0, false
+}
+
+// errandFloat reports whether a float an action opens — a box, a
+// question, a list, a view — holds the keyboard.
+func (m AppModel) errandFloat() bool {
+	return m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.finder.anim.owns() ||
+		m.confirm.anim.owns() || m.devtools.anim.owns() || m.message.anim.owns()
+}
+
+// closeMenus closes the menus and options still holding the keyboard: the
+// sources under a finished errand.
+func (m *AppModel) closeMenus() tea.Cmd {
+	var cmds []tea.Cmd
+	for _, a := range []*spaceMenu{&m.options, &m.globalMenu, &m.spaceMenu} {
+		if a.anim.owns() {
+			cmds = append(cmds, a.close())
+		}
+	}
+	return tea.Batch(cmds...)
+}
+
+func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// The easter-egg splash owns the keyboard until dismissed — any key
 	// closes it, and nothing underneath sees the press.
 	if m.splash.isActive() {
@@ -1489,7 +1541,6 @@ func (m AppModel) globalMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key == "" {
 		return m, nil
 	}
-	closeCmd := m.globalMenu.close()
 	var mm tea.Model
 	var cmd tea.Cmd
 	switch key {
@@ -1504,7 +1555,24 @@ func (m AppModel) globalMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		mm, cmd = m.panelKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)})
 	}
-	return mm, tea.Batch(closeCmd, cmd)
+	return keepSource(mm, cmd, func(a *AppModel) *spaceMenu { return &a.globalMenu })
+}
+
+// keepSource finishes a row run from a menu (tdp F4, T1): when the row
+// opened a float, the menu stays under it and Esc comes back to it;
+// otherwise the row was the whole errand and the menu closes. The close
+// lands on the model the action returned, which is the one that lives on.
+func keepSource(mm tea.Model, cmd tea.Cmd, menu func(*AppModel) *spaceMenu) (tea.Model, tea.Cmd) {
+	am, ok := mm.(AppModel)
+	if !ok {
+		return mm, cmd
+	}
+	src := menu(&am)
+	opened := am.errandFloat() || (src != &am.options && am.options.anim.owns())
+	if opened || !src.anim.owns() {
+		return am, cmd
+	}
+	return am, tea.Batch(src.close(), cmd)
 }
 
 // optionsKind says what the options menu is showing.
@@ -1564,9 +1632,10 @@ func itemMenuItems(n *ir.Node, folded bool) []menuItem {
 			items = append(items, menuItem{label: "Collapse", key: "fold", hint: "the section, up to the next heading of its level"})
 		}
 	case ir.Unsupported:
+		// Not a disabled row of its own (tdp M6): what webu cannot do with
+		// it is said where the one thing it can do is.
 		items = append(items,
-			menuItem{label: "role: " + n.Role + ", not supported yet — only click", key: "unsupported", disabled: true},
-			menuItem{label: "Click", key: "click", hint: "the page decides"})
+			menuItem{label: "Click", key: "click", hint: "the page decides; " + n.Role + " is not supported yet"})
 	case ir.Code:
 		items = append(items, menuItem{label: "[Enter] Read", key: "enter", hint: "the block on its own, lines unfolded"})
 	}
@@ -1671,7 +1740,7 @@ func pagetabItem(t *tab) menuItem {
 	switch {
 	case t == nil || len(t.parts) < 2:
 		return menuItem{label: "[Esc] Page parts", key: "pagetab",
-			hint: "this page is all one part", disabled: true}
+			hint: "header, body, others, footer", disabled: true}
 	case t.onPagetab():
 		return menuItem{label: "[Esc] Back to the page", key: "pagetab",
 			hint: "h/l show a part, Enter stays on it"}
@@ -1687,8 +1756,11 @@ func goItem(t *tab) menuItem {
 	if t != nil && t.popupNode() == nil {
 		n = t.lineCount()
 	}
-	return menuItem{label: "[go] Go to line", key: "go",
-		hint: "by its number, 1 to " + itoa(n), disabled: n == 0}
+	hint := "by its number"
+	if n > 0 {
+		hint += ", 1 to " + itoa(n)
+	}
+	return menuItem{label: "[go] Go to line", key: "go", hint: hint, disabled: n == 0}
 }
 
 // sectionOpenHint says what opening the section under the list cursor
@@ -1709,7 +1781,7 @@ func sectionsItem(t *tab) menuItem {
 	switch {
 	case t == nil || len(t.secs) == 0:
 		return menuItem{label: "Sections", key: "sections",
-			hint: "this page has no headings to cut on", disabled: true}
+			hint: "read this page one section at a time", disabled: true}
 	case t.flat:
 		return menuItem{label: "Sections", key: "sections",
 			hint: "read this page one section at a time"}
@@ -1737,16 +1809,15 @@ func (m AppModel) menuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key == "" {
 		return m, nil
 	}
-	if i := m.spaceMenu.cursor; i < len(m.spaceMenu.items) && m.spaceMenu.items[i].disabled && m.spaceMenu.items[i].key == key {
-		return m, m.toast.show(m.spaceMenu.items[i].hint, toastInfo)
-	}
-	closeCmd := m.spaceMenu.close()
 	if key == "globalmenu" {
+		// The ? menu takes the Space menu's place rather than stacking on
+		// it: it is the same kind of float, one level wider.
+		closeCmd := m.spaceMenu.close()
 		mm, cmd := m.openGlobalMenu()
 		return mm, tea.Batch(closeCmd, cmd)
 	}
 	mm, cmd := m.dispatch(key)
-	return mm, tea.Batch(closeCmd, cmd)
+	return keepSource(mm, cmd, func(a *AppModel) *spaceMenu { return &a.spaceMenu })
 }
 
 // optionsKey drives the second-level menu: an item's own operation list
@@ -1773,16 +1844,9 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if t == nil {
 		return m, m.options.close()
 	}
-	if i := m.options.cursor; i < len(m.options.items) && m.options.items[i].disabled && m.options.items[i].key == key {
-		return m, m.toast.show(m.options.items[i].hint, toastInfo)
-	}
 	if m.optionsKind == optItemMenu {
-		// Close BEFORE dispatching: dispatch returns its own copy of the
-		// model, and a close applied to this one afterwards would land on
-		// a model nobody returns.
-		closeCmd := m.options.close()
 		mm, cmd := m.dispatch(key)
-		return mm, tea.Batch(closeCmd, cmd)
+		return keepSource(mm, cmd, func(a *AppModel) *spaceMenu { return &a.options })
 	}
 	if m.optionsKind == optSlide {
 		if n == nil {

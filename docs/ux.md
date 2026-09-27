@@ -64,6 +64,9 @@ region 固定叫 `item operation` / `panel operation` / `global operation`。每
 所以 region 至少兩個，一律有標題（2026-09-27）。menu 本身：`j`/`k` 走（環繞）、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23）、Enter 執行、
 letter hotkey 在 menu 裡也有效。
 
+不能執行的列照樣出現、變暗，說明維持原本那句、不另寫原因，`Enter` 與熱鍵都不作用（tdp M6）；空清單
+沒有 item，item operation 區連標題一起不出現（tdp M2）（2026-09-27）。
+
 **`[1]` Tabs**
 
 | item operation | panel operation |
@@ -83,13 +86,13 @@ letter hotkey 在 menu 裡也有效。
 | heading / landmark | Collapse / Expand |
 | 資料表的格 | Content、然後格裡的東西各一列 |
 | code block | `[Enter] Read` |
-| 未支援 role | 第一列 disabled「role: xxx, not supported yet — only click」、Click |
+| 未支援 role | Click（說明寫明這個 role 還不支援；2026-09-27 起不另放一列 disabled） |
 | 所有 item | Yank text、Inspect（role / name / value / url / state / node id） |
 
 **`[2]` Page — panel operation**：`[R]eload`、`[T]ab`、`[P]revious`、`[N]ext`、`[/] Search`
 （finder，§1.1）、`[v]isual mode`、`[L]ocation`、`[A]dd bookmark`、`[go] Go to line`、
 `[Esc] Page parts` / `[Esc] Back to the page`、`Sections` / `One sheet`（目錄 ↔ 一整張；沒標題的頁
-disabled 並說明）、`[n] Next section` / `[p] Previous section`（讀一節時）、`[I]nspect`（DevTools）、
+disabled）、`[n] Next section` / `[p] Previous section`（讀一節時）、`[I]nspect`（DevTools）、
 `[Z]oom`、`[Y]ank page url`、`Yank markdown`（menu-only）、`[C]lose`。Outline popup 已拿掉
 （2026-09-22）：目錄就是那個畫面。
 
@@ -251,6 +254,9 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 
 **頁面自己的彈窗**是例外（`ui.md` §2.4）：它不是 webu 的浮層，是頁面的；`Esc` 不關、`Space` 是它的
 選單、要回答它才會走（按裡面的按鈕、或頁面自己收掉）。
+
+**source 留在底下**（2026-09-27，tdp F4、T1、D3）：從 Space menu、`?` menu 或 options 開出的框（confirm、
+input、finder、DevTools……）疊在 menu 上，menu 留在底下；`Esc` 回到 menu，完成動作才整疊清掉。
 
 **Context shift 清 source**：Space menu 裡點了會換頁的動作，menu 這個 source 清掉。
 

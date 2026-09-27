@@ -237,3 +237,108 @@ func helpHas(entries []helpEntry, key string) bool {
 	}
 	return false
 }
+
+func menuHas(items []menuItem, label string) bool {
+	for _, it := range items {
+		if it.label == label {
+			return true
+		}
+	}
+	return false
+}
+
+// An empty list has no item, so its Space menu has no item region — not
+// even the heading (tdp M2). Add on the empty Bookmarks is the list's.
+func TestEmptyListHasNoItemRegion(t *testing.T) {
+	d := keysDriver(t)
+
+	for _, screen := range []string{"H", "D", "B"} {
+		d.key(screen)
+		d.send(keySpace)
+		d.until("the Space menu on "+screen, func() bool { return d.m.spaceMenu.anim.isInteractive() })
+		items := d.m.spaceMenu.items
+		if menuHas(items, "item operation") || items[0].label != "panel operation" {
+			t.Errorf("%s: an empty list should have no item region: %+v", screen, items)
+		}
+		if screen == "B" && !menuHas(items, "Add") {
+			t.Error("B: Add belongs to the empty list's panel region")
+		}
+		d.key("esc")
+	}
+}
+
+// A row that cannot run stays, dimmed, in its own words, and neither Enter
+// nor its key does anything (tdp M6).
+func TestDisabledRowDoesNothing(t *testing.T) {
+	d := keysDriver(t)
+
+	d.key("2") // the page panel, no page on it
+	d.send(keySpace)
+	d.until("the page's Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
+	for _, it := range d.m.spaceMenu.items {
+		if it.key == "pagetab" && it.hint != "header, body, others, footer" {
+			t.Errorf("a disabled row keeps its own hint: %q", it.hint)
+		}
+	}
+	cur := d.m.spaceMenu.items[d.m.spaceMenu.cursor]
+	if cur.label != "Reload" || !cur.disabled {
+		t.Fatalf("the first row should be a disabled Reload: %+v", cur)
+	}
+	d.key("enter")
+	d.key("R")
+	if !d.m.spaceMenu.anim.owns() || d.m.toast.anim.owns() {
+		t.Error("Enter or the key on a disabled row should do nothing: no close, no toast")
+	}
+}
+
+// Visual mode's footer leads with Space and ? like every other surface
+// that is not being typed into (tdp M1).
+func TestVisualModeFooterShowsSpaceAndHelp(t *testing.T) {
+	d := keysDriver(t)
+	d.m.sel.on = true
+	if f := d.m.footer(); !strings.Contains(f, "space") || !strings.Contains(f, "? help") {
+		t.Errorf("visual mode's footer should show space and ?: %q", f)
+	}
+}
+
+// A float opened from a menu leaves the menu under it (tdp F4, T1): Esc
+// comes back to the menu, and finishing the errand closes the whole stack
+// (tdp D3). The ? menu's rows do the same.
+func TestMenuStaysUnderWhatItOpened(t *testing.T) {
+	d := keysDriver(t)
+
+	d.key("B")
+	d.send(keySpace)
+	d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
+	d.key("A")
+	d.until("the folder box", func() bool { return d.m.input.anim.isInteractive() })
+	if !d.m.spaceMenu.anim.owns() {
+		t.Fatal("the menu should stay under the box it opened")
+	}
+	d.key("esc")
+	if d.m.input.anim.owns() || !d.m.spaceMenu.anim.owns() {
+		t.Fatal("Esc on the box should come back to the menu")
+	}
+
+	d.key("A")
+	d.until("the folder box again", func() bool { return d.m.input.anim.isInteractive() })
+	for _, r := range "news" {
+		d.key(string(r))
+	}
+	d.key("enter")
+	if d.m.input.anim.owns() || d.m.spaceMenu.anim.owns() {
+		t.Error("finishing the errand should close the box and the menu under it")
+	}
+
+	d.key("?")
+	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	d.key("L")
+	d.until("the location box", func() bool { return d.m.input.anim.isInteractive() })
+	if !d.m.globalMenu.anim.owns() {
+		t.Fatal("the ? menu should stay under the box it opened")
+	}
+	d.key("esc")
+	if !d.m.globalMenu.anim.owns() {
+		t.Error("Esc on the box should come back to the ? menu")
+	}
+}
