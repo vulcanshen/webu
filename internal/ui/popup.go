@@ -269,7 +269,9 @@ func hotkeyIndex(keys []string, pressed string) int {
 // is no letter of the label to bracket in place and a panel operation
 // nobody can find is not disclosed (ux.md §A.1, 2026-09-22).
 func bracketHotkey(label, key string) string {
-	if len(key) != 1 {
+	// A label that already says its key ("[/] Search", "[n] Next section")
+	// is left as written.
+	if len(key) != 1 || strings.HasPrefix(label, "["+key+"]") {
 		return label
 	}
 	// The key is shown EXACTLY as declared, and it is also the only key that

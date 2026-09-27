@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -45,10 +46,10 @@ func TestSpaceClosesOnlyTheSpaceMenu(t *testing.T) {
 	}
 
 	d.key("?")
-	d.until("help", func() bool { return d.m.help.anim.isInteractive() })
+	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
 	d.send(keySpace)
-	if !d.m.help.anim.owns() || d.m.spaceMenu.anim.owns() {
-		t.Error("Space on help should do nothing")
+	if !d.m.globalMenu.anim.owns() || d.m.spaceMenu.anim.owns() {
+		t.Error("Space on the ? menu should do nothing")
 	}
 	d.key("esc")
 
@@ -71,9 +72,9 @@ func TestQuitFromEverywhere(t *testing.T) {
 		t.Error("q and Ctrl-C on the panel should quit")
 	}
 	d.key("?")
-	d.until("help", func() bool { return d.m.help.anim.isInteractive() })
+	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
 	if !d.quits(keyQ) {
-		t.Error("q over help should quit")
+		t.Error("q over the ? menu should quit")
 	}
 	d.key("esc")
 	d.m.sel.on = true
@@ -112,4 +113,127 @@ func TestQuitFromEverywhere(t *testing.T) {
 	if !d.quits(keyCtrlC) {
 		t.Error("Ctrl-C on the quit confirm should leave at once")
 	}
+}
+
+// ? on a panel is the ? menu (tdp M4): the global operations, run from
+// it like a Space menu's rows, and under them the core keys to read. A
+// second ? closes it.
+func TestQuestionMarkMenu(t *testing.T) {
+	d := keysDriver(t)
+
+	d.key("?")
+	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	items := d.m.globalMenu.items
+	if !items[0].header || items[0].label != "global operation" {
+		t.Errorf("the ? menu should open on its global operations: %+v", items[0])
+	}
+	ref := -1
+	for i, it := range items {
+		if it.header && it.label == "key reference" {
+			ref = i
+		}
+	}
+	if ref < 0 || !items[len(items)-1].note {
+		t.Fatal("the ? menu should end in a key reference")
+	}
+	d.key("G")
+	if c := d.m.globalMenu.cursor; c >= ref {
+		t.Errorf("the key reference is read, not run: G landed on row %d (%q)", c, items[c].label)
+	}
+	if v := d.m.View(); !strings.Contains(v, "key reference") || !strings.Contains(v, "[B]ookmarks") {
+		t.Errorf("the ? menu should show both regions:\n%s", v)
+	}
+
+	d.key("B") // a row's key runs it
+	if d.m.globalMenu.anim.owns() || d.m.screen != screenBookmarks {
+		t.Errorf("B in the ? menu should close it and open Bookmarks: screen %v", d.m.screen)
+	}
+	d.key("?")
+	d.until("the ? menu on a screen", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	d.key("enter") // the first row: Web
+	if d.m.screen != screenWeb {
+		t.Errorf("Enter on Web should go back to the web: screen %v", d.m.screen)
+	}
+
+	d.key("?")
+	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	d.key("?")
+	if d.m.globalMenu.anim.owns() || d.m.help.anim.owns() {
+		t.Error("a second ? should close the ? menu")
+	}
+}
+
+// Every Space menu ends in the global region: one row into the ? menu
+// (tdp M2; the one row is webu's deviation, dev-remarks.md). A menu that
+// was a single flat region is labelled, since it is one of two now.
+func TestSpaceMenuEndsInGlobal(t *testing.T) {
+	d := keysDriver(t)
+
+	for _, screen := range []string{"W", "S", "H"} {
+		d.key(screen)
+		d.send(keySpace)
+		d.until("the Space menu on "+screen, func() bool { return d.m.spaceMenu.anim.isInteractive() })
+		items := d.m.spaceMenu.items
+		n := len(items)
+		if !items[0].header {
+			t.Errorf("%s: the first region should be labelled: %+v", screen, items[0])
+		}
+		if n < 2 || items[n-2].label != "global operation" || items[n-1].key != "globalmenu" {
+			t.Fatalf("%s: the menu should end in the global region: %+v", screen, items[max(0, n-2):])
+		}
+		d.key("esc")
+	}
+
+	d.send(keySpace)
+	d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
+	d.key("G")
+	d.key("enter")
+	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	if d.m.spaceMenu.anim.owns() {
+		t.Error("the global row should open the ? menu in the Space menu's place")
+	}
+}
+
+// ? on a popup is that popup's keys, and nothing else (tdp K6); Esc takes
+// the help away and leaves the popup as it was.
+func TestQuestionMarkOnAPopup(t *testing.T) {
+	d := keysDriver(t)
+
+	d.send(keySpace)
+	d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
+	d.key("?")
+	d.until("the menu's help", func() bool { return d.m.help.anim.isInteractive() })
+	if d.m.globalMenu.anim.owns() || !helpHas(d.m.help.entries, "Space · Esc") || helpHas(d.m.help.entries, "W · B · H · D · S") {
+		t.Errorf("? on the Space menu should show the menu's keys: %+v", d.m.help.entries)
+	}
+	if v := d.m.View(); !strings.Contains(v, "a row's key") {
+		t.Errorf("the help should be drawn over the menu:\n%s", v)
+	}
+	d.key("esc")
+	if d.m.help.anim.owns() || !d.m.spaceMenu.anim.owns() {
+		t.Error("Esc should close the help and leave the menu")
+	}
+	d.key("esc")
+
+	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
+	d.send(keyQ)
+	d.until("the quit confirm", func() bool { return d.m.confirm.anim.isInteractive() })
+	d.key("?")
+	d.until("the confirm's help", func() bool { return d.m.help.anim.isInteractive() })
+	if len(d.m.help.entries) != len(helpConfirm) {
+		t.Errorf("? on a confirm should show its two keys: %+v", d.m.help.entries)
+	}
+	d.key("enter") // pressed on the help, not on the confirm under it
+	if !d.m.confirm.anim.owns() {
+		t.Error("keys on the help should not reach the confirm")
+	}
+}
+
+func helpHas(entries []helpEntry, key string) bool {
+	for _, e := range entries {
+		if e.key == key {
+			return true
+		}
+	}
+	return false
 }

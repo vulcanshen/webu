@@ -86,7 +86,7 @@ Then:
 | **`Space`** | *What can I do here?* — a menu of everything for the thing under the cursor and for the panel. Every hotkey is listed there, so there is nothing to memorize |
 | **`Esc`** | One step back up: close a popup, leave an item or frame, back to the table of contents |
 | **`Tab`** | Switch between the tab list and the page |
-| **`?`** | Help — every key in one list |
+| **`?`** | On a panel, the `?` menu — everything the app can do from anywhere, run from the list, and the core keys under it. On a popup, that popup's keys |
 
 ## The screens
 
@@ -113,7 +113,7 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
  panels    1 / 2  ·  Tab
  cursor    j k    u d (half page)      gg G      h l along a row
  page      P / N back / forward        L location    / finder    v visual mode
- global    Space menu    ? help    q / Ctrl+C quit
+ global    Space menu    ? global menu / a popup's keys    q / Ctrl+C quit
 ```
 
 ### Tabs

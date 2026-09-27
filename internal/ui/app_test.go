@@ -667,6 +667,11 @@ func TestGotoOffersThePageURL(t *testing.T) {
 	if got := bracketHotkey("dir1", "1"); got != "[1] dir1" {
 		t.Errorf("a digit key is never bracketed inside the label: %q", got)
 	}
+	for _, label := range []string{"[/] Search", "[n] Next section"} {
+		if got := bracketHotkey(label, label[1:2]); got != label {
+			t.Errorf("a label that says its key is left as written: %q", got)
+		}
+	}
 
 	// T on the page is the same new tab as T on the tabs list.
 	d.m.focus = panelPage

@@ -24,38 +24,6 @@ locku 是第一個照 tdp v0.1.0 修完的 app（v0.1.2、v0.1.3），修的時�
 
 ---
 
-## 4. `?` 疊在 popup 上時顯示整個 app 的 help —— K6
-
-- **現況**：`handleKey()` 第 779 行，`?` 在任何非輸入態都 `m.help.open(m.layer())`，內容永遠是
-  `helppopup.go` 的 `helpContent`（整個 app 的鍵）。
-- **規則**：focus 在 popup（包括 Space menu）上時，`?` 只顯示**這個 popup** 的 help：這個框裡能按什麼、做什麼。
-- **怎麼改**：`?` 先看最上層的 popup，各給一份自己的 help（Space menu / options：`j/k`、`u/d`、`gg/G`、`Enter`、
-  熱鍵、`Esc`；confirm：`Enter <動詞>`、`Esc`；input：`Enter`、`Esc`、`Tab` 接受提議、`Backspace`；editor：寫 / 移
-  兩態的鍵；finder、go、file picker、message、DevTools（`h/l`、`x`、`y`、`C`、`/`、`i`、`Enter`）各自的鍵）。
-  `ux.md` §A.0.K 的「可疊在任何浮層上」一起改。
-
-## 5. `?` menu 不能執行、也沒有 global operation 區 —— M4
-
-- **現況**：`helppopup.go` 是唯讀 viewport（`update()` 只捲動），內容是 `helpContent`：Core keys / Global /
-  Navigate 三段說明文字。`/` 那列還寫著「search the page (enters selection mode)」，2026-09-23 起 `/` 已是 finder。
-- **規則**：focus 在 panel 上時，`?` 打開的是 `?` menu：
-  1. `global operation` 區，可以直接執行（`j/k`、`Enter`、熱鍵），離開 app 必須在這裡；
-  2. `key reference` 區，唯讀，至少列出 core key。
-- **怎麼改**：`?` menu 改成「上半可執行、下半唯讀」。global operation：`[W]eb`、`[B]ookmarks`、`[H]istory`、
-  `[D]ownloads`、`[S]ettings`、`[P]revious`、`[N]ext`、`[L]ocation`、`[v]isual mode`、`[q]uit`（`/` finder 若算全域
-  也放這裡，與 `ux.md` §4 的分層對齊後決定）。key reference：core key 與導覽鍵。修掉 `/` 那列的舊說明。
-  README 兩份「Five keys」的 `?` 說明、`ux.md` §A.2、`ui.md` §3 的「`?` help | viewport」一起改。
-
-## 6. Space menu 沒有 global operation 區 —— M2
-
-- **現況**：`app.go` `openMenu()`（第 1379 行）與 `listpanel.go` `menuItems()`（第 238 行）只組 `item operation`
-  與 `panel operation` 兩區。
-- **規則**：Space menu 第三區 `global operation`。webu 在這裡**偏離** M2（見 `dev-remarks.md`「偏離 tdp」）：
-  global 區不列全部全域動作，只放一列。
-- **怎麼改**：每個 Space menu（`[1]`、`[2]`、四個 list screen）最後接上分隔線、`global operation` 標題與一列
-  `[?] global operation…`（說明例如 `everything the app can do`），`Enter` 或 `?` 打開 `?` menu（第 5 條）。
-  只剩一區時不加標題的規則照舊。`ux.md` §A.1 補上這一區。
-
 ## 7. 空清單上仍列出 item operation —— M2
 
 - **現況**：`listpanel.go` `menuItems()`：Downloads（第 245 行）與 History（第 257 行）不看游標下有沒有東西，
@@ -77,18 +45,13 @@ locku 是第一個照 tdp v0.1.0 修完的 app（v0.1.2、v0.1.3），修的時�
   `Click` 列的說明，不當成一列 disabled 的動作。`spacemenu.go` 的 disabled 註解與 `ux.md` §A.1 的「沒標題的頁
   disabled 並說明」、`ux.md` §A.1 未支援 role 那一列一起改。
 
-## 9. visual mode：footer 沒有 `Space` / `?`，`Space` 開的是 cheatsheet —— M1、K5、M2、F1
+## 9. visual mode 的 footer 沒有 `Space` / `?` —— M1
 
 - **現況**：visual mode 開著時 `footer()`（第 2796 行）改用 `selectLegendPairs()`（`selectmode.go` 第 499 行），
-  沒有 `space menu` 與 `? help`。`Space` 在 visual mode 打開的是 message popup（`app.go` 第 825 行，
-  `selectCheatsheet`、`passKeys: true`）：一張說明文字，按上面列出的鍵就關掉並執行 —— 既是 viewport 又能執行，
-  不是 Space menu（沒有區塊標題、沒有 `[]` 標記的列、不能 `j/k` 選 `Enter` 執行）。
-- **規則**：非輸入態的每一個畫面都常駐顯示 `Space` 與 `?`（M1）；panel 上的 `Space` 打開 Space menu（K5、M2），
-  每一列名稱 + 說明、可執行（M5）；一個 popup 只屬於一類（F1）。
-- **怎麼改**：visual mode 的 footer 前面固定留 `space menu   ? help`，其餘是模式的鍵、放不下從尾端捨棄。`Space`
-  改開一般的 Space menu：visual mode 的動作（`[v]` select、`[V]` select rows、`[y]` copy、`[/]` search、`[n]` / `[N]`、
-  `[Enter] Click`、`[Esc] Leave`）當 panel operation，接第 6 條的 global 區；拿掉 message popup 的 `passKeys`。
-  `ux.md` §A.0.K 的 visual mode 欄、§A.1、`ui.md` §3 message 那列的「visual mode cheatsheet」一起改。
+  沒有 `space menu` 與 `? help`。
+- **規則**：非輸入態的每一個畫面都常駐顯示 `Space` 與 `?`（M1）。
+- **怎麼改**：visual mode 的 footer 前面固定留 `space menu   ? help`，其餘是模式的鍵、放不下從尾端捨棄。
+  `Space` 開 cheatsheet 是定案的做法，不改（2026-09-27，見 `dev-remarks.md`「設計決定」）。
 
 ## 10. 從 Space menu 開出的 popup 會先關掉 menu —— F4、T1
 
@@ -100,6 +63,8 @@ locku 是第一個照 tdp v0.1.0 修完的 app（v0.1.2、v0.1.3），修的時�
   完成動作才清掉整個 stack（D3）。
 - **怎麼改**：`menuKey()` / `optionsKey()` 在 `dispatch()` 打開了新 popup 時不關 menu；完成動作的路徑照舊
   `closeStack()`。會換頁的動作（context shift）照 `ux.md` §5 清掉 source，不變。
+  `?` menu 的 `globalMenuKey()`（2026-09-27 加上）一樣先關再執行，`[L]ocation`、`[q]uit`（有下載時的 confirm）
+  也照這條改。
 
 ## 11. 程式碼註解仍引用 VTP 的 § 編號、u-family 與已退場的 implementation 文件 —— 文件對齊
 
@@ -135,8 +100,6 @@ locku 是第一個照 tdp v0.1.0 修完的 app（v0.1.2、v0.1.3），修的時�
 | `devnetdetail.go:16` | `kbu §6.0.4` | `tdp D3` |
 | `devtools.go:255` | `kbu §8.2's starship chain` | `the family's powerline chain (tdp D1)` |
 | `filepicker.go:22` | `§4.5` | `tdp K8` |
-| `helppopup.go:8` | `the §A.2 non-contextual entry point` | `the ? entry point (tdp K6, M4)` |
-| `helppopup.go:35` | `§A.0.K` | `tdp K1` |
 | `inputpopup.go:33` | `§6.1` | `tdp F1` |
 | `inputpopup.go:38` | `§4.5` | `tdp K8` |
 | `inputpopup.go:87` | `§4.3` | `tdp K4` |

@@ -158,7 +158,8 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 | Popup | 類型 | 用途 |
 |---|---|---|
 | Space menu | menu | item / panel 兩 region；捲動、環繞、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23） |
-| `?` help | viewport | 全域動作表 |
+| `?` menu | menu | 面板上的 `?`：`global operation`（可執行）+ `key reference`（唯讀） |
+| `?` help | viewport | 浮層上的 `?`：這個浮層的按鍵 |
 | Location | input | `L`：目前 URL 當提議（Tab 接手、Backspace 清掉）；非 URL 當搜尋 |
 | input | input | 一行的欄位：**邊框寫型別**（`email`、`number`、`date · YYYY-MM-DD`、`password`、`email · invalid`），**框裡一行是欄位名**（2026-09-23 user 定：邊框是 chrome 說這是哪種框，框內那行說是哪一個欄位）；JS `prompt`；HTTP auth（遮罩）；設定值 |
 | editor | 大框 | textarea / contenteditable：多行、**寫 / 移兩態**（Esc 出到框層 hjkl 走、`i`/`a`/`A`/`o` 回寫、Enter 設值、再 Esc 取消） |
