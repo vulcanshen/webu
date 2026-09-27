@@ -46,8 +46,8 @@ snapshot: ## goreleaser 本機 snapshot 打包（不發布、不推 tap）→ di
 
 ##@ 示範（demo）
 
-# vhs 0.12.0 在這台機器上 2 秒就結束、不出檔也不報錯；0.11.0 正常。
-# 例：make gif VHS=/opt/homebrew/Cellar/vhs/0.11.0/bin/vhs
+# vhs 0.12.0 曾在 macOS 上 2 秒就結束、不出檔也不報錯；遇到時改用 0.11.x。
+# 例：make gif VHS=<vhs 0.11 的路徑>
 VHS ?= vhs
 
 .PHONY: gif
