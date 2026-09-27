@@ -11,6 +11,18 @@
 - **`Space` opens and closes the Space menu, and nothing else.** On help,
   a confirm or any other popup it does nothing, so a stray `Space` no
   longer cancels a question.
+- **`?` on a panel opens the `?` menu**: everything the app can do from
+  anywhere — the screens, back and forward, location, search, visual
+  mode, quit — run straight from the list, with the core keys under it.
+  **`?` on a popup shows that popup's own keys.**
+- **Every Space menu ends in a `global operation` row** that opens the
+  `?` menu.
+
+### Fixed
+
+- A menu row whose label already carries its key (`[/] Search`,
+  `[n] Next section`) no longer shows the key twice.
+- The search list's legend no longer offers `Space` to close it.
 
 ## [0.3.1] — 2026-09-25
 

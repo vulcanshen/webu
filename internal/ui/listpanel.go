@@ -239,9 +239,9 @@ func (m listPanel) menuItems() []menuItem {
 	switch m.kind {
 	case listSettings:
 		if e, _, ok := m.current(); ok && e.toggle {
-			return []menuItem{{label: "Toggle", key: "enter", hint: "switch it on or off; saved at once"}}
+			return []menuItem{{header: true, label: "item operation"}, {label: "Toggle", key: "enter", hint: "switch it on or off; saved at once"}}
 		}
-		return []menuItem{{label: "Edit", key: "enter", hint: "change this setting; empty means the default"}}
+		return []menuItem{{header: true, label: "item operation"}, {label: "Edit", key: "enter", hint: "change this setting; empty means the default"}}
 	case listDownloads:
 		return []menuItem{
 			{header: true, label: "item operation"},

@@ -91,8 +91,7 @@ func (f *finder) close() tea.Cmd     { return f.anim.close() }
 func (f *finder) setSize(w, h int)   { f.screenW, f.screenH = w, h }
 
 // typing reports whether every printable key is a character right now:
-// a search with the keyboard on its query. [go] takes digits alone, and
-// Space on its list closes it the way Space closes any popup.
+// a search with the keyboard on its query. [go] takes digits alone.
 func (f finder) typing() bool {
 	return f.anim.owns() && f.kind == finderSearch && f.mode == finderInput
 }
@@ -446,7 +445,7 @@ func (f finder) titleAndHint() (string, string) {
 	title := " " + glyphSearch + " Search "
 	if f.mode == finderNav {
 		return title, hintLegend([][2]string{
-			{"j/k/u/d", "move"}, {"Enter", "go"}, {"Esc", "query"}, {"Space", "close"}})
+			{"j/k/u/d", "move"}, {"Enter", "go"}, {"Esc", "query"}})
 	}
 	return title, hintLegend([][2]string{{"Enter", "list"}, {"Esc", "close"}})
 }

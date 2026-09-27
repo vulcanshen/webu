@@ -88,19 +88,20 @@ type AppModel struct {
 
 	// Floats. The Space menu goes down first; a target opened from it stacks
 	// above (§6.4). The toast rides on top of everything.
-	spaceMenu spaceMenu
-	options   spaceMenu   // a textbox's Submit/Edit/Clear/Yank, or a select's options
-	lists     listPanel   // the screen behind a header chip after [W]eb
-	splash    splashModel // the easter egg (splash.go)
-	devtools  devtoolsPopup
-	message   messagePopup
-	finder    finder // [/] over the page's nodes, [go] over its lines (finder.go)
-	help      helpPopup
-	confirm   confirmPopup
-	input     inputPopup
-	editor    editorPopup // a textarea's box: several lines, two modes (editorpopup.go)
-	picker    filePicker  // a file, picked rather than typed (filepicker.go)
-	toast     toastModel
+	spaceMenu  spaceMenu
+	globalMenu spaceMenu   // ? on a panel: the global operations, then the core keys (tdp M4)
+	options    spaceMenu   // a textbox's Submit/Edit/Clear/Yank, or a select's options
+	lists      listPanel   // the screen behind a header chip after [W]eb
+	splash     splashModel // the easter egg (splash.go)
+	devtools   devtoolsPopup
+	message    messagePopup
+	finder     finder // [/] over the page's nodes, [go] over its lines (finder.go)
+	help       helpPopup
+	confirm    confirmPopup
+	input      inputPopup
+	editor     editorPopup // a textarea's box: several lines, two modes (editorpopup.go)
+	picker     filePicker  // a file, picked rather than typed (filepicker.go)
+	toast      toastModel
 
 	// optionsFor is the node the options menu is about, and optionsKind
 	// what the menu is: an item's operations, a select's options, or the
@@ -152,24 +153,25 @@ func New(b *browser.Browser, start ...string) AppModel {
 		}
 	}
 	m := AppModel{
-		focus:     panelPage,
-		shown:     -1,
-		browser:   b,
-		events:    make(chan tea.Msg, 16),
-		startURLs: urls,
-		spaceMenu: newSpaceMenu(),
-		splash:    newSplashModel(),
-		options:   spaceMenu{anim: newPopupAnimator("options")},
-		lists:     newListPanel(),
-		devtools:  newDevtoolsPopup(),
-		message:   newMessagePopup(),
-		finder:    newFinder(),
-		help:      newHelpPopup(),
-		confirm:   newConfirmPopup(),
-		input:     newInputPopup(),
-		picker:    newFilePicker(),
-		editor:    newEditorPopup(),
-		toast:     newToast(),
+		focus:      panelPage,
+		shown:      -1,
+		browser:    b,
+		events:     make(chan tea.Msg, 16),
+		startURLs:  urls,
+		spaceMenu:  newSpaceMenu(),
+		globalMenu: spaceMenu{anim: newPopupAnimator("globalmenu")},
+		splash:     newSplashModel(),
+		options:    spaceMenu{anim: newPopupAnimator("options")},
+		lists:      newListPanel(),
+		devtools:   newDevtoolsPopup(),
+		message:    newMessagePopup(),
+		finder:     newFinder(),
+		help:       newHelpPopup(),
+		confirm:    newConfirmPopup(),
+		input:      newInputPopup(),
+		picker:     newFilePicker(),
+		editor:     newEditorPopup(),
+		toast:      newToast(),
 	}
 	m.listenBrowser()
 	return m
@@ -222,7 +224,7 @@ func (m AppModel) Close() {
 func (m AppModel) narrow() bool { return m.w < narrowW }
 func (m AppModel) panelH() int  { return m.h - 3 } // the header row, its rule, and the footer row
 func (m AppModel) layer() int {
-	if m.spaceMenu.isActive() || m.options.isActive() ||
+	if m.spaceMenu.isActive() || m.globalMenu.isActive() || m.options.isActive() ||
 		m.devtools.isActive() {
 		return 2
 	}
@@ -253,7 +255,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		first := m.w == 0
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
-			&m.spaceMenu, &m.options, &m.lists, &m.devtools, &m.message,
+			&m.spaceMenu, &m.globalMenu, &m.options, &m.lists, &m.devtools, &m.message,
 			&m.finder, &m.help, &m.confirm, &m.input, &m.editor, &m.picker, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
@@ -277,7 +279,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AnimTickMsg:
 		return m, tea.Batch(
-			m.spaceMenu.anim.tick(msg), m.options.anim.tick(msg),
+			m.spaceMenu.anim.tick(msg), m.globalMenu.anim.tick(msg), m.options.anim.tick(msg),
 			m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
 			m.message.anim.tick(msg), m.finder.anim.tick(msg),
 			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.editor.anim.tick(msg),
@@ -712,7 +714,7 @@ func (m *AppModel) recordVisit(t *tab) {
 // ------------------------------------------------------------------- keys
 
 func (m AppModel) popupOpen() bool {
-	return m.spaceMenu.isActive() || m.options.isActive() ||
+	return m.spaceMenu.isActive() || m.globalMenu.isActive() || m.options.isActive() ||
 		m.devtools.isActive() || m.message.isActive() || m.finder.isActive() ||
 		m.help.isActive() || m.confirm.isActive() || m.input.isActive() || m.editor.isActive() || m.picker.isActive()
 }
@@ -723,13 +725,19 @@ func (m AppModel) popupOpen() bool {
 func (m AppModel) floatOwned() bool {
 	return m.toast.anim.owns() || m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
 		m.options.anim.owns() || m.devtools.anim.owns() || m.finder.anim.owns() ||
-		m.message.anim.owns() || m.help.anim.owns() || m.spaceMenu.anim.owns()
+		m.message.anim.owns() || m.help.anim.owns() || m.globalMenu.anim.owns() || m.spaceMenu.anim.owns()
 }
 
 // floatAboveMenu reports whether a float other than the Space menu (and
 // the toast, which never takes keys) holds the keyboard — one that key
 // routing would hand a key to before the menu.
 func (m AppModel) floatAboveMenu() bool {
+	return m.globalMenu.anim.owns() || m.floatAboveGlobalMenu()
+}
+
+// floatAboveGlobalMenu is the same for the ? menu: a float key routing
+// hands a key to before it.
+func (m AppModel) floatAboveGlobalMenu() bool {
 	return m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.finder.anim.owns() ||
 		m.confirm.anim.owns() || m.options.anim.owns() || m.devtools.anim.owns() ||
 		m.message.anim.owns() || m.help.anim.owns()
@@ -804,14 +812,26 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
+	// ? on a panel is the ? menu; on a float, that float's own keys (tdp
+	// K6, M4). A second ? closes what the first opened.
 	if msg.String() == "?" && !m.typing() {
-		if m.help.anim.owns() {
+		switch {
+		case m.help.anim.owns():
 			return m, m.help.close()
+		case m.globalMenu.anim.owns() && !m.floatAboveGlobalMenu():
+			return m, m.globalMenu.close()
+		case m.floatAboveMenu() || m.spaceMenu.anim.owns():
+			title, entries := m.floatHelp()
+			return m, m.help.open(title, entries, m.layer()+1)
 		}
-		return m, m.help.open(m.layer())
+		return m.openGlobalMenu()
 	}
 
 	switch {
+	case m.help.anim.owns():
+		// Nothing opens over a float's help: it is the top while it is up.
+		m.help.update(msg)
+		return m, nil
 	case m.input.anim.owns():
 		return m.inputKey(msg)
 	case m.editor.anim.owns():
@@ -837,9 +857,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// A long message — a cell in full — scrolls by the page's keys.
 		m.message.scroll(msg.String())
 		return m, nil
-	case m.help.anim.owns():
-		m.help.update(msg)
-		return m, nil
+	case m.globalMenu.anim.owns():
+		return m.globalMenuKey(msg)
 	case m.spaceMenu.anim.owns():
 		return m.menuKey(msg)
 	}
@@ -868,6 +887,8 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 	switch {
 	case m.toast.anim.owns():
 		return m, m.toast.close()
+	case m.help.anim.owns():
+		return m, m.help.close()
 	case m.input.anim.owns():
 		// Cancelling a page's prompt is an answer too: "no".
 		switch m.input.action {
@@ -908,8 +929,8 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		return m, m.devtools.close()
 	case m.message.anim.owns():
 		return m, m.message.close()
-	case m.help.anim.owns():
-		return m, m.help.close()
+	case m.globalMenu.anim.owns():
+		return m, m.globalMenu.close()
 	case m.spaceMenu.anim.owns():
 		return m, m.spaceMenu.close()
 	}
@@ -956,7 +977,7 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.input.close(), m.editor.close(), m.picker.close(), m.confirm.close(), m.options.close(),
 		m.devtools.close(), m.message.close(), m.finder.close(),
-		m.help.close(), m.spaceMenu.close())
+		m.help.close(), m.globalMenu.close(), m.spaceMenu.close())
 }
 
 func (m AppModel) quit() (tea.Model, tea.Cmd) {
@@ -1405,7 +1426,7 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 	title := ""
 	if m.screen != screenWeb {
 		_, title = m.lists.title()
-		m.spaceMenu.setItems(m.lists.menuItems(), title, 1)
+		m.spaceMenu.setItems(withGlobal(m.lists.menuItems()), title, 1)
 		return m, m.spaceMenu.open()
 	}
 	switch m.focus {
@@ -1433,8 +1454,57 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 		title = "Page"
 		items = m.pageMenuItems()
 	}
-	m.spaceMenu.setItems(items, title, 1)
+	m.spaceMenu.setItems(withGlobal(items), title, 1)
 	return m, m.spaceMenu.open()
+}
+
+// withGlobal ends a Space menu with its global region (tdp M2): one row
+// into the ? menu, where the global operations are — listing all of them
+// in every menu would outgrow the panel's own (dev-remarks.md, 偏離 tdp).
+// A menu that was one flat region gets its label, since it is one of two
+// now.
+func withGlobal(items []menuItem) []menuItem {
+	if len(items) > 0 && !items[0].header {
+		items = append([]menuItem{{header: true, label: "panel operation"}}, items...)
+	}
+	return append(items,
+		menuItem{separator: true},
+		menuItem{header: true, label: "global operation"},
+		menuItem{label: "Global operation…", key: "globalmenu", hint: "everything the app can do"})
+}
+
+// openGlobalMenu is the ? menu (helppopup.go globalMenuItems).
+func (m AppModel) openGlobalMenu() (tea.Model, tea.Cmd) {
+	m.globalMenu.setItems(globalMenuItems(), "Global operation", 1)
+	return m, m.globalMenu.open()
+}
+
+// globalMenuKey runs a row of the ? menu: the menu closes and the key runs
+// as if pressed on the web — a list screen steps back to it first, and
+// visual mode ends, except for the screen keys and quit, which read the
+// same from anywhere.
+func (m AppModel) globalMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	var key string
+	m.globalMenu, key, _ = m.globalMenu.update(msg)
+	if key == "" {
+		return m, nil
+	}
+	closeCmd := m.globalMenu.close()
+	var mm tea.Model
+	var cmd tea.Cmd
+	switch key {
+	case "q":
+		mm, cmd = m.askQuit()
+	case "W", "B", "H", "D", "S":
+		mm, cmd = m.switchScreen(key)
+	default:
+		m.screen = screenWeb
+		if m.sel.on {
+			m.leaveSelect()
+		}
+		mm, cmd = m.panelKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)})
+	}
+	return mm, tea.Batch(closeCmd, cmd)
 }
 
 // optionsKind says what the options menu is showing.
@@ -1671,6 +1741,10 @@ func (m AppModel) menuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.toast.show(m.spaceMenu.items[i].hint, toastInfo)
 	}
 	closeCmd := m.spaceMenu.close()
+	if key == "globalmenu" {
+		mm, cmd := m.openGlobalMenu()
+		return mm, tea.Batch(closeCmd, cmd)
+	}
 	mm, cmd := m.dispatch(key)
 	return mm, tea.Batch(closeCmd, cmd)
 }
@@ -2711,6 +2785,9 @@ func (m AppModel) View() string {
 	if m.spaceMenu.isActive() {
 		out = overlay.Composite(m.spaceMenu.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
+	if m.globalMenu.isActive() {
+		out = overlay.Composite(m.globalMenu.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
 	if m.devtools.isActive() {
 		out = overlay.Composite(m.devtools.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -2723,9 +2800,6 @@ func (m AppModel) View() string {
 	if m.finder.isActive() {
 		out = overlay.Composite(m.finder.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
-	if m.help.isActive() {
-		out = overlay.Composite(m.help.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
 	if m.confirm.isActive() {
 		out = overlay.Composite(m.confirm.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
@@ -2737,6 +2811,9 @@ func (m AppModel) View() string {
 	}
 	if m.editor.isActive() {
 		out = overlay.Composite(m.editor.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.help.isActive() {
+		out = overlay.Composite(m.help.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.toast.isActive() {
 		out = overlay.Composite(m.toast.view(), out, overlay.Center, overlay.Bottom, 0, -2)

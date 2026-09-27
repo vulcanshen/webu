@@ -17,6 +17,9 @@ type menuItem struct {
 	hint      string
 	header    bool // dim region label, not selectable
 	separator bool // horizontal rule, not selectable
+	// note is a line of reference, not an action: label and hint drawn as a
+	// row, never selectable, never run — the ? menu's key reference (tdp M4).
+	note bool
 	// disabled: the action belongs here but cannot run right now. It is NOT
 	// the same as leaving the row out (which is what an action that does not
 	// apply gets, §sftpApplicable): a row that vanishes teaches that the
@@ -72,9 +75,12 @@ func (m *spaceMenu) open() tea.Cmd      { return m.anim.open() }
 func (m *spaceMenu) close() tea.Cmd     { return m.anim.close() }
 func (m *spaceMenu) setSize(w, h int)   { m.screenW, m.screenH = w, h }
 
+// selectable reports whether the cursor can land on the row.
+func (it menuItem) selectable() bool { return !it.header && !it.separator && !it.note }
+
 func (m spaceMenu) firstSelectable() int {
 	for i, it := range m.items {
-		if !it.header && !it.separator {
+		if it.selectable() {
 			return i
 		}
 	}
@@ -83,7 +89,7 @@ func (m spaceMenu) firstSelectable() int {
 
 func (m spaceMenu) lastSelectable() int {
 	for i := len(m.items) - 1; i >= 0; i-- {
-		if !m.items[i].header && !m.items[i].separator {
+		if m.items[i].selectable() {
 			return i
 		}
 	}
@@ -101,7 +107,7 @@ func (m *spaceMenu) step(d int) {
 	at := m.cursor
 	for i := 0; i < n; i++ {
 		at = (at + d + n) % n
-		if !m.items[at].header && !m.items[at].separator {
+		if m.items[at].selectable() {
 			m.cursor = at
 			m.scroll()
 			return
@@ -177,7 +183,7 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string, tea.Cmd) {
 		// exact-then-fold rule as the panel, so `t` and `T` stay distinct here.
 		var keys []string
 		for _, it := range m.items {
-			if it.header || it.separator {
+			if !it.selectable() {
 				continue
 			}
 			keys = append(keys, it.key)
@@ -204,6 +210,9 @@ func (m spaceMenu) view() string {
 		case it.separator:
 		case it.header:
 			headW = max(headW, dispW(it.label)+2)
+		case it.note:
+			labelW = max(labelW, dispW(it.label))
+			hintW = max(hintW, dispW(it.hint))
 		default:
 			acts++
 			labelW = max(labelW, dispW(bracketHotkey(it.label, it.key)))
@@ -226,6 +235,7 @@ func (m spaceMenu) view() string {
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)
+	key := lipgloss.NewStyle().Foreground(handColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	// The cursor still has to be visible on a row that cannot run, so it drops
 	// to the register the app already uses for "highlighted, but not live" —
@@ -239,6 +249,9 @@ func (m spaceMenu) view() string {
 			rows = append(rows, dim.Render(" "+strings.Repeat("─", max(0, innerW-2))))
 		case it.header:
 			rows = append(rows, dim.Render(padRight(" "+it.label, innerW)))
+		case it.note:
+			rows = append(rows, key.Render(padRight(" "+it.label, innerW-hintW-1))+
+				dim.Render(padLeft(it.hint, hintW)+" "))
 		default:
 			label := padRight(" "+bracketHotkey(it.label, it.key), innerW-hintW-1)
 			hint := padLeft(it.hint, hintW) + " "

@@ -198,6 +198,7 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 - **webu 簽自己的名字** —— Chromium 自報的 user agent，把 headless 版的 `HeadlessChrome/` 寫成 `Chrome/`、尾巴接 `webu/<version>`。不是偽裝，是一個真瀏覽器的名字。
 - **預設搜尋是 DuckDuckGo 的 HTML 端點**，因為 Google 對每一次 headless 搜尋都回 reCAPTCHA。
 - **沒有交棒給視窗** —— CAPTCHA、passkey、WebRTC 是牆，webu 明講；webu 必須能在沒有 display 的機器上跑，所以沒有視窗可以交棒。
+- **visual mode 的 `Space` 是 cheatsheet** —— visual mode 是一個模式，它的鍵是移動與選字（`h j k l`、`w e b`、`v V`、`y`、`/`），不是對某個 item 的動作，排成 Space menu 的列反而難讀。所以 `Space` 打開一張 cheatsheet（`selectCheatsheet`，message popup 的 `passKeys`）：列出這個模式的每個鍵，按其中一個就關掉 cheatsheet 並執行；再按 `Space` 關掉。它扮演這個模式的 Space menu，不算偏離 tdp（2026-09-27 定案）。
 
 ## 已否決，不要重提
 
@@ -233,7 +234,7 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 
 ## 偏離 tdp
 
-- **Space menu 的 global operation 區只有一列（M2）。** tdp M2 要 Space menu 的 `global operation` 區列出全部全域動作；webu 的全域動作約十個（切畫面 `W` `B` `H` `D` `S`、`P` / `N`、`L`、`v`、`q`……），全部列進每一個 Space menu，會比 panel 自己的動作還長。所以 webu 的 global 區只放一列 `[?] global operation…`，按下去打開 `?` menu，全域動作的完整清單在那裡、可以直接執行（M4）。2026-09-26 定案；程式目前還沒有 global 區，見 fix 檔。
+- **Space menu 的 global operation 區只有一列（M2）。** tdp M2 要 Space menu 的 `global operation` 區列出全部全域動作；webu 的全域動作約十個（切畫面 `W` `B` `H` `D` `S`、`P` / `N`、`L`、`v`、`q`……），全部列進每一個 Space menu，會比 panel 自己的動作還長。所以 webu 的 global 區只放一列 `Global operation…`，`Enter` 打開 `?` menu，全域動作的完整清單在那裡、可以直接執行（M4）。這一列不標 `[?]`：Space menu 也是 popup，在它上面按 `?` 照 K6 顯示它自己的按鍵（2026-09-27）。2026-09-26 定案。
 - **頁面自己的彈窗 `Esc` 不關（K4、F3）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在頁面上的框（`ui.md` §2.4），但它不是 webu 的 popup，是頁面的：頁面放它上來要一個回答，`Esc` 關掉等於把那個決定擱著。所以 `Esc` 在它上面只 toast 說明，要按裡面的按鈕、或等頁面自己收掉（`ux.md` §5；`app.go` `togglePagetab`）。webu 自己的 popup 照 K4、F3。
 
 ## 設計文件導讀

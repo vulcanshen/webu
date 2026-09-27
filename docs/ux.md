@@ -13,7 +13,7 @@
 | Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
 |---|---|---|---|
 | **Contextual** | `Space` | footer 常駐 `space menu` | 當前 focus 的 contextual 動作 100% 在 Space menu 內；`[2]` 的 item operation menu-only、沒有 letter hotkey |
-| **Non-contextual** | `?` | footer 常駐 `? help` | 全域動作 100% 在 help 內；header 五個 screen 的 chip 是 Layer 2 ambient 揭露 |
+| **Non-contextual** | `?` | footer 常駐 `? help` | 全域動作 100% 在 `?` menu 內、可直接執行；每個 Space menu 最後一列通往它；header 五個 screen 的 chip 是 Layer 2 ambient 揭露 |
 
 **規則（2026-09-22）：一個面板操作沒進 Space menu 就等於不存在。** core key（Enter / Esc / `/` / `go`）
 沒有字母可以括，所以鍵寫進 label 自己：`[Esc] Page parts`、`[Enter] Open section`、`[/] Search`、
@@ -27,7 +27,7 @@
 | `Enter` | **滑鼠左鍵在 terminal 的對應**（定案 2026-09-21；0.3.0 起先 hover 再按）；左鍵沒有對應的才自定義——**進去**：目錄開一節、清單裡的一件事走進去、frame 走進去；heading / landmark 開合；pagetab 上 = 確認回頁面。細表在 §A.0.K.1 | 對字元所屬的節點做同一件事，並離開模式 |
 | `Esc` | **往上一層，一次一步**（2026-09-23）：關最上層浮層 → 走出一件事 / frame → 回目錄 → 上 pagetab → 再 Esc 回頁面。頁面自己的彈窗**不關**（toast：它要一個回答）。上一頁是 `P`，Esc 不兼職 | 打字中取消；否則離開模式 |
 | `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-27，tdp K5、F6） | cheatsheet，按列出的鍵即執行 |
-| `?` | help；再按關閉；可疊在任何浮層上 | 同 |
+| `?` | 面板上：`?` menu；浮層上：**這個浮層的按鍵**（唯讀）；再按關閉（2026-09-27，tdp K6、M4） | `?` menu |
 
 #### §A.0.K.1 Enter 對每種東西
 
@@ -59,7 +59,9 @@
 
 ### §A.1 Contextual track — Space menu（tdp K5、M2）
 
-兩個 region 固定叫 `item operation` / `panel operation`；只有一個 region 就保持扁平。menu 本身：`j`/`k` 走（環繞）、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23）、Enter 執行、
+region 固定叫 `item operation` / `panel operation` / `global operation`。每個 Space menu 最後都是 `global operation`，
+只有一列 `Global operation…`，`Enter` 打開 `?` menu（§A.2；只放一列是偏離 tdp M2，見 `dev-remarks.md`）。
+所以 region 至少兩個，一律有標題（2026-09-27）。menu 本身：`j`/`k` 走（環繞）、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23）、Enter 執行、
 letter hotkey 在 menu 裡也有效。
 
 **`[1]` Tabs**
@@ -103,7 +105,12 @@ disabled 並說明）、`[n] Next section` / `[p] Previous section`（讀一節�
 
 delete 用 `x` 不用 `d`：`d` 是半頁。
 
-### §A.2 Non-contextual track — `?` help（tdp K6、M4）
+### §A.2 Non-contextual track — `?` menu（tdp K6、M4）
+
+面板上按 `?` 打開 `?` menu（2026-09-27）：上半 `global operation` 是下表的動作，一列一個，`j`/`k`、`Enter`、
+熱鍵照 Space menu 執行；下半 `key reference` 唯讀，列 core key 與導覽鍵。從 list screen 執行 `P` / `N` / `L` /
+`/` / `v` 會先回到 web；visual mode 開著時先離開。浮層上按 `?` 是那個浮層自己的按鍵（唯讀 viewport），
+`Esc` 或再按 `?` 關掉、回到浮層。
 
 | 全域動作 | 鍵 |
 |---|---|
