@@ -894,6 +894,9 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case m.floatAboveMenu() || m.spaceMenu.anim.owns():
 			title, entries := m.floatHelp()
 			return m, m.help.open(title, entries, m.layer()+1)
+		case m.sel.on:
+			// A mode has its own help (tdp K11): its keys, to read.
+			return m, m.help.open("Visual mode", selectKeys, m.layer())
 		}
 		return m.openPanelHelp()
 	}

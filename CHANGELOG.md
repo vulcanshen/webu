@@ -12,6 +12,8 @@
   place: `Esc` goes back to the Space menu, and running one closes both.
   The row is called `Global operation`. The screen you are on is dimmed
   in it.
+- **`?` in visual mode shows the mode's keys**, the same list `Space`
+  shows there, to read.
 
 ### Fixed
 

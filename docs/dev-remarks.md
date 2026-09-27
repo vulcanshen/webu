@@ -198,7 +198,7 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 - **webu 簽自己的名字** —— Chromium 自報的 user agent，把 headless 版的 `HeadlessChrome/` 寫成 `Chrome/`、尾巴接 `webu/<version>`。不是偽裝，是一個真瀏覽器的名字。
 - **預設搜尋是 DuckDuckGo 的 HTML 端點**，因為 Google 對每一次 headless 搜尋都回 reCAPTCHA。
 - **沒有交棒給視窗** —— CAPTCHA、passkey、WebRTC 是牆，webu 明講；webu 必須能在沒有 display 的機器上跑，所以沒有視窗可以交棒。
-- **visual mode 的 `Space` 是 cheatsheet** —— visual mode 是一個模式，它的鍵是移動與選字（`h j k l`、`w e b`、`v V`、`y`、`/`），不是對某個 item 的動作，排成 Space menu 的列反而難讀。所以 `Space` 打開一張 cheatsheet（`selectCheatsheet`，message popup 的 `passKeys`）：列出這個模式的每個鍵，按其中一個就關掉 cheatsheet 並執行；再按 `Space` 關掉。它扮演這個模式的 Space menu，不算偏離 tdp（2026-09-27 定案）。
+- **visual mode 的 `Space` 是 cheatsheet** —— visual mode 是一個模式，它的鍵是移動與選字（`h j k l`、`w e b`、`v V`、`y`、`/`），不是對某個 item 的動作，排成 Space menu 的列反而難讀。所以 `Space` 打開一張 cheatsheet（`selectCheatsheet`，message popup 的 `passKeys`）：列出這個模式的每個鍵，按其中一個就關掉 cheatsheet 並執行；再按 `Space` 關掉。它扮演這個模式的 Space menu，不算偏離 tdp（2026-09-27 定案）。`?` 是同一份鍵（`selectKeys`）的唯讀 help（tdp K11）。
 - **Space menu 的 global operation 區只有一列（tdp M2）。** webu 的全域動作約十個（切畫面 `W` `B` `H` `D` `S`、`P` / `N`、`L`、`v`、`q`……），全部列進每一個 Space menu，會比 panel 自己的動作還長。所以 global 區只放一列，`Enter` 打開全域動作的完整清單，在那裡可以直接執行。這一列不標 `[?]`：Space menu 也是 popup，在它上面按 `?` 照 K6 顯示它自己的按鍵（2026-09-27）。2026-09-26 定案。這條原本是偏離 M2（tdp v0.1.0 要 global 區列出全部全域動作）；tdp v0.1.2 起 M2 規定 global 區**固定一列** `Global operation`，不再是偏離。那一列打開的清單還是舊的 `?` menu、還沒照 v0.1.2 拆成 global operation popup，見 [`webu-terminu-fix.md`](webu-terminu-fix.md)。
 
 ## 已否決，不要重提
