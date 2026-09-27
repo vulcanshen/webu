@@ -726,6 +726,15 @@ func (m AppModel) floatOwned() bool {
 		m.message.anim.owns() || m.help.anim.owns() || m.spaceMenu.anim.owns()
 }
 
+// floatAboveMenu reports whether a float other than the Space menu (and
+// the toast, which never takes keys) holds the keyboard — one that key
+// routing would hand a key to before the menu.
+func (m AppModel) floatAboveMenu() bool {
+	return m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.finder.anim.owns() ||
+		m.confirm.anim.owns() || m.options.anim.owns() || m.devtools.anim.owns() ||
+		m.message.anim.owns() || m.help.anim.owns()
+}
+
 // typing reports whether a float is taking text: every printable key is a
 // character then (§4.5). A search being typed in selection mode counts.
 func (m AppModel) typing() bool {
@@ -768,13 +777,32 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m.closeTop()
 	}
+	// Ctrl-C and q are one way out (tdp K9): the quit flow, and a second
+	// Ctrl-C on its confirm leaves at once. q is a character while a float
+	// is being typed into; Ctrl-C never is.
 	if msg.Type == tea.KeyCtrlC {
-		return m.quit()
+		if m.confirm.anim.owns() && m.confirm.action == confirmQuit {
+			return m.quit()
+		}
+		return m.askQuit()
 	}
-	// Space and ? close what they open (§A.1 / §A.2), unless a float is
-	// being typed into.
-	if msg.Type == tea.KeySpace && m.popupOpen() && !m.typing() {
-		return m.closeTop()
+	if msg.String() == "q" && !m.typing() {
+		if m.confirm.anim.owns() && m.confirm.action == confirmQuit {
+			return m, nil // already asking
+		}
+		return m.askQuit()
+	}
+	// Space opens and closes the Space menu and nothing else (tdp K5, F6):
+	// on any other float it does nothing, unless that float is being typed
+	// into. Visual mode's cheatsheet is that mode's Space menu for now.
+	if msg.Type == tea.KeySpace && !m.typing() {
+		switch {
+		case m.spaceMenu.anim.owns() && !m.floatAboveMenu(),
+			m.message.anim.owns() && m.message.passKeys:
+			return m.closeTop()
+		case m.floatAboveMenu():
+			return m, nil
+		}
 	}
 	if msg.String() == "?" && !m.typing() {
 		if m.help.anim.owns() {
@@ -960,8 +988,6 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "1", "2":
 		m.focus = panelID(k[0] - '1')
 		return m, nil
-	case "q":
-		return m.askQuit()
 	case "W", "B", "H", "D", "S":
 		return m.switchScreen(k)
 	case "L":
@@ -1191,8 +1217,6 @@ func (m AppModel) screenKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	k := msg.String()
 	if !m.lists.typing {
 		switch k {
-		case "q":
-			return m.askQuit()
 		case "W", "B", "H", "D", "S":
 			return m.switchScreen(k)
 		case " ":
