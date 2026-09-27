@@ -24,6 +24,8 @@
 - **A box or question opened from a menu comes back to the menu** on
   `Esc`; finishing it closes both.
 - **Visual mode's footer shows `space` and `?`** like every other.
+- **`Tab`, `1` and `2` in visual mode say to leave the mode first**
+  instead of doing nothing silently.
 
 ### Fixed
 

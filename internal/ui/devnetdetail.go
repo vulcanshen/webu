@@ -13,7 +13,7 @@ import (
 
 // The Network detail (ui.md §3.2): one request's headers and body, a
 // viewport stacked over the DevTools popup. Its own file and animator
-// (kbu §6.0.4); the DevTools popup composites it inside its own view.
+// (tdp D3); the DevTools popup composites it inside its own view.
 
 // bodyMsg is the response body landing.
 type bodyMsg struct {

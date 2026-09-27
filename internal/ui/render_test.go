@@ -676,7 +676,7 @@ func TestInlineMarkup(t *testing.T) {
 
 // TestHeadingGround: a heading's rows carry its level, which is the
 // ground they are painted on — brightest at h1, the crust at h6
-// (theme.headingBg, 2026-09-22). The ramp is the VTP's lerp between two
+// (theme.headingBg, 2026-09-22). The ramp is tdp D2's lerp between two
 // anchors, so the six are distinct and in order.
 func TestHeadingGround(t *testing.T) {
 	head := func(level int, s string) *ir.Node {

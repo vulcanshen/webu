@@ -51,8 +51,8 @@ func reveal(ctx context.Context, id cdp.BackendNodeID) error {
 // opened a dialog showed it five seconds late, and every other click
 // paid the same. Press and release alone are answered in a millisecond.
 // The cost is hover: a menu that opens on pointer-over does not open for
-// webu yet (function.md §4 asked for it; webu-implementation.md §4 says
-// why not).
+// webu yet (function.md §4 asked for it; docs/dev-remarks.md「運作方式」
+// says why not).
 func Click(ctx context.Context, id cdp.BackendNodeID) error {
 	return on(ctx, id, func(ctx context.Context, id cdp.BackendNodeID) error {
 		if err := reveal(ctx, id); err != nil {

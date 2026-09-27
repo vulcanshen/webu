@@ -116,7 +116,7 @@ func (m AppModel) popupVisible() int {
 // popupFloat is one of the page's popups drawn as a float, and where it
 // sits: the stack cascades down and to the right, three cells and a row
 // a level, so the one under is still seen — its title, its edge — and
-// the border brightens as the stack climbs (VTP's z-axis).
+// the border brightens as the stack climbs (tdp D2's z-axis).
 type popupFloat struct {
 	box    string
 	dx, dy int

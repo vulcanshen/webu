@@ -19,7 +19,7 @@ import (
 // was made.
 //
 // It is not modal. Letters always filter and the arrows always move, so
-// there is no "input state" versus "list state" to learn (§4.5): in a
+// there is no "input state" versus "list state" to learn (tdp K8): in a
 // text-entry surface, letters type and arrows navigate.
 type filePicker struct {
 	anim    popupAnimator

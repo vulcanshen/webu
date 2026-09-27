@@ -251,8 +251,8 @@ func (m devtoolsPopup) view() string {
 	edit := lipgloss.NewStyle().Foreground(editColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
 
-	// The title row: glyph and name, then the chip chain of tabs (kbu
-	// §8.2's starship chain, moved into a popup title).
+	// The title row: glyph and name, then the chip chain of tabs (the
+	// family's powerline chain (tdp D1), moved into a popup title).
 	title := " " + glyphDevTools + " DevTools "
 	chain := tabChain(devTabLabels, int(m.tab))
 	titleW := dispW(title) + 1 + tabChainW(devTabLabels)

@@ -170,7 +170,7 @@ func (m listPanel) rows() int {
 // update handles one key and returns the key that names an action —
 // "enter", "o", "m", "x", "y", "A", "F", "C" — or "": the app runs it,
 // since the panel does not know what a URL is for, and the Space menu
-// hands the same keys to the same place. Esc is the app's (§4.3); while
+// hands the same keys to the same place. Esc is the app's (tdp K4); while
 // typing, Esc clearing the filter is answered by escTyping.
 func (m *listPanel) update(msg tea.KeyMsg) string {
 	k := msg.String()
@@ -316,7 +316,7 @@ func itemRegion(ok bool, item, panel []menuItem) []menuItem {
 	return append(items, panel...)
 }
 
-// hintPairs is the border legend: bright the key, dim what it does (§4.4).
+// hintPairs is the border legend: bright the key, dim what it does (tdp M5).
 func (m listPanel) hintPairs() [][2]string {
 	if m.typing {
 		return [][2]string{{"Enter", "done"}, {"Esc", "clear"}}

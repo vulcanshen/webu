@@ -116,7 +116,7 @@ func main() {
 	p := tea.NewProgram(app, tea.WithAltScreen())
 
 	// Whatever door the program leaves through — q, an outside SIGINT or
-	// SIGTERM, the terminal closing — Chromium goes too (u-family: leave
+	// SIGTERM, the terminal closing — Chromium goes too (terminu family: leave
 	// with no child behind).
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)

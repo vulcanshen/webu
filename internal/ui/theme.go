@@ -13,7 +13,7 @@ import (
 //
 // The APP palette is webu's own chrome — panels, borders, the header
 // chain, the pagetab, the cursor, menus, popups, the footer. It obeys
-// the VTP in full: a few anchors, lightness as the z-axis, one reserved
+// tdp D2 in full: a few anchors, lightness as the z-axis, one reserved
 // band per meaning, override colours outside the hierarchy.
 //
 // The PAGE palette is the document's own structure — headings, links,
@@ -29,12 +29,12 @@ import (
 // app colour share a hex today, that is two independent decisions
 // landing on the same shade, not one band used twice.
 //
-// Anchors are catppuccin-mocha (ui.md §4 / VTP §B): assigned once,
+// Anchors are catppuccin-mocha (ui.md §4 / tdp P4): assigned once,
 // derived everywhere.
 
 // ---- App palette: webu's own chrome.
 var (
-	// structural — panel chrome and the KEY half of every legend (§4.4).
+	// structural — panel chrome and the KEY half of every legend (tdp M5).
 	focusColor = lipgloss.Color("#89b4fa") // blue
 	borderDim  = lipgloss.Color("#585b70") // surface2: unfocused border
 	// cursor — "the current hand".
@@ -44,7 +44,7 @@ var (
 	// neutral text.
 	textColor = lipgloss.Color("#cdd6f4") // text
 	dimColor  = lipgloss.Color("#6c7086") // overlay0: glyphs, hints, secondary
-	// override — outside the brightness hierarchy (§2.4): red is "something
+	// override — outside the brightness hierarchy (tdp D2): red is "something
 	// is wrong", peach is "worth catching, nothing broken".
 	warnColor  = lipgloss.Color("#f38ba8") // red
 	peachColor = lipgloss.Color("#fab387") // peach

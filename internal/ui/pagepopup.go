@@ -166,7 +166,7 @@ func allIDs(root *ir.Node) map[cdp.BackendNodeID]bool {
 }
 
 // popupNode is the popup on top of the stack, as the current tree has
-// it, or nil — the page's popups stack the way webu's own do (VTP's
+// it, or nil — the page's popups stack the way webu's own do (tdp D2's
 // z-axis): a dialog opened from a dialog sits over it, and answering
 // the top one uncovers the one below.
 func (t *tab) popupNode() *ir.Node {
