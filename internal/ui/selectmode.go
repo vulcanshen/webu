@@ -518,17 +518,28 @@ func selectLegendPairs(typing bool) [][2]string {
 	}
 }
 
+// selectKeys are the mode's keys, the one list both of its sheets read:
+// the cheatsheet on Space, where pressing one runs it, and the help on ?,
+// which only reads (tdp K11).
+var selectKeys = []helpEntry{
+	{"h j k l", "move by character and row"},
+	{"w e b", "next word, word end, previous word"},
+	{"0 $", "start / end of the row"},
+	{"u d", "half a page up / down"},
+	{"gg G", "top / bottom of the page"},
+	{"v V", "select by character / by row"},
+	{"y", "copy the selection (or this row)"},
+	{"/", "search; Enter finds, n N step"},
+	{"Enter", "click what the cursor is on"},
+	{"Esc", "cancel the search, then leave"},
+}
+
 // selectCheatsheet is what Space shows in the mode (ux.md §A.1): every
 // key, and pressing one runs it.
-var selectCheatsheet = []string{
-	"  h j k l        move by character and row",
-	"  w e b          next word, word end, previous word",
-	"  0 $            start / end of the row",
-	"  u d            half a page up / down",
-	"  gg G           top / bottom of the page",
-	"  v V            select by character / by row",
-	"  y              copy the selection (or this row)",
-	"  /              search; Enter finds, n N step",
-	"  Enter          click what the cursor is on",
-	"  Esc            cancel the search, then leave",
-}
+var selectCheatsheet = func() []string {
+	lines := make([]string, len(selectKeys))
+	for i, e := range selectKeys {
+		lines[i] = "  " + padRight(e.key, 15) + e.desc
+	}
+	return lines
+}()

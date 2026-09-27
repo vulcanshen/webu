@@ -64,17 +64,6 @@ locku（對照到 v0.1.4）、webu（v0.1.0 那一輪）與 sshu（對照到 v0.
 
 ---
 
-## 4. visual mode 的 `?` 打開 `?` menu，不是模式的 help —— K11
-
-- **現況**：`app.go` `routeKey()` 的 `?` 分支（:867–879）排在 visual mode 的處理（:920）之前，visual mode 開著、沒有 popup 時
-  `?` 走 `openGlobalMenu()`，打開整個 app 的 `?` menu。`ux.md` §A.0.K 的 visual mode 欄也寫 `` `?` menu ``。
-  （visual mode 的 `Space` cheatsheet、`Esc`、`q` / `Ctrl-C`、`Tab` 的 toast、footer 的 `space` / `?` 都已符合 K11；cheatsheet
-  沒有游標、不移動，每個鍵都是「執行」，也符合「模式的鍵跟導覽鍵重疊時只用方向鍵移動」。）
-- **規則**：模式裡 `?` 是**這個模式的 help（唯讀）**（K11）。
-- **怎麼改**：`?` 分支裡，`m.sel.on`、沒有 popup、不在打字時，打開 `helpPopup`（標題 `Visual mode`），內容是模式的鍵 —— 跟
-  `selectCheatsheet`（`selectmode.go` :523）同一份來源轉成 `helpEntry`，不另外手寫。`ux.md` §A.0.K 的 visual mode `?` 欄改成
-  「模式的 help（唯讀）」。
-
 ## 6. 程式碼註解與測試訊息仍寫 `?` menu 與「偏離 tdp」—— 文件對齊
 
 第 1、2 條改完後，下列註解與 `t.Error` 訊息描述的是舊規則，一起改（照內容比對，不照行號）：

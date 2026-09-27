@@ -469,3 +469,25 @@ func TestGlobalPopupDimsTheScreenYouAreOn(t *testing.T) {
 		t.Error("the dimmed row should do nothing")
 	}
 }
+
+// In visual mode ? is the mode's help (tdp K11): its keys, read-only, from
+// the same list the Space cheatsheet shows.
+func TestQuestionMarkInVisualMode(t *testing.T) {
+	d := keysDriver(t)
+	d.m.sel.on = true
+
+	d.key("?")
+	d.until("the mode's help", func() bool { return d.m.help.anim.isInteractive() })
+	if d.m.help.title != "Visual mode" || len(d.m.help.entries) != len(selectKeys) {
+		t.Errorf("? in visual mode should show the mode's keys: %q %+v", d.m.help.title, d.m.help.entries)
+	}
+	d.key("y") // read, not run
+	if !d.m.help.anim.owns() || !d.m.sel.on {
+		t.Error("keys on the mode's help should run nothing")
+	}
+	for i, e := range selectKeys {
+		if !strings.Contains(selectCheatsheet[i], e.key) || !strings.Contains(selectCheatsheet[i], e.desc) {
+			t.Errorf("the cheatsheet and the help should read the same list: %q", selectCheatsheet[i])
+		}
+	}
+}
