@@ -1,6 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.0] — 2026-09-27
+
+The keys, brought in line with the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)
+(tdp v0.1.0) that kbu, filu, sshu and locku share.
 
 ### Changed
 
