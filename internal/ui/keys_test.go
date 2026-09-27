@@ -519,6 +519,9 @@ func TestInputGroupLegendFits(t *testing.T) {
 		return lines[len(lines)-1], ansi.StringWidth(lines[0])
 	}
 	bottom, w := box()
+	if v := ansi.Strip(d.m.input.view()); !strings.Contains(v, d.m.tabs[0].url) {
+		t.Errorf("the box should open wide enough to show the offer whole:\n%s", v)
+	}
 	if !strings.Contains(bottom, "Esc cancel") || !strings.Contains(bottom, "→ accept") || !strings.Contains(bottom, "Bksp decline") {
 		t.Errorf("the whole legend should fit on the bottom border, → accepting in a group: %q", bottom)
 	}
@@ -530,5 +533,34 @@ func TestInputGroupLegendFits(t *testing.T) {
 	d.key("x") // the title field typed: its offer is gone
 	if _, w2 := box(); w2 != w {
 		t.Errorf("the box should keep its width as the legend changes: %d then %d", w, w2)
+	}
+
+	// Its width is set as it opens: declining every offer, accepting one,
+	// or typing past the edge moves nothing (tdp L2).
+	d.send(tea.KeyMsg{Type: tea.KeyShiftTab})
+	d.send(tea.KeyMsg{Type: tea.KeyBackspace}) // the URL declined: no offer left anywhere
+	if d.m.input.placeholder != "" || d.m.input.more[0].placeholder != "" {
+		t.Fatalf("Backspace should decline the URL, and the title's offer with it")
+	}
+	if _, w2 := box(); w2 != w {
+		t.Errorf("declining the offers should not change the width: %d then %d", w, w2)
+	}
+	for _, r := range strings.Repeat("a-long-address/", 12) {
+		d.key(string(r))
+	}
+	if _, w2 := box(); w2 != w {
+		t.Errorf("typing past the edge should scroll, not widen: %d then %d", w, w2)
+	}
+	d.key("esc")
+	d.until("closed", func() bool { return !d.m.input.anim.owns() })
+
+	// A single box: accepting its long offer does not widen it either.
+	d.key("W")
+	d.key("L")
+	d.until("the location box", func() bool { return d.m.input.anim.isInteractive() })
+	_, lw := box()
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	if _, lw2 := box(); d.m.input.value == "" || lw2 != lw {
+		t.Errorf("accepting the offer should not change the width: %d then %d", lw, lw2)
 	}
 }
