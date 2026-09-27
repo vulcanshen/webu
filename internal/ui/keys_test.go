@@ -519,10 +519,14 @@ func TestInputGroupLegendFits(t *testing.T) {
 		return lines[len(lines)-1], ansi.StringWidth(lines[0])
 	}
 	bottom, w := box()
-	if !strings.Contains(bottom, "Esc cancel") || !strings.Contains(bottom, "Bksp clear") {
-		t.Errorf("the whole legend should fit on the bottom border: %q", bottom)
+	if !strings.Contains(bottom, "Esc cancel") || !strings.Contains(bottom, "→ accept") || !strings.Contains(bottom, "Bksp decline") {
+		t.Errorf("the whole legend should fit on the bottom border, → accepting in a group: %q", bottom)
 	}
 	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	// In a group Tab only moves: the URL on offer stays an offer (tdp K2).
+	if d.m.input.at != 1 || d.m.input.value != "" || d.m.input.placeholder == "" {
+		t.Fatalf("Tab in a group should move to the next field and accept nothing: at %d value %q", d.m.input.at, d.m.input.value)
+	}
 	d.key("x") // the title field typed: its offer is gone
 	if _, w2 := box(); w2 != w {
 		t.Errorf("the box should keep its width as the legend changes: %d then %d", w, w2)

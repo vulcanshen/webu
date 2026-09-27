@@ -125,7 +125,7 @@ webu help                         # 完整的命令列說明
 
 `Space` 就是右鍵選單：連結開新分頁、複製連結或文字、送出、清除或編輯輸入框、檢查元素。對整頁：`R` 重新載入 · `T` 新分頁 · `P` / `N` 上一頁 / 下一頁 · `/` finder · `go` 跳到某行 · `n` / `p` 下一節 / 上一節 · `Sections` / `One sheet` · `v` visual mode · `L` 網址 · `A` 加書籤 · `I` DevTools · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。
 
-`L` 開網址框時會帶著目前的網址：`→` 接過來改、`Backspace` 清掉。有好幾欄的框（加書籤、登入）用 `Tab` 換欄，`Enter` 一次送出全部。
+`L` 開網址框時會帶著目前的網址：`Tab` 接過來改、`Backspace` 不要它。有好幾欄的框（加書籤、登入）用 `Tab` 換欄、`→` 接下提議，`Enter` 一次送出全部。
 
 ### 書籤、歷史、下載、設定
 
@@ -183,7 +183,7 @@ restore_session: true
 
 ## terminu family
 
-webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.5/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
+webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.6/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
 
 ## 授權
 

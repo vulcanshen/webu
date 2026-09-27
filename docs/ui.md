@@ -2,7 +2,7 @@
 
 > 本文件講**版面與 surface**：面板、頁面的三個畫面、pagetab、popup、色帶、存檔。互動語意
 > （core-key、Space menu 內容、hotkey）在 `ux.md`；功能與 Chromium 邊界在 `function.md`；
-> 實作註記在 `dev-remarks.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.5/principle)（tdp）撰寫，每條版面決定標日期。
+> 實作註記在 `dev-remarks.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.6/principle)（tdp）撰寫，每條版面決定標日期。
 
 ---
 
@@ -160,7 +160,7 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 | Space menu | menu | item / panel 兩 region；捲動、環繞、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23） |
 | global operation | menu | Space menu 最後一列打開：全域動作，可執行 |
 | `?` key reference | viewport | 最前端 surface 的按鍵，唯讀：面板上是面板的鍵 + core key，浮層上是這個浮層的鍵；寬度依內容 |
-| Location | input | `L`：目前 URL 當提議（`→` 接手、Backspace 清掉）；非 URL 當搜尋 |
+| Location | input | `L`：目前 URL 當提議（`Tab` 接受、Backspace 拒絕）；非 URL 當搜尋 |
 | input | input | 一行的欄位：**邊框寫型別**（`email`、`number`、`date · YYYY-MM-DD`、`password`、`email · invalid`），**框裡一行是欄位名**（2026-09-23 user 定：邊框是 chrome 說這是哪種框，框內那行說是哪一個欄位）；JS `prompt`；設定值。**input group**：一個框幾個欄位（加書籤 URL + 標題、HTTP auth 帳號 + 密碼遮罩），聚焦那一欄的名字亮起、只有它有游標，送出不成立時原因寫在最下面（2026-09-27） |
 | editor | 大框 | textarea / contenteditable：多行、**寫 / 移兩態**（Esc 出到框層 hjkl 走、`i`/`a`/`A`/`o` 回寫、Enter 設值、再 Esc 取消） |
 | **finder** | 三區（輸入 / 清單 / 預覽，filu 的 `/` 形式；寬 ≥ 96 欄並排、否則上下） | `/`：整頁四個 part 的節點索引（「持有文字的最小區塊」各一次），字面比對優先、名字模糊比對；清單列前綴 part 的 glyph；打字時 Enter 進清單，清單上 Enter = **去那裡**（切 part、開節、沿路走進去、游標落定），不按 |
