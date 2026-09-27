@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // keysDriver is an app with no browser behind it: the core keys route the
@@ -499,5 +500,31 @@ func TestQuestionMarkInVisualMode(t *testing.T) {
 		if !strings.Contains(selectCheatsheet[i], e.key) || !strings.Contains(selectCheatsheet[i], e.desc) {
 			t.Errorf("the cheatsheet and the help should read the same list: %q", selectCheatsheet[i])
 		}
+	}
+}
+
+// The bookmark box is as wide as its legend at its widest, so the bottom
+// border is never cut short, and Tab from a field with an offer to one
+// without does not change its width (tdp L2).
+func TestInputGroupLegendFits(t *testing.T) {
+	d := keysDriver(t)
+	d.m.tabs = []*tab{{id: 1, url: "https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/dialog/", title: "Modal Dialog Example | APG | WAI | W3C"}}
+	d.m.shown = 0
+
+	d.key("B")
+	d.key("a")
+	d.until("the bookmark box", func() bool { return d.m.input.anim.isInteractive() })
+	box := func() (string, int) {
+		lines := strings.Split(ansi.Strip(d.m.input.view()), "\n")
+		return lines[len(lines)-1], ansi.StringWidth(lines[0])
+	}
+	bottom, w := box()
+	if !strings.Contains(bottom, "Esc cancel") || !strings.Contains(bottom, "Bksp clear") {
+		t.Errorf("the whole legend should fit on the bottom border: %q", bottom)
+	}
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	d.key("x") // the title field typed: its offer is gone
+	if _, w2 := box(); w2 != w {
+		t.Errorf("the box should keep its width as the legend changes: %d then %d", w, w2)
 	}
 }

@@ -176,7 +176,11 @@ func (m inputPopup) view() string {
 	for _, f := range fields {
 		want = max(want, dispW(f.value)+8, dispW(f.prompt)+3)
 	}
-	innerW := popupInnerW(m.screenW, max(want, dispW(m.refused)+3))
+	// The legend under the box fits too, at its widest: the offer's keys come
+	// and go as Tab moves between fields, and the box must not change width
+	// with them (tdp L2).
+	widest := hintLegend(m.legend(fields, true))
+	innerW := popupInnerW(m.screenW, max(want, dispW(m.refused)+3, dispW(widest)+2))
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
@@ -215,17 +219,28 @@ func (m inputPopup) view() string {
 		rows = append(rows, spaces(innerW), warn.Render(padRight(" "+m.refused, innerW)))
 	}
 
+	hint := hintLegend(m.legend(fields, false))
+	return drawPopupBox(popupLayerColor(m.layer), " "+m.glyph+" "+m.title+" ",
+		hint, animRows(m.anim, rows), innerW)
+}
+
+// legend is the bottom border's keys: the offer's two only while the field
+// the keys go to has one standing — or, widest, while any field does.
+func (m inputPopup) legend(fields []groupField, widest bool) [][2]string {
 	pairs := [][2]string{{"Enter", m.accept}}
 	if len(fields) > 1 {
 		pairs = append(pairs, [2]string{"Tab", "next field"})
 	}
-	if f := fields[min(m.at, len(fields)-1)]; f.value == "" && f.placeholder != "" {
+	offer := false
+	for i, f := range fields {
+		if (widest || i == m.at) && f.value == "" && f.placeholder != "" {
+			offer = true
+		}
+	}
+	if offer {
 		pairs = append(pairs, [2]string{"→", "edit it"}, [2]string{"Bksp", "clear"})
 	}
-	pairs = append(pairs, [2]string{"Esc", "cancel"})
-	hint := hintLegend(pairs)
-	return drawPopupBox(popupLayerColor(m.layer), " "+m.glyph+" "+m.title+" ",
-		hint, animRows(m.anim, rows), innerW)
+	return append(pairs, [2]string{"Esc", "cancel"})
 }
 
 func spaces(n int) string {
