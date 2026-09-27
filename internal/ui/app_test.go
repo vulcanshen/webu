@@ -424,16 +424,25 @@ func TestScreensAndSession(t *testing.T) {
 	d.key("esc")
 	d.until("removal toast gone", func() bool { return !d.m.toast.anim.owns() })
 
-	// a adds a bookmark where the cursor is, in two boxes; with no page
-	// up, the title box offers the URL, and Enter takes the offer.
+	// a adds a bookmark where the cursor is: URL and title are one group
+	// (tdp K3). With no page up there is nothing on offer, so Enter on the
+	// empty box is refused on the URL field and the box stays.
 	d.m.lists.cursorToFolder("dev")
 	d.key("a")
-	d.until("url box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputBookmarkURL })
-	d.key("go.dev")
+	d.until("the bookmark box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputBookmark })
+	if len(d.m.input.more) != 1 || d.m.input.more[0].prompt != "title" {
+		t.Fatalf("URL and title should be one box: %+v", d.m.input.more)
+	}
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
 	d.key("enter")
-	d.until("title box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputBookmarkTitle })
-	if d.m.input.placeholder != "https://go.dev" {
-		t.Errorf("the title box should offer the URL: %q", d.m.input.placeholder)
+	if !d.m.input.isInteractive() || d.m.input.at != 0 || d.m.input.refused == "" {
+		t.Fatalf("an empty URL should be refused on its field: at %d refused %q", d.m.input.at, d.m.input.refused)
+	}
+	// The title follows the URL while it is not typed: the URL, with no
+	// page of that address up; Enter takes it.
+	d.key("go.dev")
+	if d.m.input.refused != "" || d.m.input.more[0].placeholder != "https://go.dev" {
+		t.Errorf("the title should offer the URL: %q", d.m.input.more[0].placeholder)
 	}
 	d.key("enter")
 	d.until("added", func() bool { return len(d.m.bookmarks) == 2 })
@@ -637,14 +646,19 @@ func TestGotoOffersThePageURL(t *testing.T) {
 	if d.m.input.value != "" || d.m.input.placeholder != "https://example.com/a" {
 		t.Fatalf("value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
 	}
-	if v := d.m.input.view(); !strings.Contains(v, "Tab") || !strings.Contains(v, "edit it") {
-		t.Errorf("hint does not offer Tab:\n%s", v)
+	if v := d.m.input.view(); !strings.Contains(v, "→") || !strings.Contains(v, "edit it") || strings.Contains(v, "Tab") {
+		t.Errorf("hint should offer →, and no Tab in a box of one field:\n%s", v)
 	}
-	// Tab takes the offer into the line; typing then edits it.
+	// Tab only moves between fields, and one field has none to go to.
 	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	if d.m.input.value != "" || d.m.input.placeholder == "" {
+		t.Fatalf("Tab should leave the offer alone: value %q", d.m.input.value)
+	}
+	// → takes the offer into the line; typing then edits it.
+	d.send(tea.KeyMsg{Type: tea.KeyRight})
 	d.key("b")
 	if d.m.input.value != "https://example.com/ab" || d.m.input.placeholder != "" {
-		t.Fatalf("after Tab: value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
+		t.Fatalf("after →: value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
 	}
 	d.key("esc")
 	d.until("closed", func() bool { return !d.m.input.isActive() })
@@ -657,7 +671,7 @@ func TestGotoOffersThePageURL(t *testing.T) {
 		t.Fatalf("Backspace kept the offer %q", d.m.input.placeholder)
 	}
 	if v := d.m.input.view(); strings.Contains(v, "edit it") {
-		t.Errorf("hint still offers Tab with nothing to take:\n%s", v)
+		t.Errorf("hint still offers → with nothing to take:\n%s", v)
 	}
 	d.key("esc")
 

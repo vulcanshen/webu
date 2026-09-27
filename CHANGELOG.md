@@ -14,6 +14,12 @@
   in it.
 - **`?` in visual mode shows the mode's keys**, the same list `Space`
   shows there, to read.
+- **Adding a bookmark is one box**, URL and title together, and so is
+  **signing in**, name and password. `Tab` moves between the fields and
+  `Enter` sends them all; an empty URL keeps the box open on that field
+  and says why.
+- **`→` takes the offered value** in a text box (the current URL at `L`,
+  the page at adding a bookmark); `Tab` only moves between fields.
 
 ### Fixed
 

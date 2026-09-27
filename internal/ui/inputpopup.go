@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/chromedp/cdproto/cdp"
+	"strings"
 )
 
 // inputAction says what to do with the answer. It exists so the popup itself
@@ -12,21 +13,19 @@ import (
 type inputAction int
 
 const (
-	inputNone          inputAction = iota
-	inputGoto                      // open a URL in the shown tab (ux.md §7)
-	inputGotoNewTab                // open a URL in a new tab
-	inputField                     // write a textbox's value back to the page (ux.md §2)
-	inputFill                      // a date, a time, a colour: the value set whole (page.Fill)
-	inputPrompt                    // answer a page's prompt() (function.md §5)
-	inputAuthUser                  // an HTTP challenge: the name, then…
-	inputAuthPass                  // …the password, masked
-	inputEval                      // the console prompt: JavaScript, run in the page
-	inputSetting                   // a value for config.yaml, from the Settings screen
-	inputFolder                    // a new bookmark folder's name, or a path of them
-	inputBookmarkURL               // a bookmark typed in: the URL first…
-	inputBookmarkTitle             // …then its title (bookmarks.go)
-	inputImportName                // the folder a browser's export goes under (bookmarks.go)
-	inputRename                    // a bookmark's title, or a folder's name (bookmarks.go)
+	inputNone       inputAction = iota
+	inputGoto                   // open a URL in the shown tab (ux.md §7)
+	inputGotoNewTab             // open a URL in a new tab
+	inputField                  // write a textbox's value back to the page (ux.md §2)
+	inputFill                   // a date, a time, a colour: the value set whole (page.Fill)
+	inputPrompt                 // answer a page's prompt() (function.md §5)
+	inputAuth                   // an HTTP challenge: name and password, one group
+	inputEval                   // the console prompt: JavaScript, run in the page
+	inputSetting                // a value for config.yaml, from the Settings screen
+	inputFolder                 // a new bookmark folder's name, or a path of them
+	inputBookmark               // a bookmark typed in: URL and title, one group (bookmarks.go)
+	inputImportName             // the folder a browser's export goes under (bookmarks.go)
+	inputRename                 // a bookmark's title, or a folder's name (bookmarks.go)
 )
 
 // inputPopup is one line of text with a question above it — the message
@@ -59,6 +58,14 @@ type inputPopup struct {
 	// placeholder is shown dim in the empty box: an offer Tab takes and
 	// Backspace declines (update).
 	placeholder string
+	// more are the fields after the first, for an input group (tdp K3):
+	// the popup's own prompt, value, placeholder and masked are field 0.
+	// at is the field the keys go to; Tab moves it, Enter submits them all.
+	more []groupField
+	at   int
+	// refused says why the last Enter did not go through: the box stays,
+	// on the field at fault.
+	refused string
 
 	layer   int
 	screenW int
@@ -66,6 +73,33 @@ type inputPopup struct {
 }
 
 func newInputPopup() inputPopup { return inputPopup{anim: newPopupAnimator("input")} }
+
+// groupField is one field of an input group after the first.
+type groupField struct {
+	prompt      string
+	value       string
+	placeholder string
+	masked      bool
+}
+
+// fields is every field of the popup, the first one included, as copies.
+func (m inputPopup) fields() []groupField {
+	return append([]groupField{{m.prompt, m.value, m.placeholder, m.masked}}, m.more...)
+}
+
+// focused is the value and the offer of the field the keys go to.
+func (m *inputPopup) focused() (*string, *string) {
+	if m.at == 0 || m.at > len(m.more) {
+		return &m.value, &m.placeholder
+	}
+	f := &m.more[m.at-1]
+	return &f.value, &f.placeholder
+}
+
+// refuse keeps the box up on field i, saying why (tdp K3).
+func (m *inputPopup) refuse(i int, why string) {
+	m.at, m.refused = i, why
+}
 
 func (m inputPopup) isActive() bool      { return m.anim.isActive() }
 func (m inputPopup) isInteractive() bool { return m.anim.isInteractive() }
@@ -95,61 +129,98 @@ func (m *inputPopup) update(msg tea.KeyMsg) (committed string, done bool) {
 	if !m.anim.isInteractive() {
 		return "", false
 	}
+	value, offer := m.focused()
 	switch msg.Type {
 	case tea.KeyEnter:
+		// Always the whole box, one field or a group (tdp K3).
 		return m.value, true
-	case tea.KeyTab:
-		if m.value == "" && m.placeholder != "" {
-			m.value, m.placeholder = m.placeholder, ""
+	case tea.KeyTab, tea.KeyShiftTab:
+		// Field to field, and nothing else (tdp K3): one field has nowhere
+		// to go.
+		if n := len(m.more) + 1; n > 1 {
+			d := 1
+			if msg.Type == tea.KeyShiftTab {
+				d = n - 1
+			}
+			m.at = (m.at + d) % n
+		}
+		return "", false
+	case tea.KeyRight:
+		// The offer is taken with →, since Tab moves between fields
+		// (2026-09-27).
+		if *value == "" && *offer != "" {
+			*value, *offer = *offer, ""
 		}
 	case tea.KeyBackspace:
-		if r := []rune(m.value); len(r) > 0 {
-			m.value = string(r[:len(r)-1])
+		if r := []rune(*value); len(r) > 0 {
+			*value = string(r[:len(r)-1])
 		} else {
-			m.placeholder = ""
+			*offer = ""
 		}
 	case tea.KeyCtrlU:
-		m.value = ""
+		*value = ""
 	case tea.KeySpace:
-		m.value += " "
+		*value += " "
 	case tea.KeyRunes:
-		m.value += string(msg.Runes)
+		*value += string(msg.Runes)
+	default:
+		return "", false
 	}
+	m.refused = ""
 	return "", false
 }
 
 func (m inputPopup) view() string {
-	innerW := popupInnerW(m.screenW, max(44, dispW(m.value)+8, dispW(m.prompt)+3))
+	fields := m.fields()
+	want := 44
+	for _, f := range fields {
+		want = max(want, dispW(f.value)+8, dispW(f.prompt)+3)
+	}
+	innerW := popupInnerW(m.screenW, max(want, dispW(m.refused)+3))
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
+	warn := lipgloss.NewStyle().Foreground(warnColor)
 
-	shown := m.value
-	if m.masked {
-		shown = ""
-		for range m.value {
-			shown += "•"
+	var rows []string
+	for i, f := range fields {
+		if i > 0 {
+			rows = append(rows, spaces(innerW))
 		}
+		on := i == m.at
+		shown := f.value
+		if f.masked {
+			shown = strings.Repeat("•", len([]rune(f.value)))
+		}
+		// Lavender, because this is the field being edited (tdp P4). Long
+		// values keep their END in view: that is where the cursor is. In a
+		// group only the field the keys go to wears the cursor.
+		caret := " "
+		if on {
+			caret = cur.Render(" ")
+		}
+		value := truncateHead(shown, innerW-3)
+		line := " " + edit.Render(value) + caret + spaces(max(0, innerW-2-dispW(value)))
+		if f.value == "" && f.placeholder != "" {
+			ph := truncate(f.placeholder, innerW-3)
+			line = " " + caret + dim.Render(ph) + spaces(max(0, innerW-2-dispW(ph)))
+		}
+		prompt := dim.Render(padRight(" "+f.prompt, innerW))
+		if on && len(fields) > 1 {
+			prompt = edit.Render(padRight(" "+f.prompt, innerW))
+		}
+		rows = append(rows, prompt, spaces(innerW), line)
 	}
-	// Lavender, because this is the field being edited (tdp P4). Long values
-	// keep their END in view: that is where the cursor is.
-	value := truncateHead(shown, innerW-3)
-	line := " " + edit.Render(value) + cur.Render(" ") +
-		spaces(max(0, innerW-2-dispW(value)))
-	if m.value == "" && m.placeholder != "" {
-		ph := truncate(m.placeholder, innerW-3)
-		line = " " + cur.Render(" ") + dim.Render(ph) +
-			spaces(max(0, innerW-2-dispW(ph)))
+	if m.refused != "" {
+		rows = append(rows, spaces(innerW), warn.Render(padRight(" "+m.refused, innerW)))
 	}
 
-	rows := []string{
-		dim.Render(padRight(" "+m.prompt, innerW)),
-		spaces(innerW),
-		line,
-	}
 	pairs := [][2]string{{"Enter", m.accept}}
-	if m.value == "" && m.placeholder != "" {
-		pairs = append(pairs, [2]string{"Tab", "edit it"}, [2]string{"Bksp", "clear"})
+	if len(fields) > 1 {
+		pairs = append(pairs, [2]string{"Tab", "next field"})
+	}
+	if f := fields[min(m.at, len(fields)-1)]; f.value == "" && f.placeholder != "" {
+		pairs = append(pairs, [2]string{"→", "edit it"}, [2]string{"Bksp", "clear"})
 	}
 	pairs = append(pairs, [2]string{"Esc", "cancel"})
 	hint := hintLegend(pairs)

@@ -81,24 +81,3 @@ locku（對照到 v0.1.4）、webu（v0.1.0 那一輪）與 sshu（對照到 v0.
 | `spacemenu.go:20–22` | `the ? menu's key reference (tdp M4)` | 隨 `note` 一起拿掉（第 1 條） |
 | `keys_test.go:118`、`:166–167`、`:320` | `? on a panel is the ? menu`、`the one row is webu's deviation`、`The ? menu's rows do the same` | 新規則 |
 | `keys_test.go` 的 `t.Error` / `until` 訊息 | `the ? menu`（:49、:52、:75、:77、:125–162、:191、:193、:348–356） | global operation popup / key reference |
-
-## 7. 加書籤、HTTP 驗證拆成兩個接連的框，應該是一個 input group —— K3
-
-- **現況**：兩者都是一個接一個的單欄 input popup。加書籤：`bookmarks.go` `startAddBookmark()`（:291）先問 URL（`accept: "next"`），
-  `bookmarkURLGiven()`（:302）關掉它再開標題框。HTTP 驗證：`app.go` 的 `authMsg`（:342）先問帳號，`inputAuthUser`（:2594）再開
-  遮罩的密碼框。`Tab` 不在兩框之間移動；`Esc` 在第二個框只取消第二個。
-- **定案**（2026-09-27，user）：兩組都是一個 input group —— 放進**同一個 popup**：加書籤是 URL + 標題，HTTP 驗證是帳號 + 密碼。
-- **規則**：`Tab` 在欄位之間移動；`Enter` 一律送出整組；送出失敗時焦點跳到第一個不合格的欄位、說明錯在哪（K3）。
-- **怎麼改**：
-  - `inputPopup` 從一個值改成一組欄位（每欄：prompt、value、masked、offer），單欄的 popup 就是一欄，路由、層數、`closeTop`、
-    `floatHelp` 都沿用，不另開一種 popup。
-  - **`Tab` 只換欄，接下提議改用 `→`**（2026-09-27，user：「tab follow tdp」）。單欄 popup 裡 `Tab` 原本是「接下提議」
-    （Location 的目前 URL、加書籤的目前頁）；改成**所有** input popup 的 `Tab` 都只在欄位之間移動（單欄時不作用），空欄位上接下
-    提議的是 `→`（input popup 目前沒有游標移動，`→` 沒有別的用途）。提議仍是欄位裡的暗字，`Backspace` 拒絕它；加書籤的欄位空著送出
-    就用提議（原本的行為），Location 不用（原本的行為）。加書籤的標題提議跟著 URL 欄：URL 是目前這頁就提議頁面標題，否則提議 URL。
-  - 下框 hint：`Tab  next field`（多欄時）、`→  edit it`（有提議時，原本是 `Tab`）。
-  - 驗證：加書籤的 URL 不可空；HTTP 驗證不驗（帳號可以是空的）。失敗時焦點移到那一欄、框裡寫出原因，不關框。
-  - `Esc` 取消整組：HTTP 驗證走 `cancelAuth()`。
-  - 文件：`ux.md` §2（文字輸入、§2.2 Location 的「Tab 接手」）與 `ui.md` 浮層表的 Location、input 列補上 input group 與 `→`；
-    README 兩份的「`L` opens the address box … `Tab` takes it to edit」改成 `→`，Bookmarks `a` 的說明。
-  - 測試：`app_test.go` 的加書籤（:431–434）與 `hooks_test.go` 的 HTTP 驗證（:164–170）改成量一個框兩欄；補送出失敗跳到 URL 欄。

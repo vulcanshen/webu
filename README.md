@@ -126,7 +126,7 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
 
 `Space` is the right-click menu: open a link in a new tab, yank a link or text, submit, clear or edit a box, inspect an element. For the page: `R` reload · `T` new tab · `P` / `N` back / forward · `/` finder · `go` go to line · `n` / `p` next / previous section · `Sections` / `One sheet` · `v` visual mode · `L` location · `A` bookmark it · `I` DevTools · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab.
 
-`L` opens the address box with the current URL on offer: `Tab` takes it to edit, `Backspace` clears it.
+`L` opens the address box with the current URL on offer: `→` takes it to edit, `Backspace` clears it. In a box of several fields — adding a bookmark, signing in — `Tab` moves between them and `Enter` sends them all.
 
 ### Bookmarks, History, Downloads, Settings
 

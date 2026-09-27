@@ -117,10 +117,8 @@ type AppModel struct {
 	// dialog is the page's question being asked (function.md §5); the page
 	// is stalled until it is answered, and settle captures wait too.
 	dialog *dialogMsg
-	// auth is the HTTP challenge being answered, and authUser the name
-	// typed so far (the password is asked second).
-	auth     *authMsg
-	authUser string
+	// auth is the HTTP challenge being answered.
+	auth *authMsg
 	// upload is the file chooser waiting on a path.
 	upload *fileMsg
 	// closed is the tabs closed this session, for [U]ndo close in [1].
@@ -351,15 +349,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(waitEvent(m.events), m.noteDownload(msg))
 
 	case authMsg:
-		// The name first, the password second (masked); the request waits.
-		m.auth, m.authUser = &msg, ""
+		// Name and password, one group (tdp K3); the request waits.
+		m.auth = &msg
 		where := msg.origin
 		if msg.realm != "" {
 			where += " — " + msg.realm
 		}
 		return m, tea.Batch(waitEvent(m.events), m.input.ask(inputPopup{
-			title: "Sign in", glyph: glyphPencil, prompt: where + " asks for a name", accept: "next",
-			action: inputAuthUser}, m.layer()))
+			title: "Sign in", glyph: glyphPencil, prompt: "name for " + where, accept: "sign in",
+			more: []groupField{{prompt: "password", masked: true}}, action: inputAuth}, m.layer()))
 
 	case fileMsg:
 		// The page asks for a file: the file picker, the way the
@@ -985,7 +983,7 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		switch m.input.action {
 		case inputPrompt:
 			return m, tea.Batch(m.input.close(), m.answerDialog(false, ""))
-		case inputAuthUser, inputAuthPass:
+		case inputAuth:
 			return m, tea.Batch(m.input.close(), m.cancelAuth())
 		}
 		return m, m.input.close()
@@ -2562,6 +2560,9 @@ func fieldTakes(n *ir.Node) string {
 
 func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	value, done := m.input.update(msg)
+	if m.input.action == inputBookmark {
+		m.input.more[0].placeholder = m.bookmarkTitleOffer(m.bookmarkURLInBox())
+	}
 	if !done {
 		return m, nil
 	}
@@ -2619,10 +2620,8 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.input.close(), m.addFolder(m.folderParent, value))
 	case inputImportName:
 		return m, m.importBookmarks(value)
-	case inputBookmarkURL:
-		return m, m.bookmarkURLGiven(value)
-	case inputBookmarkTitle:
-		return m, m.bookmarkTitleGiven(value)
+	case inputBookmark:
+		return m, m.bookmarkGiven()
 	case inputRename:
 		return m, m.renameGiven(value)
 	case inputEval:
@@ -2639,17 +2638,10 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.devtools.console.cursor = max(0, len(m.devtools.console.entries)-1)
 		ctx, id := dt.ctx, dt.id
 		return m, func() tea.Msg { return evalMsg{tabID: id, entry: page.Eval(ctx, expr)} }
-	case inputAuthUser:
-		if m.auth == nil {
-			return m, m.input.close()
-		}
-		m.authUser = value
-		return m, m.input.ask(inputPopup{title: "Sign in", glyph: glyphPencil,
-			prompt: "password for " + value, accept: "sign in", action: inputAuthPass, masked: true}, m.layer())
-	case inputAuthPass:
+	case inputAuth:
 		a := m.auth
 		m.auth = nil
-		user := m.authUser
+		user, pass := value, m.input.more[0].value
 		if a == nil {
 			return m, m.input.close()
 		}
@@ -2657,7 +2649,7 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if at == nil {
 			return m, m.input.close()
 		}
-		return m, tea.Batch(m.input.close(), at.unblock(func(ctx context.Context) error { return page.Auth(ctx, a.id, user, value) }))
+		return m, tea.Batch(m.input.close(), at.unblock(func(ctx context.Context) error { return page.Auth(ctx, a.id, user, pass) }))
 	}
 	return m, m.closeStack()
 }

@@ -282,49 +282,60 @@ func (m *AppModel) deleteFolderTree(path string) tea.Cmd {
 
 // ---------------------------------------------------------- adding one
 
-// startAddBookmark is a on the Bookmarks screen: a bookmark typed in, in
-// two boxes — the URL, then the title — into the folder the cursor is in.
-// The page [W]eb is showing is on offer in both, so adding the current
-// page is a, Enter, Enter: here Enter on the untouched offer TAKES it,
-// because the offer is the whole point of the box (unlike Location, where
-// the offer is the page you are already on).
+// startAddBookmark is a on the Bookmarks screen: a bookmark typed in, URL
+// and title in one box (tdp K3), into the folder the cursor is in. The page
+// [W]eb is showing is on offer in both, so adding the current page is a,
+// Enter: here a field left on its offer TAKES it, because the offer is the
+// whole point of the box (unlike Location, where the offer is the page you
+// are already on).
 func (m *AppModel) startAddBookmark(folder string) tea.Cmd {
 	m.newBookmark = store.Bookmark{Folder: folder}
 	p := inputPopup{title: "Add bookmark", glyph: glyphBookmark, prompt: "URL",
-		accept: "next", action: inputBookmarkURL}
+		accept: "add", action: inputBookmark, more: []groupField{{prompt: "title"}}}
 	if t := m.shownTab(); t != nil && t.url != "" && t.url != "about:blank" {
 		p.placeholder = t.url
 	}
+	p.more[0].placeholder = m.bookmarkTitleOffer(p.placeholder)
 	return m.input.ask(p, m.layer())
 }
 
-// bookmarkURLGiven is the first box answered: the title box follows.
-func (m *AppModel) bookmarkURLGiven(value string) tea.Cmd {
-	url := strings.TrimSpace(value)
-	if url == "" {
-		url = m.input.placeholder
+// bookmarkURLInBox is the URL the box would add: what is typed, or the
+// offer.
+func (m *AppModel) bookmarkURLInBox() string {
+	if url := strings.TrimSpace(m.input.value); url != "" {
+		return url
 	}
-	if url == "" {
-		return m.input.close()
-	}
-	url = m.resolveURL(url)
-	m.newBookmark.URL = url
-	title := url
-	if t := m.shownTab(); t != nil && t.url == url && t.title != "" {
-		title = t.title
-	}
-	return tea.Batch(m.input.close(), m.input.ask(inputPopup{title: "Add bookmark", glyph: glyphBookmark,
-		prompt: "title", placeholder: title, accept: "add", action: inputBookmarkTitle}, m.layer()))
+	return m.input.placeholder
 }
 
-// bookmarkTitleGiven is the second box answered: the bookmark is written.
-func (m *AppModel) bookmarkTitleGiven(value string) tea.Cmd {
-	title := strings.TrimSpace(value)
-	if title == "" {
-		title = m.input.placeholder
+// bookmarkTitleOffer is the title offered for a URL: the page's own when
+// it is the page [W]eb shows, else the URL. It follows the URL field until
+// the title is typed.
+func (m *AppModel) bookmarkTitleOffer(url string) string {
+	if url == "" {
+		return ""
+	}
+	url = m.resolveURL(url)
+	if t := m.shownTab(); t != nil && t.url == url && t.title != "" {
+		return t.title
+	}
+	return url
+}
+
+// bookmarkGiven is the box submitted: the bookmark is written, or the box
+// stays on the URL, which is the one thing a bookmark cannot be without.
+func (m *AppModel) bookmarkGiven() tea.Cmd {
+	url := m.bookmarkURLInBox()
+	if url == "" {
+		m.input.refuse(0, "a bookmark needs a URL")
+		return nil
 	}
 	b := m.newBookmark
-	b.Title = title
+	b.URL = m.resolveURL(url)
+	b.Title = strings.TrimSpace(m.input.more[0].value)
+	if b.Title == "" {
+		b.Title = m.bookmarkTitleOffer(url)
+	}
 	for _, x := range m.bookmarks {
 		if x.URL == b.URL {
 			return tea.Batch(m.input.close(), m.toast.show("already bookmarked", toastInfo))
