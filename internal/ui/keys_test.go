@@ -55,9 +55,9 @@ func TestSpaceClosesOnlyTheSpaceMenu(t *testing.T) {
 
 	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
 	d.send(keyQ)
-	d.until("the quit confirm", func() bool { return d.m.confirm.anim.isInteractive() })
+	d.until("the quit confirm", func() bool { return d.m.quitAsk.anim.isInteractive() })
 	d.send(keySpace)
-	if !d.m.confirm.anim.owns() {
+	if !d.m.quitAsk.anim.owns() {
 		t.Error("Space on a confirm should not cancel it")
 	}
 }
@@ -99,15 +99,16 @@ func TestQuitFromEverywhere(t *testing.T) {
 	// Ctrl-C on it leaves.
 	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
 	d.send(keyCtrlC)
-	d.until("the quit confirm", func() bool { return d.m.confirm.anim.isInteractive() })
-	if d.m.confirm.action != confirmQuit {
-		t.Fatalf("Ctrl-C with a download in flight should ask first: %v", d.m.confirm.action)
+	d.until("the quit confirm", func() bool { return d.m.quitAsk.anim.isInteractive() })
+	if d.m.quitAsk.action != confirmQuit {
+		t.Fatalf("Ctrl-C with a download in flight should ask first: %v", d.m.quitAsk.action)
 	}
 	if d.quits(keyQ) {
 		t.Error("q on the quit confirm should not leave")
 	}
 	d.send(keyQ)
-	if !d.m.confirm.anim.owns() || d.m.confirm.action != confirmQuit {
+	// As it is: not asked again, which would replay its opening.
+	if !d.m.quitAsk.anim.isInteractive() || d.m.quitAsk.action != confirmQuit {
 		t.Error("q on the quit confirm should leave it as it is")
 	}
 	if !d.quits(keyCtrlC) {
@@ -217,14 +218,14 @@ func TestQuestionMarkOnAPopup(t *testing.T) {
 
 	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
 	d.send(keyQ)
-	d.until("the quit confirm", func() bool { return d.m.confirm.anim.isInteractive() })
+	d.until("the quit confirm", func() bool { return d.m.quitAsk.anim.isInteractive() })
 	d.key("?")
-	d.until("the confirm's help", func() bool { return d.m.help.anim.isInteractive() })
-	if len(d.m.help.entries) != len(helpConfirm) {
-		t.Errorf("? on a confirm should show its two keys: %+v", d.m.help.entries)
+	d.until("the confirm's help", func() bool { return d.m.quitHelp.anim.isInteractive() })
+	if len(d.m.quitHelp.entries) != len(helpConfirm) {
+		t.Errorf("? on a confirm should show its two keys: %+v", d.m.quitHelp.entries)
 	}
 	d.key("enter") // pressed on the help, not on the confirm under it
-	if !d.m.confirm.anim.owns() {
+	if !d.m.quitAsk.anim.owns() {
 		t.Error("keys on the help should not reach the confirm")
 	}
 }
@@ -354,5 +355,57 @@ func TestMenuStaysUnderWhatItOpened(t *testing.T) {
 	d.key("esc")
 	if !d.m.globalMenu.anim.owns() {
 		t.Error("Esc on the box should come back to the ? menu")
+	}
+}
+
+// The quit flow asks in a popup of its own, over the whole stack (tdp D3,
+// K4, F4): a question being answered stays under it, and Esc on the quit
+// question comes back to that one, not past it.
+func TestQuitAskKeepsTheQuestionUnder(t *testing.T) {
+	d := keysDriver(t)
+
+	d.key("H")
+	d.key("C")
+	d.until("the clear-history question", func() bool { return d.m.confirm.anim.isInteractive() })
+	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
+	d.send(keyQ)
+	d.until("the quit question", func() bool { return d.m.quitAsk.anim.isInteractive() })
+	if !d.m.confirm.anim.owns() || d.m.confirm.action != confirmClearHistory {
+		t.Fatalf("the quit question should not replace the one under it: %v", d.m.confirm.action)
+	}
+	if v := d.m.View(); !strings.Contains(v, "Quitting stops it") {
+		t.Errorf("the quit question should be drawn on top:\n%s", v)
+	}
+	d.key("esc")
+	if d.m.quitAsk.anim.owns() || !d.m.confirm.anim.owns() || d.m.confirm.action != confirmClearHistory {
+		t.Error("Esc on the quit question should come back to the question under it")
+	}
+}
+
+// The quit question has a help of its own (tdp D3): help can be under it
+// — q pressed on help — and its own ? opens over it. Esc unwinds them one
+// at a time, back to the help that was there first.
+func TestQuitHelpOverTheQuitAsk(t *testing.T) {
+	d := keysDriver(t)
+
+	d.send(keySpace)
+	d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
+	d.key("?")
+	d.until("the menu's help", func() bool { return d.m.help.anim.isInteractive() })
+	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
+	d.send(keyQ)
+	d.until("the quit question over help", func() bool { return d.m.quitAsk.anim.isInteractive() })
+	d.key("?")
+	d.until("the quit question's help", func() bool { return d.m.quitHelp.anim.isInteractive() })
+	if len(d.m.quitHelp.entries) != len(helpConfirm) || !d.m.help.anim.owns() {
+		t.Errorf("? on the quit question should open its own help, over the other: %+v", d.m.quitHelp.entries)
+	}
+	d.key("esc")
+	if d.m.quitHelp.anim.owns() || !d.m.quitAsk.anim.owns() {
+		t.Fatal("the first Esc should close the quit question's help")
+	}
+	d.key("esc")
+	if d.m.quitAsk.anim.owns() || !d.m.help.anim.owns() {
+		t.Error("the second Esc should close the quit question and leave the help under it")
 	}
 }

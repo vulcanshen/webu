@@ -255,6 +255,9 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 **頁面自己的彈窗**是例外（`ui.md` §2.4）：它不是 webu 的浮層，是頁面的；`Esc` 不關、`Space` 是它的
 選單、要回答它才會走（按裡面的按鈕、或頁面自己收掉）。
 
+**離開的 confirm 疊在最上面**（2026-09-27，tdp D3、K4）：有下載進行中時 `q` / `Ctrl-C` 問的那一題是自己的浮層，疊在整疊
+之上，不取代底下正在回答的 confirm；`Esc` 回到那一題。它的 `?` 也是自己的 help，順序 quit help > quit confirm > help > 其他。
+
 **source 留在底下**（2026-09-27，tdp F4、T1、D3）：從 Space menu、`?` menu 或 options 開出的框（confirm、
 input、finder、DevTools……）疊在 menu 上，menu 留在底下；`Esc` 回到 menu，完成動作才整疊清掉。
 

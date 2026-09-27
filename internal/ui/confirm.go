@@ -12,7 +12,7 @@ type confirmAction int
 const (
 	confirmNone         confirmAction = iota
 	confirmCloseTab                   // close a tab with a download in flight
-	confirmQuit                       // leave webu with a download in flight
+	confirmQuit                       // leave webu with a download in flight (AppModel.quitAsk)
 	confirmDeleteEntry                // remove a bookmark, shortcut or visit
 	confirmClearHistory               // empty the history log
 	confirmDialog                     // a page's alert / confirm / beforeunload
