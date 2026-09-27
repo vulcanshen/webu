@@ -447,3 +447,25 @@ func TestQuitHelpOverTheQuitAsk(t *testing.T) {
 		t.Error("the second Esc should close the quit question and leave the help under it")
 	}
 }
+
+// In the global operation popup the screen already up is dimmed, not left
+// out, and does nothing (tdp M4, M6).
+func TestGlobalPopupDimsTheScreenYouAreOn(t *testing.T) {
+	d := keysDriver(t)
+
+	d.key("H")
+	d.send(keySpace)
+	d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
+	d.key("G")
+	d.key("enter")
+	d.until("the global operation popup", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	for _, it := range d.m.globalMenu.items {
+		if it.disabled != (it.key == "H") {
+			t.Errorf("only History should be dimmed on History: %+v", it)
+		}
+	}
+	d.key("H")
+	if !d.m.globalMenu.anim.owns() || d.m.screen != screenHistory {
+		t.Error("the dimmed row should do nothing")
+	}
+}
