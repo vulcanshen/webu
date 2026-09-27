@@ -247,10 +247,9 @@ func (m helpPopup) view() string {
 		animRows(m.anim, capRows(rows, m.screenH)), innerW)
 }
 
-// globalMenuItems is the ? menu (tdp M4): on top what the app can do from
-// anywhere, each row run like a Space menu's; under it the core keys, to
-// read. Every Space menu ends in one row that opens this (dev-remarks.md,
-// 偏離 tdp).
+// globalMenuItems are the global operation popup's rows (tdp M4): what the
+// app can do from anywhere, each run like a Space menu's row. Every Space
+// menu ends in the one row that opens it.
 func globalMenuItems(on screen) []menuItem {
 	items := []menuItem{
 		{label: "Web", key: "W", hint: "the tabs and the page"},
