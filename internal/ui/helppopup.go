@@ -247,9 +247,11 @@ func (m helpPopup) view() string {
 		animRows(m.anim, capRows(rows, m.screenH)), innerW)
 }
 
-// globalMenuItems are the global operation popup's rows (tdp M4): what the
-// app can do from anywhere, each run like a Space menu's row. Every Space
-// menu ends in the one row that opens it.
+// globalMenuItems are the global operation popup's rows (tdp M4): what acts
+// on the app rather than on a panel — the screens and quitting — each run
+// like a Space menu's row. Back, forward, location, search and visual mode
+// act on the page, so they are [2]'s panel operations and not here (tdp
+// M3, 2026-09-27). Every Space menu ends in the one row that opens this.
 func globalMenuItems(on screen) []menuItem {
 	items := []menuItem{
 		{label: "Web", key: "W", hint: "the tabs and the page"},
@@ -257,11 +259,6 @@ func globalMenuItems(on screen) []menuItem {
 		{label: "History", key: "H", hint: "every page visited"},
 		{label: "Downloads", key: "D", hint: "this session's"},
 		{label: "Settings", key: "S", hint: "config.yaml, in place"},
-		{label: "Previous", key: "P", hint: "back in this tab"},
-		{label: "Next", key: "N", hint: "forward in this tab"},
-		{label: "Location", key: "L", hint: "a URL or a search"},
-		{label: "[/] Search", key: "/", hint: "every part of the page; Enter goes there"},
-		{label: "Visual mode", key: "v", hint: "walk the text by character, copy some"},
 		{label: "Quit", key: "q", hint: "Ctrl+C too; asks while a download runs"},
 	}
 	// The screen already up is a row that cannot run (tdp M4, M6): dimmed

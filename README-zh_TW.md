@@ -112,7 +112,6 @@ webu help                         # 完整的命令列說明
  screen    W / B / H / D / S           screen 上 Esc 回到 web
  面板      1 / 2  ·  Tab
  游標      j k    u d（半頁）          gg G      h l 同列移動
- 頁面      P / N 上一頁 / 下一頁       L 網址    / finder    v visual mode
  全域      Space 選單    ? 按鍵    q / Ctrl+C 離開
 ```
 

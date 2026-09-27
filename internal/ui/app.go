@@ -1535,7 +1535,7 @@ func (m AppModel) panelMenu() ([]menuItem, string) {
 	title := ""
 	switch m.focus {
 	case panelTabs:
-		title = "Tabs"
+		title = "[1] Tabs" // the panel's own label (tdp D4)
 		if len(m.tabs) > 0 {
 			items = append(items,
 				menuItem{header: true, label: "item operation"},
@@ -1555,7 +1555,7 @@ func (m AppModel) panelMenu() ([]menuItem, string) {
 			menuItem{label: "X close others", key: "X", hint: "every tab but this one", disabled: len(m.tabs) < 2},
 			menuItem{label: "Undo close", key: "U", hint: "reopen the last closed tab", disabled: len(m.closed) == 0})
 	case panelPage:
-		title = "Page"
+		title = "[2] Page"
 		items = m.pageMenuItems()
 	}
 	return items, title
@@ -1582,10 +1582,8 @@ func (m AppModel) openGlobalMenu() (tea.Model, tea.Cmd) {
 	return m, m.globalMenu.open()
 }
 
-// globalMenuKey runs a row of the global operation popup: the key runs
-// as if pressed on the web — a list screen steps back to it first, and
-// visual mode ends, except for the screen keys and quit, which read the
-// same from anywhere.
+// globalMenuKey runs a row of the global operation popup: a screen, or
+// quitting.
 func (m AppModel) globalMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var key string
 	m.globalMenu, key, _ = m.globalMenu.update(msg)
@@ -1594,17 +1592,10 @@ func (m AppModel) globalMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	var mm tea.Model
 	var cmd tea.Cmd
-	switch key {
-	case "q":
+	if key == "q" {
 		mm, cmd = m.askQuit()
-	case "W", "B", "H", "D", "S":
+	} else {
 		mm, cmd = m.switchScreen(key)
-	default:
-		m.screen = screenWeb
-		if m.sel.on {
-			m.leaveSelect()
-		}
-		mm, cmd = m.panelKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)})
 	}
 	// The Space menu under it closes with it when the row was the whole
 	// errand: handleKey sees the stack drop (tdp T1).

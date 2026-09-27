@@ -199,6 +199,9 @@ func TestSpaceMenuEndsInGlobal(t *testing.T) {
 		if !items[0].header {
 			t.Errorf("%s: the first region should be labelled: %+v", screen, items[0])
 		}
+		if ti := d.m.spaceMenu.title; screen == "W" && ti != "[1] Tabs" && ti != "[2] Page" {
+			t.Errorf("the Space menu is titled with its panel's label (tdp D4): %q", d.m.spaceMenu.title)
+		}
 		if n < 2 || items[n-2].label != "global operation" || items[n-1].key != "globalmenu" {
 			t.Fatalf("%s: the menu should end in the global region: %+v", screen, items[max(0, n-2):])
 		}
@@ -216,6 +219,12 @@ func TestSpaceMenuEndsInGlobal(t *testing.T) {
 	if d.m.globalMenu.items[0].header || !menuHas(d.m.globalMenu.items, "Quit") {
 		t.Errorf("the popup should list the global operations, runnable from the first row: %+v", d.m.globalMenu.items[0])
 	}
+	for _, it := range d.m.globalMenu.items {
+		if _, screen := screenKeys[it.key]; !screen && it.key != "q" {
+			t.Errorf("only the screens and quitting act on the app; %q is a panel operation", it.label)
+		}
+	}
+
 	d.key("esc")
 	if d.m.globalMenu.anim.owns() || !d.m.spaceMenu.anim.owns() {
 		t.Fatal("Esc should go back to the Space menu")
@@ -385,9 +394,10 @@ func TestMenuStaysUnderWhatItOpened(t *testing.T) {
 	d.key("G")
 	d.key("enter")
 	d.until("the global operation popup", func() bool { return d.m.globalMenu.anim.isInteractive() })
-	d.key("L")
-	d.until("the location box", func() bool { return d.m.input.anim.isInteractive() })
-	if !d.m.globalMenu.anim.owns() {
+	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
+	d.send(keyQ) // the quit row; with a download in flight it asks first
+	d.until("the quit question", func() bool { return d.m.quitAsk.anim.isInteractive() })
+	if !d.m.globalMenu.anim.owns() || !d.m.spaceMenu.anim.owns() {
 		t.Fatal("the global operation popup should stay under the box it opened")
 	}
 	d.key("esc")

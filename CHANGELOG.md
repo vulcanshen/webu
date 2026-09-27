@@ -11,7 +11,10 @@
 - **The global operations open over the Space menu** instead of in its
   place: `Esc` goes back to the Space menu, and running one closes both.
   The row is called `Global operation`. The screen you are on is dimmed
-  in it.
+  in it. It lists what acts on the app — the screens and quitting; back,
+  forward, location, search and visual mode are the page's, in `[2]`'s
+  Space menu.
+- **The Space menu is titled with its panel**: `[1] Tabs`, `[2] Page`.
 - **`?` in visual mode shows the mode's keys**, the same list `Space`
   shows there, to read.
 - **Adding a bookmark is one box**, URL and title together, and so is
