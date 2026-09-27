@@ -353,7 +353,7 @@ func TestVisualModeHoldsThePanel(t *testing.T) {
 
 // A float opened from a menu leaves the menu under it (tdp F4, T1): Esc
 // comes back to the menu, and finishing the errand closes the whole stack
-// (tdp D3). The ? menu's rows do the same.
+// (tdp D3). The global operation popup's rows do the same.
 func TestMenuStaysUnderWhatItOpened(t *testing.T) {
 	d := keysDriver(t)
 
@@ -384,15 +384,15 @@ func TestMenuStaysUnderWhatItOpened(t *testing.T) {
 	d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
 	d.key("G")
 	d.key("enter")
-	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	d.until("the global operation popup", func() bool { return d.m.globalMenu.anim.isInteractive() })
 	d.key("L")
 	d.until("the location box", func() bool { return d.m.input.anim.isInteractive() })
 	if !d.m.globalMenu.anim.owns() {
-		t.Fatal("the ? menu should stay under the box it opened")
+		t.Fatal("the global operation popup should stay under the box it opened")
 	}
 	d.key("esc")
 	if !d.m.globalMenu.anim.owns() {
-		t.Error("Esc on the box should come back to the ? menu")
+		t.Error("Esc on the box should come back to the global operation popup")
 	}
 }
 

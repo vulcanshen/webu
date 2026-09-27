@@ -89,7 +89,7 @@ type AppModel struct {
 	// Floats. The Space menu goes down first; a target opened from it stacks
 	// above (tdp F4). The toast rides on top of everything.
 	spaceMenu  spaceMenu
-	globalMenu spaceMenu   // ? on a panel: the global operations, then the core keys (tdp M4)
+	globalMenu spaceMenu   // the global operation popup, from the Space menu's last row (tdp M4)
 	options    spaceMenu   // a textbox's Submit/Edit/Clear/Yank, or a select's options
 	lists      listPanel   // the screen behind a header chip after [W]eb
 	splash     splashModel // the easter egg (splash.go)
@@ -747,7 +747,7 @@ func (m AppModel) floatAboveMenu() bool {
 	return m.globalMenu.anim.owns() || m.floatAboveGlobalMenu()
 }
 
-// floatAboveGlobalMenu is the same for the ? menu: a float key routing
+// floatAboveGlobalMenu is the same for the global operation popup: a float key routing
 // hands a key to before it.
 func (m AppModel) floatAboveGlobalMenu() bool {
 	return m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.finder.anim.owns() ||
@@ -1561,11 +1561,10 @@ func (m AppModel) panelMenu() ([]menuItem, string) {
 	return items, title
 }
 
-// withGlobal ends a Space menu with its global region (tdp M2): one row
-// into the ? menu, where the global operations are — listing all of them
-// in every menu would outgrow the panel's own (dev-remarks.md, 偏離 tdp).
-// A menu that was one flat region gets its label, since it is one of two
-// now.
+// withGlobal ends a Space menu with its global region (tdp M2): always one
+// row, Global operation, which opens the global operation popup over the
+// menu. A menu that was one flat region gets its label, since it is one of
+// two now.
 func withGlobal(items []menuItem) []menuItem {
 	if len(items) > 0 && !items[0].header {
 		items = append([]menuItem{{header: true, label: "panel operation"}}, items...)
@@ -1583,7 +1582,7 @@ func (m AppModel) openGlobalMenu() (tea.Model, tea.Cmd) {
 	return m, m.globalMenu.open()
 }
 
-// globalMenuKey runs a row of the ? menu: the menu closes and the key runs
+// globalMenuKey runs a row of the global operation popup: the key runs
 // as if pressed on the web — a list screen steps back to it first, and
 // visual mode ends, except for the screen keys and quit, which read the
 // same from anywhere.
