@@ -10,6 +10,19 @@ import (
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
+// In the writing state of multi-line text Tab is a character, an indent,
+// the way Enter is a newline (tdp K8, K2, v0.1.5).
+func TestTabIndentsInTheEditor(t *testing.T) {
+	e := newEditorPopup()
+	e.setSize(100, 30)
+	e.ask("text, several lines", "Notes", "a", 7, 1)
+	e.anim.phase = animOpen
+	e.update(tea.KeyMsg{Type: tea.KeyTab})
+	if e.mode != editorWriting || e.value() != "a    " {
+		t.Errorf("Tab should indent and stay writing: mode %d value %q", e.mode, e.value())
+	}
+}
+
 // The textarea's box: writing, then Esc out to the box, then Enter to
 // set — Esc layered so a paragraph is not lost to a reflex (user,
 // 2026-09-23).
