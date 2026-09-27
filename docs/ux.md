@@ -117,19 +117,16 @@ menu-only 的列不列），照 menu 的區塊標題分組，最後接 core key�
 
 **全域動作在 global operation popup**（2026-09-27，tdp M4、F4、T1）：每個 Space menu 最後一列 `Global operation` 打開它，
 **疊在 Space menu 上**；`Esc` 回到 Space menu，執行一列就關掉整疊（開出新框的列除外，那個框疊上去）。目前所在畫面的
-那一列照 M6 變暗、不作用，不拿掉。列出下表的動作，一列一個，
-`j`/`k`、`Enter`、熱鍵照 Space menu 執行。從 list screen 執行 `P` / `N` / `L` / `/` / `v` 會先回到 web；visual mode
-開著時先離開。
+那一列照 M6 變暗、不作用，不拿掉。列出下表的動作，一列一個，`j`/`k`、`Enter`、熱鍵照 Space menu 執行。
 
 | 全域動作 | 鍵 |
 |---|---|
 | screen | `W` `B` `H` `D` `S` |
-| 上一頁 / 下一頁 | `P` / `N` |
-| Location | `L` |
-| 切面板 | `Tab`、`1` / `2` |
-| visual mode | `v`；`/` 是 finder（不再進 visual mode，2026-09-23） |
 | 離開 | `q` / `Ctrl+C`：輸入框以外到處都通，浮層上、visual mode 裡也是；有下載進行中先 confirm，confirm 上再按 `Ctrl+C` 立刻離開（2026-09-27，tdp K9） |
-| splash 彩蛋 | `V`（不揭露） |
+
+**只有作用在 app 上的才是全域動作**（2026-09-27，tdp M3、P3）：`P` / `N`、`L`、`/`、`v` 作用在頁面上，是 `[2]` 的
+panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的兩個面板上都通（`[1]` 上也作用在顯示中的那一頁）。
+切面板的 `Tab`、`1` / `2` 是 core key。splash 彩蛋 `V` 不揭露（tdp S2）。
 
 全域字母在浮層開著、visual mode、打字中三種狀態下不作用；`q` 例外，只有打字中不作用。
 

@@ -112,7 +112,6 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
  screens   W / B / H / D / S           Esc on a screen goes back to the web
  panels    1 / 2  ·  Tab
  cursor    j k    u d (half page)      gg G      h l along a row
- page      P / N back / forward        L location    / finder    v visual mode
  global    Space menu    ? keys    q / Ctrl+C quit
 ```
 
