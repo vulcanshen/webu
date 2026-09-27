@@ -242,7 +242,7 @@ func TestUndoCloseAndQuitConfirm(t *testing.T) {
 
 	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
 	d.key("q")
-	if !d.m.confirm.isActive() || d.m.confirm.action != confirmQuit {
+	if !d.m.quitAsk.isActive() || d.m.quitAsk.action != confirmQuit {
 		t.Error("q with a download in flight should ask first")
 	}
 }

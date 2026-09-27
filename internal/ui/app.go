@@ -98,10 +98,16 @@ type AppModel struct {
 	finder     finder // [/] over the page's nodes, [go] over its lines (finder.go)
 	help       helpPopup
 	confirm    confirmPopup
-	input      inputPopup
-	editor     editorPopup // a textarea's box: several lines, two modes (editorpopup.go)
-	picker     filePicker  // a file, picked rather than typed (filepicker.go)
-	toast      toastModel
+	// The quit confirm and its own help sit above every other float, in
+	// that order (tdp D3): q and Ctrl-C reach the quit flow from anywhere,
+	// so the question they ask must not replace one being answered, and
+	// help can be under it (q on help) or over it (? on it).
+	quitAsk  confirmPopup
+	quitHelp helpPopup
+	input    inputPopup
+	editor   editorPopup // a textarea's box: several lines, two modes (editorpopup.go)
+	picker   filePicker  // a file, picked rather than typed (filepicker.go)
+	toast    toastModel
 
 	// optionsFor is the node the options menu is about, and optionsKind
 	// what the menu is: an item's operations, a select's options, or the
@@ -168,6 +174,8 @@ func New(b *browser.Browser, start ...string) AppModel {
 		finder:     newFinder(),
 		help:       newHelpPopup(),
 		confirm:    newConfirmPopup(),
+		quitAsk:    confirmPopup{anim: newPopupAnimator("quitask")},
+		quitHelp:   helpPopup{anim: newPopupAnimator("quithelp")},
 		input:      newInputPopup(),
 		picker:     newFilePicker(),
 		editor:     newEditorPopup(),
@@ -256,7 +264,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
 			&m.spaceMenu, &m.globalMenu, &m.options, &m.lists, &m.devtools, &m.message,
-			&m.finder, &m.help, &m.confirm, &m.input, &m.editor, &m.picker, &m.toast} {
+			&m.finder, &m.help, &m.confirm, &m.quitAsk, &m.quitHelp, &m.input, &m.editor, &m.picker, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
 		m.relayoutTabs()
@@ -282,7 +290,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spaceMenu.anim.tick(msg), m.globalMenu.anim.tick(msg), m.options.anim.tick(msg),
 			m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
 			m.message.anim.tick(msg), m.finder.anim.tick(msg),
-			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.input.anim.tick(msg), m.editor.anim.tick(msg),
+			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.quitAsk.anim.tick(msg), m.quitHelp.anim.tick(msg),
+			m.input.anim.tick(msg), m.editor.anim.tick(msg),
 			m.picker.anim.tick(msg), m.toast.anim.tick(msg))
 
 	case devTickMsg:
@@ -716,14 +725,16 @@ func (m *AppModel) recordVisit(t *tab) {
 func (m AppModel) popupOpen() bool {
 	return m.spaceMenu.isActive() || m.globalMenu.isActive() || m.options.isActive() ||
 		m.devtools.isActive() || m.message.isActive() || m.finder.isActive() ||
-		m.help.isActive() || m.confirm.isActive() || m.input.isActive() || m.editor.isActive() || m.picker.isActive()
+		m.help.isActive() || m.confirm.isActive() || m.quitAsk.isActive() || m.quitHelp.isActive() ||
+		m.input.isActive() || m.editor.isActive() || m.picker.isActive()
 }
 
 // floatOwned reports whether some float still holds the keyboard — not
 // merely is on screen: one that is closing has let go (tdp F3), and an Esc
 // that arrived during its animation belongs to whatever is under it.
 func (m AppModel) floatOwned() bool {
-	return m.toast.anim.owns() || m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
+	return m.toast.anim.owns() || m.quitHelp.anim.owns() || m.quitAsk.anim.owns() ||
+		m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
 		m.options.anim.owns() || m.devtools.anim.owns() || m.finder.anim.owns() ||
 		m.message.anim.owns() || m.help.anim.owns() || m.globalMenu.anim.owns() || m.spaceMenu.anim.owns()
 }
@@ -739,7 +750,8 @@ func (m AppModel) floatAboveMenu() bool {
 // hands a key to before it.
 func (m AppModel) floatAboveGlobalMenu() bool {
 	return m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.finder.anim.owns() ||
-		m.confirm.anim.owns() || m.options.anim.owns() || m.devtools.anim.owns() ||
+		m.confirm.anim.owns() || m.quitAsk.anim.owns() || m.quitHelp.anim.owns() ||
+		m.options.anim.owns() || m.devtools.anim.owns() ||
 		m.message.anim.owns() || m.help.anim.owns()
 }
 
@@ -788,7 +800,7 @@ func (m AppModel) stackTop() (int, bool) {
 // question, a list, a view — holds the keyboard.
 func (m AppModel) errandFloat() bool {
 	return m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.finder.anim.owns() ||
-		m.confirm.anim.owns() || m.devtools.anim.owns() || m.message.anim.owns()
+		m.confirm.anim.owns() || m.quitAsk.anim.owns() || m.devtools.anim.owns() || m.message.anim.owns()
 }
 
 // closeMenus closes the menus and options still holding the keyboard: the
@@ -841,13 +853,13 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Ctrl-C on its confirm leaves at once. q is a character while a float
 	// is being typed into; Ctrl-C never is.
 	if msg.Type == tea.KeyCtrlC {
-		if m.confirm.anim.owns() && m.confirm.action == confirmQuit {
+		if m.quitAsk.anim.owns() {
 			return m.quit()
 		}
 		return m.askQuit()
 	}
 	if msg.String() == "q" && !m.typing() {
-		if m.confirm.anim.owns() && m.confirm.action == confirmQuit {
+		if m.quitAsk.anim.owns() {
 			return m, nil // already asking
 		}
 		return m.askQuit()
@@ -868,6 +880,10 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// K6, M4). A second ? closes what the first opened.
 	if msg.String() == "?" && !m.typing() {
 		switch {
+		case m.quitHelp.anim.owns():
+			return m, m.quitHelp.close()
+		case m.quitAsk.anim.owns():
+			return m, m.quitHelp.open(m.quitAsk.title, helpConfirm, m.layer()+2)
 		case m.help.anim.owns():
 			return m, m.help.close()
 		case m.globalMenu.anim.owns() && !m.floatAboveGlobalMenu():
@@ -880,8 +896,16 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
+	case m.quitHelp.anim.owns():
+		m.quitHelp.update(msg)
+		return m, nil
+	case m.quitAsk.anim.owns():
+		if m.quitAsk.commit(msg) {
+			return m.quit()
+		}
+		return m, nil
 	case m.help.anim.owns():
-		// Nothing opens over a float's help: it is the top while it is up.
+		// Only the quit flow opens over a float's help.
 		m.help.update(msg)
 		return m, nil
 	case m.input.anim.owns():
@@ -944,6 +968,10 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 	switch {
 	case m.toast.anim.owns():
 		return m, m.toast.close()
+	case m.quitHelp.anim.owns():
+		return m, m.quitHelp.close()
+	case m.quitAsk.anim.owns():
+		return m, m.quitAsk.close()
 	case m.help.anim.owns():
 		return m, m.help.close()
 	case m.input.anim.owns():
@@ -1032,7 +1060,8 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 // closeStack tears every float down: an errand that ended in an action is
 // over, and the user is back on the panel (tdp T1).
 func (m *AppModel) closeStack() tea.Cmd {
-	return tea.Batch(m.input.close(), m.editor.close(), m.picker.close(), m.confirm.close(), m.options.close(),
+	return tea.Batch(m.quitHelp.close(), m.quitAsk.close(),
+		m.input.close(), m.editor.close(), m.picker.close(), m.confirm.close(), m.options.close(),
 		m.devtools.close(), m.message.close(), m.finder.close(),
 		m.help.close(), m.globalMenu.close(), m.spaceMenu.close())
 }
@@ -1263,7 +1292,7 @@ type evalMsg struct {
 // asks first; otherwise it goes.
 func (m AppModel) askQuit() (tea.Model, tea.Cmd) {
 	if n := m.downloading(); n > 0 {
-		return m, m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Quit",
+		return m, m.quitAsk.ask(confirmPopup{glyph: glyphWarn, title: "Quit",
 			lines:  []string{plural(n, "download") + " still in progress.", "Quitting stops it."},
 			accept: "quit", warn: true, action: confirmQuit}, m.layer())
 	}
@@ -2666,8 +2695,6 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	closeCmd := m.confirm.close()
 	switch m.confirm.action {
-	case confirmQuit:
-		return m.quit()
 	case confirmCloseTab:
 		i, _ := m.tabByID(m.confirm.tabID)
 		mm, cmd := m.closeTab(i)
@@ -2883,6 +2910,12 @@ func (m AppModel) View() string {
 	}
 	if m.help.isActive() {
 		out = overlay.Composite(m.help.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.quitAsk.isActive() {
+		out = overlay.Composite(m.quitAsk.view(), out, overlay.Center, overlay.Center, 0, 0)
+	}
+	if m.quitHelp.isActive() {
+		out = overlay.Composite(m.quitHelp.view(), out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.toast.isActive() {
 		out = overlay.Composite(m.toast.view(), out, overlay.Center, overlay.Bottom, 0, -2)

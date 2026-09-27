@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **Quitting with a download in flight no longer replaces the question
+  on screen.** Pressing `q` or `Ctrl+C` while another question was open
+  — a page's `confirm()`, deleting a folder, clearing history — asked
+  about quitting in its place; cancelling the quit then left the first
+  question gone, and a page's `confirm()` never got its answer. The quit
+  question now opens over it, and `Esc` comes back to it.
+
 ## [0.4.0] — 2026-09-27
 
 The keys, brought in line with the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)

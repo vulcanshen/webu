@@ -127,23 +127,6 @@ locku（對照到 v0.1.4）、webu（v0.1.0 那一輪）與 sshu（對照到 v0.
   `selectCheatsheet`（`selectmode.go` :523）同一份來源轉成 `helpEntry`，不另外手寫。`ux.md` §A.0.K 的 visual mode `?` 欄改成
   「模式的 help（唯讀）」。
 
-## 5. 離開的 confirm 借用共用的 confirm，蓋掉底下正在回答的 confirm —— F4、K4（tdp D3）
-
-- **現況**：`app.go` `askQuit()`（:1264）在有下載進行中時用 `m.confirm.ask(...)`；`confirm.go` `ask()`（:55）是 `*m = c`，整個
-  覆寫。`routeKey()` 的 `Ctrl-C`（:843）與 `q`（:849）只擋「已經是 quit confirm」的情況，所以另一個 confirm 開著時（刪書籤、
-  清歷史、頁面的 `confirm()` / `beforeunload`、link Open……）按 `q` 或 `Ctrl-C`，那個 confirm 被 quit confirm 取代；在 quit
-  confirm 上按 `Esc` 取消後，底下原本的問題不見了。頁面的 `confirm()`（`confirmDialog`）被蓋掉時，`closeTop()`（:971）看到的已經
-  是 `confirmQuit`，`answerDialog` 永遠不會送出，頁面一直等著回答。
-- **規則**：popup 開出 popup 時，`Esc` 只關最上層，底下的階層原樣留著（K4、F4）。tdp D3：離開的 confirm 用自己的 popup，疊在
-  整疊最上面。
-- **怎麼改**：另開一個 quit confirm（自己的 animator target，例 `quitAsk`），`askQuit()` 開它而不是 `m.confirm`。「放在最上層」
-  三處一起改：按鍵路由（在 `help` 之後、其他 popup 之前拿鍵）、`closeTop()`、繪製順序（在 `confirm` 之上）；`floatOwned()`、
-  `popupOpen()`、`closeStack()`、`layer()` 都要認得它。`Ctrl-C` / `q` 的「已經在問」判斷改看 `quitAsk.anim.owns()`。
-  **quit confirm 的 `?` 另開一個 `quitHelp`**（2026-09-27 定案，照 locku v0.1.4）：help 可能在 quit confirm 底下（在 help 上按 `q`），
-  也可能在它上面（在 quit confirm 上按 `?`），共用 `help` 就得記誰先開。順序固定 `quitHelp` > `quitAsk` > `help` > 其他，路由、
-  `closeTop()`、繪製三處都照這個順序；`quitHelp` 的內容是 `helpConfirm`。補測試：頁面的 confirm 開著、有下載時按 `q` → `Esc` →
-  頁面的 confirm 還在、答案照常送出；help 開著時按 `q` → `?` → `Esc` → `Esc` 回到 help。
-
 ## 6. 程式碼註解與測試訊息仍寫 `?` menu 與「偏離 tdp」—— 文件對齊
 
 第 1、2 條改完後，下列註解與 `t.Error` 訊息描述的是舊規則，一起改（照內容比對，不照行號）：
