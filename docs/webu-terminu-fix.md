@@ -64,29 +64,6 @@ locku（對照到 v0.1.4）、webu（v0.1.0 那一輪）與 sshu（對照到 v0.
 
 ---
 
-## 2. global operation popup 取代 Space menu，而不是疊在它上面 —— M2、M4、K4、F4、T1
-
-- **現況**：每個 Space menu 最後一區是一列 `Global operation…`（`app.go` `withGlobal()` :1523–1531，key `globalmenu`）—— 一列符合 M2。
-  但 `menuKey()` 的 `globalmenu` 分支（:1817–1823）先關掉 Space menu、再開 `globalMenu`（註解：「takes the Space menu's place rather
-  than stacking on it」），所以 `Esc` 從 global 清單直接回到 panel，不是回到 Space menu。`openGlobalMenu()` 用 layer 1（:1535），
-  跟 Space menu 同一層色。清單就是第 1 條的 `?` menu（混著唯讀的 key reference）。列名多了 `…`。
-- **規則**：Space menu 的 global 區固定一列 `Global operation`（M2）；`Enter` 打開 global operation popup，**疊在 Space menu 上**，
-  是一種 menu，列出全部全域動作、可以執行，離開在這裡（M4、K9）；`Esc` 只關最上層、回到 Space menu，底下原樣留著（K4、F4）；
-  執行了會關掉整疊（T1）。
-- **怎麼改**：
-  - `menuKey()` 的 `globalmenu` 分支不再關 Space menu，`globalMenu` 疊上去、layer 2（`popupLayerColor`）。`closeTop()` 的順序已經
-    是 `globalMenu` 先於 `spaceMenu`（:989），`Esc` 自然回到 Space menu；繪製順序也已是 `globalMenu` 在 `spaceMenu` 之上（:2857）。
-  - 執行一列要清掉整疊：`globalMenuKey()`（:1543）現在只對 `globalMenu` 做 `keepSource`，改成沒開出新框時兩層 menu 一起關
-    （`closeMenus()`）。`stackTop()`（:774）目前把兩個 menu 都算「1」，疊起來後要分得出 global popup 在 Space menu 之上
-    （例：Space menu 1、global popup 2、options 3、動作開出的框 4），`handleKey` 的 F4 判斷才對。
-  - `globalMenuItems()` 只留可執行的列（標題照 M4 是 popup 自己的，不需要 `global operation` 區塊標題；要不要保留由 app 定）。
-  - `withGlobal()` 的列名改成 `Global operation`（去掉 `…`）。
-  - global popup 上的 `?`（`floatHelp()` :116）：`Esc` 的說明改成「back to the Space menu」。global popup 上的 `Space` 維持不作用（K5）。
-  - `?` 不再開 global popup（第 1 條）以後，`routeKey()` `?` 分支裡「`globalMenu` 開著就關掉它」那一格（:873）拿掉：global popup
-    上的 `?` 跟其他 popup 一樣是它自己的按鍵。
-  - 文件：`ux.md` §A.1（:62–63「`Enter` 打開 `?` menu … 偏離 tdp M2」）、§A.2、§5「從 Space menu、`?` menu 或 options 開出的框」、
-    `ui.md` 浮層表，改成 global operation popup。
-
 ## 3. global operation 清單裡，目前所在畫面那一列沒有變暗 —— M4、M6
 
 - **現況**：`helppopup.go` `globalMenuItems()`（:164）是固定的一份，`Web` / `Bookmarks` / `History` / `Downloads` / `Settings` 五列
