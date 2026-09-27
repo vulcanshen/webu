@@ -1,8 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是 README 以前寫著、但屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。
-
-webu 是 `u`-family 的成員，也是 [這份 TUI 設計原則](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md) 在瀏覽器領域的實作 —— 與 [kbu](https://github.com/vulcanshen/kbu)、[filu](https://github.com/vulcanshen/filu)、[sshu](https://github.com/vulcanshen/sshu) 同一套設計系統。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)（tdp），是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -19,8 +17,54 @@ webu 是 `u`-family 的成員，也是 [這份 TUI 設計原則](https://github.
 - **存檔** —— 書籤每筆帶 `folder` 路徑，另有 `folders:` 清單讓空目錄留得住；歷史是一次 append 一筆的 YAML sequence；每次寫檔都是原子的。分法：使用者寫的在 config、webu 產生的在 data、可重抓的在 cache。
 - **unix-first、靜態執行檔** —— macOS + Linux，`CGO_ENABLED=0`。chromedp 的 log 進檔案，永遠不進 TUI 正在畫的終端機。
 - **Chromium 不在 release 裡** —— release 只有 Go 執行檔；第一次啟動下載到 cache。Chromium snapshot bucket 沒有 Linux ARM 版，所以沒有 Linux ARM build。
+- **Chromium 的啟動與關閉** —— flag 是 Puppeteer 那組減 `--enable-automation`，加 `--disable-blink-features=AutomationControlled`、`--headless=new`，三個 background throttling 關閉。下載串流到 `.zip.part`、解到 `.tmp`、最後 rename，保留 symlink（Mac bundle 的 `Versions/Current`）。關閉先 `chromedp.Cancel`（讓 profile flush）再 allocator cancel；不論從哪裡離開（`q`、外部的 SIGINT / SIGTERM、終端機關掉），Chromium 都跟著走。
+- **分頁的三種跑法** —— `press`（使用者的動作：設 loading / `settlingUntil` / `popupUntil`）、`act`（webu 自己的：Reveal、開 frame）、`unblock`（對話框 / auth 的回答：不排隊）。**action lock**（`tab.acting`）：讀 box 與按下之間曾被舊的 Reveal 捲走（六次漏一次），鎖住讓它們是一個動作；對話框開著時碰 renderer 會卡，所以回答不經鎖。動作後 300 ms `settle` 再 capture；`gen` 丟掉過期的。
+- **hover 送了不等** —— headless 下單獨的 `mouseMoved` 要等 renderer ack 5 秒，但頁面當下就處理了，所以 hover 用 100 ms 的 ctx 送出就走。
 
-## 0.3.0 的設計重點
+### 量出來的事實（不再重查）
+
+| 事實 | 影響 |
+|---|---|
+| headless 下單獨的 `mouseMoved` 要等 renderer ack 5 秒，但頁面當下就處理 | hover 送了不等（100 ms ctx） |
+| `Security.certificateError` 已從協定移除 | 用 `setIgnoreCertificateErrors` |
+| `Page.getFrameTree` 不列 OOPIF；`DOM.describeNode` 給 frame id；瀏覽器允許 attach iframe target；frame id 從 1 重編 | 跨站 frame 走自己的 session、id 加偏移 |
+| chromedp 對 page target 開了 `Target.setAutoAttach(flatten)`，但不替 iframe session 建 executor、訊息全丟 | 自己 `NewContext(WithTargetID)` attach 一條 |
+| 同站 frame 在自己那層讀整張 owner 表會找到自己（無限遞迴到 15 秒 timeout） | `frameOwners` 只看當前 document |
+| 原生 `showModal` 砍掉 dialog 以外整棵樹、疊 modal 時連第一層也砍；aria-modal 不砍 | backdrop 用前一刻的版面；彈窗 stack push 不 drop |
+| 數字經 float32（0.6 變 0.6000000238418579） | `cleanNum` 洗成六位 |
+| password：Chromium 把 value 遮成 `•`、AX 不說；空欄位只有 snapshot 的 `type=password` 認得出 | password 從 snapshot 屬性判斷 |
+| 沒有 option 的 ARIA combobox（Google 的搜尋框是 `<textarea role=combobox>`） | 當 Textbox |
+| Google 對 headless 一律 reCAPTCHA（即使 UA 簽自己的名）；十二個搜尋引擎實測 DDG html 最乾淨 | 預設搜尋 |
+| 內文裡的連結串最長 5–8（HN 全頁 2）、導覽 12–47 | 裸連結串只流動、不收合 |
+| w3schools 沒有任何 landmark；沒 main 的頁把側欄連結欄當「節」 | part 靠幾何；`pruneNav` |
+| 表單第一欄的 caret 掉到下一列 | `formValueW` 沒算 caret 前的空格（2026-09-23 修） |
+| `tea.Sequence` 巢狀不等內層 | 先後執行寫成一個 cmd |
+| Bubble Tea value receiver：改 popup 狀態的 helper 若是 value receiver 只回 `tea.Cmd`，改到的是副本 | pointer receiver，或先 `close()` 再 `dispatch()` |
+| 有 timer 的頁面每秒指紋都不同 | spinner 轉滿 8 秒 grace（已知） |
+
+### 程式碼目錄
+
+```
+cmd/webu/            進入點：version / browser update / 首次下載 / 啟動 Chromium / 進 TUI
+internal/browser/    Chromium 的取得與執行：釘死 revision、目錄、flag、UA、關閉
+internal/ir/         翻譯層：role 單一宣告表（roles.go）、AX tree + snapshot → IR（build.go）、
+                     Dump / Markdown、fixture、docs/support.md 產生器
+internal/page/       CDP 端：Capture（capture.go）、動作（actions.go）、hook（hooks.go）、
+                     觀察與 DevTools 資料（observe.go / devlog.go）、跨站 frame 的 session（sessions.go）
+internal/ui/         TUI：app.go（key 路由、Space menu、dispatch）、tab.go（分頁模型：capture / apply /
+                     settling / places / drill / 移動）、render.go（IR → rows / items / marks）、
+                     parts.go（四個 part）、section.go + sectionlist.go（目錄與節）、finder.go（/ 與 go）、
+                     pagepopup.go（頁面的彈窗）、pagepanel.go（[2] 的畫法）、editorpopup.go、slider.go、
+                     fill.go、inputpopup.go / spacemenu.go / popup.go（webu 的浮層）、bookmarks.go /
+                     listpanel.go / settings.go（screen）、devtools*.go、selectmode.go、theme.go
+internal/store/      config / bookmarks / history / session 的 YAML；Netscape 書籤匯入
+internal/paths/      三個目錄的解析
+tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
+```
+
+依賴方向：`ui → page → ir`、`ui → browser`；`ir` 不依賴 CDP 以外的任何東西。`page/sessions.go` 用 `ir.CarriedFrom` 當 id 偏移的單位，是 page 對 ir 唯一的反向依賴（一個常數）。
+
+## 設計決定
 
 0.2.x 把 accessibility tree 排成一長頁；0.3.0 把它讀成一份**文件**。各項的完整理由與日期在設計文件裡，這裡是摘要：
 
@@ -37,7 +81,23 @@ webu 是 `u`-family 的成員，也是 [這份 TUI 設計原則](https://github.
 - **預設搜尋是 DuckDuckGo 的 HTML 端點**，因為 Google 對每一次 headless 搜尋都回 reCAPTCHA。
 - **沒有交棒給視窗** —— CAPTCHA、passkey、WebRTC 是牆，webu 明講；webu 必須能在沒有 display 的機器上跑，所以沒有視窗可以交棒。
 
-## 牆在哪裡
+## 已否決，不要重提
+
+完整理由在設計文件原地、各自標日期；這裡是索引。
+
+| 否決的做法 | 改成 | 出處 |
+|---|---|---|
+| 自訂 protocol / 新內容格式、自己 parse HTML、Chromium 像素轉字元 | 真 Chromium + AX tree + 版面快照 | `function.md` §0「排除的路線」 |
+| 為單一網站寫 heuristic（2026-09-21） | 只認 AX tree 與 DOM 的版面事實 | `function.md` §0 |
+| 交棒給有視窗的 Chromium 讓人過 CAPTCHA（2026-09-23） | 沒有交棒，牆明講 | `function.md` §9.1 |
+| `Enter` 開該 item 的選單（2026-09-20） | `Enter` 是左鍵，點了沒意義就走進去（09-21） | `ux.md` §A.0.K |
+| landmark 入口行（09-21）、URL 底下的 landmark 膠囊、Outline popup（09-22） | 四個 part 由幾何切（09-23） | `ui.md` §2 `[2]` |
+| 一節只到下一個任何標題 | 一節包含它的子節（2026-09-23） | `ui.md` §2 `[2]` |
+| heading 用六級底色（09-22） | 五個 hue 輪流表深度（09-23） | `ui.md` §2 `[2]` |
+| 頁面的彈窗佔整個面板 | 浮在 `[2]` 上的框（2026-09-23） | `ui.md` §2 `[2]` |
+| `/` 進 visual mode 搜尋 | `/` 是 finder（2026-09-23） | `ux.md` §1.1 |
+
+## 已知的牆與未做
 
 網頁是二維的、終端機不是，所以一個密集的 app 頁（issue tracker 的看板、dashboard）分類是對的、但還是得在裡面移動 —— finder 與目錄是路，不是捲動。一個完全不宣告語意的站（全是 `div`、沒有 ARIA）給 webu 的只有文字和能點的東西；那種站 screen reader 也會壞，webu 不為單一站加 heuristic 去追。
 
@@ -47,16 +107,24 @@ webu 是 `u`-family 的成員，也是 [這份 TUI 設計原則](https://github.
 - `<textarea>` 交給使用者的 `$EDITOR`；小數 step 的 slider（目前只列整數）
 - 游標在 frame 裡時只捲 frame，不捲外面的頁
 - timer 類 live region 會讓 settling 的 spinner 轉滿 8 秒
+- 只在 pointer-over 才打開的選單：hover 送了不等（見「運作方式」），這類選單 webu 目前開不出來
+- 頁面名字自帶 Nerd Font glyph（APG 的 tree 用 U+F07B 當資料夾 icon）看起來像多一格空白 —— 先放著
 - 滑鼠、Linux ARM
 
-## 設計文件
+尚未符合 tdp 的地方：逐條列在 [`webu-terminu-fix.md`](webu-terminu-fix.md)。
+
+## 偏離 tdp
+
+- **Space menu 的 global operation 區只有一列（M2）。** tdp M2 要 Space menu 的 `global operation` 區列出全部全域動作；webu 的全域動作約十個（切畫面 `W` `B` `H` `D` `S`、`P` / `N`、`L`、`v`、`q`……），全部列進每一個 Space menu，會比 panel 自己的動作還長。所以 webu 的 global 區只放一列 `[?] global operation…`，按下去打開 `?` menu，全域動作的完整清單在那裡、可以直接執行（M4）。2026-09-26 定案；程式目前還沒有 global 區，見 fix 檔。
+- **頁面自己的彈窗 `Esc` 不關（K4、F3）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在頁面上的框（`ui.md` §2.4），但它不是 webu 的 popup，是頁面的：頁面放它上來要一個回答，`Esc` 關掉等於把那個決定擱著。所以 `Esc` 在它上面只 toast 說明，要按裡面的按鈕、或等頁面自己收掉（`ux.md` §5；`app.go` `togglePagetab`）。webu 自己的 popup 照 K4、F3。
+
+## 設計文件導讀
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|
 | [`function.md`](function.md) | Chromium 做什麼、webu 做什麼、做到哪；翻譯層（accessibility tree + 版面快照 → 一份文件）；role 表；frame；彈窗；Chromium 怎麼取得、怎麼跑 | 第 1 |
 | [`ui.md`](ui.md) | 版面、header 的 screen 與兩個面板、頁面的三個畫面與四個 part、每種東西怎麼畫、popup、兩套配色、存檔 | 第 2 |
-| [`ux.md`](ux.md) | core-key 語意、每種東西的 Enter、每個焦點的 `Space` 選單、finder、每種輸入的行為、熱鍵全表、時間軸 | 第 3 |
-| [`webu-implementation.md`](webu-implementation.md) | 實際怎麼做的、量到了什麼、踩過的坑、測試、做到哪 | — |
+| [`ux.md`](ux.md) | core-key 語意、每種東西的 Enter、每個焦點的 `Space` 選單、finder、每種輸入的行為、熱鍵全表、時間軸；§A、§B 沿用 VTP 時期的分章，標題標出對應的 tdp 條目 | 第 3 |
 | [`support.md`](support.md) | 支援的 accessibility role，由 role 表產生 | — |
 
 設計本身 —— 包含試過而被否決的做法 —— 每條決定都在原地標了日期。
@@ -86,6 +154,13 @@ make snapshot           goreleaser 本機打包到 dist/
 ```
 
 `make` 列出全部。
+
+- **fixture 與 golden**：`internal/ir/testdata/<group>.html` → `make fixtures`（只認釘死的 Chromium）→ `<group>.json` → `.golden`（`ir.Dump`）+ `.md`（`ir.Markdown`）；`internal/ui/testdata/<group>.render` 是同一批在 60 欄的排版。`-update` 重生 golden，改渲染時看 diff 決定。
+- **瀏覽器測試**（需要釘死的 Chromium，沒有就 skip）：`hooks_test`（dialog、新視窗、憑證、下載、auth、上傳 picker、PDF、hover、iframe 同站）、`frame_test`（跨站 + 巢狀）、`popup_test`、`loading_test`、`finder_test`、`section_test`、`parts_test`、`app_test` 等。
+- **測試 driver**（`app_test.go`）：`newDriver` / `startAt` / `until`（20 秒）/ `cursorOn` / `key`；`until` 的條件要寫 closure（`d.m` 是值，綁方法會綁到舊副本）。
+- **重現 TUI bug** 用 Go driver；要手動跑 `./webu` 重現時，把 `WEBU_CONFIG`、`WEBU_DATA` 指到暫存目錄，不碰自己的設定、書籤與登入。
+- **glyph 碼位**用 `fontTools` 讀已安裝 Nerd Font 的 cmap 查，不憑記憶。
+- **demo gif**：vhs 0.12.0 曾在 macOS 上 2 秒就結束、不出檔也不報錯；遇到時改用 0.11.x：`make gif VHS=<vhs 0.11 的路徑>`。
 
 ## 發布
 

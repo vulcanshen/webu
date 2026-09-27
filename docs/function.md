@@ -2,7 +2,7 @@
 
 > 本文件講「功能怎麼實現」：webu 站在 Chromium 上，哪些事 Chromium 做、哪些事 webu 做、
 > 做到什麼程度。版面與 surface 在 `ui.md`、互動語意在 `ux.md`、實作落地在
-> `webu-implementation.md`。每條決定標日期；被推翻的寫在「修訂」裡，不刪。
+> `dev-remarks.md`。每條決定標日期；被推翻的寫在「修訂」裡，不刪。
 >
 > 縮寫首次出現皆展開。CDP = Chrome DevTools Protocol；a11y = accessibility；
 > AX tree = accessibility tree；IR = Intermediate Representation（中間表示法）；
@@ -31,7 +31,7 @@ screen reader 維護的 accessibility tree，加上同一棵 DOM 的版面快照
 |---|---|
 | 自訂 protocol / 新內容格式（gemtext 式） | 沒有網站會 follow；Gemini 做了十年只有幾千個站 |
 | 自己 parse HTML、忽略 CSS / JS（w3m 式） | 現代 SPA 的 HTML 是空殼，不跑 JS 沒內容；DOM 是 div 湯，語意節點稀疏 |
-| Chromium 像素轉字元（browsh / carbonyl 式） | 得到的是縮小的 GUI，沒有語意，套不上 VTP |
+| Chromium 像素轉字元（browsh / carbonyl 式） | 得到的是縮小的 GUI，沒有語意，套不上 tdp |
 | 為單一網站寫 heuristic | 追不完，而且一改版就壞。webu 只認 AX tree 與 DOM 的版面事實，Jira 的 div 湯是 Jira 的問題（定案 2026-09-21） |
 
 ### 與同類工具的差異

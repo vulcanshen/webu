@@ -49,6 +49,8 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/install.sh | s
 go install github.com/vulcanshen/webu/cmd/webu@latest
 ```
 
+從原始碼建置見 [docs/dev-remarks.md](docs/dev-remarks.md)。
+
 有兩件事要知道：
 
 - **Chromium 在第一次啟動時下載**，只下載一次，放在 cache 目錄（約 175–250 MB），有進度列。升級後若需要新版 Chromium，執行 `webu browser update`。
@@ -179,7 +181,10 @@ restore_session: true
 
 - [CHANGELOG.md](CHANGELOG.md) —— 每個版本改了什麼。
 - [docs/dev-remarks.md](docs/dev-remarks.md) —— webu 內部怎麼運作、設計文件、從原始碼建置。
-- webu 是 `u`-family 的一員 —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）—— 共用同一套 [TUI 設計](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md) 與同樣的按鍵。
+
+## terminu family
+
+webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
 
 ## 授權
 
