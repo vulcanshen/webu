@@ -64,11 +64,11 @@ tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
 
 依賴方向：`ui → page → ir`、`ui → browser`；`ir` 不依賴 CDP 以外的任何東西。`page/sessions.go` 用 `ir.CarriedFrom` 當 id 偏移的單位，是 page 對 ir 唯一的反向依賴（一個常數）。
 
-## 實作落地
+### 實作落地
 
 設計文件（`function.md`、`ui.md`、`ux.md`）講該怎樣；這一節記程式裡實際怎麼做、對應哪些名字。
 
-### Chromium（`function.md` §9）
+#### Chromium（`function.md` §9）
 
 | 項目 | 落地 |
 |---|---|
@@ -77,7 +77,7 @@ tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
 | UA（2026-09-23） | `Browser.getVersion` 拿自報字串，`HeadlessChrome/` → `Chrome/`，尾巴 ` webu/<ver>`；client hints brands `Chromium` + `webu`；每個分頁 `Prepare` 時 `Emulation.setUserAgentOverride`（`browser.identify` / `userAgent` / `uaMetadata`；`TestWebuSignsItsUserAgent`） |
 | log | chromedp 的 log 全部進 `<data>/webu.log`，**絕不到 stderr**；`unhandled … event` 丟掉 |
 
-### Capture：一次抓什麼（`function.md` §3）
+#### Capture：一次抓什麼（`function.md` §3）
 
 `page.Capture(ctx, frames)` → `ir.Capture`：
 
@@ -93,7 +93,7 @@ tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
 | `Viewport` | `Page.getLayoutMetrics` | 頁面比視窗矮就不切 part |
 | `ContentType` | `document.contentType` | 非 HTML 整份 code block；PDF 不支援 |
 
-### Build：AX tree 上實測出來的事
+#### Build：AX tree 上實測出來的事
 
 - **`url` 就在 AX node 上**（link 的 href、image 的 src）；`<iframe src>` 不在，從 snapshot 補。
 - **contenteditable**：`generic` + `focusable` + `editable="richtext"` → 多行 Textbox。
@@ -107,7 +107,7 @@ tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
 
 password、沒有 option 的 combobox、float32 的數字見上面「量出來的事實」。
 
-### frame：三條路一個出口（2026-09-23）
+#### frame：三條路一個出口（2026-09-23）
 
 - **同 process**：snapshot 的 `docs` 已含所有同 process 文件；`frameOwners(docs, strs, cur)` 只看**當前 document** 的 `ContentDocumentIndex`；`getFullAXTree.WithFrameID` 取樹。
 - **跨站**：`DOM.describeNode(<iframe>)` 給 `FrameID`（= target id，`Target.getTargets` 列為 `iframe` 型、已 auto-attach）；`chromedp.NewContext(tabCtx, WithTargetID(frameID))` attach 一條自己的 session。在那條 session 上 `getFullAXTree` / `captureSnapshot` / `getBoxModel` / `Input.dispatchMouseEvent` 都正常，座標是 frame 自己的、Chromium 會轉。`page.Sessions`（`WithSessions` 掛在 tab ctx、`NewSessions` 的 `tab` 也帶著它所以巢狀派生得到）：`frame(id)` 懶 attach（5 秒沒回就放棄）、`forget`、`resolve`。
@@ -115,7 +115,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - **box**：`attachFrames.keep` 把 frame 的 Boxes 平移到 owner 的 box、以 carried id 併進主頁（巢狀先在上一層平移），part 與彈窗判定看得到 frame 內容。
 - **ui**：`openFrame(n)` 把 frame id 加進 `tab.frames`、`wantDrill`、重抓；`apply` 後 drill 進去；沒抓到就 toast。同站 / 跨站 / 巢狀在 ui 一行都不用分。
 
-### render：IR → layout（`render.go`）
+#### render：IR → layout（`render.go`）
 
 `layout{rows, items, marks}`：block kind 斷行、inline kind 流式折行；每個 `seg` 記 item、item 記 first / last 列與起始欄（`j/k` 換列、`h/l` 同列靠它）；`marks` 記每個 block 的第一列（目錄、finder、起點都靠它；`markNext` 讓欠著的空列不算成它的）。
 
@@ -133,30 +133,30 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - **measure**：只管 `wrap()` 的 `textW`；`store.Measure` 收 `full` / 數字。
 - **行號**（`lineNumW` / `lineNum`）：gutter 從文字寬扣、面板寬不變；`relayout` 先用上一頁的位數排、位數變了再排一次；drill 進一件事時從 body 起算、彈窗裡 gutter 0。
 
-### parts（`parts.go`，2026-09-23）
+#### parts（`parts.go`，2026-09-23）
 
 `splitParts(root, boxes, viewport)`：只看頂層區塊的幾何——最大面積是 body；`beside`（垂直重疊）是 others；前面 header、後面 footer。守門：頁面高 ≤ viewport、或最大區塊 < 25% 面積 → nil（整頁一塊）。`tab.parts` / `at` / `activePart`；`relayout` 從 `sansPopup(root)` 切、`base` 是 active part 的節點；pagetab 由 `partChain(labels, at, hand, focused, dimmed)` 畫（lit 整條 / dim 兩種）；`stepPagetab` 走到哪就 `relayout` 到哪；`enterPagetab` 在彈窗時 false。
 
-### sections（`section.go` / `sectionlist.go`）
+#### sections（`section.go` / `sectionlist.go`）
 
 `sectionsOf(root, lay, url)`：從 `marks` 收 heading（scope 是 main）；`(top)` 是第一個標題前的內容；**一節的 `last` 延伸到下一個同級或更高級標題**（2026-09-23，原本是下一個任何標題——MDN「Try it」因此是空的）；`start()` 把 landmark 的 rule 併進下一節；`count` 數表 / code / 媒體 / 散文 / 連結；`pruneNav` 丟掉只有連結、沒子節的「節」（併進前一節，用 max 不縮短父節）；深度用 stack 算（h1 → h3 → h4 是三層）。`shapeOf`：≥ 3 個標題是 `shapeDoc`。`tab.listing()` / `read` / `sec` / `secTop` / `flat`；`openSection` / `closeSection` / `stepSection`（`siblingSection` 同 level）/ `sectionAt`（最內層）/ `rowRange`（讀一節時 `body..last`）；`recut` 重抓後用 heading 的 node id 留在原節；`sectionHint` / `readPct` 給下框；`headingTitle` 去掉標題尾巴的同頁錨點連結。
 
-### drill、places、finder、go
+#### drill、places、finder、go
 
 - **drill**：`drillInto(n)` / `leaveDrill`；`chainTo` / `chainOf` 算祖先路徑；`enterItem` 對一行的 ListItem 直接 `firstItemIn` → `enterOn`；`Media` 有 `Frame` 就 `openFrame`；Code → `showCode`。
 - **places**（`tab.go`）：`entry`（`Page.getNavigationHistory` 的 current entry id）、`places[entry] = place{at, flat, read, sec, top, cursor}`；`apply` 的 `fresh` = entry 不同（URL 判斷會被 settle 重設）。
 - **finder**（`finder.go`）：`indexPage` 走四個 part、`partOf` 記 part、Combobox 的子節點跳過、Option 可命中；`hit{node, part, trail, under, text, line}`；`hitScore` 字面優先、模糊 ≤ 64；`goToHit` 用 `chainOf` 沿路 drill、`rowOf` 找列；`geometry` 96 欄以上並排。`go`：`finderGo` 列 `lineText(n)`、`goToLine`。
 - **Esc 鏈**（`app.go` `escKey`）：pagetab → drill → 彈窗（拒絕）→ read → pagetab。
 
-### 頁面的彈窗（`pagepopup.go`，2026-09-23）
+#### 頁面的彈窗（`pagepopup.go`，2026-09-23）
 
 `noticePopup()` 在 `apply` 時跑：`findPopup(prev, skip, root, boxes)` 走整棵樹找 `prev` 沒有的子樹根；`isPopup(c, chain, boxes, parents)`：`countItems > 0`、且（`Modal` / dialog / alertdialog / menu / `hasFocus`）或 `overlap`「疊在無關的 box 上一半以上」（`parents` 排除 DOM 祖先 / 子孫——`main` 在 Accept 之後曾被誤判）。`popups` 是 stack：同一次 capture 有新的就 push、不丟舊的；`popupLays` 存下層的 layout 畫在後面（`pagePopupFloats` 錯開 3 欄 1 列）；`back` / `backParts` / `backRead` / `backSec` / `backTop` 存彈窗出現前的版面與位置，答完復原；`popupUntil` = press 後 8 秒；載入時 prev 空 → 全部算新（載入就在的彈窗算）。`popupWidth` / `popupVisible`；`pageBody` 用 `backdrop()`。
 
-### 兩套配色（`theme.go`）
+#### 兩套配色（`theme.go`）
 
 App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）與 Page palette（`pageText` / `pagePress` / `pageFill` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）分開。glyph 常數（`glyphHeader/Body/Others/Footer` = `page_layout_*`、`glyphPopup`、`glyphUpload`、`glyphInfo`…）的碼位查法見「建置與開發」。
 
-### 動作（`page/actions.go`、`sessions.go`）
+#### 動作（`page/actions.go`、`sessions.go`）
 
 每個 `page.*` 入口都經 `chromedp.Run`（`run` / `on`）；`on(ctx, id, fn)` 先用 ctx 裡的 Sessions 解 id。分頁怎麼排這些動作見上面「分頁的三種跑法」。
 
@@ -171,7 +171,7 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 | Key | Enter / Escape / ArrowLeft / ArrowRight |
 | Entry | `Page.getNavigationHistory` 的 current entry |
 
-### 非 DOM 事件（`page/hooks.go`）
+#### 非 DOM 事件（`page/hooks.go`）
 
 | 事件 | 落地 |
 |---|---|
@@ -198,8 +198,13 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 - **webu 簽自己的名字** —— Chromium 自報的 user agent，把 headless 版的 `HeadlessChrome/` 寫成 `Chrome/`、尾巴接 `webu/<version>`。不是偽裝，是一個真瀏覽器的名字。
 - **預設搜尋是 DuckDuckGo 的 HTML 端點**，因為 Google 對每一次 headless 搜尋都回 reCAPTCHA。
 - **沒有交棒給視窗** —— CAPTCHA、passkey、WebRTC 是牆，webu 明講；webu 必須能在沒有 display 的機器上跑，所以沒有視窗可以交棒。
+- **按鍵與家族習慣（tdp D5）** —— D5 記的是家族的按鍵習慣、不是規則；webu 有四處跟它不同：
+  - `[go] Go to line` 用 `g` 開頭：D5 把 `j k u d g G h l` 保留給移動，`go` 本身就是移動（游標跳到第幾行），跟 `gg` 同一族，不是動作。
+  - visual mode 是小寫 `v`，雖然它作用在整個面板：`V` 保留給 splash（tdp S1），而且模式不是 panel operation（`ux.md` §A.0.K，2026-09-21）。
+  - 讀一節時的 `n` / `p`（下一節 / 上一節）是小寫的 panel operation：大寫的 `N` / `P` 已經是上一頁 / 下一頁。
+  - `h` / `l` 是同一列左右移動、pagetab 上換 part，不是 D5 的「panel 內換分頁」：webu 的 `[2]` 沒有分頁，分頁在 `[1]`。
 - **visual mode 的 `Space` 是 cheatsheet** —— visual mode 是一個模式，它的鍵是移動與選字（`h j k l`、`w e b`、`v V`、`y`、`/`），不是對某個 item 的動作，排成 Space menu 的列反而難讀。所以 `Space` 打開一張 cheatsheet（`selectCheatsheet`，message popup 的 `passKeys`）：列出這個模式的每個鍵，按其中一個就關掉 cheatsheet 並執行；再按 `Space` 關掉。它扮演這個模式的 Space menu，不算偏離 tdp（2026-09-27 定案）。`?` 是同一份鍵（`selectKeys`）的唯讀 help（tdp K11）。
-- **Space menu 的 global operation 區只有一列（tdp M2）。** webu 的全域動作約十個（切畫面 `W` `B` `H` `D` `S`、`P` / `N`、`L`、`v`、`q`……），全部列進每一個 Space menu，會比 panel 自己的動作還長。所以 global 區只放一列，`Enter` 打開全域動作的完整清單，在那裡可以直接執行。這一列不標 `[?]`：Space menu 也是 popup，在它上面按 `?` 照 K6 顯示它自己的按鍵（2026-09-27）。2026-09-26 定案。這條原本是偏離 M2（tdp v0.1.0 要 global 區列出全部全域動作）；tdp v0.1.2 起 M2 規定 global 區**固定一列** `Global operation`，不再是偏離。那一列打開 global operation popup，疊在 Space menu 上（2026-09-27）。
+- **Space menu 的 global operation 區只有一列（tdp M2）。** global 區固定一列 `Global operation`，`Enter` 打開 global operation popup，疊在 Space menu 上；全域動作在那裡、可以直接執行。這一列不標 `[?]`：Space menu 也是 popup，在它上面按 `?` 照 K6 顯示它自己的按鍵。2026-09-26 定案時 webu 把 `P` / `N`、`L`、`/`、`v` 也算全域動作（約十個，全列會比 panel 自己的動作還長，所以只放一列，當時是偏離 tdp v0.1.0 的 M2）；tdp v0.1.2 起 M2 規定固定一列，不再是偏離。2026-09-27 起全域動作只有五個畫面與離開：`P` / `N`、`L`、`/`、`v` 作用在頁面上，是 `[2]` 的 panel operation（tdp M3、P3）。
 
 ## 已否決，不要重提
 
@@ -235,7 +240,11 @@ webu 照 tdp v0.1.4 逐條修完（2026-09-27）；有意不照做的地方列�
 
 ## 偏離 tdp
 
-- **頁面自己的彈窗 `Esc` 不關（K4、F3）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在頁面上的框（`ui.md` §2.4），但它不是 webu 的 popup，是頁面的：頁面放它上來要一個回答，`Esc` 關掉等於把那個決定擱著。所以 `Esc` 在它上面只 toast 說明，要按裡面的按鈕、或等頁面自己收掉（`ux.md` §5；`app.go` `togglePagetab`）。webu 自己的 popup 照 K4、F3。
+- **頁面自己的彈窗是 `[2]` 的內容，不是 webu 的 popup（K4、F3、K5、K6）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在頁面上的框（`ui.md` §2.4），看起來像 popup，但它是頁面的一部分：頁面放它上來要一個回答，webu 只是把頁面畫出來。所以它上面的鍵照 panel `[2]` 走，不照 popup 走：
+  - `Esc` 不關它（偏離 K4、F3）：關掉等於把頁面要的決定擱著。`Esc` 在它上面只 toast 說明，要按裡面的按鈕、或等頁面自己收掉（`ux.md` §5；`app.go` `togglePagetab`）。
+  - `Space` 在它上面打開 `[2]` 的 Space menu，疊在它之上（偏離 K5 的「popup 上不疊 Space menu」）：它的按鈕、連結是 `[2]` 的 item，要能用 Space menu 操作；焦點始終在 panel 上。
+  - `?` 是 `[2]` 的 key reference，不是「這個 popup 的鍵」（K6 以 panel 處理）。
+  webu 自己的 popup 照 K4、K5、K6、F3。
 
 ## 設計文件導讀
 
@@ -248,11 +257,13 @@ webu 照 tdp v0.1.4 逐條修完（2026-09-27）；有意不照做的地方列�
 
 設計本身 —— 包含試過而被否決的做法 —— 每條決定都在原地標了日期。
 
-## 用什麼做的
+## 建置與開發
+
+### 用什麼做的
 
 Go、[Bubble Tea](https://github.com/charmbracelet/bubbletea) 與 [Lip Gloss](https://github.com/charmbracelet/lipgloss)、浮層用 [bubbletea-overlay](https://github.com/rmhubbert/bubbletea-overlay)、Chrome DevTools Protocol 用 [chromedp](https://github.com/chromedp/chromedp)、語法色用 [chroma](https://github.com/alecthomas/chroma)。瀏覽器是 Chromium 專案自己的 snapshot 版，依 revision 釘死。
 
-## 建置與開發
+### 從原始碼建置
 
 ```bash
 git clone https://github.com/vulcanshen/webu.git
