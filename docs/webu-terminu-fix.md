@@ -64,27 +64,6 @@ locku（對照到 v0.1.4）、webu（v0.1.0 那一輪）與 sshu（對照到 v0.
 
 ---
 
-## 1. panel 上的 `?` 打開可執行的 `?` menu —— K6、M4、F1
-
-- **現況**：`internal/ui/app.go` `routeKey()` 的 `?` 分支（:867–879）：沒有 popup 時走 `openGlobalMenu()`（:1534），打開
-  `globalMenu`，內容是 `helppopup.go` 的 `globalMenuItems()`（:164）—— 上半 `global operation` 十一列可以執行（`j`/`k`、`Enter`、
-  熱鍵），下半 `key reference` 是 `note` 列（唯讀，`spacemenu.go` :22 的 `note`）。一個 popup 同時是 menu 又是唯讀清單。
-  list screen（Bookmarks、History、Downloads、Settings）上的 `?` 也是這個 menu；panel 自己能按的鍵不在任何 `?` 裡。
-  popup 上的 `?`（`floatHelp()`，`helppopup.go` :98）已經是該 popup 自己的按鍵、唯讀，符合。
-- **規則**：`?` 打開**最前端那個 surface 的 key reference**：唯讀、可以捲動，沒有游標、不能執行。panel 上列出這個 panel 能按的鍵
-  與 core key；popup 上只列這個 popup 的鍵（K6、M4）。能做的事在 `Space` 與 global operation popup；讀與做分成兩個框（F1）。
-- **怎麼改**：
-  - panel 上的 `?` 改開 `helpPopup`（跟 popup 上的 `?` 同一個 viewport），內容 = 這個 panel 的鍵 + core key。panel 的鍵從它的
-    Space menu 列產生（`openMenu()` / `m.lists.menuItems()` 組出來的列，只收有鍵可按的：單一字元、`Enter`、`/`、`go` 這類寫在
-    label 裡的 core key；menu-only 沒有字母的列不收），不另外手寫一份。core key 沿用 `globalMenuItems()` 下半那幾列的文字，
-    `?` 那一列改成「this key reference; on a popup, its keys」之類。`[1]` Tabs、`[2]` Page、每個 list screen 各自一份。
-  - `?` 再按一次關掉、`Esc` 也關（已是如此）。
-  - `globalMenuItems()` 只留可執行的全域動作（見第 2 條）；`note` 列沒有人用之後，`menuItem.note` 與 `spaceMenu.view()` 裡 `it.note`
-    的分支一起拿掉（`selectable()` 跟著簡化）。
-  - key reference 的寬度依最長的說明計算（tdp D4）：`helpPopup.view()` 目前是 `keyW+44`（:138），長說明會被截掉。
-  - 文件：README 兩份的 `?` 那一列（:89）、`ux.md` §A.0 表的 Non-contextual 列、§A.0.K 的 `?` 列、§A.2 整節、`ui.md` 浮層表的
-    `?` menu 列（:161）改成「`?` 只讀；全域動作在 global operation popup」。
-
 ## 2. global operation popup 取代 Space menu，而不是疊在它上面 —— M2、M4、K4、F4、T1
 
 - **現況**：每個 Space menu 最後一區是一列 `Global operation…`（`app.go` `withGlobal()` :1523–1531，key `globalmenu`）—— 一列符合 M2。

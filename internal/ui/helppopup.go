@@ -1,13 +1,15 @@
 package ui
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-// helpPopup is ? on a float (tdp K6): the keys of THAT float, read-only —
-// what can be pressed in this box and what it does. ? on a panel is the
-// ? menu instead (globalMenuItems).
+// helpPopup is ? (tdp K6, M4): the key reference of the frontmost surface,
+// read-only — on a float the keys of THAT float, on a panel the panel's
+// keys and the core keys. Nothing in it runs; that is Space's.
 type helpPopup struct {
 	anim    popupAnimator
 	title   string
@@ -29,8 +31,81 @@ func (m *helpPopup) open(title string, entries []helpEntry, layer int) tea.Cmd {
 func (m *helpPopup) close() tea.Cmd   { return m.anim.close() }
 func (m *helpPopup) setSize(w, h int) { m.screenW, m.screenH = w, h }
 
-// helpEntry is one line: a key and what it does.
+// helpEntry is one line: a key and what it does, or with no key a group's
+// heading.
 type helpEntry struct{ key, desc string }
+
+// coreKeys close every panel's key reference.
+var coreKeys = []helpEntry{
+	{"Enter", "the item, as a click; where a click means nothing, go in"},
+	{"Esc", "one step back up"},
+	{"Space", "what can I do here: the item, the panel, the global operations"},
+	{"?", "these keys; on a popup, its keys"},
+	{"Tab · 1 · 2", "next panel / this panel"},
+	{"j · k", "next / previous item"},
+	{"h · l", "along a row"},
+	{"u · d", "half a page"},
+	{"gg · G", "first / last"},
+	{"q · Ctrl+C", "quit"},
+}
+
+// keyReference is a panel's ? from its Space menu rows: every row that a
+// key reaches — a letter, or a core key written into its label — under
+// the menu's own region headings, then the core keys. A menu-only row has
+// no key to list. When the panel says what its Enter does, the general
+// Enter line is not repeated.
+func keyReference(items []menuItem) []helpEntry {
+	var out []helpEntry
+	enter := false
+	for _, it := range items {
+		if it.header {
+			out = append(out, helpEntry{desc: it.label})
+			continue
+		}
+		k, label := rowKey(it)
+		if k == "" {
+			continue
+		}
+		enter = enter || k == "Enter"
+		if it.hint != "" {
+			label += " — " + it.hint
+		}
+		out = append(out, helpEntry{k, label})
+	}
+	// A heading with nothing of its own under it goes.
+	var kept []helpEntry
+	for i, e := range out {
+		if e.key == "" && (i+1 == len(out) || out[i+1].key == "") {
+			continue
+		}
+		kept = append(kept, e)
+	}
+	kept = append(kept, helpEntry{desc: "core keys"})
+	for _, e := range coreKeys {
+		if !(enter && e.key == "Enter") {
+			kept = append(kept, e)
+		}
+	}
+	return kept
+}
+
+// rowKey is the key a Space menu row answers to and its label without it:
+// "[Enter] Switch to" is Enter, "[go] Go to line" is go, a one-letter key
+// is itself. "" for a row only the menu runs.
+func rowKey(it menuItem) (string, string) {
+	if strings.HasPrefix(it.label, "[") {
+		if i := strings.Index(it.label, "] "); i > 0 {
+			return it.label[1:i], it.label[i+2:]
+		}
+	}
+	switch {
+	case len(it.key) == 1:
+		return it.key, it.label
+	case it.key == "enter":
+		return "Enter", it.label
+	}
+	return "", ""
+}
 
 // Each float's keys, as its ? shows them. A float's border legend is the
 // short form of the same list.
@@ -131,12 +206,28 @@ func (m *helpPopup) update(msg tea.KeyMsg) {
 func (m helpPopup) visible() int { return max(1, min(len(m.entries), m.screenH-6)) }
 
 func (m helpPopup) view() string {
-	keyW := 0
-	for _, e := range m.entries {
-		keyW = max(keyW, dispW(e.key))
+	pairs := [][2]string{{"Esc", "close"}}
+	if len(m.entries) > m.visible() {
+		pairs = append([][2]string{{"j/k", "scroll"}}, pairs...)
 	}
-	innerW := popupInnerW(m.screenW, keyW+44)
+	hint := hintLegend(pairs)
+	title := " " + glyphHelp + " " + m.title + " · keys "
 
+	// As wide as the longest line needs (tdp D4), with a column to spare so
+	// it does not touch the frame, and never narrower than the title or
+	// the legend under it.
+	keyW, descW, headW := 0, 0, 0
+	for _, e := range m.entries {
+		if e.key == "" {
+			headW = max(headW, dispW(e.desc)+2)
+			continue
+		}
+		keyW = max(keyW, dispW(e.key))
+		descW = max(descW, dispW(e.desc))
+	}
+	innerW := popupInnerW(m.screenW, max(keyW+4+descW+1, headW, dispW(title)+4, dispW(hint)+2))
+
+	dim := lipgloss.NewStyle().Foreground(dimColor)
 	key := lipgloss.NewStyle().Foreground(handColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)
 
@@ -144,16 +235,14 @@ func (m helpPopup) view() string {
 	end := min(len(m.entries), m.top+vis)
 	rows := make([]string, 0, vis)
 	for _, e := range m.entries[m.top:end] {
+		if e.key == "" {
+			rows = append(rows, dim.Render(padRight(" "+e.desc, innerW)))
+			continue
+		}
 		rows = append(rows, key.Render(padRight("  "+e.key, keyW+4))+
-			txt.Render(padRight(e.desc, innerW-keyW-4)))
+			txt.Render(padRight(truncate(e.desc, innerW-keyW-5), innerW-keyW-4)))
 	}
-
-	pairs := [][2]string{{"Esc", "close"}}
-	if len(m.entries) > vis {
-		pairs = append([][2]string{{"j/k", "scroll"}}, pairs...)
-	}
-	hint := hintLegend(pairs)
-	return drawPopupBox(popupLayerColor(m.layer), " "+glyphHelp+" "+m.title+" · keys ", hint,
+	return drawPopupBox(popupLayerColor(m.layer), title, hint,
 		animRows(m.anim, capRows(rows, m.screenH)), innerW)
 }
 
@@ -175,16 +264,5 @@ func globalMenuItems() []menuItem {
 		{label: "[/] Search", key: "/", hint: "every part of the page; Enter goes there"},
 		{label: "Visual mode", key: "v", hint: "walk the text by character, copy some"},
 		{label: "Quit", key: "q", hint: "Ctrl+C too; asks while a download runs"},
-		{separator: true},
-		{header: true, label: "key reference"},
-		{note: true, label: "Enter", hint: "the item, as a click; where a click means nothing, go in"},
-		{note: true, label: "Esc", hint: "one step back up"},
-		{note: true, label: "Space", hint: "what can I do here: the item and the panel"},
-		{note: true, label: "?", hint: "on a panel this menu; on a popup, its keys"},
-		{note: true, label: "Tab · 1 · 2", hint: "next panel / this panel"},
-		{note: true, label: "j · k", hint: "next / previous item"},
-		{note: true, label: "h · l", hint: "along a row"},
-		{note: true, label: "u · d", hint: "half a page"},
-		{note: true, label: "gg · G", hint: "first / last"},
 	}
 }

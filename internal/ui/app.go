@@ -876,8 +876,8 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
-	// ? on a panel is the ? menu; on a float, that float's own keys (tdp
-	// K6, M4). A second ? closes what the first opened.
+	// ? reads, never runs (tdp K6, M4): the keys of the frontmost surface
+	// — a float's own, or on a panel that panel's. A second ? closes it.
 	if msg.String() == "?" && !m.typing() {
 		switch {
 		case m.quitHelp.anim.owns():
@@ -892,7 +892,7 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			title, entries := m.floatHelp()
 			return m, m.help.open(title, entries, m.layer()+1)
 		}
-		return m.openGlobalMenu()
+		return m.openPanelHelp()
 	}
 
 	switch {
@@ -1508,13 +1508,27 @@ func (m *AppModel) deleteEntry(at int) tea.Cmd {
 // openMenu is Space: the contextual list for the focused panel (ux.md
 // §A.1).
 func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
+	items, title := m.panelMenu()
+	m.spaceMenu.setItems(withGlobal(items), title, 1)
+	return m, m.spaceMenu.open()
+}
+
+// openPanelHelp is ? on a panel (tdp K6, M4): the keys of this panel, to
+// read. They come from its Space menu, so the two cannot disagree.
+func (m AppModel) openPanelHelp() (tea.Model, tea.Cmd) {
+	items, title := m.panelMenu()
+	return m, m.help.open(title, keyReference(items), m.layer())
+}
+
+// panelMenu is what the focused panel can do right now, as Space menu rows
+// without the global region, and its title.
+func (m AppModel) panelMenu() ([]menuItem, string) {
+	if m.screen != screenWeb {
+		_, title := m.lists.title()
+		return m.lists.menuItems(), title
+	}
 	var items []menuItem
 	title := ""
-	if m.screen != screenWeb {
-		_, title = m.lists.title()
-		m.spaceMenu.setItems(withGlobal(m.lists.menuItems()), title, 1)
-		return m, m.spaceMenu.open()
-	}
 	switch m.focus {
 	case panelTabs:
 		title = "Tabs"
@@ -1540,8 +1554,7 @@ func (m AppModel) openMenu() (tea.Model, tea.Cmd) {
 		title = "Page"
 		items = m.pageMenuItems()
 	}
-	m.spaceMenu.setItems(withGlobal(items), title, 1)
-	return m, m.spaceMenu.open()
+	return items, title
 }
 
 // withGlobal ends a Space menu with its global region (tdp M2): one row
