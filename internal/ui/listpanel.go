@@ -235,67 +235,85 @@ func (m *listPanel) escTyping() bool {
 
 // menuItems is the screen's Space menu: the same keys update answers to,
 // so the two cannot drift (ux.md §A.1).
+//
+// An empty list has no item, so it has no item region (tdp M2): the rows
+// that act on the cursor's entry are left out, heading and all.
 func (m listPanel) menuItems() []menuItem {
+	e, _, ok := m.current()
 	switch m.kind {
 	case listSettings:
-		if e, _, ok := m.current(); ok && e.toggle {
+		if ok && e.toggle {
 			return []menuItem{{header: true, label: "item operation"}, {label: "Toggle", key: "enter", hint: "switch it on or off; saved at once"}}
 		}
 		return []menuItem{{header: true, label: "item operation"}, {label: "Edit", key: "enter", hint: "change this setting; empty means the default"}}
 	case listDownloads:
-		return []menuItem{
-			{header: true, label: "item operation"},
+		return itemRegion(ok, []menuItem{
 			{label: "Open file", key: "enter", hint: "with what the desktop opens it with"},
 			{label: "Source in new tab", key: "o", hint: "where it came from"},
 			{label: "Remove", key: "x", hint: "this row; a download still running is stopped"},
 			{label: "Yank path", key: "y", hint: "to the clipboard"},
-			{separator: true},
-			{header: true, label: "panel operation"},
+		}, []menuItem{
 			{label: "Clear done", key: "C", hint: "the finished and cancelled rows"},
 			{label: "[/] Filter", key: "/", hint: "type to narrow the list"},
-		}
+		})
 	case listHistory:
-		return []menuItem{
-			{header: true, label: "item operation"},
+		return itemRegion(ok, []menuItem{
 			{label: "Open in new tab", key: "enter", hint: "and switch to it"},
 			{label: "Delete", key: "x", hint: "this visit"},
 			{label: "Yank url", key: "y", hint: "to the clipboard"},
-			{separator: true},
-			{header: true, label: "panel operation"},
+		}, []menuItem{
 			{label: "Clear", key: "C", hint: "every visit ever recorded"},
 			{label: "[/] Filter", key: "/", hint: "type to narrow the list"},
-		}
+		})
 	}
 	// Bookmarks: what the cursor is on decides the item half — a folder
 	// row folds on Enter, a bookmark opens (revised 2026-09-21).
-	items := []menuItem{{header: true, label: "item operation"}}
-	e, _, ok := m.current()
+	var items []menuItem
 	switch {
-	case ok && e.isFolder && e.folded:
+	case !ok:
+	case e.isFolder && e.folded:
 		items = append(items, menuItem{label: "[Enter] Expand", key: "enter", hint: "show what is inside"})
-	case ok && e.isFolder:
+	case e.isFolder:
 		items = append(items, menuItem{label: "[Enter] Collapse", key: "enter", hint: "one row, out of the way"})
 	default:
 		items = append(items, menuItem{label: "[Enter] Open in new tab", key: "enter", hint: "and switch to it"})
 	}
-	items = append(items, menuItem{label: "Add", key: "a", hint: "a bookmark here: its URL, then its title"})
-	if ok && e.isFolder {
+	add := menuItem{label: "Add", key: "a", hint: "a bookmark here: its URL, then its title"}
+	switch {
+	case !ok:
+		// Nothing to be "here" beside: Add is the list's, not an item's.
+		return itemRegion(false, nil, []menuItem{add,
+			{label: "Add folder", key: "A", hint: "here; a path like a/b/c makes each level"},
+			{label: "Import", key: "I", hint: "a browser's bookmarks export (HTML), into a folder of its own"},
+			{label: "[/] Filter", key: "/", hint: "type to narrow the list"}})
+	case e.isFolder:
 		items = append(items,
 			menuItem{label: "Rename", key: "r", hint: "this folder; what is in it follows"},
 			menuItem{label: "Delete", key: "x", hint: "this folder; with anything in it, asks first, then the whole tree"})
-	} else {
+	default:
 		items = append(items,
 			menuItem{label: "Move", key: "m", hint: "into a folder, or out to the top"},
 			menuItem{label: "Rename", key: "r", hint: "its title"},
 			menuItem{label: "Delete", key: "x", hint: "this bookmark"},
 			menuItem{label: "Yank url", key: "y", hint: "to the clipboard"})
 	}
-	return append(items,
-		menuItem{separator: true},
-		menuItem{header: true, label: "panel operation"},
-		menuItem{label: "Add folder", key: "A", hint: "here; a path like a/b/c makes each level"},
-		menuItem{label: "Import", key: "I", hint: "a browser's bookmarks export (HTML), into a folder of its own"},
-		menuItem{label: "[/] Filter", key: "/", hint: "type to narrow the list"})
+	return itemRegion(true, append([]menuItem{items[0], add}, items[1:]...), []menuItem{
+		{label: "Add folder", key: "A", hint: "here; a path like a/b/c makes each level"},
+		{label: "Import", key: "I", hint: "a browser's bookmarks export (HTML), into a folder of its own"},
+		{label: "[/] Filter", key: "/", hint: "type to narrow the list"}})
+}
+
+// itemRegion lays a list's menu out as its two regions, the item's only
+// when there is an item (tdp M2).
+func itemRegion(ok bool, item, panel []menuItem) []menuItem {
+	var items []menuItem
+	if ok {
+		items = append(items, menuItem{header: true, label: "item operation"})
+		items = append(items, item...)
+		items = append(items, menuItem{separator: true})
+	}
+	items = append(items, menuItem{header: true, label: "panel operation"})
+	return append(items, panel...)
 }
 
 // hintPairs is the border legend: bright the key, dim what it does (§4.4).

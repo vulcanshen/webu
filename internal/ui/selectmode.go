@@ -495,12 +495,16 @@ func (m AppModel) selectRows(t *tab, innerW, innerH int) []string {
 }
 
 // selectLegendPairs is the footer while the mode is on (ux.md §B): only
-// the keys that mean something here.
+// the keys that mean something here. Space and ? lead it whenever a search
+// is not being typed (tdp M1) — Space is the mode's cheatsheet, ? the ?
+// menu — and the mode's own keys drop off the right when it is narrow.
 func selectLegendPairs(typing bool) [][2]string {
 	if typing {
 		return [][2]string{{"Enter", "find"}, {"Esc", "cancel"}}
 	}
 	return [][2]string{
+		{"space", "menu"},
+		{"?", "help"},
 		{"y", "copy"},
 		{"v/V", "select"},
 		{"Esc", "leave"},

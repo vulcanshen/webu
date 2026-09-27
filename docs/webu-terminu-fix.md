@@ -24,48 +24,6 @@ locku 是第一個照 tdp v0.1.0 修完的 app（v0.1.2、v0.1.3），修的時�
 
 ---
 
-## 7. 空清單上仍列出 item operation —— M2
-
-- **現況**：`listpanel.go` `menuItems()`：Downloads（第 245 行）與 History（第 257 行）不看游標下有沒有東西，
-  `item operation` 區（Open / Remove / Delete / Yank……）一律出現；Bookmarks（第 272 行起）在沒有任何書籤時也列出
-  `[Enter] Open in new tab`、Move、Rename、Delete、Yank url。
-- **規則**：沒有對象就沒有那一區 —— 空清單沒有 item，item operation 連標題一起不出現；只剩一區時不加標題。
-- **怎麼改**：`m.current()` 沒有東西時略過 item operation 區（Bookmarks 的 `Add` 若要留，歸到 panel operation）。
-
-## 8. 不能執行的列改寫說明、按了還會 toast —— M6
-
-- **現況**：`app.go` 對 disabled 的列把說明換成原因：`pagetabItem()`（第 1576 行）`this page is all one part`、
-  `sectionsItem()`（第 1614 行）`this page has no headings to cut on`；`itemMenuItems()` 對 `ir.Unsupported`（第 1472 行）
-  放一列 disabled 的 `role: xxx, not supported yet — only click` 當說明文字。`menuKey()` 第 1647 行、`optionsKey()`
-  第 1679 行遇到 disabled 的列用 toast 顯示它的 hint。`spacemenu.go` 的註解寫明 disabled 列「still answers when
-  pressed」。
-- **規則**：列照樣出現、變暗；說明欄維持原本那句，不另外寫原因；`Enter` 與熱鍵都不作用。
-- **怎麼改**：disabled 時用原本的說明（`header, body, others, footer`、`read this page one section at a time` ……）；
-  `menuKey()` / `optionsKey()` 遇到 disabled 直接 `return m, nil`。未支援 role 那一列改放進 Inspect 的內容或
-  `Click` 列的說明，不當成一列 disabled 的動作。`spacemenu.go` 的 disabled 註解與 `ux.md` §A.1 的「沒標題的頁
-  disabled 並說明」、`ux.md` §A.1 未支援 role 那一列一起改。
-
-## 9. visual mode 的 footer 沒有 `Space` / `?` —— M1
-
-- **現況**：visual mode 開著時 `footer()`（第 2796 行）改用 `selectLegendPairs()`（`selectmode.go` 第 499 行），
-  沒有 `space menu` 與 `? help`。
-- **規則**：非輸入態的每一個畫面都常駐顯示 `Space` 與 `?`（M1）。
-- **怎麼改**：visual mode 的 footer 前面固定留 `space menu   ? help`，其餘是模式的鍵、放不下從尾端捨棄。
-  `Space` 開 cheatsheet 是定案的做法，不改（2026-09-27，見 `dev-remarks.md`「設計決定」）。
-
-## 10. 從 Space menu 開出的 popup 會先關掉 menu —— F4、T1
-
-- **現況**：`app.go` `menuKey()` 第 1649 行，任何一列執行前都先 `m.spaceMenu.close()` 再 `dispatch()`；`optionsKey()`
-  的 `optItemMenu` 也一樣。所以 Space menu 裡選了會開 confirm / input 的列（`[C] Clear` history、`[x] Delete`
-  folder、`[L]ocation`、`[T]ab`、`[A] Add folder`、`[r] Rename`……），在那個 confirm / input 上按 `Esc`，回到的是
-  panel，不是剛才的 menu。
-- **規則**：從 popup A 開出 popup B 時，A 預設留在底下，取消 B 回到 A（F4）；短的 confirm / input 保留 source（T1）。
-  完成動作才清掉整個 stack（D3）。
-- **怎麼改**：`menuKey()` / `optionsKey()` 在 `dispatch()` 打開了新 popup 時不關 menu；完成動作的路徑照舊
-  `closeStack()`。會換頁的動作（context shift）照 `ux.md` §5 清掉 source，不變。
-  `?` menu 的 `globalMenuKey()`（2026-09-27 加上）一樣先關再執行，`[L]ocation`、`[q]uit`（有下載時的 confirm）
-  也照這條改。
-
 ## 11. 程式碼註解仍引用 VTP 的 § 編號、u-family 與已退場的 implementation 文件 —— 文件對齊
 
 - **現況**：`internal/ui` 等處的註解用 VTP 的 § 編號、「u-family」與 `webu-implementation.md`（不影響行為）。只換
@@ -139,5 +97,5 @@ locku 是第一個照 tdp v0.1.0 修完的 app（v0.1.2、v0.1.3），修的時�
   不換？
 - **`chrome.go:136` 的 `§1.1`**：「the lit capsule is what says which surface you are on」看起來是 focus 的標示（tdp L5），
   但 VTP §1.1 是窄寬可用（tdp L1）；可能是從 kbu 帶過來、指 kbu 自己的文件。要換成哪個，由改程式的人看上下文決定。
-- **`chrome.go:88` 的 `§11.21`、`chrome.go:241` 的 `§11.22`、`spacemenu.go:22` 的 `§sftpApplicable`**：不是 VTP，
+- **`chrome.go:88` 的 `§11.21`、`chrome.go:241` 的 `§11.22`**：不是 VTP，
   看起來是從 kbu / sshu 帶過來的引用，webu 自己的文件裡沒有對應的節。要不要拿掉？

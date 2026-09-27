@@ -20,12 +20,11 @@ type menuItem struct {
 	// note is a line of reference, not an action: label and hint drawn as a
 	// row, never selectable, never run — the ? menu's key reference (tdp M4).
 	note bool
-	// disabled: the action belongs here but cannot run right now. It is NOT
-	// the same as leaving the row out (which is what an action that does not
-	// apply gets, §sftpApplicable): a row that vanishes teaches that the
-	// action does not exist on this panel, and it will be looked for later.
-	// A dimmed row keeps the map honest and still answers when pressed — so
-	// the cursor lands on it like any other, and running it says why not.
+	// disabled: the action belongs here but cannot run right now (tdp M6).
+	// It is NOT the same as leaving the row out: a row that vanishes teaches
+	// that the action does not exist on this panel. The row stays, dimmed,
+	// in its own words; the cursor lands on it like any other, and neither
+	// Enter nor its key does anything.
 	disabled bool
 }
 
@@ -174,21 +173,23 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string, tea.Cmd) {
 	case "u", "ctrl+u":
 		m.step(-max(1, m.visible()/2))
 	case "enter":
-		if m.cursor < len(m.items) {
+		if m.cursor < len(m.items) && !m.items[m.cursor].disabled {
 			return m, m.items[m.cursor].key, nil
 		}
 	default:
 		// Letter hotkeys work from inside the menu too: the menu is the slow
 		// path and the letter is the fast one, and they must agree. Same
 		// exact-then-fold rule as the panel, so `t` and `T` stay distinct here.
+		var rows []menuItem
 		var keys []string
 		for _, it := range m.items {
 			if !it.selectable() {
 				continue
 			}
+			rows = append(rows, it)
 			keys = append(keys, it.key)
 		}
-		if i := hotkeyIndex(keys, k); i >= 0 {
+		if i := hotkeyIndex(keys, k); i >= 0 && !rows[i].disabled {
 			return m, keys[i], nil
 		}
 	}

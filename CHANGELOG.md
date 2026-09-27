@@ -17,6 +17,13 @@
   **`?` on a popup shows that popup's own keys.**
 - **Every Space menu ends in a `global operation` row** that opens the
   `?` menu.
+- **A row that cannot run does nothing.** It stays in the menu, dimmed,
+  saying what it does; Enter and its key no longer answer with a toast.
+- **An empty list's menu has no item rows** — no Open or Delete on a
+  History, Downloads or Bookmarks screen with nothing on it.
+- **A box or question opened from a menu comes back to the menu** on
+  `Esc`; finishing it closes both.
+- **Visual mode's footer shows `space` and `?`** like every other.
 
 ### Fixed
 
