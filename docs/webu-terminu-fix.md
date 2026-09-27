@@ -24,36 +24,6 @@ locku 是第一個照 tdp v0.1.0 修完的 app（v0.1.2、v0.1.3），修的時�
 
 ---
 
-## 1. `Space` 會關掉任何 popup —— K5、F6
-
-- **現況**：`internal/ui/app.go` `handleKey()` 第 776 行，`msg.Type == tea.KeySpace && m.popupOpen() && !m.typing()`
-  一律 `closeTop()`：confirm（等於取消）、options、message、DevTools、finder 的清單、`?` help、file picker 都被
-  `Space` 關掉。
-- **規則**：`Space` 只開關它自己開的 Space menu；其他 popup（由 `Enter` 或熱鍵打開的 confirm、input、viewport……）
-  上按 `Space` 不作用，由 `Esc` 或自己的流程關閉。
-- **怎麼改**：這個分支只留給 Space menu（`m.spaceMenu.anim.owns()` 且它是最上層時）。頁面自己的彈窗不受影響
-  （它是頁面內容，`Space` 在它上面照舊開 `[2]` 的 Space menu）。`ux.md` §A.0.K 的「在浮層上按 = 關掉它」、
-  §5「`Space` 在浮層上 = 關掉它」與 `ui.md` §3 的同一句一起改。`ux.md` §A.1 的「一列的 menu 直接執行」程式裡
-  沒有這個行為（`openMenu()` 永遠開 menu），也一起刪掉。
-
-## 2. `Ctrl-C` 直接結束，不走離開流程 —— K9
-
-- **現況**：`app.go` `handleKey()` 第 771 行 `if msg.Type == tea.KeyCtrlC { return m.quit() }`，`quit()`（第 934 行）
-  直接 `tea.Quit`；有下載進行中也不問。只有 `q` 走 `askQuit()`（第 1160 行，有下載先 confirm）。
-- **規則**：`q` 與 `Ctrl-C` 做同一件事 —— 進入離開流程；離開流程進行中再按一次 `Ctrl-C` 才立刻離開。
-- **怎麼改**：`Ctrl-C` 改成呼叫 `askQuit()`；quit confirm（`confirmQuit`）開著時的 `Ctrl-C` 直接 `quit()`。
-  help 的 `Ctrl+C  force quit`、README 兩份「Everywhere」的 `Ctrl+C force quit`、`ux.md` §A.2 的「`Ctrl+C` 硬退」
-  改成「quit（再按一次立刻離開）」之類的說法。
-
-## 3. `q` 只在沒有浮層時有效，visual mode 裡也沒作用 —— K1、K9
-
-- **現況**：`q` 只在 `panelKey()`（第 963 行）與 `screenKey()`（第 1194 行）處理，也就是沒有浮層、不在 visual mode
-  的時候；Space menu、options、confirm、message、`?` help、DevTools 開著時按 `q` 沒有作用；visual mode 的
-  `selectMode.key()` 不認 `q`。
-- **規則**：`q` 是 core key，除了輸入態以外在每個 surface 都是「離開 app」。
-- **怎麼改**：`q` 的處理提到浮層路由之前（`m.typing()` 判斷之後），呼叫 `askQuit()`。`ux.md` §A.2 的
-  「浮層內不作用」一起改。
-
 ## 4. `?` 疊在 popup 上時顯示整個 app 的 help —— K6
 
 - **現況**：`handleKey()` 第 779 行，`?` 在任何非輸入態都 `m.help.open(m.layer())`，內容永遠是
@@ -149,7 +119,6 @@ locku 是第一個照 tdp v0.1.0 修完的 app（v0.1.2、v0.1.3），修的時�
 | `app.go:721` | `§6.2` | `tdp F3` |
 | `app.go:730` | `§4.5` | `tdp K8` |
 | `app.go:745` | `§4.3` | `tdp K4` |
-| `app.go:774` | `§A.1 / §A.2` | `tdp K5, K6`（第 1 條改完後這段註解跟著重寫） |
 | `app.go:833` | `§6.4` | `tdp F4` |
 | `app.go:836` | `§6.2` | `tdp F3` |
 | `app.go:927` | `§7.1` | `tdp T1` |

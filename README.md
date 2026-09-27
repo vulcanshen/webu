@@ -113,7 +113,7 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
  panels    1 / 2  ·  Tab
  cursor    j k    u d (half page)      gg G      h l along a row
  page      P / N back / forward        L location    / finder    v visual mode
- global    Space menu    ? help    q quit    Ctrl+C force quit
+ global    Space menu    ? help    q / Ctrl+C quit
 ```
 
 ### Tabs

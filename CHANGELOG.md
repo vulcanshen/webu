@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **`q` quits from anywhere but a text box** — over a menu, help, a
+  confirm or DevTools, and in visual mode. **`Ctrl+C` is the same way
+  out**: it asks first while a download runs, and a second `Ctrl+C` on
+  that question leaves at once.
+- **`Space` opens and closes the Space menu, and nothing else.** On help,
+  a confirm or any other popup it does nothing, so a stray `Space` no
+  longer cancels a question.
+
 ## [0.3.1] — 2026-09-25
 
 ### Changed

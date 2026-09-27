@@ -153,7 +153,7 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 ## §3 Popup
 
 全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint
-嵌下邊框、`Esc` 只在 `closeTop` 一處解析、`Space` 在浮層上 = 關掉它、動畫 8 × 16 ms。
+嵌下邊框、`Esc` 只在 `closeTop` 一處解析、`Space` 只開關 Space menu、在其他浮層上不作用、動畫 8 × 16 ms。
 
 | Popup | 類型 | 用途 |
 |---|---|---|

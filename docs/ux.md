@@ -26,7 +26,7 @@
 | `Tab` | `[1]` ↔ `[2]`；`1` / `2` 直達 | 同 |
 | `Enter` | **滑鼠左鍵在 terminal 的對應**（定案 2026-09-21；0.3.0 起先 hover 再按）；左鍵沒有對應的才自定義——**進去**：目錄開一節、清單裡的一件事走進去、frame 走進去；heading / landmark 開合；pagetab 上 = 確認回頁面。細表在 §A.0.K.1 | 對字元所屬的節點做同一件事，並離開模式 |
 | `Esc` | **往上一層，一次一步**（2026-09-23）：關最上層浮層 → 走出一件事 / frame → 回目錄 → 上 pagetab → 再 Esc 回頁面。頁面自己的彈窗**不關**（toast：它要一個回答）。上一頁是 `P`，Esc 不兼職 | 打字中取消；否則離開模式 |
-| `Space` | **滑鼠右鍵 context menu**；再按關閉；在浮層上按 = 關掉它 | cheatsheet，按列出的鍵即執行 |
+| `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-27，tdp K5、F6） | cheatsheet，按列出的鍵即執行 |
 | `?` | help；再按關閉；可疊在任何浮層上 | 同 |
 
 #### §A.0.K.1 Enter 對每種東西
@@ -59,8 +59,7 @@
 
 ### §A.1 Contextual track — Space menu（tdp K5、M2）
 
-兩個 region 固定叫 `item operation` / `panel operation`；只有一個 region 就保持扁平；一列的 menu
-直接執行。menu 本身：`j`/`k` 走（環繞）、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23）、Enter 執行、
+兩個 region 固定叫 `item operation` / `panel operation`；只有一個 region 就保持扁平。menu 本身：`j`/`k` 走（環繞）、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23）、Enter 執行、
 letter hotkey 在 menu 裡也有效。
 
 **`[1]` Tabs**
@@ -113,10 +112,10 @@ delete 用 `x` 不用 `d`：`d` 是半頁。
 | Location | `L` |
 | 切面板 | `Tab`、`1` / `2` |
 | visual mode | `v`；`/` 是 finder（不再進 visual mode，2026-09-23） |
-| 離開 | `q`（有下載進行中先 confirm；浮層內不作用）、`Ctrl+C` 硬退 |
+| 離開 | `q` / `Ctrl+C`：輸入框以外到處都通，浮層上、visual mode 裡也是；有下載進行中先 confirm，confirm 上再按 `Ctrl+C` 立刻離開（2026-09-27，tdp K9） |
 | splash 彩蛋 | `V`（不揭露） |
 
-全域字母在浮層開著、visual mode、打字中三種狀態下不作用。
+全域字母在浮層開著、visual mode、打字中三種狀態下不作用；`q` 例外，只有打字中不作用。
 
 ---
 
@@ -241,7 +240,7 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 ## §5 浮層行為
 
 沿用 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
-`Space` 在浮層上 = 關掉它、正在關閉的浮層不握鍵盤。
+`Space` 只開關 Space menu、在其他浮層上不作用、正在關閉的浮層不握鍵盤。
 
 **頁面自己的彈窗**是例外（`ui.md` §2.4）：它不是 webu 的浮層，是頁面的；`Esc` 不關、`Space` 是它的
 選單、要回答它才會走（按裡面的按鈕、或頁面自己收掉）。
