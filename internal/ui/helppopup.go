@@ -251,8 +251,8 @@ func (m helpPopup) view() string {
 // anywhere, each row run like a Space menu's; under it the core keys, to
 // read. Every Space menu ends in one row that opens this (dev-remarks.md,
 // 偏離 tdp).
-func globalMenuItems() []menuItem {
-	return []menuItem{
+func globalMenuItems(on screen) []menuItem {
+	items := []menuItem{
 		{label: "Web", key: "W", hint: "the tabs and the page"},
 		{label: "Bookmarks", key: "B", hint: "the folder tree"},
 		{label: "History", key: "H", hint: "every page visited"},
@@ -265,4 +265,12 @@ func globalMenuItems() []menuItem {
 		{label: "Visual mode", key: "v", hint: "walk the text by character, copy some"},
 		{label: "Quit", key: "q", hint: "Ctrl+C too; asks while a download runs"},
 	}
+	// The screen already up is a row that cannot run (tdp M4, M6): dimmed
+	// in its own words, not left out.
+	for i := range items {
+		if s, ok := screenKeys[items[i].key]; ok && s == on {
+			items[i].disabled = true
+		}
+	}
+	return items
 }

@@ -10,7 +10,8 @@
   global operations are the list the last row of every Space menu opens.
 - **The global operations open over the Space menu** instead of in its
   place: `Esc` goes back to the Space menu, and running one closes both.
-  The row is called `Global operation`.
+  The row is called `Global operation`. The screen you are on is dimmed
+  in it.
 
 ### Fixed
 

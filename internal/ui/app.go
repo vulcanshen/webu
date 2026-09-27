@@ -1578,7 +1578,7 @@ func withGlobal(items []menuItem) []menuItem {
 // openGlobalMenu is the global operation popup (tdp M4), over the Space
 // menu whose last row opened it: Esc goes back to that menu (tdp F4).
 func (m AppModel) openGlobalMenu() (tea.Model, tea.Cmd) {
-	m.globalMenu.setItems(globalMenuItems(), "Global operation", 2)
+	m.globalMenu.setItems(globalMenuItems(m.screen), "Global operation", 2)
 	return m, m.globalMenu.open()
 }
 

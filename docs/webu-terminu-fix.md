@@ -64,14 +64,6 @@ locku（對照到 v0.1.4）、webu（v0.1.0 那一輪）與 sshu（對照到 v0.
 
 ---
 
-## 3. global operation 清單裡，目前所在畫面那一列沒有變暗 —— M4、M6
-
-- **現況**：`helppopup.go` `globalMenuItems()`（:164）是固定的一份，`Web` / `Bookmarks` / `History` / `Downloads` / `Settings` 五列
-  沒有一列帶 `disabled`；在 Bookmarks 上執行 `Bookmarks` 什麼都沒變。
-- **規則**：global operation popup 裡目前所在畫面的切換列照 M6 變暗（說明維持原句，`Enter` 與熱鍵都不作用），不拿掉（M4）。
-- **怎麼改**：`globalMenuItems()` 收目前的 `m.screen`，對應那一列 `disabled: true`（`screenKeys` :62 的對照）。`spaceMenu.update()`
-  已經不執行 disabled 列，不用另外處理。
-
 ## 4. visual mode 的 `?` 打開 `?` menu，不是模式的 help —— K11
 
 - **現況**：`app.go` `routeKey()` 的 `?` 分支（:867–879）排在 visual mode 的處理（:920）之前，visual mode 開著、沒有 popup 時

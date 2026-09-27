@@ -116,7 +116,8 @@ menu-only 的列不列），照 menu 的區塊標題分組，最後接 core key�
 通用的 `Enter`。浮層上是那個浮層自己的鍵。`Esc` 或再按 `?` 關掉。框的寬度依最長的一行（tdp D4）。
 
 **全域動作在 global operation popup**（2026-09-27，tdp M4、F4、T1）：每個 Space menu 最後一列 `Global operation` 打開它，
-**疊在 Space menu 上**；`Esc` 回到 Space menu，執行一列就關掉整疊（開出新框的列除外，那個框疊上去）。列出下表的動作，一列一個，
+**疊在 Space menu 上**；`Esc` 回到 Space menu，執行一列就關掉整疊（開出新框的列除外，那個框疊上去）。目前所在畫面的
+那一列照 M6 變暗、不作用，不拿掉。列出下表的動作，一列一個，
 `j`/`k`、`Enter`、熱鍵照 Space menu 執行。從 list screen 執行 `P` / `N` / `L` / `/` / `v` 會先回到 web；visual mode
 開著時先離開。
 
