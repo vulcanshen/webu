@@ -46,10 +46,10 @@ func TestSpaceClosesOnlyTheSpaceMenu(t *testing.T) {
 	}
 
 	d.key("?")
-	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	d.until("the key reference", func() bool { return d.m.help.anim.isInteractive() })
 	d.send(keySpace)
-	if !d.m.globalMenu.anim.owns() || d.m.spaceMenu.anim.owns() {
-		t.Error("Space on the ? menu should do nothing")
+	if !d.m.help.anim.owns() || d.m.spaceMenu.anim.owns() {
+		t.Error("Space on the key reference should do nothing")
 	}
 	d.key("esc")
 
@@ -72,9 +72,9 @@ func TestQuitFromEverywhere(t *testing.T) {
 		t.Error("q and Ctrl-C on the panel should quit")
 	}
 	d.key("?")
-	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
+	d.until("the key reference", func() bool { return d.m.help.anim.isInteractive() })
 	if !d.quits(keyQ) {
-		t.Error("q over the ? menu should quit")
+		t.Error("q over the key reference should quit")
 	}
 	d.key("esc")
 	d.m.sel.on = true
@@ -116,51 +116,70 @@ func TestQuitFromEverywhere(t *testing.T) {
 	}
 }
 
-// ? on a panel is the ? menu (tdp M4): the global operations, run from
-// it like a Space menu's rows, and under them the core keys to read. A
-// second ? closes it.
-func TestQuestionMarkMenu(t *testing.T) {
+// ? on a panel reads (tdp K6, M4): the panel's keys, taken from its Space
+// menu, then the core keys — nothing in it runs. A second ? closes it.
+func TestQuestionMarkOnAPanelReads(t *testing.T) {
 	d := keysDriver(t)
 
+	d.key("B")
 	d.key("?")
-	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
-	items := d.m.globalMenu.items
-	if !items[0].header || items[0].label != "global operation" {
-		t.Errorf("the ? menu should open on its global operations: %+v", items[0])
+	d.until("the key reference", func() bool { return d.m.help.anim.isInteractive() })
+	if d.m.globalMenu.anim.owns() {
+		t.Fatal("? on a panel should not open anything that runs")
 	}
-	ref := -1
-	for i, it := range items {
-		if it.header && it.label == "key reference" {
-			ref = i
+	e := d.m.help.entries
+	if !helpHas(e, "A") || !helpHas(e, "/") || !helpHas(e, "q · Ctrl+C") {
+		t.Errorf("the key reference should list the panel's keys and the core keys: %+v", e)
+	}
+	for _, x := range e {
+		if x.key == "/" && strings.HasPrefix(x.desc, "[") {
+			t.Errorf("a key written into a label is listed once, as the key: %q", x.desc)
 		}
 	}
-	if ref < 0 || !items[len(items)-1].note {
-		t.Fatal("the ? menu should end in a key reference")
-	}
-	d.key("G")
-	if c := d.m.globalMenu.cursor; c >= ref {
-		t.Errorf("the key reference is read, not run: G landed on row %d (%q)", c, items[c].label)
-	}
-	if v := d.m.View(); !strings.Contains(v, "key reference") || !strings.Contains(v, "[B]ookmarks") {
-		t.Errorf("the ? menu should show both regions:\n%s", v)
-	}
 
-	d.key("B") // a row's key runs it
-	if d.m.globalMenu.anim.owns() || d.m.screen != screenBookmarks {
-		t.Errorf("B in the ? menu should close it and open Bookmarks: screen %v", d.m.screen)
+	d.key("A") // read, not run: the Add folder box does not open
+	d.key("enter")
+	if d.m.input.anim.owns() || !d.m.help.anim.owns() {
+		t.Error("keys on the key reference should run nothing")
+	}
+	if v := d.m.View(); !strings.Contains(v, "core keys") || !strings.Contains(v, "Bookmarks · keys") {
+		t.Errorf("the key reference should be drawn with its headings:\n%s", v)
 	}
 	d.key("?")
-	d.until("the ? menu on a screen", func() bool { return d.m.globalMenu.anim.isInteractive() })
-	d.key("enter") // the first row: Web
-	if d.m.screen != screenWeb {
-		t.Errorf("Enter on Web should go back to the web: screen %v", d.m.screen)
+	if d.m.help.anim.owns() {
+		t.Error("a second ? should close the key reference")
 	}
+}
 
-	d.key("?")
-	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
-	d.key("?")
-	if d.m.globalMenu.anim.owns() || d.m.help.anim.owns() {
-		t.Error("a second ? should close the ? menu")
+// The panel's key reference follows its Space menu: [1] with a tab lists
+// what Enter does there, and the general Enter line is not repeated.
+func TestKeyReferenceFromTheMenu(t *testing.T) {
+	items := []menuItem{
+		{header: true, label: "item operation"},
+		{label: "[Enter] Switch to", key: "enter", hint: "show this tab in [2]"},
+		{label: "Close", key: "c", hint: "this tab"},
+		{label: "Yank markdown", key: "yankmd", hint: "menu-only"},
+		{separator: true},
+		{header: true, label: "panel operation"},
+		{label: "[go] Go to line", key: "go", hint: "by its number"},
+		{separator: true},
+		{header: true, label: "menu-only region"},
+		{label: "Yank markdown", key: "yankmd"},
+	}
+	e := keyReference(items)
+	for _, x := range e {
+		if x.desc == "menu-only region" {
+			t.Errorf("a heading with no key under it should go: %+v", e)
+		}
+	}
+	enters := 0
+	for _, x := range e {
+		if x.key == "Enter" {
+			enters++
+		}
+	}
+	if enters != 1 || !helpHas(e, "c") || !helpHas(e, "go") || helpHas(e, "yankmd") {
+		t.Errorf("the reference should hold Enter once, c, go and no menu-only row: %+v", e)
 	}
 }
 
@@ -345,7 +364,10 @@ func TestMenuStaysUnderWhatItOpened(t *testing.T) {
 		t.Error("finishing the errand should close the box and the menu under it")
 	}
 
-	d.key("?")
+	d.send(keySpace)
+	d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
+	d.key("G")
+	d.key("enter")
 	d.until("the ? menu", func() bool { return d.m.globalMenu.anim.isInteractive() })
 	d.key("L")
 	d.until("the location box", func() bool { return d.m.input.anim.isInteractive() })

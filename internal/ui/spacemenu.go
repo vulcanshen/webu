@@ -17,9 +17,6 @@ type menuItem struct {
 	hint      string
 	header    bool // dim region label, not selectable
 	separator bool // horizontal rule, not selectable
-	// note is a line of reference, not an action: label and hint drawn as a
-	// row, never selectable, never run — the ? menu's key reference (tdp M4).
-	note bool
 	// disabled: the action belongs here but cannot run right now (tdp M6).
 	// It is NOT the same as leaving the row out: a row that vanishes teaches
 	// that the action does not exist on this panel. The row stays, dimmed,
@@ -75,7 +72,7 @@ func (m *spaceMenu) close() tea.Cmd     { return m.anim.close() }
 func (m *spaceMenu) setSize(w, h int)   { m.screenW, m.screenH = w, h }
 
 // selectable reports whether the cursor can land on the row.
-func (it menuItem) selectable() bool { return !it.header && !it.separator && !it.note }
+func (it menuItem) selectable() bool { return !it.header && !it.separator }
 
 func (m spaceMenu) firstSelectable() int {
 	for i, it := range m.items {
@@ -211,9 +208,6 @@ func (m spaceMenu) view() string {
 		case it.separator:
 		case it.header:
 			headW = max(headW, dispW(it.label)+2)
-		case it.note:
-			labelW = max(labelW, dispW(it.label))
-			hintW = max(hintW, dispW(it.hint))
 		default:
 			acts++
 			labelW = max(labelW, dispW(bracketHotkey(it.label, it.key)))
@@ -236,7 +230,6 @@ func (m spaceMenu) view() string {
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)
-	key := lipgloss.NewStyle().Foreground(handColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	// The cursor still has to be visible on a row that cannot run, so it drops
 	// to the register the app already uses for "highlighted, but not live" —
@@ -250,9 +243,6 @@ func (m spaceMenu) view() string {
 			rows = append(rows, dim.Render(" "+strings.Repeat("─", max(0, innerW-2))))
 		case it.header:
 			rows = append(rows, dim.Render(padRight(" "+it.label, innerW)))
-		case it.note:
-			rows = append(rows, key.Render(padRight(" "+it.label, innerW-hintW-1))+
-				dim.Render(padLeft(it.hint, hintW)+" "))
 		default:
 			label := padRight(" "+bracketHotkey(it.label, it.key), innerW-hintW-1)
 			hint := padLeft(it.hint, hintW) + " "

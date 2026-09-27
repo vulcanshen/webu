@@ -86,7 +86,7 @@ webu help                         # 完整的命令列說明
 | **`Space`** | *這裡能做什麼？* —— 游標所在的東西與這個面板能做的全部。所有熱鍵都列在裡面，不用背 |
 | **`Esc`** | 往上一層：關 popup、走出項目或 frame、回目錄 |
 | **`Tab`** | 在分頁清單與頁面之間切換 |
-| **`?`** | 在面板上是 `?` menu —— 整個 app 到處都能做的事，從清單直接執行，底下列著 core key。在 popup 上是這個 popup 的按鍵 |
+| **`?`** | *這裡能按哪些鍵？* —— 最前面那一層的按鍵，只能看：面板自己的鍵加上 core key，在 popup 上則是這個 popup 的鍵。能做的事在 `Space` 裡；每個 Space menu 最後一列是 `Global operation`，列著到處都能做的事 |
 
 ## 畫面
 
@@ -113,7 +113,7 @@ webu help                         # 完整的命令列說明
  面板      1 / 2  ·  Tab
  游標      j k    u d（半頁）          gg G      h l 同列移動
  頁面      P / N 上一頁 / 下一頁       L 網址    / finder    v visual mode
- 全域      Space 選單    ? 全域選單 / popup 的按鍵    q / Ctrl+C 離開
+ 全域      Space 選單    ? 按鍵    q / Ctrl+C 離開
 ```
 
 ### 分頁
