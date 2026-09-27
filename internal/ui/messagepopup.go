@@ -5,7 +5,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// messagePopup is the message class with nothing to decide (§6.1): a few
+// messagePopup is the message class with nothing to decide (tdp F1): a few
 // lines and Esc. Inspect shows a node's facts here; selection mode shows
 // its cheatsheet here. Unlike a confirm it asks nothing, so Enter is not
 // special.

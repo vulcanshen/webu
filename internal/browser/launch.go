@@ -180,7 +180,7 @@ func uaMetadata(product, ver string) *emulation.UserAgentMetadata {
 // Close asks Chromium to quit and waits for it, then releases the allocator.
 // Graceful first — Browser.close lets the profile flush cookies and storage —
 // and the allocator's cancel is the kill behind it, so a browser that will not
-// answer still goes (u-family: leave with no child left behind).
+// answer still goes (terminu family: leave with no child left behind).
 func (b *Browser) Close() {
 	if b == nil {
 		return

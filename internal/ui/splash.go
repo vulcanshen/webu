@@ -16,7 +16,7 @@ type splashIdentityMsg struct{} // fires the name + tagline together
 type splashHintMsg struct{}
 
 // splashModel renders the webu logo as a hidden easter egg, a sibling of
-// kbu's, filu's and sshu's splashes. The u-family mark is a navy U wrapping
+// kbu's, filu's and sshu's splashes. The terminu family mark is a navy U wrapping
 // a gold figure that spells WEB, and it reveals in that order: the
 // background sheet, W, E, B, then the U frame rising around them.
 //

@@ -8,7 +8,7 @@ import (
 )
 
 // The Console tab (ui.md §3.2): a viewport of entries, a glyph per level,
-// warnings and errors in the override colours (§2.4). An entry is shown
+// warnings and errors in the override colours (tdp D2). An entry is shown
 // whole, wrapped onto as many rows as it needs (revised 2026-09-21: it
 // was one row, cut with an ellipsis, and a stack trace or a multi-line
 // log was unreadable without opening its detail).

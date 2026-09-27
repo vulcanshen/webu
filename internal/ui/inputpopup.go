@@ -30,12 +30,12 @@ const (
 )
 
 // inputPopup is one line of text with a question above it — the message
-// class's sibling (§6.1). It is NOT a form: a form is several fields and one
+// class's sibling (tdp F1). It is NOT a form: a form is several fields and one
 // submit, and blurring the two would make Enter mean different things on
 // different floats.
 //
 // While it is up every printable key is a character: Space is a space and ?
-// is a question mark (§4.5).
+// is a question mark (tdp K8).
 type inputPopup struct {
 	anim   popupAnimator
 	title  string
@@ -84,7 +84,7 @@ func (m *inputPopup) ask(p inputPopup, layer int) tea.Cmd {
 
 // update edits the line. It reports the committed value, or "" — Esc is not
 // handled here, because cancelling is resolved in one place for every float
-// (§4.3).
+// (tdp K4).
 //
 // The placeholder is an offer, not a value (ux.md §2.1, revised
 // 2026-09-20): the go-to box opens on the page's own URL the way Chrome's
@@ -131,7 +131,7 @@ func (m inputPopup) view() string {
 			shown += "•"
 		}
 	}
-	// Lavender, because this is the field being edited (§B). Long values
+	// Lavender, because this is the field being edited (tdp P4). Long values
 	// keep their END in view: that is where the cursor is.
 	value := truncateHead(shown, innerW-3)
 	line := " " + edit.Render(value) + cur.Render(" ") +

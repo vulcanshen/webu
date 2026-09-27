@@ -85,7 +85,7 @@ func divider(prev, cur lipgloss.Color) (glyph string, fg, bg lipgloss.Color) {
 // keys were chords and the strip spelled the chord out, two lit halves reading
 // as one block. With bare letters there is no second half to spell, and a
 // permanently lit segment that names no surface is just a lit thing competing
-// with the one that means something (§11.21).
+// with the one that means something.
 func tabChain(segs []string, active int) string {
 	lit, unlit := focusColor, lipgloss.Color(baseHex)
 	isLit := func(i int) bool { return i == active }
@@ -118,7 +118,7 @@ func tabChain(segs []string, active int) string {
 // shortLabels drops each segment to its bracket — "[M] [F] [S]" — the first
 // narrow-width degradation. The label is the content signal and losing it
 // hurts, but a strip wider than the terminal breaks the frame outright
-// (§1.1 — narrow must stay usable).
+// (tdp L1 — narrow must stay usable).
 func shortLabels(labels []string) []string {
 	out := make([]string, len(labels))
 	for i, l := range labels {
@@ -133,14 +133,14 @@ func shortLabels(labels []string) []string {
 
 // tabRow is the top content row: capsules on the left, a per-tab status slot
 // right-aligned. This row replaces the panel border title entirely — the lit
-// capsule is what says which surface you are on (§1.1).
+// capsule is what says which surface you are on (tdp L5).
 //
-// Always exactly one row of exactly w cells (§1.3): the status is truncated,
+// Always exactly one row of exactly w cells (tdp L3, L4): the status is truncated,
 // the labels shorten, nothing wraps.
 //
 // The status slot is dim — a resting fact — EXCEPT while it reports an
 // action in flight: a running transfer's summary comes in liveColor,
-// because information arriving is not dimmed (§7.2).
+// because information arriving is not dimmed (tdp T2).
 func tabRow(w int, labels []string, active int, status string, live bool) string {
 	segs := labels
 	if tabChainW(segs)+1 > w {
@@ -175,7 +175,7 @@ func tabRow(w int, labels []string, active int, status string, live bool) string
 }
 
 // keyLegend renders the footer's "key desc" pairs. This is the mandatory
-// disclosure channel for the two entry keys (§A.1 / §A.2): a user who never
+// disclosure channel for the two entry keys (tdp M1): a user who never
 // read a README learns Space and ? exist by reading this row.
 //
 // When the terminal is too narrow, pairs are dropped from the RIGHT — the entry
@@ -198,7 +198,7 @@ func keyLegend(pairs [][2]string, w int) string {
 		n--
 	}
 
-	// Blue, the structural band (§2.1). A key name is chrome — the app naming
+	// Blue, the structural band (tdp D2). A key name is chrome — the app naming
 	// its own controls — not user state, which is the line that band draws. It
 	// used to be handColor, and handColor is the CURSOR: the same colour on
 	// "where you are in this list" and on "here is a key you could press" made
@@ -238,7 +238,7 @@ func tabRule(w, pct int, moving bool) string {
 
 // borderTone is what a panel's frame says about the keyboard. Two states were
 // enough everywhere until the ssh grid grew a third: a cell can be pointed AT
-// from the sessions list while the keyboard is still on the list (§11.22).
+// from the sessions list while the keyboard is still on the list.
 type borderTone int
 
 const (
@@ -262,7 +262,7 @@ func toneColor(t borderTone) lipgloss.Color {
 		// The cursor's own colour. Not blue: blue is where the keyboard is, and
 		// two blues on screen makes the user hunt for which one is live. Not a
 		// new colour either — an echo of the list cursor is the list cursor, so
-		// it wears what the cursor wears (§2.1 keeps the bands separate).
+		// it wears what the cursor wears (tdp D2 keeps the bands separate).
 		return handColor
 	}
 	return borderDim

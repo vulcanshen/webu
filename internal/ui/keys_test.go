@@ -301,6 +301,20 @@ func TestVisualModeFooterShowsSpaceAndHelp(t *testing.T) {
 	}
 }
 
+// Tab, 1 and 2 do not switch panels while visual mode is on (tdp K2, K4):
+// a note says to leave the mode first.
+func TestVisualModeHoldsThePanel(t *testing.T) {
+	d := keysDriver(t)
+	d.key("2")
+	d.m.sel.on = true
+	for _, k := range []tea.KeyMsg{{Type: tea.KeyTab}, {Type: tea.KeyRunes, Runes: []rune("1")}} {
+		d.send(k)
+		if d.m.focus != panelPage || !d.m.toast.anim.owns() {
+			t.Errorf("%q in visual mode should stay on the panel and say why: focus %v", k.String(), d.m.focus)
+		}
+	}
+}
+
 // A float opened from a menu leaves the menu under it (tdp F4, T1): Esc
 // comes back to the menu, and finishing the errand closes the whole stack
 // (tdp D3). The ? menu's rows do the same.

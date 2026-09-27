@@ -87,7 +87,7 @@ type AppModel struct {
 	history   []store.Visit
 
 	// Floats. The Space menu goes down first; a target opened from it stacks
-	// above (§6.4). The toast rides on top of everything.
+	// above (tdp F4). The toast rides on top of everything.
 	spaceMenu  spaceMenu
 	globalMenu spaceMenu   // ? on a panel: the global operations, then the core keys (tdp M4)
 	options    spaceMenu   // a textbox's Submit/Edit/Clear/Yank, or a select's options
@@ -720,7 +720,7 @@ func (m AppModel) popupOpen() bool {
 }
 
 // floatOwned reports whether some float still holds the keyboard — not
-// merely is on screen: one that is closing has let go (§6.2), and an Esc
+// merely is on screen: one that is closing has let go (tdp F3), and an Esc
 // that arrived during its animation belongs to whatever is under it.
 func (m AppModel) floatOwned() bool {
 	return m.toast.anim.owns() || m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
@@ -744,7 +744,7 @@ func (m AppModel) floatAboveGlobalMenu() bool {
 }
 
 // typing reports whether a float is taking text: every printable key is a
-// character then (§4.5). A search being typed in selection mode counts.
+// character then (tdp K8). A search being typed in selection mode counts.
 func (m AppModel) typing() bool {
 	return m.input.anim.owns() || m.editor.typing() || m.picker.anim.owns() || m.finder.typing() || (m.screen != screenWeb && m.lists.typing) ||
 		(m.devtools.anim.owns() && m.devtools.typing) ||
@@ -811,7 +811,7 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.splash, cmd = m.splash.update(msg)
 		return m, cmd
 	}
-	// Esc is one role, resolved in one place: close the topmost float (§4.3).
+	// Esc is one role, resolved in one place: close the topmost float (tdp K4).
 	// With nothing up it belongs to selection mode when that is on, and
 	// otherwise does nothing — the previous page is P (ux.md §A.0.K).
 	if msg.Type == tea.KeyEscape {
@@ -923,16 +923,21 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.KeySpace && !m.sel.typing {
 			return m, m.message.show(glyphMenu, "Visual mode", selectCheatsheet, true, m.layer())
 		}
+		// The panel keys do not reach past the mode (tdp K2, K4): the mode
+		// is left first, with Esc, and a note says so (2026-09-27).
+		if !m.sel.typing && (msg.Type == tea.KeyTab || msg.String() == "1" || msg.String() == "2") {
+			return m, m.toast.show("leave visual mode first (Esc), then switch panels", toastInfo)
+		}
 		return m.selectKey(msg)
 	}
 	return m.panelKey(msg)
 }
 
 // closeTop pops one level off the float stack; the source under a target
-// stays (§6.4).
+// stays (tdp F4).
 //
 // A float that is already closing is not "the top": its keyboard is gone
-// (§6.2), and an Esc that landed on it would do nothing while the float
+// (tdp F3), and an Esc that landed on it would do nothing while the float
 // underneath waited — which is exactly what happens when two keys arrive
 // inside one closing animation.
 func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
@@ -1025,7 +1030,7 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 }
 
 // closeStack tears every float down: an errand that ended in an action is
-// over, and the user is back on the panel (§7.1).
+// over, and the user is back on the panel (tdp T1).
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.input.close(), m.editor.close(), m.picker.close(), m.confirm.close(), m.options.close(),
 		m.devtools.close(), m.message.close(), m.finder.close(),
@@ -2955,7 +2960,7 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	return panelFrame(innerW, body, "[2] Page", hint, tone)
 }
 
-// footer is the mandatory disclosure of the entry keys (§A.1 / §A.2): one
+// footer is the mandatory disclosure of the entry keys (tdp M1): one
 // row, locked (ui.md §5). Selection mode replaces it with only the keys
 // that work there (ux.md §B: the footer is honest).
 func (m AppModel) footer() string {
