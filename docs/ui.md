@@ -2,7 +2,7 @@
 
 > 本文件講**版面與 surface**：面板、頁面的三個畫面、pagetab、popup、色帶、存檔。互動語意
 > （core-key、Space menu 內容、hotkey）在 `ux.md`；功能與 Chromium 邊界在 `function.md`；
-> 落地在 `webu-implementation.md`。依 VTP（`thoughts/tui-design`）撰寫，每條版面決定標日期。
+> 實作註記在 `dev-remarks.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)（tdp）撰寫，每條版面決定標日期。
 
 ---
 
@@ -152,7 +152,7 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 
 ## §3 Popup
 
-全部走 u-family 的 Popup Convention：一個 popup 一個檔一個 animator、title = glyph + 文字、hint
+全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint
 嵌下邊框、`Esc` 只在 `closeTop` 一處解析、`Space` 在浮層上 = 關掉它、動畫 8 × 16 ms。
 
 | Popup | 類型 | 用途 |
@@ -174,14 +174,14 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 
 DevTools 的四個分頁與 2026-09-21 相同：Network（清單 + detail：headers / body）、Storage（cookie /
 local / session：刪、yank、清站資料）、Console（每筆完整折行、物件列 own property、`i` REPL）、
-Source（HTML + `/` grep）。實作註記在 `webu-implementation.md`。
+Source（HTML + `/` grep）。
 
 ---
 
 ## §4 色帶
 
 **兩套配色（2026-09-22 定案）**：**app 配色**是 webu 的外殼（面板、邊框、header、pagetab、游標、
-選單、popup、footer），完整吃 VTP——少數錨點、明度當 z-axis、一個語意一條色帶；**page 配色**是文件
+選單、popup、footer），完整吃 tdp D2——少數錨點、明度當 z-axis、一個語意一條色帶；**page 配色**是文件
 自己的結構，封閉集合，只出現在 `[2]` 的內容區、不參與 z-axis。錨點 catppuccin-mocha。
 
 | 色帶 | 意思 | 值 |
@@ -198,10 +198,10 @@ Source（HTML + `/` grep）。實作註記在 `webu-implementation.md`。
 | 五個 hue 輪流 | 標題深度：目錄的縮排、節的 header 列、heading、tab 鏈、游標在標題上時的底 | `levelInk` |
 | Lavender | visual mode 的選取 | `#b4befe` |
 | Surface0 / Surface1 | 資料表底 / 表頭底 | `#313244` / `#45475a` |
-| popup layer scale | 浮層層級，依 §2.5 插值 | — |
+| popup layer scale | 浮層層級，依 tdp D2 的插值 | — |
 | 語法色 | key Mauve、string Pink、number Flamingo、常數 Sky、註解 dim 斜體、標點 Overlay2 | — |
 
-focus 二態同 kbu §8.4：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。visual mode 邊框 Yellow。
+focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。visual mode 邊框 Yellow。
 
 ---
 
@@ -215,7 +215,7 @@ focus 二態同 kbu §8.4：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─�
 
 footer：`space menu   ? help   tab/1-2 panels   q quit`；list screen 上 `space menu   ? help   esc web   q quit`。
 
-`docs/icon.svg` 是 u-family mark 的 webu 版；`V` 觸發 splash 彩蛋（家族同鍵，visual mode 因此是小寫 `v`）。
+`docs/icon.svg` 是 terminu family mark 的 webu 版；`V` 觸發 splash 彩蛋（家族同鍵，visual mode 因此是小寫 `v`）。
 **Nerd Font 是設計、必裝**：role glyph、part glyph、spinner、powerline 鏈都靠它，排版量它的寬。
 
 ---

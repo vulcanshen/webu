@@ -2,13 +2,13 @@
 
 > 本文件講**互動語意**：core-key、Space menu 內容、hotkey 分層、兩種游標、每種輸入怎麼填、
 > 浮層行為、時間軸。版面與 surface 在 `ui.md`，功能邊界在 `function.md`。
-> 依 VTP（`thoughts/tui-design`）撰寫，章節編號對齊 kbu / filu / sshu；每條決定標日期。
+> 依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)（tdp）撰寫，章節編號對齊 kbu / filu / sshu（§A、§B 沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。
 
 ---
 
-## §A. VTP in webu
+## §A. tdp in webu
 
-### §A.0 揭露對照
+### §A.0 揭露對照（tdp M1、P2）
 
 | Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
 |---|---|---|---|
@@ -19,7 +19,7 @@
 沒有字母可以括，所以鍵寫進 label 自己：`[Esc] Page parts`、`[Enter] Open section`、`[/] Search`、
 `[go] Go to line`、`[n] Next section`。
 
-### §A.0.K core-key 語意
+### §A.0.K core-key 語意（tdp K 章）
 
 | Core-key | 一般模式 | visual mode |
 |---|---|---|
@@ -57,7 +57,7 @@
 **修訂史**：2026-09-20 實機試用後 Enter 曾改成「開該 item 的選單」；09-21 定案改回左鍵；
 0.3.0 加上「進去」這一類（目錄 / 一件事 / frame）與 hover。
 
-### §A.1 Contextual track — Space menu
+### §A.1 Contextual track — Space menu（tdp K5、M2）
 
 兩個 region 固定叫 `item operation` / `panel operation`；只有一個 region 就保持扁平；一列的 menu
 直接執行。menu 本身：`j`/`k` 走（環繞）、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23）、Enter 執行、
@@ -104,7 +104,7 @@ disabled 並說明）、`[n] Next section` / `[p] Previous section`（讀一節�
 
 delete 用 `x` 不用 `d`：`d` 是半頁。
 
-### §A.2 Non-contextual track — `?` help
+### §A.2 Non-contextual track — `?` help（tdp K6、M4）
 
 | 全域動作 | 鍵 |
 |---|---|
@@ -120,7 +120,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁。
 
 ---
 
-## §B. 元素專職化
+## §B. 元素專職化（tdp P4）
 
 | 元素 | 唯一語意 |
 |---|---|
@@ -240,7 +240,7 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 
 ## §5 浮層行為
 
-沿用 u-family Popup Convention：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
+沿用 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 在浮層上 = 關掉它、正在關閉的浮層不握鍵盤。
 
 **頁面自己的彈窗**是例外（`ui.md` §2.4）：它不是 webu 的浮層，是頁面的；`Esc` 不關、`Space` 是它的
