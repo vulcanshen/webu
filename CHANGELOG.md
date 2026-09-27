@@ -21,8 +21,10 @@
   **signing in**, name and password. `Tab` moves between the fields and
   `Enter` sends them all; an empty URL keeps the box open on that field
   and says why.
-- **`→` takes the offered value** in a text box (the current URL at `L`,
-  the page at adding a bookmark); `Tab` only moves between fields.
+- **Offered values**: in a box of one field (the current URL at `L`) `Tab`
+  accepts the offer; in a box of several `Tab` moves between fields and
+  `→` accepts — `→` works in a single box too. The legend says `accept`,
+  and `decline` for `Backspace` refusing it.
 
 ### Fixed
 

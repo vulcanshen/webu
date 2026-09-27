@@ -125,7 +125,7 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
 
 `Space` is the right-click menu: open a link in a new tab, yank a link or text, submit, clear or edit a box, inspect an element. For the page: `R` reload · `T` new tab · `P` / `N` back / forward · `/` finder · `go` go to line · `n` / `p` next / previous section · `Sections` / `One sheet` · `v` visual mode · `L` location · `A` bookmark it · `I` DevTools · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab.
 
-`L` opens the address box with the current URL on offer: `→` takes it to edit, `Backspace` clears it. In a box of several fields — adding a bookmark, signing in — `Tab` moves between them and `Enter` sends them all.
+`L` opens the address box with the current URL on offer: `Tab` accepts it to edit, `Backspace` declines it. In a box of several fields — adding a bookmark, signing in — `Tab` moves between them, `→` accepts an offer, and `Enter` sends them all.
 
 ### Bookmarks, History, Downloads, Settings
 
@@ -183,7 +183,7 @@ Settings and bookmarks are plain YAML you can edit by hand.
 
 ## terminu family
 
-webu follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.5/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [locku](https://github.com/vulcanshen/locku) (screen lock).
+webu follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.6/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [locku](https://github.com/vulcanshen/locku) (screen lock).
 
 ## License
 

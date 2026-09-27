@@ -135,19 +135,26 @@ func (m *inputPopup) update(msg tea.KeyMsg) (committed string, done bool) {
 		// Always the whole box, one field or a group (tdp K3).
 		return m.value, true
 	case tea.KeyTab, tea.KeyShiftTab:
-		// Field to field, and nothing else (tdp K3): one field has nowhere
-		// to go.
+		// In a group, field to field and nothing else; in a single box,
+		// which has no field to go to, Tab accepts the offer (tdp K2,
+		// v0.1.6). Shift-Tab only ever moves.
 		if n := len(m.more) + 1; n > 1 {
 			d := 1
 			if msg.Type == tea.KeyShiftTab {
 				d = n - 1
 			}
 			m.at = (m.at + d) % n
+			return "", false
 		}
-		return "", false
+		if msg.Type == tea.KeyShiftTab {
+			return "", false
+		}
+		if *value == "" && *offer != "" {
+			*value, *offer = *offer, ""
+		}
 	case tea.KeyRight:
-		// The offer is taken with →, since Tab moves between fields
-		// (2026-09-27).
+		// → accepts the offer in any box: in a group it is the only key
+		// that does, since Tab moves between fields there (tdp K2).
 		if *value == "" && *offer != "" {
 			*value, *offer = *offer, ""
 		}
@@ -237,8 +244,14 @@ func (m inputPopup) legend(fields []groupField, widest bool) [][2]string {
 			offer = true
 		}
 	}
+	// One key per action on the legend: a single box accepts with Tab, a
+	// group with → (→ works in a single box too, unlisted). Bksp declines.
 	if offer {
-		pairs = append(pairs, [2]string{"→", "edit it"}, [2]string{"Bksp", "clear"})
+		take := "Tab"
+		if len(fields) > 1 {
+			take = "→"
+		}
+		pairs = append(pairs, [2]string{take, "accept"}, [2]string{"Bksp", "decline"})
 	}
 	return append(pairs, [2]string{"Esc", "cancel"})
 }

@@ -646,22 +646,32 @@ func TestGotoOffersThePageURL(t *testing.T) {
 	if d.m.input.value != "" || d.m.input.placeholder != "https://example.com/a" {
 		t.Fatalf("value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
 	}
-	if v := d.m.input.view(); !strings.Contains(v, "→") || !strings.Contains(v, "edit it") || strings.Contains(v, "Tab") {
-		t.Errorf("hint should offer →, and no Tab in a box of one field:\n%s", v)
+	if v := d.m.input.view(); !strings.Contains(v, "Tab accept") || !strings.Contains(v, "Bksp decline") || strings.Contains(v, "→") {
+		t.Errorf("a single box's legend should offer Tab to accept, one key for it:\n%s", v)
 	}
-	// Tab only moves between fields, and one field has none to go to.
-	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	// In a single box Tab accepts the offer (tdp K2, v0.1.6); typing then
+	// edits it. Shift-Tab has nothing to move to and does nothing.
+	d.send(tea.KeyMsg{Type: tea.KeyShiftTab})
 	if d.m.input.value != "" || d.m.input.placeholder == "" {
-		t.Fatalf("Tab should leave the offer alone: value %q", d.m.input.value)
+		t.Fatalf("Shift-Tab should leave the offer alone: value %q", d.m.input.value)
 	}
-	// → takes the offer into the line; typing then edits it.
-	d.send(tea.KeyMsg{Type: tea.KeyRight})
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
 	d.key("b")
 	if d.m.input.value != "https://example.com/ab" || d.m.input.placeholder != "" {
-		t.Fatalf("after →: value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
+		t.Fatalf("after Tab: value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
 	}
 	d.key("esc")
 	d.until("closed", func() bool { return !d.m.input.isActive() })
+
+	// → accepts too, in any box.
+	d.key("L")
+	d.until("goto open for →", func() bool { return d.m.input.isInteractive() })
+	d.send(tea.KeyMsg{Type: tea.KeyRight})
+	if d.m.input.value != "https://example.com/a" {
+		t.Fatalf("after →: value %q", d.m.input.value)
+	}
+	d.key("esc")
+	d.until("closed again", func() bool { return !d.m.input.isActive() })
 
 	// Backspace on the empty line declines it.
 	d.key("L")
@@ -670,8 +680,8 @@ func TestGotoOffersThePageURL(t *testing.T) {
 	if d.m.input.placeholder != "" {
 		t.Fatalf("Backspace kept the offer %q", d.m.input.placeholder)
 	}
-	if v := d.m.input.view(); strings.Contains(v, "edit it") {
-		t.Errorf("hint still offers → with nothing to take:\n%s", v)
+	if v := d.m.input.view(); strings.Contains(v, "accept") {
+		t.Errorf("the legend still offers to accept with nothing to take:\n%s", v)
 	}
 	d.key("esc")
 

@@ -2,7 +2,7 @@
 
 > 本文件講**互動語意**：core-key、Space menu 內容、hotkey 分層、兩種游標、每種輸入怎麼填、
 > 浮層行為、時間軸。版面與 surface 在 `ui.md`，功能邊界在 `function.md`。
-> 依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.5/principle)（tdp）撰寫，章節編號對齊 kbu / filu / sshu（§A、§B 沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。
+> 依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.6/principle)（tdp）撰寫，章節編號對齊 kbu / filu / sshu（§A、§B 沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。
 
 ---
 
@@ -196,13 +196,15 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 
 **input group**（2026-09-27，tdp K3）：幾個欄位一起才有意義的，放進同一個 input popup —— 加書籤是 URL + 標題，HTTP 驗證是
 帳號 + 密碼（遮罩）。`Tab` / `Shift-Tab` 在欄位之間移動，`Enter` 一律送出整組；送出不成立時框留著、焦點回到那一欄、
-框裡寫出原因（加書籤的 URL 不可空）。所有 input popup 的 `Tab` 都只換欄，單欄時不作用；空欄位上的提議用 `→` 接下。
+框裡寫出原因（加書籤的 URL 不可空）。group 裡 `Tab` 只換欄，空欄位上的提議用 `→` 接受；單欄框沒有別欄可換，`Tab` 接受提議（`→` 也可以）
+（2026-09-27，tdp K2 v0.1.6）。`Backspace` 在空欄位上拒絕提議。下框一個動作只露一個鍵：單欄 `Tab accept`、group `→ accept`，
+拒絕是 `Bksp decline`。
 加書籤的標題提議跟著 URL 欄：URL 是目前這頁就提議頁面標題，否則提議 URL；欄位空著送出就用提議。`Esc` 取消整組。
 
 ### §2.2 Location（`L`）
 
-開啟時輸入列空的、目前分頁的 URL dim 當提議：`→` 接進來編輯、`Backspace` 整個清掉、直接打字從頭來
-（`Tab` 只在欄位之間移動，2026-09-27，tdp K3）。
+開啟時輸入列空的、目前分頁的 URL dim 當提議：`Tab` 接受、接進來編輯（`→` 也可以；tdp K2 v0.1.6）、`Backspace` 拒絕、
+直接打字從頭來。
 Enter：像 URL（有 scheme 或 `host.tld`）→ 補 `https://`；不像 → 當搜尋（`search_engine`）。`L` 開在
 目前分頁，`T` 開新分頁。
 
