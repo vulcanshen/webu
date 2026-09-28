@@ -184,7 +184,7 @@ restore_session: true
 
 ## terminu family
 
-webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.12/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
+webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.13/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
 
 ## 授權
 
