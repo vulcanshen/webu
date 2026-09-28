@@ -82,28 +82,6 @@ Downloads / Settings 四個 screen（`listpanel.go`，是畫面不是 popup）�
   - 測試：打開 Space menu → base 的每一列都是 dim 色、menu 是亮的；再開 global operation popup → Space menu 也變 dim；開 toast → 亮暗不變；
     `Esc` 一層 → 下一層變回亮的。串流：下載中開 popup，header 的進度列是 dim 色。mutation：拿掉 dim 那一步，測試要紅。
 
-## 4. input 沒有預留錯誤列；送出失敗的錯誤大多丟到 toast —— F7、K3
-
-- **現況**：
-  - `inputpopup.go` `view()`：只有 `m.refused != ""` 時才 `append` 空白列 + 錯誤列，框變高 2 列、並用 `max(w, dispW(m.refused)+3)` 變寬。
-  - 用到 `refuse()` 的只有加書籤（`bookmarks.go` `bookmarkGiven()`：「a bookmark needs a URL」）。
-  - 其他送出失敗、框留著的，錯誤寫在 **toast**：
-    - `app.go` `inputKey` 的 `inputFill`：不合形狀 `toast("wants YYYY-MM-DD")`（`ux.md` §2 的表也這樣寫）；
-    - `settings.go` `saveSetting()`：`s.set` 失敗 `toast(key+": "+err)`，框留著；
-    - `bookmarks.go` `importBookmarks()`：「a folder name is needed…」「folder … exists; pick another name」；
-    - `bookmarks.go` `renameGiven()`：「a name is needed」「a name, not a path…」「folder … exists; pick another name」。
-  - `inputFolder`：`inputKey` 先 `m.input.close()` 再 `addFolder()`，「already a folder」時框已經關了、打的字沒了（K3：不合格就不送出、框留著）。
-- **規則**：F7 input popup 打開時高度就含一列錯誤列，沒有錯誤時空白；送出失敗時錯誤寫在這一列，框的高度不變。K3：不合格就不送出，
-  focus 跳到第一個不合格的欄位，錯誤（哪個欄位、為什麼）寫在預留的錯誤列。
-- **怎麼改**：
-  - `inputPopup.view()` 固定在最後（下框之上）畫一列錯誤列：沒有錯誤時空白，有就用 `warnColor` 寫 `m.refused`（太長截尾，不加寬框）；
-    高度從打開就包含它（跟第 2 條的「打開時定高」一起做）。
-  - 上面列出的每個 toast 改成 `m.input.refuse(i, why)`，框留著、focus 在出錯的欄位；單欄框就是第 0 欄。
-  - `inputFolder`：先檢查（重名、空）再決定關框，失敗時 `refuse`；成功才 `close()`。
-  - editor 要不要也預留一列：見待確認。
-  - 測試：`app_test.go` 裡等 `toast.isActive()` 當作「被拒絕」的（設定的 `measure` 填 `wide`、匯入名稱重複）改成斷言錯誤列有字、toast 沒開、
-    框的高度與送出前相同；加書籤那個（`app_test.go` 約 430 行）補「框的高度不變」。`ux.md` §2 表格與 §2.1 的說法一起改。
-
 ## 6. finder 的 `Tab` 不切換、清單上的 `Esc` 退回打字 —— F1（v0.1.9）
 
 - **現況**：`finder.go`：打字階段（`finderInput`）`Enter` 把 keyboard 交給清單（`finderNav`）；清單上 `Esc` 回到打字（`escape()` 分層，

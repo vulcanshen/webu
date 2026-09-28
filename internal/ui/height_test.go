@@ -82,3 +82,45 @@ func TestNetworkDetailKeepsItsHeight(t *testing.T) {
 		t.Errorf("the body arriving should fill the box, not grow it: %d rows, then %d", h, got)
 	}
 }
+
+// A box whose submit can fail opens with its error row; a refusal writes
+// there, the box keeps its height and what was typed (tdp F7, K3). A box
+// that cannot fail has no such row.
+func TestInputErrorRow(t *testing.T) {
+	d := keysDriver(t)
+
+	d.key("L")
+	d.until("the location box", func() bool { return d.m.input.anim.isInteractive() })
+	plain := rowsOf(d.m.input.view())
+	d.key("esc")
+	d.until("closed", func() bool { return !d.m.input.anim.owns() })
+
+	// A folder goes where the cursor is: under news, x is taken.
+	d.m.folders = []string{"news", "news/x"}
+	d.key("B")
+	d.m.lists.setEntries(d.m.bookmarkEntries())
+	d.m.lists.cursorToFolder("news")
+	d.key("A")
+	d.until("the folder box", func() bool { return d.m.input.anim.isInteractive() })
+	h := rowsOf(d.m.input.view())
+	if h != plain+2 {
+		t.Errorf("a box that can refuse should open with a blank row and its error row: %d rows, a plain one %d", h, plain)
+	}
+	d.key("news")
+	d.send(tea.KeyMsg{Type: tea.KeyCtrlU})
+	d.key("x")
+	d.key("enter")
+	if !d.m.input.anim.owns() || d.m.input.value != "x" || !strings.Contains(d.m.input.refused, "already") {
+		t.Fatalf("a taken name should keep the box and what was typed, saying why: open %v value %q refused %q",
+			d.m.input.anim.owns(), d.m.input.value, d.m.input.refused)
+	}
+	if got := rowsOf(d.m.input.view()); got != h || !strings.Contains(ansi.Strip(d.m.input.view()), "already a folder") {
+		t.Errorf("the refusal should be written in the error row, the height as it was: %d rows, then %d", h, got)
+	}
+	d.key("s") // a new name clears the error
+	if d.m.input.refused != "" {
+		t.Error("typing should clear the refusal")
+	}
+	d.key("enter")
+	d.until("the folder made", func() bool { return !d.m.input.anim.owns() && len(d.m.folders) == 3 })
+}

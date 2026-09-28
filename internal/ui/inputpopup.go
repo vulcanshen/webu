@@ -96,6 +96,16 @@ func (m *inputPopup) focused() (*string, *string) {
 	return &f.value, &f.placeholder
 }
 
+// canFail reports whether a submit of this box can be refused: those boxes
+// open with an error row (tdp F7), blank until a refusal writes in it.
+func (a inputAction) canFail() bool {
+	switch a {
+	case inputBookmark, inputFill, inputSetting, inputFolder, inputImportName, inputRename:
+		return true
+	}
+	return false
+}
+
 // refuse keeps the box up on field i, saying why (tdp K3).
 func (m *inputPopup) refuse(i int, why string) {
 	m.at, m.refused = i, why
@@ -214,8 +224,10 @@ func (m inputPopup) view() string {
 		}
 		rows = append(rows, prompt, spaces(innerW), line)
 	}
-	if m.refused != "" {
-		rows = append(rows, spaces(innerW), warn.Render(padRight(" "+m.refused, innerW)))
+	// A box whose submit can fail has its error row from the start, so a
+	// refusal writes into it and the box keeps its height (tdp F7, K3).
+	if m.action.canFail() {
+		rows = append(rows, spaces(innerW), warn.Render(padRight(" "+truncate(m.refused, innerW-2), innerW)))
 	}
 
 	hint := hintLegend(m.legend(fields, false))

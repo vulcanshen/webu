@@ -11,6 +11,9 @@
   textarea, the file picker and a request's detail no longer grow or
   shrink as lines are added, a filter narrows the list, or the body
   arrives; what does not fit scrolls inside the box.
+- **A refused entry says why inside its box**, on a row kept for it:
+  a date or colour in the wrong shape, a bad setting, a folder name
+  that is taken or missing. The box stays, with what was typed.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The
@@ -18,8 +21,8 @@
 - **The global operations open over the Space menu** instead of in its
   place: `Esc` goes back to the Space menu, and running one closes both.
   The row is called `Global operation`, under a divider with no heading
-  of its own. The screen you are on is dimmed
-  in it. It lists what acts on the app — the screens and quitting; back,
+  of its own. The screen you are on
+  is dimmed in it. It lists what acts on the app — the screens and quitting; back,
   forward, location, search and visual mode are the page's, in `[2]`'s
   Space menu.
 - **The Space menu is titled with its panel**: `[1] Tabs`, `[2] Page`.
@@ -36,6 +39,8 @@
 
 ### Fixed
 
+- Adding a folder with a name that is taken no longer throws away what
+  was typed: the box stays open and says so.
 - **Quitting with a download in flight no longer replaces the question
   on screen.** Pressing `q` or `Ctrl+C` while another question was open
   — a page's `confirm()`, deleting a folder, clearing history — asked

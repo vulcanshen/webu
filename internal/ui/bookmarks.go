@@ -211,7 +211,8 @@ func (m *AppModel) addFolder(parent, path string) tea.Cmd {
 	}
 	for _, f := range m.folderNames() {
 		if f == full {
-			return m.toast.show("already a folder", toastInfo)
+			m.input.refuse(0, "already a folder")
+			return nil
 		}
 	}
 	m.folders = append(m.folders, full)
@@ -429,11 +430,13 @@ func (m *AppModel) importPicked(path string) tea.Cmd {
 func (m *AppModel) importBookmarks(name string) tea.Cmd {
 	root := cleanFolderPath(name)
 	if root == "" {
-		return m.toast.show("a folder name is needed: the import goes under it", toastInfo)
+		m.input.refuse(0, "a folder name is needed: the import goes under it")
+		return nil
 	}
 	for _, f := range m.folderNames() {
 		if f == root {
-			return m.toast.show("folder "+root+" exists; pick another name", toastInfo)
+			m.input.refuse(0, "folder "+root+" exists; pick another name")
+			return nil
 		}
 	}
 	imp := m.pendingImport
@@ -501,7 +504,8 @@ func (m *AppModel) startRename(e listEntry) tea.Cmd {
 func (m *AppModel) renameGiven(value string) tea.Cmd {
 	name := strings.TrimSpace(value)
 	if name == "" {
-		return m.toast.show("a name is needed", toastInfo)
+		m.input.refuse(0, "a name is needed")
+		return nil
 	}
 	if m.renameFolder == "" {
 		if m.renameRef < 0 || m.renameRef >= len(m.bookmarks) {
@@ -516,7 +520,8 @@ func (m *AppModel) renameGiven(value string) tea.Cmd {
 		return tea.Batch(m.input.close(), m.toast.show("renamed to "+oneLine(name), toastInfo))
 	}
 	if strings.Contains(name, "/") {
-		return m.toast.show("a name, not a path: the folder stays where it is", toastInfo)
+		m.input.refuse(0, "a name, not a path: the folder stays where it is")
+		return nil
 	}
 	old := m.renameFolder
 	to := name
@@ -528,7 +533,8 @@ func (m *AppModel) renameGiven(value string) tea.Cmd {
 	}
 	for _, f := range m.folderNames() {
 		if f == to {
-			return m.toast.show("folder "+to+" exists; pick another name", toastInfo)
+			m.input.refuse(0, "folder "+to+" exists; pick another name")
+			return nil
 		}
 	}
 	move := func(p string) string { return to + strings.TrimPrefix(p, old) }
