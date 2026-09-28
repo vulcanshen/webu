@@ -2599,7 +2599,8 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if v != "" && !fillOK(m.input.shape, v) {
 			// The box stays: the browser would drop the value without a
 			// word, and an edit that vanishes is worse than one refused.
-			return m, m.toast.show("wants "+m.input.shape, toastInfo)
+			m.input.refuse(0, "wants "+m.input.shape)
+			return m, nil
 		}
 		return m, tea.Batch(m.closeStack(), t.press(func(ctx context.Context) error { return page.Fill(ctx, id, v) }))
 	case inputPrompt:
@@ -2608,7 +2609,12 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// An offer still standing means nothing was typed or declined.
 		return m, m.saveSetting(value, value == "" && m.input.placeholder != "")
 	case inputFolder:
-		return m, tea.Batch(m.input.close(), m.addFolder(m.folderParent, value))
+		// Checked before the box goes: a taken name keeps what was typed.
+		cmd := m.addFolder(m.folderParent, value)
+		if m.input.refused != "" {
+			return m, cmd
+		}
+		return m, tea.Batch(m.input.close(), cmd)
 	case inputImportName:
 		return m, m.importBookmarks(value)
 	case inputBookmark:

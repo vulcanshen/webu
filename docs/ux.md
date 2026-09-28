@@ -40,7 +40,7 @@
 | textarea / contenteditable | editor popup（§2.3） |
 | password | input popup 遮罩、不帶舊值 |
 | searchbox（`type=search` 或 search landmark 裡的框） | 寫回後 confirm「Search」→ Enter 送 Enter 給欄位 |
-| date / datetime-local / time / month / week / color | input popup，邊框寫形狀；不合形狀 toast、框留著 |
+| date / datetime-local / time / month / week / color | input popup，邊框寫形狀；不合形狀寫在框的錯誤列、框留著 |
 | slider | 數字清單，Enter 移到游標那個數字 |
 | `<select>` | option 清單 |
 | `<input type=file>` | 檔案 picker |
@@ -186,7 +186,7 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 | password | 同上，遮罩、不帶舊值、邊框 `password` |
 | searchbox | 寫回後 confirm「Search」：Enter = 送 Enter 給欄位（implicit submission）、Esc 值留著不送 |
 | textarea / contenteditable | **editor popup**（§2.3） |
-| date / datetime-local / time / month / week / color | 一行 input popup，邊框寫**形狀**：`date · YYYY-MM-DD`、`date and time · YYYY-MM-DDTHH:MM`、`time · HH:MM`、`month · YYYY-MM`、`week · YYYY-Www`、`color · #rrggbb`；不合形狀 toast「wants YYYY-MM-DD」框留著（瀏覽器會無聲丟掉不合的值，寧可擋在前面）；合的整串設值 |
+| date / datetime-local / time / month / week / color | 一行 input popup，邊框寫**形狀**：`date · YYYY-MM-DD`、`date and time · YYYY-MM-DDTHH:MM`、`time · HH:MM`、`month · YYYY-MM`、`week · YYYY-Www`、`color · #rrggbb`；不合形狀在框的錯誤列寫「wants YYYY-MM-DD」、框留著（瀏覽器會無聲丟掉不合的值，寧可擋在前面）；合的整串設值 |
 | slider（range / ARIA） | options menu 列出 bar 上每個數字（範圍很大的以十、百為步）、10 列一窗、游標在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去（2026-09-23 user 定：打字輸入數字不好用） |
 | checkbox / radio / switch | Enter 切換 |
 | `<select>` | option 清單，Enter 選、寫回並發 change |
@@ -196,7 +196,9 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 
 **input group**（2026-09-27，tdp K3）：幾個欄位一起才有意義的，放進同一個 input popup —— 加書籤是 URL + 標題，HTTP 驗證是
 帳號 + 密碼（遮罩）。`Tab` / `Shift-Tab` 在欄位之間移動，`Enter` 一律送出整組；送出不成立時框留著、焦點回到那一欄、
-框裡寫出原因（加書籤的 URL 不可空）。group 裡 `Tab` 只換欄，空欄位上的提議用 `→` 接受；單欄框沒有別欄可換，`Tab` 接受提議（`→` 也可以）
+原因寫在框的錯誤列（加書籤的 URL 不可空）。**錯誤列**（2026-09-28，tdp F7、K3）：送出可能失敗的框 —— 加書籤、日期時間顏色、設定、
+新增目錄、匯入名稱、改名 —— 打開時就有一列空白的錯誤列，拒絕時原因寫在那裡，框的高度不變、打的字留著；不會失敗的框（Location、
+欄位、登入、JS prompt、console）不留。原因不再丟到 toast。新增目錄也先檢查重名、再關框。group 裡 `Tab` 只換欄，空欄位上的提議用 `→` 接受；單欄框沒有別欄可換，`Tab` 接受提議（`→` 也可以）
 （2026-09-27，tdp K2 v0.1.6）。`Backspace` 在空欄位上拒絕提議。下框一個動作只露一個鍵：單欄 `Tab accept`、group `→ accept`，
 拒絕是 `Bksp decline`。
 加書籤的標題提議跟著 URL 欄：URL 是目前這頁就提議頁面標題，否則提議 URL；欄位空著送出就用提議。`Esc` 取消整組。

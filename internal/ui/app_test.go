@@ -533,7 +533,9 @@ func TestScreensAndSession(t *testing.T) {
 	d.send(tea.KeyMsg{Type: tea.KeyBackspace})
 	d.key("wide")
 	d.key("enter")
-	d.until("refused", func() bool { return d.m.toast.isActive() })
+	if d.m.input.refused == "" || (d.m.toast.isActive() && d.m.toast.msg == d.m.input.refused) {
+		t.Fatalf("a bad measure should be refused in the box's error row, not a toast: %q", d.m.input.refused)
+	}
 	if !d.m.input.isActive() || d.m.cfg.Measure != 0 {
 		t.Fatalf("a bad measure should keep the box open and the setting as it was: %d", d.m.cfg.Measure)
 	}
@@ -778,10 +780,13 @@ func TestImportBookmarks(t *testing.T) {
 		t.Errorf("the prompt should count what was read: %q", p)
 	}
 	// The name is required: Enter on nothing keeps the box.
+	rows := rowsOf(d.m.input.view())
 	d.key("enter")
-	d.until("told to name it", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "folder name") })
-	if !d.m.input.isInteractive() {
-		t.Fatal("the box should stay open without a name")
+	if !strings.Contains(d.m.input.refused, "folder name") || strings.Contains(d.m.toast.msg, "folder name") {
+		t.Fatalf("the box should say a name is needed, in its error row: %q", d.m.input.refused)
+	}
+	if !d.m.input.isInteractive() || rowsOf(d.m.input.view()) != rows {
+		t.Fatal("the box should stay open, its height as it was")
 	}
 	d.key("chrome")
 	d.key("enter")
@@ -815,7 +820,9 @@ func TestImportBookmarks(t *testing.T) {
 	d.until("name asked again", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputImportName })
 	d.key("chrome")
 	d.key("enter")
-	d.until("refused the name", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "exists") })
+	if !strings.Contains(d.m.input.refused, "exists") {
+		t.Errorf("a taken name should be refused in the box: %q", d.m.input.refused)
+	}
 	if !d.m.input.isInteractive() || len(d.m.bookmarks) != 4 {
 		t.Error("a taken name should keep the box open and import nothing")
 	}
@@ -896,9 +903,8 @@ func TestRenameBookmarks(t *testing.T) {
 	d.key("backspace")
 	d.key("backspace")
 	d.key("enter")
-	d.until("told to name it", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "name") })
-	if !d.m.input.isInteractive() {
-		t.Fatal("an empty name should keep the box")
+	if !strings.Contains(d.m.input.refused, "name") || !d.m.input.isInteractive() {
+		t.Fatalf("an empty name should keep the box and say so in it: %q", d.m.input.refused)
 	}
 	d.key("The Go site")
 	d.key("enter")
@@ -920,9 +926,8 @@ func TestRenameBookmarks(t *testing.T) {
 	}
 	d.key("misc")
 	d.key("enter")
-	d.until("refused", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "exists") })
-	if !d.m.input.isInteractive() {
-		t.Fatal("a taken name should keep the box")
+	if !strings.Contains(d.m.input.refused, "exists") || !d.m.input.isInteractive() {
+		t.Fatalf("a taken name should keep the box and say so in it: %q", d.m.input.refused)
 	}
 	for range 4 {
 		d.key("backspace")

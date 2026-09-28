@@ -140,7 +140,8 @@ func (m *AppModel) saveSetting(value string, untouched bool) tea.Cmd {
 	}
 	s := settings[m.settingRef]
 	if err := s.set(&m.cfg, strings.TrimSpace(value)); err != nil {
-		return m.toast.show(s.key+": "+err.Error(), toastError)
+		m.input.refuse(0, err.Error())
+		return nil
 	}
 	return tea.Batch(m.input.close(), m.saveConfig(s.key))
 }
