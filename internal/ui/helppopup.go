@@ -177,6 +177,8 @@ func (m AppModel) floatHelp() (string, []helpEntry) {
 		return "Search", helpFinder
 	case m.confirm.anim.owns():
 		return m.confirm.title, helpConfirm
+	case m.choices.anim.owns():
+		return m.choices.title, helpOptions
 	case m.options.anim.owns():
 		return m.options.title, helpOptions
 	case m.devtools.anim.owns():

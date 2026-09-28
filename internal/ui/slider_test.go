@@ -53,8 +53,8 @@ func TestASliderIsABarAndListsItsNumbers(t *testing.T) {
 	// cursor and mid-window, the range in the title.
 	d.cursorOn(ir.Textbox, "Red")
 	d.key("enter")
-	d.until("the number list", func() bool { return d.m.options.isInteractive() })
-	o := d.m.options
+	d.until("the number list", func() bool { return d.m.choices.isInteractive() })
+	o := d.m.choices
 	if o.title != "Red · 0–255" || len(o.items) != 256 || o.visible() != 10 {
 		t.Errorf("every number of the bar, ten at a time, under the range: %q %d %d", o.title, len(o.items), o.visible())
 	}
@@ -67,17 +67,17 @@ func TestASliderIsABarAndListsItsNumbers(t *testing.T) {
 	// G is the last number, gg the first; d is half a window, j one row;
 	// Enter is the number under the cursor.
 	d.key("G")
-	if it := d.m.options.items[d.m.options.cursor]; it.label != "255" {
+	if it := d.m.choices.items[d.m.choices.cursor]; it.label != "255" {
 		t.Errorf("G is the end of the bar: %q", it.label)
 	}
 	d.key("g")
 	d.key("g")
-	if it := d.m.options.items[d.m.options.cursor]; it.label != "0" {
+	if it := d.m.choices.items[d.m.choices.cursor]; it.label != "0" {
 		t.Errorf("gg is its start: %q", it.label)
 	}
 	d.key("d")
 	d.key("j")
-	if it := d.m.options.items[d.m.options.cursor]; it.label != "6" {
+	if it := d.m.choices.items[d.m.choices.cursor]; it.label != "6" {
 		t.Errorf("d then j is six rows down: %q", it.label)
 	}
 	d.key("enter")
@@ -86,9 +86,9 @@ func TestASliderIsABarAndListsItsNumbers(t *testing.T) {
 	// An ARIA slider has no value to set: it is walked there.
 	d.cursorOn(ir.Textbox, "Volume")
 	d.key("enter")
-	d.until("the number list", func() bool { return d.m.options.isInteractive() })
-	if d.m.options.title != "Volume · 0–100" {
-		t.Errorf("its range too: %q", d.m.options.title)
+	d.until("the number list", func() bool { return d.m.choices.isInteractive() })
+	if d.m.choices.title != "Volume · 0–100" {
+		t.Errorf("its range too: %q", d.m.choices.title)
 	}
 	d.key("u")
 	d.key("enter")

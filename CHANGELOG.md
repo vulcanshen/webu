@@ -23,6 +23,9 @@
 - **DevTools says when it is waiting**: the loading icon turns after
   its title while Storage or Source is being read, and after a
   request's title while its body is on its way.
+- **A select's options and a slider's numbers open over the menu that
+  asked for them**, in a box of their own: `Esc` goes back to that menu,
+  where it used to close both.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The
