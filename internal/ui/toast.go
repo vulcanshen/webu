@@ -57,7 +57,7 @@ func (m *toastModel) expire(msg toastExpireMsg) tea.Cmd {
 }
 
 func (m toastModel) view() string {
-	innerW := popupInnerW(m.screenW, dispW(m.msg)+4)
+	innerW := popupW(m.screenW) // the same width as every popup (tdp F7)
 	style := lipgloss.NewStyle().Foreground(textColor)
 	title := " " + glyphInfo + " Info "
 	if m.kind == toastError {

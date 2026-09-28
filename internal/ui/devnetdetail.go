@@ -35,7 +35,7 @@ type devDetailPopup struct {
 }
 
 // innerW is the box's inside; what showText wraps to.
-func (m devDetailPopup) innerW() int { return popupInnerW(m.screenW, m.screenW-8) }
+func (m devDetailPopup) innerW() int { return popupW(m.screenW) }
 
 // showText opens on lines of plain text — a console entry's whole message
 // — wrapped to the box, since a line the list had to cut is the reason

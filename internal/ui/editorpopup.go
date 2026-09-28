@@ -226,11 +226,7 @@ func (e *editorPopup) follow() {
 }
 
 func (e editorPopup) view() string {
-	longest := 0
-	for _, l := range e.lines {
-		longest = max(longest, dispW(string(l)))
-	}
-	innerW := popupInnerW(e.screenW, max(60, longest+6, dispW(e.prompt)+3))
+	innerW := popupW(e.screenW)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)

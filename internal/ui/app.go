@@ -2313,7 +2313,7 @@ func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
 	if text == "" {
 		text = "(empty)"
 	}
-	return m.message.show(glyphTable, title, wrapWords(text, min(72, max(20, m.w-12))), false, m.layer())
+	return m.message.show(glyphTable, title, wrapWords(text, max(20, popupW(m.w)-4)), false, m.layer())
 }
 
 // showCode is a code block in full: every line as the page wrote it,
