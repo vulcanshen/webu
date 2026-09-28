@@ -10,7 +10,8 @@
   global operations are the list the last row of every Space menu opens.
 - **The global operations open over the Space menu** instead of in its
   place: `Esc` goes back to the Space menu, and running one closes both.
-  The row is called `Global operation`. The screen you are on is dimmed
+  The row is called `Global operation`, under a divider with no heading
+  of its own. The screen you are on is dimmed
   in it. It lists what acts on the app — the screens and quitting; back,
   forward, location, search and visual mode are the page's, in `[2]`'s
   Space menu.
