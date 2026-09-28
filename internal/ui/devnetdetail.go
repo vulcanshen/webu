@@ -24,6 +24,8 @@ type bodyMsg struct {
 }
 
 type devDetailPopup struct {
+	// height is the rows shown, set as the box opens (tdp F7).
+	height  int
 	anim    popupAnimator
 	entry   page.NetEntry
 	title   string
@@ -58,6 +60,9 @@ func (m *devDetailPopup) showText(title string, head []string, text string, laye
 			m.lines = append(m.lines, "  "+indent+line)
 		}
 	}
+	// All of it is here as it opens: the box is its height, at most the
+	// screen's (tdp F7).
+	m.height = min(len(m.lines), m.maxRows())
 	return m.anim.open()
 }
 
@@ -109,6 +114,10 @@ func (m *devDetailPopup) show(e page.NetEntry, layer int) tea.Cmd {
 	m.entry, m.layer, m.top = e, layer, 0
 	m.title = oneLine(fitURL(e.URL, m.innerW()-12))
 	m.lines = m.build("(loading body…)")
+	// The body is still on its way and is nearly always longer than the
+	// headers: the box opens at its full height and the body fills it
+	// (tdp F7), rather than growing when it lands.
+	m.height = m.maxRows()
 	return m.anim.open()
 }
 
@@ -209,7 +218,15 @@ func headerLines(h map[string]string) []string {
 	return out
 }
 
-func (m devDetailPopup) visible() int { return max(1, m.screenH-6) }
+// maxRows is the most the box can show: the screen less its margins.
+func (m devDetailPopup) maxRows() int { return max(1, m.screenH-6) }
+
+func (m devDetailPopup) visible() int {
+	if m.height > 0 {
+		return m.height
+	}
+	return m.maxRows()
+}
 
 func (m *devDetailPopup) update(msg tea.KeyMsg) {
 	if !m.anim.isInteractive() {
@@ -231,6 +248,9 @@ func (m devDetailPopup) view() string {
 			style = dim
 		}
 		rows = append(rows, style.Render(padRight(" "+l, innerW)))
+	}
+	for len(rows) < vis {
+		rows = append(rows, spaces(innerW))
 	}
 	pairs := [][2]string{{"j/k", "scroll"}, {"u/d", "half page"}, {"Esc", "close"}}
 	return drawPopupBoxPad(popupLayerColor(m.layer), " "+glyphDevTools+" "+m.title+" ",

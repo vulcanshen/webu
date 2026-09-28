@@ -7,6 +7,10 @@
 - **Every popup is one width**: the terminal less a column on either
   side, at most 120 columns, whatever it holds — menus, questions, text
   boxes, help, the search, DevTools and the toast alike.
+- **A popup keeps the height it opens with.** The text box of a
+  textarea, the file picker and a request's detail no longer grow or
+  shrink as lines are added, a filter narrows the list, or the body
+  arrives; what does not fit scrolls inside the box.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The
