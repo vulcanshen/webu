@@ -20,6 +20,9 @@
   so the capsules, the cursor bars, code blocks and a popup's border
   colour still show under it. A toast changes nothing. The page under
   one of its own dialogs fades the same way, instead of turning grey.
+- **DevTools says when it is waiting**: the loading icon turns after
+  its title while Storage or Source is being read, and after a
+  request's title while its body is on its way.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The

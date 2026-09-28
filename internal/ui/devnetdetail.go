@@ -25,7 +25,10 @@ type bodyMsg struct {
 
 type devDetailPopup struct {
 	// height is the rows shown, set as the box opens (tdp F7).
-	height  int
+	height int
+	// waiting: the response body is still on its way — the loading icon
+	// turns after the title until it lands (tdp F7).
+	waiting bool
 	anim    popupAnimator
 	entry   page.NetEntry
 	title   string
@@ -43,7 +46,7 @@ func (m devDetailPopup) innerW() int { return popupW(m.screenW) }
 // — wrapped to the box, since a line the list had to cut is the reason
 // the popup exists.
 func (m *devDetailPopup) showText(title string, head []string, text string, layer int) tea.Cmd {
-	m.title, m.layer, m.top = title, layer, 0
+	m.title, m.layer, m.top, m.waiting = title, layer, 0, false
 	m.entry = page.NetEntry{}
 	m.lines = append([]string(nil), head...)
 	width := max(10, m.innerW()-3)
@@ -112,8 +115,9 @@ func (m *devDetailPopup) setSize(w, h int) { m.screenW, m.screenH = w, h }
 // show opens on the headers at once; the body arrives by bodyMsg.
 func (m *devDetailPopup) show(e page.NetEntry, layer int) tea.Cmd {
 	m.entry, m.layer, m.top = e, layer, 0
-	m.title = oneLine(fitURL(e.URL, m.innerW()-12))
+	m.title = oneLine(fitURL(e.URL, m.innerW()-14)) // the icon's cell and its space
 	m.lines = m.build("(loading body…)")
+	m.waiting = true
 	// The body is still on its way and is nearly always longer than the
 	// headers: the box opens at its full height and the body fills it
 	// (tdp F7), rather than growing when it lands.
@@ -134,6 +138,7 @@ func (m *devDetailPopup) setBody(body string, err error) {
 		body = text
 	}
 	m.lines = m.build(body)
+	m.waiting = false
 }
 
 // textBody says whether a body is text a terminal can show, and returns
@@ -253,7 +258,7 @@ func (m devDetailPopup) view() string {
 		rows = append(rows, spaces(innerW))
 	}
 	pairs := [][2]string{{"j/k", "scroll"}, {"u/d", "half page"}, {"Esc", "close"}}
-	return drawPopupBoxPad(popupLayerColor(m.layer), " "+glyphDevTools+" "+m.title+" ",
+	return drawPopupBoxPad(popupLayerColor(m.layer), " "+glyphDevTools+" "+m.title+" "+loadingIcon(m.waiting)+" ",
 		hintLegend(pairs), animRows(m.anim, rows), innerW, false)
 }
 

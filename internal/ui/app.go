@@ -280,8 +280,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case spinTickMsg:
-		// The chain lives exactly as long as the fetch does.
-		if m.fetching() {
+		// The chain lives exactly as long as something is loading: a tab,
+		// or DevTools waiting on Chromium.
+		if m.fetching() || m.devWaiting() {
 			return m, spinCmd()
 		}
 		return m, nil
@@ -309,6 +310,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case storageMsg:
 		if m.devtools.isActive() && msg.tabID == m.devtools.tabID {
 			m.devtools.storage.set(msg.data, msg.err)
+			m.devtools.loading = false
 		}
 		return m, nil
 
@@ -394,6 +396,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case devSourceMsg:
 		if m.devtools.isActive() && msg.tabID == m.devtools.tabID {
 			m.devtools.source.set(msg.html, msg.err)
+			m.devtools.loading = false
 		}
 		return m, nil
 
@@ -1164,14 +1167,33 @@ func (m *AppModel) openDevtools() tea.Cmd {
 		return m.toast.show("no page for DevTools", toastInfo)
 	}
 	m.devtools.refresh(t.dev)
+	open := m.devtools.open(t.id, m.layer())
+	m.devtools.loading = false
 	var fetch tea.Cmd
 	switch m.devtools.tab {
 	case devStorage:
-		fetch = m.fetchStorage()
+		fetch = m.devLoad(m.fetchStorage())
 	case devSource:
-		fetch = m.fetchSource()
+		fetch = m.devLoad(m.fetchSource())
 	}
-	return tea.Batch(m.devtools.open(t.id, m.layer()), fetch)
+	return tea.Batch(open, fetch)
+}
+
+// devLoad sends a DevTools fetch and marks DevTools as waiting on it, the
+// loading icon turning until the answer lands (tdp F7).
+func (m *AppModel) devLoad(fetch tea.Cmd) tea.Cmd {
+	if fetch == nil {
+		return nil
+	}
+	m.devtools.loading = true
+	return tea.Batch(fetch, spinCmd())
+}
+
+// devWaiting reports whether DevTools, or its detail, is waiting on
+// Chromium: what keeps the loading icon turning there.
+func (m AppModel) devWaiting() bool {
+	return (m.devtools.isActive() && m.devtools.loading) ||
+		(m.devtools.detail.isActive() && m.devtools.detail.waiting)
 }
 
 // fetchSource reads the shown page's HTML for the Source tab.
@@ -1222,19 +1244,19 @@ func (m AppModel) devtoolsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	filter := m.devtools.filter[m.devtools.tab]
 	switch action {
 	case devFetchStorage:
-		return m, m.fetchStorage()
+		return m, m.devLoad(m.fetchStorage())
 	case devFetchSource:
-		return m, m.fetchSource()
+		return m, m.devLoad(m.fetchSource())
 	case devYank:
 		return m, copyToClipboard(text)
 	case devDeleteCookie:
 		r, _ := m.devtools.storage.current(filter)
 		c := r.cookie
-		return m, m.storageThen(t, func(ctx context.Context) error { return page.DeleteCookie(ctx, c) })
+		return m, m.devLoad(m.storageThen(t, func(ctx context.Context) error { return page.DeleteCookie(ctx, c) }))
 	case devDeleteItem:
 		r, _ := m.devtools.storage.current(filter)
 		origin, local, key := m.devtools.storage.data.Origin, r.local, r.key
-		return m, m.storageThen(t, func(ctx context.Context) error { return page.RemoveStorageItem(ctx, origin, local, key) })
+		return m, m.devLoad(m.storageThen(t, func(ctx context.Context) error { return page.RemoveStorageItem(ctx, origin, local, key) }))
 	case devClearSite:
 		origin := m.devtools.storage.data.Origin
 		if origin == "" {
@@ -1256,7 +1278,7 @@ func (m AppModel) devtoolsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			body, err := page.ResponseBody(ctx, reqID)
 			return bodyMsg{tabID: id, id: string(reqID), body: body, err: err}
 		}
-		return m, tea.Batch(m.devtools.detail.show(e, m.layer()+1), fetch)
+		return m, tea.Batch(m.devtools.detail.show(e, m.layer()+1), fetch, spinCmd())
 	case devEval:
 		return m, m.openEvalPrompt()
 	case devConsoleDetail:
@@ -2729,7 +2751,7 @@ func (m AppModel) confirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if t == nil || origin == "" {
 			return m, closeCmd
 		}
-		return m, tea.Batch(closeCmd, m.storageThen(t, func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) }))
+		return m, tea.Batch(closeCmd, m.devLoad(m.storageThen(t, func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) })))
 	case confirmSubmitField:
 		t := m.shownTab()
 		if t == nil {
