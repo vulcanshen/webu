@@ -140,7 +140,8 @@ func shortLabels(labels []string) []string {
 //
 // The status slot is dim — a resting fact — EXCEPT while it reports an
 // action in flight: a running transfer's summary comes in liveColor,
-// because information arriving is not dimmed (tdp T2).
+// because information arriving is not dimmed (tdp T2) — except under a
+// popup, where everything below the top one is dimmed, this too (F8).
 func tabRow(w int, labels []string, active int, status string, live bool) string {
 	segs := labels
 	if tabChainW(segs)+1 > w {

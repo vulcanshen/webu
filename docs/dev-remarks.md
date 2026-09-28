@@ -154,6 +154,10 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 
 #### 兩套配色（`theme.go`）
 
+popup 開著時最上層以外畫暗（tdp F8）：`dim.go` `dimANSI` 把畫好的字串改色 —— popup 層色的前景換成它的暗版（比對時容許 ±2，因為輸出時
+hex 會被四捨五入，`#94C3F5` 畫成 `147;195;245`）、其他前景換成 `dimColor`、背景拿掉；版面不動。測試要在 truecolor 下跑才有色碼
+（`dim_test.go` `withColour`）。
+
 App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）與 Page palette（`pageText` / `pagePress` / `pageFill` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）分開。glyph 常數（`glyphHeader/Body/Others/Footer` = `page_layout_*`、`glyphPopup`、`glyphUpload`、`glyphInfo`…）的碼位查法見「建置與開發」。
 
 #### 動作（`page/actions.go`、`sessions.go`）
