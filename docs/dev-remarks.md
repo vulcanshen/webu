@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.7/principle)（tdp），是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.9/principle)（tdp），是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -244,7 +244,8 @@ webu 照 tdp v0.1.6 逐條修完（2026-09-27）；有意不照做的地方列�
   - `Esc` 不關它（偏離 K4、F3）：關掉等於把頁面要的決定擱著。`Esc` 在它上面只 toast 說明，要按裡面的按鈕、或等頁面自己收掉（`ux.md` §5；`app.go` `togglePagetab`）。
   - `Space` 在它上面打開 `[2]` 的 Space menu，疊在它之上（偏離 K5 的「popup 上不疊 Space menu」）：它的按鈕、連結是 `[2]` 的 item，要能用 Space menu 操作；焦點始終在 panel 上。
   - `?` 是 `[2]` 的 key reference，不是「這個 popup 的鍵」（K6 以 panel 處理）。
-  webu 自己的 popup 照 K4、K5、K6、F3。
+  - 它不屬於 F1 的六類（F1 點名 webu 的頁面彈窗），所以也不照 F7、F8：它的寬度（`popupWidth()`）、疊層錯開、開著時只把 `[2]` 畫暗當 backdrop，都是頁面內容的畫法。反過來，webu 的 popup 開在它上面時，它跟整個畫面一起照 F8 變暗（2026-09-28）。
+  webu 自己的 popup 照 K4、K5、K6、F3、F7、F8。
 
 ## 設計文件導讀
 
