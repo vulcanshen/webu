@@ -869,11 +869,10 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	// Space opens and closes the Space menu and nothing else (tdp K5, F6):
 	// on any other float it does nothing, unless that float is being typed
-	// into. Visual mode's cheatsheet is that mode's Space menu for now.
+	// into.
 	if msg.Type == tea.KeySpace && !m.typing() {
 		switch {
-		case m.spaceMenu.anim.owns() && !m.floatAboveMenu(),
-			m.message.anim.owns() && m.message.passKeys:
+		case m.spaceMenu.anim.owns() && !m.floatAboveMenu():
 			return m.closeTop()
 		case m.floatAboveMenu():
 			return m, nil
@@ -923,13 +922,6 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case m.finder.anim.owns():
 		return m.finderKey(msg)
 	case m.message.anim.owns():
-		// The cheatsheet passes its keys through (messagePopup.passKeys):
-		// the sheet closes and the key runs, one step.
-		if m.message.passKeys && m.sel.on {
-			closeCmd := m.message.close()
-			mm, cmd := m.selectKey(msg)
-			return mm, tea.Batch(closeCmd, cmd)
-		}
 		// A long message — a cell in full — scrolls by the page's keys.
 		m.message.scroll(msg.String())
 		return m, nil
@@ -946,10 +938,11 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.screenKey(msg)
 	}
 	if m.sel.on {
-		// The mode holds the keyboard (ux.md §1): Space is its cheatsheet,
-		// everything else is its own.
+		// The mode holds the keyboard (ux.md §1). Space opens nothing in a
+		// mode: its keys are pressed directly, and ? is where they are
+		// listed (tdp K11, v0.1.10).
 		if msg.Type == tea.KeySpace && !m.sel.typing {
-			return m, m.message.show(glyphMenu, "Visual mode", selectCheatsheet, true, m.layer())
+			return m, nil
 		}
 		// The panel keys do not reach past the mode (tdp K2, K4): the mode
 		// is left first, with Esc, and a note says so (2026-09-27).
@@ -2119,7 +2112,7 @@ func (m AppModel) dispatch(key string) (tea.Model, tea.Cmd) {
 		}
 	case "inspect":
 		if n := t.current(); n != nil {
-			return m, m.message.show(glyphInfo, "Inspect", inspectLines(n), false, m.layer())
+			return m, m.message.show(glyphInfo, "Inspect", inspectLines(n), m.layer())
 		}
 	case "submit":
 		if n := t.current(); n != nil {
@@ -2285,7 +2278,7 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 	}
 	return m, m.message.show(glyphInfo, "Enter", []string{
 		"Nothing is defined for Enter on this item yet.",
-		"Space lists what can be done with it."}, false, m.layer())
+		"Space lists what can be done with it."}, m.layer())
 }
 
 // enterCell is Enter on a data table's cell, drawn cut to its column
@@ -2312,7 +2305,7 @@ func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
 	if text == "" {
 		text = "(empty)"
 	}
-	return m.message.show(glyphTable, title, wrapWords(text, max(20, popupW(m.w)-4)), false, m.layer())
+	return m.message.show(glyphTable, title, wrapWords(text, max(20, popupW(m.w)-4)), m.layer())
 }
 
 // showCode is a code block in full: every line as the page wrote it,
@@ -2323,7 +2316,7 @@ func (m *AppModel) showCode(n *ir.Node) tea.Cmd {
 		title += " · " + n.Lang
 	}
 	text := strings.ReplaceAll(strings.TrimRight(n.Text(), "\n"), "\t", "    ")
-	return m.message.show(glyphCode, title, strings.Split(text, "\n"), false, m.layer())
+	return m.message.show(glyphCode, title, strings.Split(text, "\n"), m.layer())
 }
 
 // openItemMenu is Enter on an item whose own operation IS its operation

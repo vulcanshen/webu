@@ -26,8 +26,8 @@
 | `Tab` | `[1]` ↔ `[2]`；`1` / `2` 直達 | 不作用，toast 說先 `Esc` 離開模式（2026-09-27，tdp K2、K4） |
 | `Enter` | **滑鼠左鍵在 terminal 的對應**（定案 2026-09-21；0.3.0 起先 hover 再按）；左鍵沒有對應的才自定義——**進去**：目錄開一節、清單裡的一件事走進去、frame 走進去；heading / landmark 開合；pagetab 上 = 確認回頁面。細表在 §A.0.K.1 | 對字元所屬的節點做同一件事，並離開模式 |
 | `Esc` | **往上一層，一次一步**（2026-09-23）：關最上層浮層 → 走出一件事 / frame → 回目錄 → 上 pagetab → 再 Esc 回頁面。頁面自己的彈窗**不關**（toast：它要一個回答）。上一頁是 `P`，Esc 不兼職 | 打字中取消；否則離開模式 |
-| `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-27，tdp K5、F6） | cheatsheet，按列出的鍵即執行 |
-| `?` | **最前端 surface 的 key reference**，唯讀、可捲動：面板上是這個面板的鍵（由它的 Space menu 產生）+ core key；浮層上是這個浮層的鍵；再按關閉（2026-09-27，tdp K6、M4） | **模式的 help**，唯讀；跟 `Space` 的 cheatsheet 讀同一份鍵（tdp K11） |
+| `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-27，tdp K5、F6） | **不作用**：模式沒有 Space menu、沒有可執行的按鍵清單（2026-09-28，tdp K11 v0.1.10） |
+| `?` | **最前端 surface 的 key reference**，唯讀、可捲動：面板上是這個面板的鍵（由它的 Space menu 產生）+ core key；浮層上是這個浮層的鍵；再按關閉（2026-09-27，tdp K6、M4） | **模式的 key reference**，唯讀：模式的鍵直接按，列在這裡與 footer（tdp K11） |
 
 #### §A.0.K.1 Enter 對每種東西
 

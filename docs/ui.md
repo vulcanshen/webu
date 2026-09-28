@@ -183,7 +183,7 @@ options、message、finder、confirm、picker、input、editor、help、quitAsk�
 | options | menu | `<select>` 的 option；slider 的數字（10 列一窗、游標在目前值置中）；書籤搬移的目錄 picker |
 | file picker | menu（filu finder 形式） | `<input type=file>`、書籤匯入：一次一個目錄，Enter 進目錄 / 選檔，空過濾時 Backspace 回上層 |
 | confirm | message | 連結 Open、搜尋框 Search、憑證、`beforeunload`、JS confirm、刪除 / 清除 |
-| message | viewport | 表格格內容、code block 全文、Inspect、visual mode cheatsheet |
+| message | viewport | 表格格內容、code block 全文、Inspect |
 | page popup | 浮窗 | 頁面自己的彈窗（§2.4） |
 | DevTools | 帶 tab bar 的 viewport | Network / Storage / Console / Source；`h`/`l` 切分頁 |
 | toast | message | 下載、yank、拒絕的操作（disabled、popup 裡的 `/`）… |

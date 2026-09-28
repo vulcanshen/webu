@@ -6,23 +6,17 @@ import (
 )
 
 // messagePopup is the message class with nothing to decide (tdp F1): a few
-// lines and Esc. Inspect shows a node's facts here; selection mode shows
-// its cheatsheet here. Unlike a confirm it asks nothing, so Enter is not
-// special.
-//
-// passKeys is the cheatsheet's rule (ux.md §A.1): a key listed on it is
-// pressed THROUGH it — the popup closes and the key runs — so reading the
-// sheet and acting on it is one step, not two.
+// lines and Esc. Inspect shows a node's facts here, a cell or a code block
+// in full. Unlike a confirm it asks nothing, so Enter is not special.
 type messagePopup struct {
-	anim     popupAnimator
-	glyph    string
-	title    string
-	lines    []string
-	passKeys bool
-	top      int // first line shown: j/k scroll a long message (a cell in full)
-	layer    int
-	screenW  int
-	screenH  int
+	anim    popupAnimator
+	glyph   string
+	title   string
+	lines   []string
+	top     int // first line shown: j/k scroll a long message (a cell in full)
+	layer   int
+	screenW int
+	screenH int
 }
 
 func newMessagePopup() messagePopup { return messagePopup{anim: newPopupAnimator("message")} }
@@ -32,8 +26,8 @@ func (m messagePopup) isInteractive() bool { return m.anim.isInteractive() }
 func (m *messagePopup) close() tea.Cmd     { return m.anim.close() }
 func (m *messagePopup) setSize(w, h int)   { m.screenW, m.screenH = w, h }
 
-func (m *messagePopup) show(glyph, title string, lines []string, passKeys bool, layer int) tea.Cmd {
-	m.glyph, m.title, m.lines, m.passKeys, m.layer = glyph, title, lines, passKeys, layer
+func (m *messagePopup) show(glyph, title string, lines []string, layer int) tea.Cmd {
+	m.glyph, m.title, m.lines, m.layer = glyph, title, lines, layer
 	m.top = 0
 	return m.anim.open()
 }
@@ -67,10 +61,7 @@ func (m messagePopup) view() string {
 	vis := m.visible()
 	long := len(m.lines) > vis
 	hint := hintLegend([][2]string{{"Esc", "close"}})
-	switch {
-	case m.passKeys:
-		hint = hintLegend([][2]string{{"a listed key", "does it"}, {"Esc", "close"}})
-	case long:
+	if long {
 		// Longer than the box: the keys that move the window.
 		hint = hintLegend([][2]string{{"j/k", "scroll"}, {"Esc", "close"}})
 	}

@@ -30,8 +30,9 @@
   forward, location, search and visual mode are the page's, in `[2]`'s
   Space menu.
 - **The Space menu is titled with its panel**: `[1] Tabs`, `[2] Page`.
-- **`?` in visual mode shows the mode's keys**, the same list `Space`
-  shows there, to read.
+- **In visual mode `Space` opens nothing**, and `?` lists the mode's
+  keys, to read; the keys themselves are pressed directly. The sheet
+  `Space` used to open, where pressing a listed key ran it, is gone.
 - **Adding a bookmark is one box**, URL and title together, and so is
   **signing in**, name and password. `Tab` moves between the fields and
   `Enter` sends them all; an empty URL keeps the box open on that field

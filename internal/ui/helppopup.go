@@ -152,10 +152,6 @@ var (
 		{"j · k", "scroll, when it is longer than the box"},
 		{"Esc", "close"},
 	}
-	helpCheatsheet = []helpEntry{
-		{"a listed key", "close the sheet and do it"},
-		{"Space · Esc", "close"},
-	}
 	helpDevtools = []helpEntry{
 		{"h · l", "Network · Storage · Console · Source"},
 		{"j · k · u · d", "move"},
@@ -185,8 +181,6 @@ func (m AppModel) floatHelp() (string, []helpEntry) {
 		return m.options.title, helpOptions
 	case m.devtools.anim.owns():
 		return "DevTools", helpDevtools
-	case m.message.anim.owns() && m.message.passKeys:
-		return "Visual mode", helpCheatsheet
 	case m.message.anim.owns():
 		return "Message", helpMessage
 	case m.globalMenu.anim.owns():

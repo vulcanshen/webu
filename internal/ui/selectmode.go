@@ -14,8 +14,8 @@ import (
 // the way out — because a cursor on text that moves under it is a cursor
 // on nothing.
 //
-// The mode owns the keyboard: no global letter fires, Space is a cheatsheet
-// rather than a menu, and Esc is layered — it drops a search being typed
+// The mode owns the keyboard: no global letter fires, Space opens nothing
+// (? lists the keys), and Esc is layered — it drops a search being typed
 // before it drops the mode.
 type selectMode struct {
 	on   bool
@@ -495,15 +495,15 @@ func (m AppModel) selectRows(t *tab, innerW, innerH int) []string {
 }
 
 // selectLegendPairs is the footer while the mode is on (ux.md §B): only
-// the keys that mean something here. Space and ? lead it whenever a search
-// is not being typed (tdp M1) — Space is the mode's cheatsheet, ? the ?
-// menu — and the mode's own keys drop off the right when it is narrow.
+// the keys that mean something here. ? leads it whenever a search is not
+// being typed (tdp M1): it is where the mode's keys are listed. Space does
+// nothing in a mode and is not shown (K11); the mode's own keys drop off
+// the right when it is narrow.
 func selectLegendPairs(typing bool) [][2]string {
 	if typing {
 		return [][2]string{{"Enter", "find"}, {"Esc", "cancel"}}
 	}
 	return [][2]string{
-		{"space", "menu"},
 		{"?", "help"},
 		{"y", "copy"},
 		{"v/V", "select"},
@@ -518,9 +518,8 @@ func selectLegendPairs(typing bool) [][2]string {
 	}
 }
 
-// selectKeys are the mode's keys, the one list both of its sheets read:
-// the cheatsheet on Space, where pressing one runs it, and the help on ?,
-// which only reads (tdp K11).
+// selectKeys are the mode's keys, as its ? key reference lists them —
+// read-only; the keys themselves are pressed directly (tdp K11).
 var selectKeys = []helpEntry{
 	{"h j k l", "move by character and row"},
 	{"w e b", "next word, word end, previous word"},
@@ -533,13 +532,3 @@ var selectKeys = []helpEntry{
 	{"Enter", "click what the cursor is on"},
 	{"Esc", "cancel the search, then leave"},
 }
-
-// selectCheatsheet is what Space shows in the mode (ux.md §A.1): every
-// key, and pressing one runs it.
-var selectCheatsheet = func() []string {
-	lines := make([]string, len(selectKeys))
-	for i, e := range selectKeys {
-		lines[i] = "  " + padRight(e.key, 15) + e.desc
-	}
-	return lines
-}()
