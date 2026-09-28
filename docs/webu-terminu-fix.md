@@ -157,12 +157,6 @@ F7 點名的 loading icon 就是 webu 自己 URL 列的那個（第 2 條「load
   `dev-remarks.md`「偏離 tdp」頁面彈窗那條補一句：它的 backdrop 也照 D2 淡化（2026-09-28）。
 - 測試：頁面彈窗開著時，backdrop 裡一個 code block 的背景是寫死的 `dim(pageCodeBg)`、不是沒有背景；載入中的頁面仍是原本的 loading 樣式。
 
-## 5. README 沒寫需要 truecolor 終端機 —— D6（v0.1.12）
-
-- **現況**：README 兩份的需求段只寫 Nerd Font。
-- **規則**：v0.1.12 D6：家族要求 truecolor terminal；README 的需求段跟 Nerd Font 並列寫上。
-- **怎麼改**：README 兩份「Two things to know」／「有兩件事要知道」加一條「需要 truecolor 終端機」。
-
 ## 已定案（2026-09-28）
 
 - **DevTools 的 Network / Console 不放 loading icon**：v0.1.12 F7 定案 —— 一直流進來的 log 是**項目**層級的資料流，不是整個 popup 的 loading，

@@ -51,10 +51,11 @@ go install github.com/vulcanshen/webu/cmd/webu@latest
 
 從原始碼建置見 [docs/dev-remarks.md](docs/dev-remarks.md)。
 
-有兩件事要知道：
+有三件事要知道：
 
 - **Chromium 在第一次啟動時下載**，只下載一次，放在 cache 目錄（約 175–250 MB），有進度列。升級後若需要新版 Chromium，執行 `webu browser update`。
 - **終端機必須用 [Nerd Font](https://www.nerdfonts.com/)** —— 連結、欄位、面板與頁面的各部分都用它的 glyph 畫。
+- **終端機必須支援 truecolor** —— 顏色、以及 popup 底下各層變暗的樣子，都用 24-bit 色畫。
 
 移除（刪設定、資料與下載的 Chromium 之前都會先問）：
 
