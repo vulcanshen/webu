@@ -340,11 +340,23 @@ func TestDisabledRowDoesNothing(t *testing.T) {
 
 // Visual mode's footer leads with Space and ? like every other surface
 // that is not being typed into (tdp M1).
-func TestVisualModeFooterShowsSpaceAndHelp(t *testing.T) {
+func TestVisualModeFooterShowsHelp(t *testing.T) {
 	d := keysDriver(t)
 	d.m.sel.on = true
-	if f := d.m.footer(); !strings.Contains(f, "space") || !strings.Contains(f, "? help") {
-		t.Errorf("visual mode's footer should show space and ?: %q", f)
+	// ? leads it; Space does nothing in a mode and is not shown (tdp K11).
+	if f := d.m.footer(); !strings.HasPrefix(strings.TrimSpace(f), "? help") || strings.Contains(f, "space") {
+		t.Errorf("visual mode's footer should lead with ? and not show space: %q", f)
+	}
+}
+
+// Inside a mode Space opens nothing: no menu, no list of keys to run; the
+// keys are pressed directly and listed by ? (tdp K11, v0.1.10).
+func TestSpaceInVisualModeOpensNothing(t *testing.T) {
+	d := keysDriver(t)
+	d.m.sel.on = true
+	d.send(keySpace)
+	if d.m.popupOpen() || !d.m.sel.on {
+		t.Error("Space in visual mode should open nothing and leave the mode on")
 	}
 }
 
@@ -482,8 +494,8 @@ func TestGlobalPopupDimsTheScreenYouAreOn(t *testing.T) {
 	}
 }
 
-// In visual mode ? is the mode's help (tdp K11): its keys, read-only, from
-// the same list the Space cheatsheet shows.
+// In visual mode ? is the mode's key reference (tdp K11): its keys, to
+// read, nothing to run.
 func TestQuestionMarkInVisualMode(t *testing.T) {
 	d := keysDriver(t)
 	d.m.sel.on = true
@@ -496,11 +508,6 @@ func TestQuestionMarkInVisualMode(t *testing.T) {
 	d.key("y") // read, not run
 	if !d.m.help.anim.owns() || !d.m.sel.on {
 		t.Error("keys on the mode's help should run nothing")
-	}
-	for i, e := range selectKeys {
-		if !strings.Contains(selectCheatsheet[i], e.key) || !strings.Contains(selectCheatsheet[i], e.desc) {
-			t.Errorf("the cheatsheet and the help should read the same list: %q", selectCheatsheet[i])
-		}
 	}
 }
 
@@ -604,12 +611,10 @@ func TestEveryPopupIsOneWidth(t *testing.T) {
 		frame("the location box", d.m.input.view())
 		d.key("esc")
 
-		d.m.sel.on = true
-		d.send(keySpace)
-		d.until("the cheatsheet", func() bool { return d.m.message.anim.isInteractive() })
+		d.exec(d.m.message.show(glyphInfo, "Inspect", []string{"role: link"}, 1))
+		d.until("a message", func() bool { return d.m.message.anim.isInteractive() })
 		frame("a message", d.m.message.view())
 		d.key("esc")
-		d.m.sel.on = false
 
 		d.exec(d.m.toast.show("copied", toastInfo))
 		d.until("the toast", func() bool { return d.m.toast.anim.isInteractive() })

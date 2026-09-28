@@ -14,7 +14,7 @@ func TestMessageScrolls(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		lines = append(lines, "line "+itoa(i))
 	}
-	m.show(glyphTable, "Name", lines, false, 1)
+	m.show(glyphTable, "Name", lines, 1)
 	m.anim.phase = animOpen
 	if v := m.view(); !strings.Contains(v, "line 0 ") || strings.Contains(v, "line 30") || !strings.Contains(v, "scroll") {
 		t.Fatalf("the window should start at the top and offer to scroll:\n%s", v)

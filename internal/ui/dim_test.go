@@ -93,7 +93,7 @@ func TestOneOrderForDrawingEscAndBright(t *testing.T) {
 	d.m.options.setItems([]menuItem{{label: "Inspect", key: "inspect"}}, "Link", 2)
 	d.exec(d.m.options.open())
 	d.until("the options", func() bool { return d.m.options.anim.isInteractive() })
-	d.exec(d.m.message.show(glyphInfo, "Inspect", []string{"role: link"}, false, 3))
+	d.exec(d.m.message.show(glyphInfo, "Inspect", []string{"role: link"}, 3))
 	d.until("the message", func() bool { return d.m.message.anim.isInteractive() })
 
 	if v := fgs(d.m.View()); v.has(popupLayerColor(2)) || !v.has(popupLayerColor(3)) {
