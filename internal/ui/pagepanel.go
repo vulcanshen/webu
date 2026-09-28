@@ -88,9 +88,13 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		out = append(out, emptyBody(innerW, rest, "nothing here yet",
 			emptyHint("Press R to load it", "R"))...)
 	case t.popupNode() != nil:
-		// The page under a popup: as it was, dimmed the way a page being
-		// left is, no cursor — the cursor is in the float (pagePopupView).
-		out = append(out, m.pageRows(t.backdrop(), innerW, rest)...)
+		// The page under a popup: as it was, no cursor — the cursor is in
+		// the float (pagePopupView) — drawn in its own colours and faded
+		// the way everything under a popup is (tdp D2), so its code
+		// blocks and tables keep their grounds (2026-09-28).
+		for _, r := range m.pageRows(t.backdrop(), innerW, rest) {
+			out = append(out, dimANSI(r))
+		}
 	case t.listing():
 		// A document is its sections before it is a sheet (section.go):
 		// the panel lists them, and Enter gives one the whole panel.
@@ -147,7 +151,7 @@ func (m AppModel) pagePopupFloats(t *tab) []popupFloat {
 			}
 			cp := *t
 			cp.lay, cp.gutter = lay, 0
-			cp.cursor, cp.loading, cp.top = -1, true, 0
+			cp.cursor, cp.top = -1, 0
 			cp.read, cp.drill = false, nil
 			bt = &cp
 		}
@@ -165,9 +169,11 @@ func (m AppModel) pagePopupFloats(t *tab) []popupFloat {
 		if top {
 			hint = hintLegend([][2]string{{"Enter", "act"}, {"Space", "menu"}, {"Esc", "does not close it"}})
 		}
-		out = append(out, popupFloat{
-			box: drawPopupBox(popupLayerColor(i+1), " "+glyphPopup+" "+title+" ", hint, rows, w),
-			dx:  3 * i, dy: i})
+		box := drawPopupBox(popupLayerColor(i+1), " "+glyphPopup+" "+title+" ", hint, rows, w)
+		if !top {
+			box = dimANSI(box) // faded like the page under it, border and all
+		}
+		out = append(out, popupFloat{box: box, dx: 3 * i, dy: i})
 	}
 	return out
 }

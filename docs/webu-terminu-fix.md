@@ -146,17 +146,6 @@ F7 點名的 loading icon 就是 webu 自己 URL 列的那個（第 2 條「load
   - D3 的 loading icon 規格就是 webu 的 `spinnerFrames`，其他 app 照它做。
   - 待確認第 2 題（頁面彈窗的 backdrop 仍是舊 dim 畫法）仍是 webu 自己的決定。
 
-## 4. 頁面彈窗的 backdrop 把前景收成一個 dim 色 —— F8、D2（user 2026-09-28 裁定照改）
-
-- **現況**：頁面自己的彈窗開著時，底下的頁面用 `pagepanel.go` `rowStyles` 的 loading 樣式畫（258–270 行）：所有字 `dimColor`、游標改成
-  `borderDim` 的 curOff；下層的頁面彈窗也這樣畫（`pagePopupFloats` 150 行）。它是頁面內容的畫法、寫在偏離裡不照 F8，但跟 F8 v0.1.11 禁止的
-  做法同形（前景收成一個 dim 色、背景與字型屬性不見）。
-- **裁定**：換成 D2 的淡化 —— backdrop 先照原色畫，再過同一個 `dimANSI`；code block、表格底色、標題色相、游標列都保留，只是變暗，跟 webu 的
-  popup 蓋上來時一致。「正在離開的頁面」（載入中）用的是同一套樣式，但它不是 popup、不在 tdp 範圍，**不動**。
-- **怎麼改**：`pagepanel.go` 在畫彈窗底下的頁面與下層彈窗時，改成「原色畫 → `dimANSI`」，不再借 loading 樣式；loading 樣式留給載入中。
-  `dev-remarks.md`「偏離 tdp」頁面彈窗那條補一句：它的 backdrop 也照 D2 淡化（2026-09-28）。
-- 測試：頁面彈窗開著時，backdrop 裡一個 code block 的背景是寫死的 `dim(pageCodeBg)`、不是沒有背景；載入中的頁面仍是原本的 loading 樣式。
-
 ## 已定案（2026-09-28）
 
 - **DevTools 的 Network / Console 不放 loading icon**：v0.1.12 F7 定案 —— 一直流進來的 log 是**項目**層級的資料流，不是整個 popup 的 loading，

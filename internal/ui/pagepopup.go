@@ -263,7 +263,6 @@ func (t *tab) backdrop() *tab {
 	bt.secs, bt.read, bt.sec, bt.top = t.backSecs, t.backRead, t.backSec, t.backTop
 	bt.gutter = lineNumW(len(t.back.rows))
 	bt.cursor = -1
-	bt.loading = true
 	bt.popups = nil
 	bt.drill = nil
 	if bt.sec >= len(bt.secs) {

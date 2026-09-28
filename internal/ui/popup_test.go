@@ -357,3 +357,36 @@ func TestAMenuButtonOpensAPopup(t *testing.T) {
 	d.key("enter")
 	d.until("picked", func() bool { return p.popupNode() == nil && strings.Contains(dumpLayout(p.lay), "Action 3") })
 }
+
+// The page under its own popup fades the way everything under a popup
+// does (tdp D2, 2026-09-28): its heading keeps its hue, darker, instead
+// of turning to the loading grey.
+func TestPopupBackdropFades(t *testing.T) {
+	withColour(t)
+	t.Setenv("WEBU_CONFIG", t.TempDir())
+	t.Setenv("WEBU_DATA", t.TempDir())
+	exe, ok := browser.Installed()
+	if !ok {
+		t.Skip("pinned Chromium not installed; run webu once")
+	}
+	b, err := browser.Launch(exe, t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	abs, _ := filepath.Abs("testdata/popup.html")
+	d := newDriver(t, New(b, "file://"+abs))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the popups page", d.loaded("Popups"))
+	p := d.page()
+	d.cursorOn(ir.Button, "Open dialog")
+	d.key("enter")
+	d.until("the dialog", func() bool { return p.popupNode() != nil })
+
+	// The h1 is peach, #fab387 (250,179,135): faded, 129,97,86.
+	v := fgs(d.m.View())
+	if !v.has("#816156") || v.has(levelInk[0]) {
+		t.Errorf("the backdrop heading should be its own colour, faded: %v", v)
+	}
+}
