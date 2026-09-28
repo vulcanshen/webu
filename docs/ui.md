@@ -179,6 +179,7 @@ options、message、finder、confirm、picker、input、editor、help、quitAsk�
 | Popup | 類型 | 用途 |
 |---|---|---|
 | Space menu | menu | item / panel 兩 region；捲動、環繞、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23） |
+| choices | menu | select 的選項、slider 的數字（10 列一窗）：自己一個 popup，疊在叫它的 item menu 或 Space menu 上，`Esc` 回到那裡、選了關整疊（2026-09-28，tdp F1 多步驟、F4） |
 | global operation | menu | Space menu 最後一列打開：全域動作，可執行 |
 | `?` key reference | viewport | 最前端 surface 的按鍵，唯讀：面板上是面板的鍵 + core key，浮層上是這個浮層的鍵 |
 | Location | input | `L`：目前 URL 當提議（`Tab` 接受、Backspace 拒絕）；非 URL 當搜尋 |

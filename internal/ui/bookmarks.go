@@ -155,7 +155,7 @@ func (m *AppModel) movePicker(ref int) tea.Cmd {
 		return nil
 	}
 	m.moveRef = ref
-	m.optionsFor, m.optionsKind = nil, optMoveTo
+	m.optionsKind = optMoveTo
 	now := m.bookmarks[ref].Folder
 	items := []menuItem{{label: "(no folder)", key: "0", hint: "the top level"}}
 	if now == "" {

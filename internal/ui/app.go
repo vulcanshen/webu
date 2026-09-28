@@ -89,15 +89,21 @@ type AppModel struct {
 	// Floats. The Space menu goes down first; a target opened from it stacks
 	// above (tdp F4). The toast rides on top of everything.
 	spaceMenu  spaceMenu
-	globalMenu spaceMenu   // the global operation popup, from the Space menu's last row (tdp M4)
-	options    spaceMenu   // a textbox's Submit/Edit/Clear/Yank, or a select's options
-	lists      listPanel   // the screen behind a header chip after [W]eb
-	splash     splashModel // the easter egg (splash.go)
-	devtools   devtoolsPopup
-	message    messagePopup
-	finder     finder // [/] over the page's nodes, [go] over its lines (finder.go)
-	help       helpPopup
-	confirm    confirmPopup
+	globalMenu spaceMenu // the global operation popup, from the Space menu's last row (tdp M4)
+	options    spaceMenu // an item's own operations, or the Move to… picker
+	// choices is a select's options or a slider's numbers: a step of its
+	// own, stacked on whatever asked for it (tdp F1, v0.1.9), so Esc goes
+	// back to that and its height is set as it opens (F7).
+	choices     spaceMenu
+	choicesFor  *ir.Node
+	choicesKind optionsKind
+	lists       listPanel   // the screen behind a header chip after [W]eb
+	splash      splashModel // the easter egg (splash.go)
+	devtools    devtoolsPopup
+	message     messagePopup
+	finder      finder // [/] over the page's nodes, [go] over its lines (finder.go)
+	help        helpPopup
+	confirm     confirmPopup
 	// The quit confirm and its own help sit above every other float, in
 	// that order (tdp D3): q and Ctrl-C reach the quit flow from anywhere,
 	// so the question they ask must not replace one being answered, and
@@ -109,10 +115,8 @@ type AppModel struct {
 	picker   filePicker  // a file, picked rather than typed (filepicker.go)
 	toast    toastModel
 
-	// optionsFor is the node the options menu is about, and optionsKind
-	// what the menu is: an item's operations, a select's options, or the
-	// Add to… picker.
-	optionsFor  *ir.Node
+	// optionsKind is what the options menu is: an item's operations, or
+	// the Move to… picker.
 	optionsKind optionsKind
 	// dialog is the page's question being asked (function.md §5); the page
 	// is stalled until it is answered, and settle captures wait too.
@@ -166,6 +170,7 @@ func New(b *browser.Browser, start ...string) AppModel {
 		globalMenu: spaceMenu{anim: newPopupAnimator("globalmenu")},
 		splash:     newSplashModel(),
 		options:    spaceMenu{anim: newPopupAnimator("options")},
+		choices:    spaceMenu{anim: newPopupAnimator("choices")},
 		lists:      newListPanel(),
 		devtools:   newDevtoolsPopup(),
 		message:    newMessagePopup(),
@@ -264,7 +269,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		first := m.w == 0
 		m.w, m.h = msg.Width, msg.Height
 		for _, p := range []interface{ setSize(int, int) }{
-			&m.spaceMenu, &m.globalMenu, &m.options, &m.lists, &m.devtools, &m.message,
+			&m.spaceMenu, &m.globalMenu, &m.options, &m.choices, &m.lists, &m.devtools, &m.message,
 			&m.finder, &m.help, &m.confirm, &m.quitAsk, &m.quitHelp, &m.input, &m.editor, &m.picker, &m.toast} {
 			p.setSize(m.w, m.h)
 		}
@@ -289,7 +294,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AnimTickMsg:
 		return m, tea.Batch(
-			m.spaceMenu.anim.tick(msg), m.globalMenu.anim.tick(msg), m.options.anim.tick(msg),
+			m.spaceMenu.anim.tick(msg), m.globalMenu.anim.tick(msg), m.options.anim.tick(msg), m.choices.anim.tick(msg),
 			m.devtools.anim.tick(msg), m.devtools.detail.anim.tick(msg),
 			m.message.anim.tick(msg), m.finder.anim.tick(msg),
 			m.help.anim.tick(msg), m.confirm.anim.tick(msg), m.quitAsk.anim.tick(msg), m.quitHelp.anim.tick(msg),
@@ -727,7 +732,7 @@ func (m *AppModel) recordVisit(t *tab) {
 // ------------------------------------------------------------------- keys
 
 func (m AppModel) popupOpen() bool {
-	return m.spaceMenu.isActive() || m.globalMenu.isActive() || m.options.isActive() ||
+	return m.spaceMenu.isActive() || m.globalMenu.isActive() || m.options.isActive() || m.choices.isActive() ||
 		m.devtools.isActive() || m.message.isActive() || m.finder.isActive() ||
 		m.help.isActive() || m.confirm.isActive() || m.quitAsk.isActive() || m.quitHelp.isActive() ||
 		m.input.isActive() || m.editor.isActive() || m.picker.isActive()
@@ -739,7 +744,7 @@ func (m AppModel) popupOpen() bool {
 func (m AppModel) floatOwned() bool {
 	return m.toast.anim.owns() || m.quitHelp.anim.owns() || m.quitAsk.anim.owns() ||
 		m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.confirm.anim.owns() ||
-		m.options.anim.owns() || m.devtools.anim.owns() || m.finder.anim.owns() ||
+		m.options.anim.owns() || m.choices.anim.owns() || m.devtools.anim.owns() || m.finder.anim.owns() ||
 		m.message.anim.owns() || m.help.anim.owns() || m.globalMenu.anim.owns() || m.spaceMenu.anim.owns()
 }
 
@@ -755,7 +760,7 @@ func (m AppModel) floatAboveMenu() bool {
 func (m AppModel) floatAboveGlobalMenu() bool {
 	return m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.finder.anim.owns() ||
 		m.confirm.anim.owns() || m.quitAsk.anim.owns() || m.quitHelp.anim.owns() ||
-		m.options.anim.owns() || m.devtools.anim.owns() ||
+		m.options.anim.owns() || m.choices.anim.owns() || m.devtools.anim.owns() ||
 		m.message.anim.owns() || m.help.anim.owns()
 }
 
@@ -806,7 +811,8 @@ func (m AppModel) stackTop() (int, bool) {
 // question, a list, a view — holds the keyboard.
 func (m AppModel) errandFloat() bool {
 	return m.input.anim.owns() || m.editor.anim.owns() || m.picker.anim.owns() || m.finder.anim.owns() ||
-		m.confirm.anim.owns() || m.quitAsk.anim.owns() || m.devtools.anim.owns() || m.message.anim.owns()
+		m.confirm.anim.owns() || m.quitAsk.anim.owns() || m.devtools.anim.owns() || m.message.anim.owns() ||
+		m.choices.anim.owns()
 }
 
 // closeMenus closes the menus and options still holding the keyboard: the
@@ -928,6 +934,8 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// A long message — a cell in full — scrolls by the page's keys.
 		m.message.scroll(msg.String())
 		return m, nil
+	case m.choices.anim.owns():
+		return m.choicesKey(msg)
 	case m.options.anim.owns():
 		return m.optionsKey(msg)
 	case m.devtools.anim.owns():
@@ -1001,6 +1009,8 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		return m, cmd
 	case m.message.anim.owns():
 		return m, m.message.close()
+	case m.choices.anim.owns():
+		return m, m.choices.close()
 	case m.options.anim.owns():
 		return m, m.options.close()
 	case m.devtools.anim.owns():
@@ -1060,7 +1070,7 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 // over, and the user is back on the panel (tdp T1).
 func (m *AppModel) closeStack() tea.Cmd {
 	return tea.Batch(m.quitHelp.close(), m.quitAsk.close(),
-		m.input.close(), m.editor.close(), m.picker.close(), m.confirm.close(), m.options.close(),
+		m.input.close(), m.editor.close(), m.picker.close(), m.confirm.close(), m.choices.close(), m.options.close(),
 		m.devtools.close(), m.message.close(), m.finder.close(),
 		m.help.close(), m.globalMenu.close(), m.spaceMenu.close())
 }
@@ -1877,8 +1887,8 @@ func (m AppModel) menuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // optionsKey drives the second-level menu: an item's own operation list
-// (what an entry row holds), a select's options (whose keys are their
-// index), or the Move to… picker.
+// (what an entry row holds), or the Move to… picker. A select's options
+// and a slider's numbers are a popup of their own (choicesKey).
 func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var key string
 	m.options, key, _ = m.options.update(msg)
@@ -1895,25 +1905,32 @@ func (m AppModel) optionsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(closeCmd, m.moveBookmark(m.moveRef, idx))
 	}
 
-	n := m.optionsFor
-	t := m.shownTab()
-	if t == nil {
+	if m.shownTab() == nil {
 		return m, m.options.close()
 	}
-	if m.optionsKind == optItemMenu {
-		mm, cmd := m.dispatch(key)
-		return keepSource(mm, cmd, func(a *AppModel) *spaceMenu { return &a.options })
+	mm, cmd := m.dispatch(key)
+	return keepSource(mm, cmd, func(a *AppModel) *spaceMenu { return &a.options })
+}
+
+// choicesKey is a keystroke on a select's options or a slider's numbers:
+// the one picked is set, and the whole stack under it closes (tdp T1).
+func (m AppModel) choicesKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	var key string
+	m.choices, key, _ = m.choices.update(msg)
+	if key == "" {
+		return m, nil
 	}
-	if m.optionsKind == optSlide {
-		if n == nil {
-			return m, m.options.close()
-		}
+	n, t := m.choicesFor, m.shownTab()
+	if n == nil || t == nil {
+		return m, m.choices.close()
+	}
+	if m.choicesKind == optSlide {
 		v := strings.TrimPrefix(key, "v:")
 		return m, tea.Batch(m.closeStack(), t.press(func(ctx context.Context) error { return page.Slide(ctx, n.ID, v) }))
 	}
 	idx, err := strconv.Atoi(key)
-	if n == nil || err != nil || idx < 0 || idx >= len(n.Children) {
-		return m, m.options.close()
+	if err != nil || idx < 0 || idx >= len(n.Children) {
+		return m, m.choices.close()
 	}
 	opt := n.Children[idx]
 	return m, tea.Batch(m.closeStack(), t.press(func(ctx context.Context) error { return page.Choose(ctx, opt.ID) }))
@@ -2353,7 +2370,7 @@ func (m AppModel) openItemMenu(n *ir.Node) (tea.Model, tea.Cmd) {
 func (m AppModel) openItemMenuAt(n *ir.Node, layer int) (tea.Model, tea.Cmd) {
 	t := m.shownTab()
 	items, title := itemMenuItems(n, t.curFolded()), truncate(oneLine(nameOr(n.Name, n.Role)), 40)
-	m.optionsFor, m.optionsKind = n, optItemMenu
+	m.optionsKind = optItemMenu
 	m.options.setItems(items, title, layer)
 	return m, m.options.open()
 }
@@ -2420,7 +2437,7 @@ func (m AppModel) chooseOptions() (tea.Model, tea.Cmd) {
 // cursor, or one inside an entry row (actOn).
 func (m AppModel) chooseOptionsFor(n *ir.Node) (tea.Model, tea.Cmd) {
 	if n == nil || n.Kind != ir.Combobox {
-		return m, m.options.close()
+		return m, nil
 	}
 	items := make([]menuItem, 0, len(n.Children))
 	for i, o := range n.Children {
@@ -2431,19 +2448,18 @@ func (m AppModel) chooseOptionsFor(n *ir.Node) (tea.Model, tea.Cmd) {
 		items = append(items, menuItem{label: oneLine(o.Name), key: strconv.Itoa(i), hint: hint})
 	}
 	if len(items) == 0 {
-		return m, tea.Batch(m.options.close(), m.toast.show("no options to choose from", toastInfo))
+		return m, m.toast.show("no options to choose from", toastInfo)
 	}
-	m.optionsFor, m.optionsKind = n, optSelect
-	m.options.setItems(items, oneLine(nameOr(n.Name, "choose")), m.layer())
+	// A step of its own, over whatever asked for it (tdp F1): an item
+	// menu under it stays, and Esc goes back to it.
+	m.choicesFor, m.choicesKind = n, optSelect
+	m.choices.setItems(items, oneLine(nameOr(n.Name, "choose")), m.layer())
 	for i, o := range n.Children {
 		if o.Selected {
-			m.options.cursor = i
+			m.choices.cursor = i
 		}
 	}
-	if m.options.isActive() {
-		return m, nil // swapped in place under the open float
-	}
-	return m, m.options.open()
+	return m, m.choices.open()
 }
 
 // editField opens the input popup on a textbox. A pointer receiver on
@@ -2517,16 +2533,14 @@ func (m *AppModel) editFieldAs(n *ir.Node, search bool) tea.Cmd {
 // 2026-09-23).
 func (m *AppModel) slideMenu(n *ir.Node) tea.Cmd {
 	items, at := sliderItems(n)
-	m.optionsFor, m.optionsKind = n, optSlide
-	m.options.setItems(items, oneLine(nameOr(n.Name, "slider"))+" · "+sliderRange(n), m.layer())
-	m.options.rows = 10
-	m.options.cursor = at
+	// Its own popup, like a select's options (tdp F1).
+	m.choicesFor, m.choicesKind = n, optSlide
+	m.choices.setItems(items, oneLine(nameOr(n.Name, "slider"))+" · "+sliderRange(n), m.layer())
+	m.choices.rows = 10
+	m.choices.cursor = at
 	// The current number mid-window, with what is either side of it.
-	m.options.top = max(0, min(at-m.options.visible()/2, len(items)-m.options.visible()))
-	if m.options.isActive() {
-		return nil // swapped in place under the open float
-	}
-	return m.options.open()
+	m.choices.top = max(0, min(at-m.choices.visible()/2, len(items)-m.choices.visible()))
+	return m.choices.open()
 }
 
 // fieldTakes is what the box over a field says it wants. The page's own
@@ -2947,6 +2961,7 @@ func (m AppModel) floats() []floatLayer {
 		{m.devtools.isActive(), m.devtools.anim.owns() && !m.devtools.detail.anim.owns(), m.devtools.body},
 		{m.devtools.detail.isActive(), m.devtools.detail.anim.owns(), m.devtools.detail.view},
 		{m.options.isActive(), m.options.anim.owns(), m.options.view},
+		{m.choices.isActive(), m.choices.anim.owns(), m.choices.view},
 		{m.message.isActive(), m.message.anim.owns(), m.message.view},
 		{m.finder.isActive(), m.finder.anim.owns(), m.finder.view},
 		{m.confirm.isActive(), m.confirm.anim.owns(), m.confirm.view},

@@ -293,7 +293,7 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	// A select's menu leads with Choose, which swaps in the option list.
 	d.cursorOn(ir.Combobox, "Pick")
 	d.act()
-	d.until("option list", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optSelect })
+	d.until("option list", func() bool { return d.m.choices.isInteractive() && d.m.choicesKind == optSelect })
 	d.key("j")
 	d.key("enter")
 	d.until("option chosen", func() bool {
@@ -1145,9 +1145,9 @@ func TestAComboboxWithNoOptionsOpensTheInput(t *testing.T) {
 
 	d.cursorOn(ir.Combobox, "Pick")
 	d.key("enter")
-	d.until("the options", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optSelect })
-	if len(d.m.options.items) < 2 {
-		t.Errorf("a real select lists its options: %d", len(d.m.options.items))
+	d.until("the options", func() bool { return d.m.choices.isInteractive() && d.m.choicesKind == optSelect })
+	if len(d.m.choices.items) < 2 {
+		t.Errorf("a real select lists its options: %d", len(d.m.choices.items))
 	}
 }
 
