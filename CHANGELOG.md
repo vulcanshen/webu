@@ -36,6 +36,9 @@
   accepts the offer; in a box of several `Tab` moves between fields and
   `→` accepts — `→` works in a single box too. The legend says `accept`,
   and `decline` for `Backspace` refusing it.
+- **In the search, `Tab` moves between the query and the hits, and `Esc`
+  closes it** from either — it no longer steps back from the hits to the
+  query first.
 
 ### Fixed
 

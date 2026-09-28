@@ -995,8 +995,7 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		m.upload = nil // a page's chooser is simply left unanswered: nothing is chosen
 		return m, m.picker.close()
 	case m.finder.anim.owns():
-		// Layered: from the list Esc goes back up to the query, and from
-		// the query it closes.
+		// A phase is not a layer: Esc closes the finder from either (tdp F1).
 		cmd, _ := m.finder.escape()
 		return m, cmd
 	case m.confirm.anim.owns():
