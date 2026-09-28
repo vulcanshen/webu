@@ -154,9 +154,10 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 
 #### 兩套配色（`theme.go`）
 
-popup 開著時最上層以外畫暗（tdp F8）：`dim.go` `dimANSI` 把畫好的字串改色 —— popup 層色的前景換成它的暗版（比對時容許 ±2，因為輸出時
-hex 會被四捨五入，`#94C3F5` 畫成 `147;195;245`）、其他前景換成 `dimColor`、背景拿掉；版面不動。測試要在 truecolor 下跑才有色碼
-（`dim_test.go` `withColour`）。
+popup 開著時最上層以外畫暗（tdp F8）：`dim.go` `dimANSI` 把畫好的字串改色 —— 每個 SGR 裡的前景與背景（truecolor、256 色、16 色都先換
+RGB）照 tdp D2 往 base 淡化、每個通道取原值與淡化值較小的（絕不變亮），其他屬性（bold、reverse…）原樣保留，reset 與每個換行之後補
+`dim(Text)`；版面不動。參考實作是 filu 的 `dim.go`（2026-09-28 換上；較早的版本把前景全換成 `dimColor`、背景拿掉，拆掉了膠囊與游標列）。
+測試要在 truecolor 下跑才有色碼（`dim_test.go` `withColour`）；預期值用條文手算寫死（輸出時 hex 會被四捨五入，比對容許 ±2）。
 
 App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）與 Page palette（`pageText` / `pagePress` / `pageFill` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）分開。glyph 常數（`glyphHeader/Body/Others/Footer` = `page_layout_*`、`glyphPopup`、`glyphUpload`、`glyphInfo`…）的碼位查法見「建置與開發」。
 

@@ -15,9 +15,10 @@
   a date or colour in the wrong shape, a bad setting, a folder name
   that is taken or missing. The box stays, with what was typed.
 - **Only the popup you are in is bright.** Everything under it — the
-  popups below, the page and the header, a download's progress too — is
-  drawn dim; a popup below keeps a dark version of its border colour, so
-  the layers still show. A toast changes nothing.
+  popups below, the page and the header, a download's progress too —
+  fades toward the background: every colour stays itself, only darker,
+  so the capsules, the cursor bars, code blocks and a popup's border
+  colour still show under it. A toast changes nothing.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The
