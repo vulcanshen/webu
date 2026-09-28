@@ -1561,17 +1561,18 @@ func (m AppModel) panelMenu() ([]menuItem, string) {
 	return items, title
 }
 
-// withGlobal ends a Space menu with its global region (tdp M2): always one
+// withGlobal ends a Space menu with its global row (tdp M2): always one
 // row, Global operation, which opens the global operation popup over the
-// menu. A menu that was one flat region gets its label, since it is one of
-// two now.
+// menu. The row has a divider over it but no header — a global operation
+// header over a Global operation row only said it twice (v0.1.7). The item
+// and panel regions keep theirs: a menu that was one flat region gets its
+// label.
 func withGlobal(items []menuItem) []menuItem {
 	if len(items) > 0 && !items[0].header {
 		items = append([]menuItem{{header: true, label: "panel operation"}}, items...)
 	}
 	return append(items,
 		menuItem{separator: true},
-		menuItem{header: true, label: "global operation"},
 		menuItem{label: "Global operation", key: "globalmenu", hint: "everything the app can do"})
 }
 

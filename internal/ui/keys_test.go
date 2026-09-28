@@ -203,8 +203,9 @@ func TestSpaceMenuEndsInGlobal(t *testing.T) {
 		if ti := d.m.spaceMenu.title; screen == "W" && ti != "[1] Tabs" && ti != "[2] Page" {
 			t.Errorf("the Space menu is titled with its panel's label (tdp D4): %q", d.m.spaceMenu.title)
 		}
-		if n < 2 || items[n-2].label != "global operation" || items[n-1].key != "globalmenu" {
-			t.Fatalf("%s: the menu should end in the global region: %+v", screen, items[max(0, n-2):])
+		// A divider, then the one row, with no header over it (tdp M2, v0.1.7).
+		if n < 2 || !items[n-2].separator || items[n-1].key != "globalmenu" || menuHas(items, "global operation") {
+			t.Fatalf("%s: the menu should end in a divider and the global row, no header: %+v", screen, items[max(0, n-2):])
 		}
 		d.key("esc")
 	}

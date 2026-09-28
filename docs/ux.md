@@ -59,9 +59,9 @@
 
 ### §A.1 Contextual track — Space menu（tdp K5、M2）
 
-region 固定叫 `item operation` / `panel operation` / `global operation`。每個 Space menu 最後都是 `global operation`，
-固定一列 `Global operation`，`Enter` 打開 global operation popup（§A.2；tdp M2）。
-所以 region 至少兩個，一律有標題（2026-09-27）。menu 本身：`j`/`k` 走（環繞）、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23）、Enter 執行、
+region 固定叫 `item operation` / `panel operation`，一律有標題，即使只剩其中一區（2026-09-27）。每個 Space menu 最後
+是分隔線與固定一列 `Global operation`，**不加區塊標題**（2026-09-28，tdp M2 v0.1.7：`global operation` 標題底下只有一列
+`Global operation`，是同一句話講兩次），`Enter` 打開 global operation popup（§A.2）。menu 本身：`j`/`k` 走（環繞）、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23）、Enter 執行、
 letter hotkey 在 menu 裡也有效。
 
 不能執行的列照樣出現、變暗，說明維持原本那句、不另寫原因，`Enter` 與熱鍵都不作用（tdp M6）；空清單
