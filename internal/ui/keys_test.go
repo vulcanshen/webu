@@ -565,3 +565,58 @@ func TestInputGroupLegendFits(t *testing.T) {
 		t.Errorf("accepting the offer should not change the width: %d then %d", lw, lw2)
 	}
 }
+
+// Every popup is one width, min(terminal width − 2, 120), whatever it
+// holds (tdp F7): a short confirm and a long menu alike, and the toast.
+func TestEveryPopupIsOneWidth(t *testing.T) {
+	for _, w := range []int{80, 100, 200} {
+		d := keysDriver(t)
+		d.send(tea.WindowSizeMsg{Width: w, Height: 40})
+		want := min(w-2, 120)
+		frame := func(what, view string) {
+			t.Helper()
+			if got := ansi.StringWidth(strings.Split(ansi.Strip(view), "\n")[0]); got != want {
+				t.Errorf("%d columns: %s is %d wide, want %d", w, what, got, want)
+			}
+		}
+
+		d.send(keySpace)
+		d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
+		frame("the Space menu", d.m.spaceMenu.view())
+		d.key("G")
+		d.key("enter")
+		d.until("the global operation popup", func() bool { return d.m.globalMenu.anim.isInteractive() })
+		frame("the global operation popup", d.m.globalMenu.view())
+		d.key("?")
+		d.until("the key reference", func() bool { return d.m.help.anim.isInteractive() })
+		frame("the key reference", d.m.help.view())
+		d.m.closeStack()
+
+		d.m.dls = []download{{guid: "g1", name: "big.iso"}}
+		d.send(keyQ)
+		d.until("the quit confirm", func() bool { return d.m.quitAsk.anim.isInteractive() })
+		frame("the quit confirm", d.m.quitAsk.view())
+		d.key("esc")
+		d.m.dls = nil
+
+		d.key("L")
+		d.until("the location box", func() bool { return d.m.input.anim.isInteractive() })
+		frame("the location box", d.m.input.view())
+		d.key("esc")
+
+		d.m.sel.on = true
+		d.send(keySpace)
+		d.until("the cheatsheet", func() bool { return d.m.message.anim.isInteractive() })
+		frame("a message", d.m.message.view())
+		d.key("esc")
+		d.m.sel.on = false
+
+		d.exec(d.m.toast.show("copied", toastInfo))
+		d.until("the toast", func() bool { return d.m.toast.anim.isInteractive() })
+		frame("the toast", d.m.toast.view())
+
+		d.exec(d.m.picker.open(glyphFolder, "Import", t.TempDir(), 1))
+		d.until("the file picker", func() bool { return d.m.picker.anim.isInteractive() })
+		frame("the file picker", d.m.picker.view())
+	}
+}

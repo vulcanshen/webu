@@ -214,19 +214,13 @@ func (m helpPopup) view() string {
 	hint := hintLegend(pairs)
 	title := " " + glyphHelp + " " + m.title + " · keys "
 
-	// As wide as the longest line needs (tdp D4), with a column to spare so
-	// it does not touch the frame, and never narrower than the title or
-	// the legend under it.
-	keyW, descW, headW := 0, 0, 0
+	// One width for every popup (tdp F7, D4): a description longer than the
+	// box is cut at its end, the box is not widened for it.
+	keyW := 0
 	for _, e := range m.entries {
-		if e.key == "" {
-			headW = max(headW, dispW(e.desc)+2)
-			continue
-		}
 		keyW = max(keyW, dispW(e.key))
-		descW = max(descW, dispW(e.desc))
 	}
-	innerW := popupInnerW(m.screenW, max(keyW+4+descW+1, headW, dispW(title)+4, dispW(hint)+2))
+	innerW := popupW(m.screenW)
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	key := lipgloss.NewStyle().Foreground(handColor)

@@ -67,11 +67,7 @@ func (m confirmPopup) commit(msg tea.KeyMsg) bool {
 }
 
 func (m confirmPopup) view() string {
-	w := dispW(m.title) + 6
-	for _, l := range m.lines {
-		w = max(w, dispW(l)+4)
-	}
-	innerW := popupInnerW(m.screenW, w)
+	innerW := popupW(m.screenW)
 
 	txt := lipgloss.NewStyle().Foreground(textColor)
 	dim := lipgloss.NewStyle().Foreground(dimColor)

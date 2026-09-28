@@ -155,11 +155,15 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint
 嵌下邊框、`Esc` 只在 `closeTop` 一處解析、`Space` 只開關 Space menu、在其他浮層上不作用、動畫 8 × 16 ms。
 
+**一個寬度**（2026-09-28，tdp F7）：每個 popup 的外框都是 `min(terminal 寬 − 2, 120)`，水平置中（`popup.go` `popupW`）；不依內容
+算寬。說明、值太長就在框裡截尾或捲動，不加寬框。toast 同一個寬度，固定在畫面底部。finder `/` 的清單與預覽合起來是一個 popup，
+兩框合計照這個寬度。頁面自己的彈窗不照（`dev-remarks.md`「偏離 tdp」）。
+
 | Popup | 類型 | 用途 |
 |---|---|---|
 | Space menu | menu | item / panel 兩 region；捲動、環繞、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23） |
 | global operation | menu | Space menu 最後一列打開：全域動作，可執行 |
-| `?` key reference | viewport | 最前端 surface 的按鍵，唯讀：面板上是面板的鍵 + core key，浮層上是這個浮層的鍵；寬度依內容 |
+| `?` key reference | viewport | 最前端 surface 的按鍵，唯讀：面板上是面板的鍵 + core key，浮層上是這個浮層的鍵 |
 | Location | input | `L`：目前 URL 當提議（`Tab` 接受、Backspace 拒絕）；非 URL 當搜尋 |
 | input | input | 一行的欄位：**邊框寫型別**（`email`、`number`、`date · YYYY-MM-DD`、`password`、`email · invalid`），**框裡一行是欄位名**（2026-09-23 user 定：邊框是 chrome 說這是哪種框，框內那行說是哪一個欄位）；JS `prompt`；設定值。**input group**：一個框幾個欄位（加書籤 URL + 標題、HTTP auth 帳號 + 密碼遮罩），聚焦那一欄的名字亮起、只有它有游標，送出不成立時原因寫在最下面（2026-09-27） |
 | editor | 大框 | textarea / contenteditable：多行、**寫 / 移兩態**（Esc 出到框層 hjkl 走、`i`/`a`/`A`/`o` 回寫、Enter 設值、再 Esc 取消） |

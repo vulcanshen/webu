@@ -197,11 +197,12 @@ func capRows(rows []string, screenH int) []string {
 	return rows
 }
 
-// popupInnerW picks a popup's inner width: what it asked for, capped so the box
-// always leaves a margin inside the terminal.
-func popupInnerW(screenW, want int) int {
-	return max(10, min(want, screenW-6))
-}
+// popupW is every popup's inner width (tdp F7): the frame is
+// min(terminal width − 2, 120) columns — one spare on either side, at most
+// 120 — and the two border columns come off that. One width for all: no
+// popup sizes itself by its content, so none jumps when the content moves,
+// and one on top covers the sides of the one below.
+func popupW(screenW int) int { return max(10, min(screenW-2, 120)-2) }
 
 // hintLegend builds a popup's bottom-border hint: key bright, description dim.
 // It is the same reading as the footer legend — bright is the key you press, dim

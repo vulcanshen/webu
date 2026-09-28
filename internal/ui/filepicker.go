@@ -223,7 +223,7 @@ func (m *filePicker) scroll() {
 func (m filePicker) visible() int { return max(1, m.screenH-9) }
 
 func (m filePicker) view() string {
-	innerW := popupInnerW(m.screenW, 60)
+	innerW := popupW(m.screenW)
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)

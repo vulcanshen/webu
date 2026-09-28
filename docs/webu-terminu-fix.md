@@ -54,30 +54,6 @@ Downloads / Settings 四個 screen（`listpanel.go`，是畫面不是 popup）�
 
 ---
 
-## 1. 每個 popup 的寬度依內容各自算 —— F7、D4
-
-- **現況**：每個 `view()` 自己算想要的寬度再丟進 `popupInnerW(screenW, want)`（`popup.go`），上限 `W−6`（外框 `W−4`，左右各留兩欄）；
-  沒有 120 的上限。各 popup 的算法見上表：menu、help、confirm、message、toast 依內容；input 在 `ask()` 用 `openWidth()` 定一次
-  （`95af693`）；editor 每次 `view()` 依最長一行重算；file picker 60、finder `go` 56；finder `/` 依畫面比例；DevTools `W−6`、detail `W−8`。
-  `helppopup.go` `view()` 的註解還寫著「As wide as the longest line needs (tdp D4)」。
-- **規則**：F7 寬度 `min(terminal 寬 − 2, 120)`，左右各留一欄、最寬 120 欄、水平置中；toast 同一條規則。D4：popup 寬度統一照 F7，
-  說明太長就在框裡換行或截尾，不為它加寬框。
-- **怎麼改**：
-  - `popup.go` 換成一個寬度函式（例：`popupOuterW(W) = min(W−2, 120)`，框內再減 2），每個 popup 的 `view()` 都用它，拿掉各自的 `want`。
-    `popupInnerW` 沒人用就刪。
-  - **input**：`openWidth()` 與 `width` 欄位不再需要（F7 的單一寬度本來就不隨狀態變，比 `95af693`「打開時定一次」更進一步）；
-    值打得比框長照舊捲動、尾端在畫面上。`view()` 的 `max(w, dispW(m.refused)+3)` 一起拿掉（錯誤列見第 4 條）。
-  - **editor**：拿掉 `max(60, longest+6, …)`，長行照現在的做法在框裡橫向滑動。
-  - **finder `/`**：清單 + 預覽合起來是一個 popup（F1：預覽不取得 focus），合計寬度照 F7；並排 / 上下疊的門檻（96 欄）可保留，但並排時
-    兩框合計不超過 `min(W−2, 120)`。`go` 用同一個寬度。
-  - **DevTools、detail**：照 F7（寬螢幕上不再是整個畫面寬）。Network 欄位的分配改從新的寬度算。
-  - **menu**：label 靠左、說明靠右（D4），框變寬後說明離 label 遠是預期的；說明太長照現在的做法讓說明讓位（截尾）。
-  - **message 的格內容**：`app.go` 折行寬 `min(72, max(20, m.w-12))` 改成從新的框內寬算。
-  - **toast**：寬度照 F7，訊息在框裡靠左（或置中，app 決定），位置維持底部。
-  - `helppopup.go` 的 D4 註解改寫。
-  - 測試：`TestInputGroupLegendFits` 改寫（見「先看」）；新增一個跨尺寸（例：80、100、200 欄）打開每一種 popup、量 `ansi.Strip(View())`
-    裡框的寬度 = `min(W−2, 120)` 且水平置中的測試。
-
 ## 2. 開著時高度會跟內容伸縮 —— F7
 
 - **現況**：

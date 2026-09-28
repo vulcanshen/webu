@@ -66,10 +66,6 @@ type inputPopup struct {
 	// refused says why the last Enter did not go through: the box stays,
 	// on the field at fault.
 	refused string
-	// width is the box's inner width, set once when it opens: typing, an
-	// offer accepted or declined, a legend losing its offer keys — none of
-	// it moves the frame (tdp L2).
-	width int
 
 	layer   int
 	screenW int
@@ -116,28 +112,8 @@ func (m *inputPopup) setSize(w, h int)   { m.screenW, m.screenH = w, h }
 func (m *inputPopup) ask(p inputPopup, layer int) tea.Cmd {
 	p.anim, p.layer = m.anim, layer
 	p.screenW, p.screenH = m.screenW, m.screenH
-	p.width = p.openWidth()
 	*m = p
 	return m.anim.open()
-}
-
-// openWidth is what the box needs as it opens: every prompt, value and
-// offer with room for the cursor, and the legend at its widest, the
-// offer's keys included whenever a field has one. A value typed longer
-// later scrolls, its end in view.
-func (m inputPopup) openWidth() int {
-	fields := m.fields()
-	w := 44
-	offered := false
-	for _, f := range fields {
-		w = max(w, dispW(f.value)+8, dispW(f.placeholder)+8, dispW(f.prompt)+3)
-		offered = offered || f.placeholder != ""
-	}
-	legend := m.legend(fields, false)
-	if offered {
-		legend = m.legend(fields, true)
-	}
-	return max(w, dispW(hintLegend(legend))+2)
 }
 
 // update edits the line. It reports the committed value, or "" — Esc is not
@@ -203,11 +179,7 @@ func (m *inputPopup) update(msg tea.KeyMsg) (committed string, done bool) {
 
 func (m inputPopup) view() string {
 	fields := m.fields()
-	w := m.width
-	if w == 0 {
-		w = m.openWidth() // drawn without ask: size it as ask would
-	}
-	innerW := popupInnerW(m.screenW, max(w, dispW(m.refused)+3))
+	innerW := popupW(m.screenW) // one width for every popup (tdp F7)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)

@@ -397,16 +397,16 @@ func (f *finder) navKey(k string) (hit, bool) {
 // to be useful, stacked when it is not (filu's rule).
 func (f finder) geometry() (side bool, listW, listRows, prevW, prevRows int) {
 	if f.kind == finderGo {
-		w := popupInnerW(f.screenW, 56)
+		w := popupW(f.screenW)
 		return false, w, max(4, min(f.screenH-6, f.screenH*3/5)), 0, 0
 	}
 	if f.screenW >= 96 {
-		totalW := min(f.screenW-2, f.screenW*19/20)
+		totalW := min(f.screenW-2, 120) // the two boxes are one popup (tdp F7)
 		h := min(f.screenH-2, f.screenH*9/10)
 		listOuter := max(totalW*2/5, 32)
 		return true, max(listOuter-2, 20), max(h-2, 4), max(totalW-listOuter-3, 20), max(h-2, 4)
 	}
-	w := min(f.screenW-2, f.screenW*9/10) - 2
+	w := popupW(f.screenW)
 	h := min(f.screenH-2, f.screenH*9/10)
 	lh := max(h*11/20, 8)
 	return false, max(w, 20), max(lh-2, 4), max(w, 20), max(h-lh-2, 3)

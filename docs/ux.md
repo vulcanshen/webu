@@ -113,7 +113,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁。
 **`?` 只讀**（2026-09-27，tdp v0.1.2）：打開最前端 surface 的 key reference —— 唯讀、可捲動、沒有游標、不能執行。
 面板上是這個面板的鍵：從它此刻的 Space menu 產生（有鍵可按的列：字母、寫在 label 裡的 `Enter` / `Esc` / `/` / `go`；
 menu-only 的列不列），照 menu 的區塊標題分組，最後接 core key；面板自己寫了 `Enter` 做什麼時，core key 不再重複
-通用的 `Enter`。浮層上是那個浮層自己的鍵。`Esc` 或再按 `?` 關掉。框的寬度依最長的一行（tdp D4）。
+通用的 `Enter`。浮層上是那個浮層自己的鍵。`Esc` 或再按 `?` 關掉。框的寬度跟所有 popup 一樣（tdp F7、D4），說明太長就截尾。
 
 **全域動作在 global operation popup**（2026-09-27，tdp M4、F4、T1）：每個 Space menu 最後一列 `Global operation` 打開它，
 **疊在 Space menu 上**；`Esc` 回到 Space menu，執行一列就關掉整疊（開出新框的列除外，那個框疊上去）。目前所在畫面的

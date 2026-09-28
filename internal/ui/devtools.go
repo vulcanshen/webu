@@ -89,7 +89,7 @@ func (m devtoolsPopup) tick() tea.Cmd {
 
 // innerW / rows are the box's inside: the screen less a margin, and the
 // screen less the two borders and a margin.
-func (m devtoolsPopup) innerW() int { return popupInnerW(m.screenW, m.screenW-4) }
+func (m devtoolsPopup) innerW() int { return popupW(m.screenW) }
 func (m devtoolsPopup) rows() int   { return max(3, m.screenH-4) }
 
 // listRows is how many entry rows the current tab has, after the filter
