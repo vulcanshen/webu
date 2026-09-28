@@ -184,7 +184,7 @@ Settings and bookmarks are plain YAML you can edit by hand.
 
 ## terminu family
 
-webu follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.12/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [locku](https://github.com/vulcanshen/locku) (screen lock).
+webu follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.13/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [locku](https://github.com/vulcanshen/locku) (screen lock).
 
 ## License
 
