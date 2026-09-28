@@ -14,6 +14,10 @@
 - **A refused entry says why inside its box**, on a row kept for it:
   a date or colour in the wrong shape, a bad setting, a folder name
   that is taken or missing. The box stays, with what was typed.
+- **Only the popup you are in is bright.** Everything under it — the
+  popups below, the page and the header, a download's progress too — is
+  drawn dim; a popup below keeps a dark version of its border colour, so
+  the layers still show. A toast changes nothing.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The
@@ -44,6 +48,9 @@
 
 - Adding a folder with a name that is taken no longer throws away what
   was typed: the box stays open and says so.
+- `Esc` and the keys now go to the popup drawn on top: a question that
+  came up over the search, or a message opened from a menu of options,
+  used to leave `Esc` closing the one underneath it.
 - **Quitting with a download in flight no longer replaces the question
   on screen.** Pressing `q` or `Ctrl+C` while another question was open
   — a page's `confirm()`, deleting a folder, clearing history — asked

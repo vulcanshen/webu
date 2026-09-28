@@ -912,20 +912,16 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Only the quit flow opens over a float's help.
 		m.help.update(msg)
 		return m, nil
-	case m.input.anim.owns():
-		return m.inputKey(msg)
 	case m.editor.anim.owns():
 		return m.editorKey(msg)
+	case m.input.anim.owns():
+		return m.inputKey(msg)
 	case m.picker.anim.owns():
 		return m.pickerKey(msg)
-	case m.finder.anim.owns():
-		return m.finderKey(msg)
 	case m.confirm.anim.owns():
 		return m.confirmKey(msg)
-	case m.options.anim.owns():
-		return m.optionsKey(msg)
-	case m.devtools.anim.owns():
-		return m.devtoolsKey(msg)
+	case m.finder.anim.owns():
+		return m.finderKey(msg)
 	case m.message.anim.owns():
 		// The cheatsheet passes its keys through (messagePopup.passKeys):
 		// the sheet closes and the key runs, one step.
@@ -937,6 +933,10 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// A long message — a cell in full — scrolls by the page's keys.
 		m.message.scroll(msg.String())
 		return m, nil
+	case m.options.anim.owns():
+		return m.optionsKey(msg)
+	case m.devtools.anim.owns():
+		return m.devtoolsKey(msg)
 	case m.globalMenu.anim.owns():
 		return m.globalMenuKey(msg)
 	case m.spaceMenu.anim.owns():
@@ -978,6 +978,10 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 		return m, m.quitAsk.close()
 	case m.help.anim.owns():
 		return m, m.help.close()
+	case m.editor.anim.owns():
+		// Layered: out of writing into the box, and out of the box.
+		cmd, _ := m.editor.escape()
+		return m, cmd
 	case m.input.anim.owns():
 		// Cancelling a page's prompt is an answer too: "no".
 		switch m.input.action {
@@ -987,22 +991,20 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.input.close(), m.cancelAuth())
 		}
 		return m, m.input.close()
-	case m.editor.anim.owns():
-		// Layered: out of writing into the box, and out of the box.
-		cmd, _ := m.editor.escape()
-		return m, cmd
 	case m.picker.anim.owns():
 		m.upload = nil // a page's chooser is simply left unanswered: nothing is chosen
 		return m, m.picker.close()
-	case m.finder.anim.owns():
-		// A phase is not a layer: Esc closes the finder from either (tdp F1).
-		cmd, _ := m.finder.escape()
-		return m, cmd
 	case m.confirm.anim.owns():
 		if m.confirm.action == confirmDialog {
 			return m, tea.Batch(m.confirm.close(), m.answerDialog(false, ""))
 		}
 		return m, m.confirm.close()
+	case m.finder.anim.owns():
+		// A phase is not a layer: Esc closes the finder from either (tdp F1).
+		cmd, _ := m.finder.escape()
+		return m, cmd
+	case m.message.anim.owns():
+		return m, m.message.close()
 	case m.options.anim.owns():
 		return m, m.options.close()
 	case m.devtools.anim.owns():
@@ -1015,8 +1017,6 @@ func (m AppModel) closeTop() (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.devtools.close()
-	case m.message.anim.owns():
-		return m, m.message.close()
 	case m.globalMenu.anim.owns():
 		return m, m.globalMenu.close()
 	case m.spaceMenu.anim.owns():
@@ -2884,50 +2884,64 @@ func (m AppModel) View() string {
 			out = overlay.Composite(f.box, out, overlay.Center, overlay.Center, f.dx, f.dy)
 		}
 	}
-	// Then the menu, so what it opened lands above it.
-	if m.spaceMenu.isActive() {
-		out = overlay.Composite(m.spaceMenu.view(), out, overlay.Center, overlay.Center, 0, 0)
+	// Then webu's popups, bottom to top: the same order closeTop and key
+	// routing read top down. Only the topmost that holds the keyboard is
+	// bright; everything under it — the popups below, the page's own
+	// popups and the whole base screen — is dimmed, and so is one still
+	// closing above it (tdp F8). The toast is not a layer: it neither
+	// dims nor is dimmed.
+	floats := m.floats()
+	top := -1
+	for i, f := range floats {
+		if f.owns {
+			top = i
+		}
 	}
-	if m.globalMenu.isActive() {
-		out = overlay.Composite(m.globalMenu.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.devtools.isActive() {
-		out = overlay.Composite(m.devtools.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.options.isActive() {
-		out = overlay.Composite(m.options.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.message.isActive() {
-		out = overlay.Composite(m.message.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.finder.isActive() {
-		out = overlay.Composite(m.finder.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.confirm.isActive() {
-		out = overlay.Composite(m.confirm.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.picker.isActive() {
-		out = overlay.Composite(m.picker.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.input.isActive() {
-		out = overlay.Composite(m.input.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.editor.isActive() {
-		out = overlay.Composite(m.editor.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.help.isActive() {
-		out = overlay.Composite(m.help.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.quitAsk.isActive() {
-		out = overlay.Composite(m.quitAsk.view(), out, overlay.Center, overlay.Center, 0, 0)
-	}
-	if m.quitHelp.isActive() {
-		out = overlay.Composite(m.quitHelp.view(), out, overlay.Center, overlay.Center, 0, 0)
+	for i, f := range floats {
+		if !f.active {
+			continue
+		}
+		if i == top {
+			out = dimANSI(out)
+		}
+		box := f.view()
+		if top >= 0 && i > top {
+			box = dimANSI(box)
+		}
+		out = overlay.Composite(box, out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.toast.isActive() {
 		out = overlay.Composite(m.toast.view(), out, overlay.Center, overlay.Bottom, 0, -2)
 	}
 	return out
+}
+
+// floatLayer is one of webu's popups as View draws it.
+type floatLayer struct {
+	active, owns bool
+	view         func() string
+}
+
+// floats are webu's popups bottom to top — the one order drawing, closeTop
+// and key routing all follow (tdp D3): what is drawn on top is what Esc
+// closes and what takes the keys.
+func (m AppModel) floats() []floatLayer {
+	return []floatLayer{
+		{m.spaceMenu.isActive(), m.spaceMenu.anim.owns(), m.spaceMenu.view},
+		{m.globalMenu.isActive(), m.globalMenu.anim.owns(), m.globalMenu.view},
+		{m.devtools.isActive(), m.devtools.anim.owns() && !m.devtools.detail.anim.owns(), m.devtools.body},
+		{m.devtools.detail.isActive(), m.devtools.detail.anim.owns(), m.devtools.detail.view},
+		{m.options.isActive(), m.options.anim.owns(), m.options.view},
+		{m.message.isActive(), m.message.anim.owns(), m.message.view},
+		{m.finder.isActive(), m.finder.anim.owns(), m.finder.view},
+		{m.confirm.isActive(), m.confirm.anim.owns(), m.confirm.view},
+		{m.picker.isActive(), m.picker.anim.owns(), m.picker.view},
+		{m.input.isActive(), m.input.anim.owns(), m.input.view},
+		{m.editor.isActive(), m.editor.anim.owns(), m.editor.view},
+		{m.help.isActive(), m.help.anim.owns(), m.help.view},
+		{m.quitAsk.isActive(), m.quitAsk.anim.owns(), m.quitAsk.view},
+		{m.quitHelp.isActive(), m.quitHelp.anim.owns(), m.quitHelp.view},
+	}
 }
 
 // header is the top row (ui.md §1.1): the screens as one chain of chips,

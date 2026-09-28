@@ -242,7 +242,19 @@ func (m *devtoolsPopup) escTyping() bool {
 	return true
 }
 
+// view is the DevTools box with its detail over it, when one is open. The
+// app's View draws the two as separate layers instead (body, then detail),
+// so the body can be dimmed under the detail (tdp F8).
 func (m devtoolsPopup) view() string {
+	out := m.body()
+	if m.detail.isActive() {
+		out = m.detail.over(out)
+	}
+	return out
+}
+
+// body is the DevTools box alone.
+func (m devtoolsPopup) body() string {
 	innerW := m.innerW()
 	bc := popupLayerColor(m.layer)
 	bs := lipgloss.NewStyle().Foreground(bc)
@@ -306,11 +318,7 @@ func (m devtoolsPopup) view() string {
 	}
 	hint := clipANSI(hintLegend(pairs), innerW-1)
 	b.WriteString(bs.Render("╰─") + hint + bs.Render(strings.Repeat("─", max(0, innerW-1-dispW(hint)))+"╯"))
-	out := b.String()
-	if m.detail.isActive() {
-		out = m.detail.over(out)
-	}
-	return out
+	return b.String()
 }
 
 // matches is the one filter rule for every tab: a case-insensitive

@@ -163,6 +163,13 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 editor 以打開時的行數定高（至少 6 行）；file picker 以打開時那個目錄的項目數定高（至少 8 列），過濾、換目錄只換內容；Network
 detail 一打開就用最大高度（body 還在路上，幾乎都比 headers 長），body 到了在框裡捲動；Console detail 以打開時的內容定高。
 
+**只有最上層是亮的**（2026-09-28，tdp F8）：有 popup 開著時，最上層那個（握著鍵盤的，`owns()`）以外全部畫暗 —— 底下的 popup、
+頁面自己的彈窗、整個 base 畫面，header 的下載進度與警示色也一樣（T2 的例外）。暗的內容用 dim 色；下層 popup 的邊框用它自己層色的
+暗版，看得出是哪一層。還在關閉動畫的 popup 已經不是最上層，畫暗。toast 不是一層：不讓別人變暗，自己也不變暗。畫的順序、`Esc`
+關哪一層、按鍵給誰，都讀同一份由下而上的順序（`app.go` `floats()`；D3）：spaceMenu、globalMenu、DevTools、DevTools detail、
+options、message、finder、confirm、picker、input、editor、help、quitAsk、quitHelp。實作是把畫好的字串改色（`dim.go` `dimANSI`），
+不必每個 popup 各有一個暗的畫法。
+
 | Popup | 類型 | 用途 |
 |---|---|---|
 | Space menu | menu | item / panel 兩 region；捲動、環繞、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23） |
