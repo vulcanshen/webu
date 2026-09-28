@@ -163,6 +163,10 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 editor 以打開時的行數定高（至少 6 行）；file picker 以打開時那個目錄的項目數定高（至少 8 列），過濾、換目錄只換內容；Network
 detail 一打開就用最大高度（body 還在路上，幾乎都比 headers 長），body 到了在框裡捲動；Console detail 以打開時的內容定高。
 
+**loading icon**（2026-09-28，tdp F7、D3）：popup 的內容還在路上時，標題後面轉 `[2]` URL 列同一個 loading icon（`spinnerFrame`，
+circle slice 八格、90 ms、由時鐘決定），用標題的層色；到了就換回同寬的空白，標題與後面的分頁鏈不位移。有三處：Network detail 等 body、
+DevTools 的 Storage 分頁（含刪除、清網站資料之後重讀）、Source 分頁。Network / Console 分頁一直流進來的 log 是項目層級的資料流，不放。
+
 **只有最上層是亮的**（2026-09-28，tdp F8）：有 popup 開著時，最上層那個（握著鍵盤的，`owns()`）以外全部畫暗 —— 底下的 popup、
 頁面自己的彈窗、整個 base 畫面，header 的下載進度與警示色也一樣（T2 的例外）。**怎麼暗**（2026-09-28，tdp F8、D2
 v0.1.11–v0.1.12）：每個顏色——前景與背景——往底色淡化，`c × 0.45 + base × 0.55`（base `#1e1e2e`），而且絕不比原色亮；沒設色的字給

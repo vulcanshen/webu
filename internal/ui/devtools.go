@@ -39,7 +39,10 @@ type devTickMsg struct{ gen int }
 const devTickEvery = 500 * time.Millisecond
 
 type devtoolsPopup struct {
-	anim    popupAnimator
+	anim popupAnimator
+	// loading: the Storage or Source tab is waiting on Chromium — the
+	// loading icon turns after the title until it answers (tdp F7).
+	loading bool
 	tab     devTab
 	tabID   int // the tab whose log is shown
 	storage devStorageTab
@@ -265,7 +268,7 @@ func (m devtoolsPopup) body() string {
 
 	// The title row: glyph and name, then the chip chain of tabs (the
 	// family's powerline chain (tdp D1), moved into a popup title).
-	title := " " + glyphDevTools + " DevTools "
+	title := " " + glyphDevTools + " DevTools " + loadingIcon(m.loading) + " "
 	chain := tabChain(devTabLabels, int(m.tab))
 	titleW := dispW(title) + 1 + tabChainW(devTabLabels)
 	var b strings.Builder

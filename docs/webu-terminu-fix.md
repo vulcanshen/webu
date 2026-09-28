@@ -39,44 +39,6 @@ F7 點名的 loading icon 就是 webu 自己 URL 列的那個（第 2 條「load
 
 ---
 
-## 2. DevTools 裡等資料的三處沒有 loading icon —— F7
-
-- **現況**：打開時內容還不確定、要等 Chromium 回答的地方有三處，都沒有在標題後面放轉圈的 icon：
-  - **Network detail**（`devnetdetail.go` `show`，113 行）：打開時只有 headers，body 用 `bodyMsg` 晚一步到（`app.go` 315 行 `setBody`）。
-    等 body 時框裡寫一列 `(loading body…)`，標題是 ` <glyphDevTools> <URL> `（`view`，256 行），不轉。高度一打開就是最大高度（120 行），body 到了
-    在框裡捲動——高度這部分已經符合。
-  - **DevTools 的 Storage 分頁**（`devtools.go` `update` 166–171 行：切到 Storage 就 `devFetchStorage`；`app.go` 1224 行 `fetchStorage`，
-    `storageMsg` 在 309 行落地）：等回答時照畫上一次的資料，第一次則是三個空的 `cookies · 0` / `local storage · 0` / `session storage · 0`，
-    看不出是「還在讀」還是「真的沒有」。
-  - **DevTools 的 Source 分頁**（切到 Source 就 `devFetchSource`；`devsource.go` `view` 70 行）：等回答時框裡寫一列 `  loading…`，不轉。
-  DevTools 本身與 Network detail 的高度都打開時就定好（DevTools 滿版，`rows()`；detail 最大高度），所以高度沒有問題，缺的只有揭露。
-- **規則**：F7：打開時內容還不確定（串流、載入中）的 popup，loading 期間要揭露——popup 標題後面放一個輪轉的 loading icon（webu 載入網址時的
-  那個 icon）；loading 結束，icon 消失。
-- **loading icon 的樣子**（webu 是來源，家族照這個做）：
-  - **字形**：Nerd Font 的 Material Design circle slice，八格依序 `nf-md-circle_slice_1` … `_8` = U+F0A9E、U+F0A9F、U+F0AA0、U+F0AA1、
-    U+F0AA2、U+F0AA3、U+F0AA4、U+F0AA5——一個圓一片一片填滿，滿了再從第一片開始（`theme.go` `spinnerFrames`，212 行）。程式碼裡寫成
-    code point（`string(rune(0xf0a9e))`），不寫 PUA 字面。
-  - **速度**：一格 90 ms（`spinStep`，218 行），一圈 720 ms。
-  - **哪一格由時鐘決定，不是計數**：`spinnerFrames[(now / 90ms) % 8]`（`spinnerFrame`，223 行）。tick 不帶資料，排在**下一格該出現的時刻**
-    （`pagepanel.go` `spinCmd`，30 行），晚到的 tick 就畫下一格，不會跳格也不會因為多一次重畫而走快。tick 鏈只在有東西在 loading 時續（`app.go` 282 行）。
-  - **寬度**：一格（`lipgloss.Width` 算 1），跟它取代的靜止 glyph `nf-md-web`（U+F059F，`glyphWeb`）同寬，換上換下不位移（L2）。
-    點字（braille）試過又放棄：它是細長的一欄，跟旁邊方正的 Nerd Font glyph 形狀不同，一開始 loading 那一列就跳一下。
-  - **顏色**：跟旁邊的字同色。URL 列是 `urlColor`（Blue `#89b4fa`），icon 與網址一個顏色；放在 popup 標題後面時，用標題的顏色（該層的層色、bold）。
-  - **在 webu 的位置**：`[2]` 的 URL 列 ` <icon> <URL>`（`pagepanel.go` 66–75 行）：`t.working()`（loading 或 settling）時 icon 是 spinner，否則是 `glyphWeb`。
-- **怎麼改**：
-  - 三處都在標題後面放 `spinnerFrame()`：Network detail 是 ` <glyphDevTools> <URL> <icon> `，body 落地（`setBody`）就不畫；DevTools 是 ` <glyphDevTools> DevTools <icon> `，
-    再接分頁鏈，Storage / Source 的回答落地就不畫。icon 不在時那一格留空白，`titleW`（`devtools.go` 270 行）與 detail 標題的截寬（`fitURL(…, innerW−12)`）
-    都先把這一格算進去，分頁鏈與上框不因 icon 出現、消失而左右移（L2）。
-  - 給 `devDetailPopup` 一個「body 還沒到」的狀態（例：`waiting bool`，`show` 設、`setBody` 清），給 `devtoolsPopup` 一個「Storage / Source 在讀」的狀態
-    （fetch 時設、`storageMsg` / `devSourceMsg` 清；回答屬於別的分頁或別的 tab 時不清錯）。
-  - tick 鏈：`spinTickMsg` 現在只在 `m.fetching()`（有分頁在載入）時續；改成「有分頁在載入，**或** DevTools / detail 在等回答」時續，
-    fetch 的地方（`app.go` 1224–1226 行、1257–1259 行）也要 `spinCmd()` 起鏈。DevTools 自己的 500 ms `devTickMsg` 太慢，不能拿來轉 icon。
-  - 框裡的 `(loading body…)` / `  loading…` 可以留（說的是框裡這一塊是什麼），但揭露 loading 的是標題的 icon。
-  - 測試：打開 Network detail、body 還沒送到時標題裡有 spinner 的某一格、`bodyMsg` 之後沒有，框高前後不變；Storage、Source 同樣；
-    切換 icon 前後標題列的寬度與分頁鏈的位置不變。
-
----
-
 ## 3. item menu 裡選了 select 或 slider，選項清單在同一個框裡換內容 —— F1（v0.1.9 多步驟）、F7、F4
 
 - **現況**：表格的格、chrome 的膠囊這類「一格裡有好幾個目標」的東西，`Enter` 打開 item menu（`options` popup，`optItemMenu`，

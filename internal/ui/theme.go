@@ -224,6 +224,17 @@ func spinnerFrame() string {
 	return spinnerFrames[(time.Now().UnixNano()/int64(spinStep))%int64(len(spinnerFrames))]
 }
 
+// loadingIcon is what a popup's title carries after its name while its
+// content is still on its way (tdp F7, D3): the turning frame, or a blank
+// cell of the same width when nothing is loading, so the title and what
+// follows it never shift (L2).
+func loadingIcon(loading bool) string {
+	if loading {
+		return spinnerFrame()
+	}
+	return " "
+}
+
 // Nerd Font glyphs. Never a PUA literal in source — built from the rune so
 // the codepoint stays greppable and the file stays editor-safe (family
 // rule). One role, one glyph, one table (ux.md §B).
