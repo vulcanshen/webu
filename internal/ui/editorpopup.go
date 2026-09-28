@@ -24,6 +24,8 @@ const (
 )
 
 type editorPopup struct {
+	// height is the text window's rows, set as the box opens (tdp F7).
+	height  int
 	anim    popupAnimator
 	title   string // what the box takes, on the border (fieldTakes)
 	prompt  string // the field's name, over the text
@@ -60,6 +62,10 @@ func (e *editorPopup) ask(title, prompt, value string, node cdp.BackendNodeID, l
 	e.row = len(e.lines) - 1
 	e.col = len(e.lines[e.row])
 	e.top, e.mode = 0, editorWriting
+	// The box's height is set here, as it opens, and stays (tdp F7): the
+	// text it came with, at least a few lines to write in, at most what the
+	// screen holds. Lines added later scroll inside it.
+	e.height = min(max(len(e.lines), 6), max(3, e.screenH-10))
 	e.follow()
 	return e.anim.open()
 }
@@ -211,7 +217,12 @@ func (e *editorPopup) clampCol() {
 }
 
 // visible is how many lines the box shows.
-func (e editorPopup) visible() int { return max(3, min(len(e.lines), e.screenH-10)) }
+func (e editorPopup) visible() int {
+	if e.height > 0 {
+		return e.height
+	}
+	return max(3, min(len(e.lines), e.screenH-10))
+}
 
 // follow keeps the cursor's line in the window.
 func (e *editorPopup) follow() {

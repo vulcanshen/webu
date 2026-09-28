@@ -22,6 +22,8 @@ import (
 // there is no "input state" versus "list state" to learn (tdp K8): in a
 // text-entry surface, letters type and arrows navigate.
 type filePicker struct {
+	// height is the list's rows, set as the picker opens (tdp F7).
+	height  int
 	anim    popupAnimator
 	glyph   string
 	title   string
@@ -54,7 +56,12 @@ func (m *filePicker) setSize(w, h int)   { m.screenW, m.screenH = w, h }
 // open shows dir under a title of the caller's.
 func (m *filePicker) open(glyph, title, dir string, layer int) tea.Cmd {
 	m.glyph, m.title, m.layer = glyph, title, layer
+	m.height = 0
 	m.enter(dir)
+	// The list's rows are set here, as it opens, and stay (tdp F7): what
+	// this folder holds, at least a few, at most what the screen holds.
+	// Filtering and changing folder change the rows, not the box.
+	m.height = min(max(len(m.entries), 8), max(1, m.screenH-9))
 	return m.anim.open()
 }
 
@@ -220,7 +227,12 @@ func (m *filePicker) scroll() {
 
 // visible is how many rows fit: the box costs its borders, and the query
 // row and its divider come out of the content budget.
-func (m filePicker) visible() int { return max(1, m.screenH-9) }
+func (m filePicker) visible() int {
+	if m.height > 0 {
+		return m.height
+	}
+	return max(1, m.screenH-9)
+}
 
 func (m filePicker) view() string {
 	innerW := popupW(m.screenW)
@@ -261,6 +273,9 @@ func (m filePicker) view() string {
 			continue
 		}
 		rows = append(rows, " "+txt.Render(name)+" "+dim.Render(meta)+" ")
+	}
+	for len(rows) < 2+m.visible() {
+		rows = append(rows, spaces(innerW))
 	}
 
 	title := " " + m.glyph + " " + m.title + "  " + foldHome(m.dir) + " "

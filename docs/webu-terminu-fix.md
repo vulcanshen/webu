@@ -54,28 +54,6 @@ Downloads / Settings 四個 screen（`listpanel.go`，是畫面不是 popup）�
 
 ---
 
-## 2. 開著時高度會跟內容伸縮 —— F7
-
-- **現況**：
-  - **input**（`inputpopup.go` `view()`）：`m.refused != ""` 時多 `append` 一列空白與一列錯誤，框變高 2 列（錯誤列見第 4 條）。
-  - **editor**（`editorpopup.go` `visible()`）：`max(3, min(len(e.lines), e.screenH-10))`，每加一行框就長一列，直到上限。
-  - **file picker**（`filepicker.go` `view()`）：內容是查詢列 + 分隔線 + `m.matches` 的列，打字過濾、`Enter` 進目錄、`Bksp` 回上層都會讓框
-    變高變矮（`visible()` 只是上限 `H−9`）。
-  - **Network detail**（`devnetdetail.go`）：`show()` 時 `lines` 只有 headers 加一行 `(loading body…)`，`setBody()` 收到 `bodyMsg` 後
-    `lines` 重建，`view()` 取 `min(len(lines), H−6)` 列，框在打開後長高。
-  - 其他 popup 的內容在打開時就定了（menu 的 `setItems`、help 的 `entries`、confirm / message 的 `lines`），高度實際上不變；finder、
-    DevTools 本來就用固定高度。
-- **規則**：F7 高度依內容、**打開時定好**，之後不跟著內容伸縮；上限是畫面高度扣掉上下留白，超過就在框裡捲動。
-- **怎麼改**：
-  - 共用規則：打開時算一次內容列數、夾在上限內，存成 popup 的 `rows`；`view()` 內容不足就補空白列、超過就捲動。
-    `capRows` 可留作上限的計算。
-  - **editor**：打開時依初始行數定高（例：`max(3, min(行數, 上限))`）；之後加行就在框裡捲動（`follow()` 已經會讓游標那行留在窗裡）。
-    要不要直接給 editor 一個固定的較大高度（它是「多行」框），由 app 決定，但定了就不變。
-  - **file picker**：打開時定高（例：上限高度或當下目錄的項目數），過濾與換目錄只改內容、補空白列；「no match」照舊畫在第一列。
-  - **Network detail**：打開時就用上限高度（body 一定比 headers 長的機率高），或 body 到了之後內容在已定的框裡捲動、框不長高。
-  - 測試：每個會變的 popup 各一個「打開 → 讓內容變多 / 變少 → 框的列數不變」的測試（量 `View()` 的行數或框的上下框位置）。
-    mutation：把 `view()` 改回用 `len(lines)` 算，測試要紅。
-
 ## 3. popup 開著時底下沒有任何 dim —— F8、T2
 
 - **現況**：`app.go` `View()` 先畫 base（header、header rule、panel、footer），再依固定順序把每個 `isActive()` 的 popup 用
