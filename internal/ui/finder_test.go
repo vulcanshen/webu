@@ -167,17 +167,23 @@ func TestSearchGoesToAHitInAnotherPart(t *testing.T) {
 		t.Error("nothing was pressed: still on the page")
 	}
 
-	// From the list Esc goes back to the query; from the query it closes.
+	// Tab moves between the query and the list, either way; Esc closes
+	// the finder from the list as from the query — a phase is not a layer
+	// (tdp F1, v0.1.9).
 	d.key("/")
 	d.until("the finder again", func() bool { return d.m.finder.isInteractive() })
 	d.key("side")
-	d.key("enter")
-	d.key("esc")
-	if d.m.finder.mode != finderInput || !d.m.finder.isActive() {
-		t.Error("Esc on the list is back to the query")
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	if d.m.finder.mode != finderNav || d.m.typing() {
+		t.Fatal("Tab on the query hands the keyboard to the list")
 	}
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	if d.m.finder.mode != finderInput || !d.m.typing() {
+		t.Fatal("Tab on the list is back to the query")
+	}
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
 	d.key("esc")
-	d.until("closed", func() bool { return !d.m.finder.isActive() })
+	d.until("closed from the list", func() bool { return !d.m.finder.anim.owns() })
 }
 
 // [go] over a page: the list is its lines, digits narrow it, Enter is

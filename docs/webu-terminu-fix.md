@@ -82,18 +82,6 @@ Downloads / Settings 四個 screen（`listpanel.go`，是畫面不是 popup）�
   - 測試：打開 Space menu → base 的每一列都是 dim 色、menu 是亮的；再開 global operation popup → Space menu 也變 dim；開 toast → 亮暗不變；
     `Esc` 一層 → 下一層變回亮的。串流：下載中開 popup，header 的進度列是 dim 色。mutation：拿掉 dim 那一步，測試要紅。
 
-## 6. finder 的 `Tab` 不切換、清單上的 `Esc` 退回打字 —— F1（v0.1.9）
-
-- **現況**：`finder.go`：打字階段（`finderInput`）`Enter` 把 keyboard 交給清單（`finderNav`）；清單上 `Esc` 回到打字（`escape()` 分層，
-  `app.go` `closeTop` 的 finder 分支），打字階段 `Esc` 才關掉。`Tab` 在 finder 裡沒有作用。
-- **規則**：v0.1.9 F1：finder 的 `Tab` 在打字與結果清單之間切換 focus；`Esc` 關掉整個 finder —— 階段不是一層（K4）。
-- **怎麼改**：`Tab`（打字與清單兩邊都是）切換 `finderInput` / `finderNav`；`Esc` 不論在哪個階段都關掉 finder（`escape()` 不再分層）。
-  打字階段的 `Enter` 維持「把 keyboard 交給清單」還是改成直接去第一筆，由 app 定（K3：`Enter` 做最自然的事），寫進下框 hint 與 `?`。
-  下框 hint（`finder.go` 的 `{"Esc", "query"}`）、`helpFinder`（`?`）、`ux.md` §1.1 與 `ui.md` §3 的 finder 說明一起改。`finder_test.go`
-  守「清單上 `Esc` 回打字」的測試改寫成新規則。`go`（跳行）沒有打字階段，只照 `Esc` 關掉。
-
----
-
 ## tdp v0.1.9 定案（2026-09-28，回答本檔與其他 app 共同的待確認）
 
 v0.1.9 只補了 v0.1.8 popup 規則的細節。本檔的條目與「待確認」照下面改讀；修的時候以這裡為準。

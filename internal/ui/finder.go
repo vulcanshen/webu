@@ -315,11 +315,9 @@ func (f *finder) scroll() {
 
 // escape is Esc: back from the list to the query, or closed. True when
 // the finder is now closing.
+// A phase is not a layer (tdp F1, K4): Esc closes the finder from the
+// query and from the list alike.
 func (f *finder) escape() (tea.Cmd, bool) {
-	if f.kind == finderSearch && f.mode == finderNav {
-		f.mode = finderInput
-		return nil, false
-	}
 	return f.close(), true
 }
 
@@ -346,11 +344,23 @@ func (f *finder) update(msg tea.KeyMsg) (hit, bool) {
 		}
 		return f.navKey(k)
 	}
+	// Tab moves the keyboard between the query and the list, either way
+	// (tdp F1, v0.1.9).
+	if msg.Type == tea.KeyTab {
+		switch {
+		case f.mode == finderNav:
+			f.mode = finderInput
+		case len(f.hits) > 0:
+			f.mode = finderNav
+		}
+		return hit{}, false
+	}
 	if f.mode == finderNav {
 		return f.navKey(k)
 	}
 	switch msg.Type {
 	case tea.KeyEnter:
+		// The natural thing for Enter on the query: to the hits (K3).
 		if len(f.hits) > 0 {
 			f.mode = finderNav
 		}
@@ -445,9 +455,9 @@ func (f finder) titleAndHint() (string, string) {
 	title := " " + glyphSearch + " Search "
 	if f.mode == finderNav {
 		return title, hintLegend([][2]string{
-			{"j/k/u/d", "move"}, {"Enter", "go"}, {"Esc", "query"}})
+			{"j/k/u/d", "move"}, {"Enter", "go"}, {"Tab", "query"}, {"Esc", "close"}})
 	}
-	return title, hintLegend([][2]string{{"Enter", "list"}, {"Esc", "close"}})
+	return title, hintLegend([][2]string{{"Tab", "list"}, {"Esc", "close"}})
 }
 
 // listColumn is the query bar, a rule, and the hits, exactly rows tall.

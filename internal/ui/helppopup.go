@@ -133,7 +133,8 @@ var (
 	helpFinder = []helpEntry{
 		{"j · k · u · d", "move through the hits"},
 		{"Enter", "go there; nothing is pressed"},
-		{"Esc", "back to the query"},
+		{"Tab", "back to the query"},
+		{"Esc", "close the search"},
 	}
 	helpGo = []helpEntry{
 		{"0-9", "narrow to a line number"},
