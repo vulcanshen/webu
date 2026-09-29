@@ -229,7 +229,7 @@ func TestKeyReferenceWritesKeysByM5(t *testing.T) {
 func TestKeyReferenceColours(t *testing.T) {
 	withColour(t)
 	d := keysDriver(t)
-	d.exec(d.m.help.open("x", []helpEntry{{"j/k", "move"}}, 1))
+	d.exec(d.m.help.open("x", []helpEntry{{key: "j/k", desc: "move"}}, 1))
 	d.until("the key reference", func() bool { return d.m.help.anim.isInteractive() })
 	v := d.m.help.view()
 	if !strings.Contains(v, "38;2;137;179;250m  j/k") { // #89b4fa, rounded as lipgloss does
@@ -303,4 +303,55 @@ func TestKeysInSentencesAreBracketed(t *testing.T) {
 			t.Errorf("%s: a key in a description is a sentence\x27s, bracketed: %q", where, s)
 		}
 	}
+}
+
+// ? lists a key that is there but cannot be pressed now, dimmed as its
+// Space menu row is; its words stay as they are (tdp M6 v0.1.14).
+func TestKeyReferenceDimsWhatCannotRun(t *testing.T) {
+	withColour(t)
+	d := keysDriver(t)
+	d.m.tabs = []*tab{{id: 1, url: "https://example.com/", title: "Example"}}
+	d.m.shown = 0
+	d.m.focus = panelTabs
+	items, _ := d.m.panelMenu()
+	e := keyReference(items)
+	off := map[string]bool{}
+	for _, x := range e {
+		off[x.key] = x.disabled
+	}
+	if !off["X"] || !off["U"] || off["T"] {
+		t.Errorf("[1] with one tab: X and U cannot run, T can: %+v", e)
+	}
+	for _, x := range e {
+		if x.key == "X" && strings.HasPrefix(x.desc, "X ") {
+			t.Errorf("the key should not be printed twice: %q", x.desc)
+		}
+	}
+	d.exec(d.m.help.open("[1] Tabs", e, 1))
+	d.until("the key reference", func() bool { return d.m.help.anim.isInteractive() })
+	const dim, blue = "38;2;108;112;134m  X ", "38;2;137;179;250m  T " // #6c7086; #89b4fa as lipgloss rounds it
+	if v := d.m.help.view(); !strings.Contains(v, dim) || !strings.Contains(v, blue) {
+		t.Errorf("X should be drawn dim and T lit:\n%q", v)
+	}
+
+	d.m.tabs, d.m.focus = nil, panelPage
+	items, _ = d.m.panelMenu()
+	var lit []string
+	for _, x := range keyReference(items) {
+		if x.key != "" && !x.disabled && x.desc != "" && !isCore(x.key) {
+			lit = append(lit, x.key)
+		}
+	}
+	if strings.Join(lit, " ") != "T L Z" {
+		t.Errorf("[2] with no tab: only T, L and Z can run, got %v", lit)
+	}
+}
+
+func isCore(k string) bool {
+	for _, c := range coreKeys {
+		if c.key == k {
+			return true
+		}
+	}
+	return false
 }
