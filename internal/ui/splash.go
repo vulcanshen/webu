@@ -192,7 +192,7 @@ func (m splashModel) render(width, height int) string {
 		taglineText = line.Render("A terminal browser")
 	}
 	if m.hintVisible {
-		hintText = dim.Render("Press Esc to close")
+		hintText = dim.Render("Press [Esc] to close")
 		devLabelText = dim.Render("developed by")
 		devMailText = dim.Render("vulcan.shen.2304@gmail.com")
 	}

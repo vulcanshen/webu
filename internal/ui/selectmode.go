@@ -528,7 +528,7 @@ var selectKeys = []helpEntry{
 	{"gg/G", "top / bottom of the page"},
 	{"v/V", "select by character / by row"},
 	{"y", "copy the selection (or this row)"},
-	{"/", "search; Enter finds, n N step"},
+	{"/", "search; [Enter] finds, [n]/[N] step"},
 	{"Enter", "click what the cursor is on"},
 	{"Esc", "cancel the search, then leave"},
 }

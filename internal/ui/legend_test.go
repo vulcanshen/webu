@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -236,5 +237,70 @@ func TestKeyReferenceColours(t *testing.T) {
 	}
 	if !strings.Contains(v, "38;2;205;214;243mmove") { // #cdd6f4, f4 rounded to 243
 		t.Errorf("the description should be Text: %q", v)
+	}
+}
+
+// sentence is a wrapped, centred body read back as one line of words.
+func sentence(lines []string) string {
+	return strings.Join(strings.Fields(ansi.Strip(strings.Join(lines, " "))), " ")
+}
+
+// A key named in a sentence — an empty state, a toast, a message, a
+// prompt, a menu description — is in square brackets (tdp M5 v0.1.15),
+// and an empty state still lights it as a key.
+func TestKeysInSentencesAreBracketed(t *testing.T) {
+	withColour(t)
+	d := keysDriver(t)
+	lit := lipgloss.NewStyle().Foreground(handColor)
+	for where, tc := range map[string]struct {
+		lines []string
+		want  string
+		keys  []string
+	}{
+		"[1] empty": {d.m.tabsBody(22, 10), "Press [T] to open one", []string{"[T]"}},
+		"[2] empty": {d.m.pageBody(70, 10), "Press [L] to enter a location, or [T] for a new tab", []string{"[L]", "[T]"}},
+	} {
+		if got := sentence(tc.lines); !strings.Contains(got, tc.want) {
+			t.Errorf("%s: %q, want %q", where, got, tc.want)
+		}
+		for _, k := range tc.keys {
+			if !strings.Contains(strings.Join(tc.lines, ""), lit.Render(k)) {
+				t.Errorf("%s: %s should be lit as a key", where, k)
+			}
+		}
+	}
+	for kind, want := range map[listKind]string{
+		listHistory:   "Pages you visit are listed here; [W] is the web",
+		listDownloads: "Files the page saves are listed here; [W] is the web",
+		listBookmarks: "Press [a] to add one, [A] for a folder, or [W] for the web",
+	} {
+		_, words := listPanel{kind: kind}.emptyState()
+		var got []string
+		for _, w := range words {
+			got = append(got, w.text)
+			if strings.HasPrefix(w.text, "[") != w.key {
+				t.Errorf("%q: a bracketed word is a key, and only that", w.text)
+			}
+		}
+		if strings.Join(got, " ") != want {
+			t.Errorf("empty list: %q, want %q", strings.Join(got, " "), want)
+		}
+	}
+
+	// Visual mode answers Tab with a toast naming the way out.
+	d.m.sel.on = true
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	if !strings.Contains(d.m.toast.msg, "[Esc]") {
+		t.Errorf("the toast should bracket the key: %q", d.m.toast.msg)
+	}
+	d.m.sel.on = false
+
+	for where, s := range map[string]string{
+		"Quit":          globalMenuItems(screenWeb)[5].hint,
+		"visual mode /": selectKeys[7].desc,
+	} {
+		if !strings.Contains(s, "[") {
+			t.Errorf("%s: a key in a description is a sentence\x27s, bracketed: %q", where, s)
+		}
 	}
 }

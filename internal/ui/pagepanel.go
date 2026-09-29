@@ -49,7 +49,7 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 	t := m.shownTab()
 	if t == nil {
 		return emptyBody(innerW, innerH, "no page",
-			emptyHint("Press L to enter a location, or T for a new tab", "L", "T"))
+			emptyHint("Press [L] to enter a location, or [T] for a new tab", "[L]", "[T]"))
 	}
 	out := make([]string, 0, innerH)
 	// The first row is the URL, behind a glyph that says what state the
@@ -81,12 +81,12 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		out = append(out, m.selectRows(t, innerW, rest)...)
 	case t.errText != "":
 		out = append(out, emptyBody(innerW, rest, "could not load",
-			emptyHint(t.errText+" — press R to retry", "R"))...)
+			emptyHint(t.errText+" — press [R] to retry", "[R]"))...)
 	case t.root == nil && t.loading:
 		out = append(out, emptyBody(innerW, rest, "loading…", nil)...)
 	case t.root == nil:
 		out = append(out, emptyBody(innerW, rest, "nothing here yet",
-			emptyHint("Press R to load it", "R"))...)
+			emptyHint("Press [R] to load it", "[R]"))...)
 	case t.popupNode() != nil:
 		// The page under a popup: as it was, no cursor — the cursor is in
 		// the float (pagePopupView) — drawn in its own colours and faded

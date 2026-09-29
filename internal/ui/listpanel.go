@@ -396,7 +396,7 @@ func (m listPanel) panel(outerW, outerH int) string {
 	if len(vis) == 0 {
 		fact, hint := m.emptyState()
 		if m.filter != "" {
-			fact, hint = "nothing matches", emptyHint("Press Esc to clear the filter", "Esc")
+			fact, hint = "nothing matches", emptyHint("Press [Esc] to clear the filter", "[Esc]")
 		}
 		rows = append(rows, emptyBody(innerW, innerH-len(rows), fact, hint)...)
 		return frame(rows)
@@ -444,9 +444,9 @@ func (m listPanel) panel(outerW, outerH int) string {
 func (m listPanel) emptyState() (string, []hintWord) {
 	switch m.kind {
 	case listHistory:
-		return "no history yet", emptyHint("Pages you visit are listed here; W is the web", "W")
+		return "no history yet", emptyHint("Pages you visit are listed here; [W] is the web", "[W]")
 	case listDownloads:
-		return "no downloads yet", emptyHint("Files the page saves are listed here; W is the web", "W")
+		return "no downloads yet", emptyHint("Files the page saves are listed here; [W] is the web", "[W]")
 	}
-	return "no bookmarks yet", emptyHint("Press a to add one, A for a folder, or W for the web", "a", "A", "W")
+	return "no bookmarks yet", emptyHint("Press [a] to add one, [A] for a folder, or [W] for the web", "[a]", "[A]", "[W]")
 }

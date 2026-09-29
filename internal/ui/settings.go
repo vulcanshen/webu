@@ -125,7 +125,7 @@ func (m *AppModel) settingBox(ref int) tea.Cmd {
 		cur = s.def(*m)
 	}
 	return m.input.ask(inputPopup{title: "Settings", glyph: glyphSettings,
-		prompt:      s.key + " — " + s.desc + "; Backspace then Enter for the default",
+		prompt:      s.key + " — " + s.desc + "; [Backspace] then [Enter] for the default",
 		placeholder: cur, accept: "save", action: inputSetting}, m.layer())
 }
 
