@@ -241,7 +241,7 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 - 頁面名字自帶 Nerd Font glyph（APG 的 tree 用 U+F07B 當資料夾 icon）看起來像多一格空白 —— 先放著
 - 滑鼠、Linux ARM
 
-webu 照 tdp v0.1.17 逐條修完（2026-09-29）；有意不照做的地方列在下一節。
+webu 照 tdp v0.1.19 逐條修完（2026-09-29），只差 D6 的 icon 實際寬度（等 filu 的參考實作定案，`docs/webu-terminu-fix.md` 第 5 條）；有意不照做的地方列在下一節。
 
 ## 偏離 tdp
 
