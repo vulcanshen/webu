@@ -264,5 +264,5 @@ func (m devDetailPopup) view() string {
 
 // over composites the detail on top of the DevTools frame.
 func (m devDetailPopup) over(frame string) string {
-	return overlay.Composite(m.view(), frame, overlay.Center, overlay.Center, 0, 0)
+	return composite(m.view(), frame, overlay.Center, overlay.Center, 0, 0)
 }

@@ -2914,7 +2914,7 @@ func (m AppModel) View() string {
 	// webu's: a menu opened on it lands above it (pagepopup.go).
 	if t := m.shownTab(); t != nil && m.screen == screenWeb && t.popupNode() != nil {
 		for _, f := range m.pagePopupFloats(t) {
-			out = overlay.Composite(f.box, out, overlay.Center, overlay.Center, f.dx, f.dy)
+			out = composite(f.box, out, overlay.Center, overlay.Center, f.dx, f.dy)
 		}
 	}
 	// Then webu's popups, bottom to top: the same order closeTop and key
@@ -2941,10 +2941,10 @@ func (m AppModel) View() string {
 		if top >= 0 && i > top {
 			box = dimANSI(box)
 		}
-		out = overlay.Composite(box, out, overlay.Center, overlay.Center, 0, 0)
+		out = composite(box, out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.toast.isActive() {
-		out = overlay.Composite(m.toast.view(), out, overlay.Center, overlay.Bottom, 0, -2)
+		out = composite(m.toast.view(), out, overlay.Center, overlay.Bottom, 0, -2)
 	}
 	return out
 }

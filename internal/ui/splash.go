@@ -197,19 +197,19 @@ func (m splashModel) render(width, height int) string {
 		devMailText = dim.Render("vulcan.shen.2304@gmail.com")
 	}
 	caption := "\n\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, identityText) +
+		center(logoW, 0, identityText) +
 		"\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, versionText) +
+		center(logoW, 0, versionText) +
 		"\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, taglineText) +
+		center(logoW, 0, taglineText) +
 		"\n\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, devLabelText) +
+		center(logoW, 0, devLabelText) +
 		"\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, devMailText) +
+		center(logoW, 0, devMailText) +
 		"\n\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, hintText)
+		center(logoW, 0, hintText)
 
-	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, logo+caption)
+	return center(width, height, logo+caption)
 }
 
 // update handles key events and animation ticks while the splash is active.

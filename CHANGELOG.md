@@ -89,6 +89,9 @@
 
 ### Fixed
 
+- Frames no longer come out crooked on fonts that draw the icons two
+  cells wide (some CJK Nerd Fonts): webu measures how far the cursor moves
+  for an icon when it starts, and `WEBU_ICON_WIDTH` overrides it.
 - A hint too long for its box loses whole items from its end: the
   search's list beside its preview used to end in half a key, like `Esc`
   without `:close`.

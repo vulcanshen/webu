@@ -113,6 +113,9 @@ func main() {
 		session = store.Session{}
 	}
 	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session)
+	// How many cells the terminal gives a Nerd Font icon, asked before the
+	// screen is taken (tdp D6); version, help and browser update never ask.
+	ui.DetectIconWidth()
 	p := tea.NewProgram(app, tea.WithAltScreen())
 
 	// Whatever door the program leaves through — q, an outside SIGINT or

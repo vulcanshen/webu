@@ -226,13 +226,14 @@ func spinnerFrame() string {
 
 // loadingIcon is what a popup's title carries after its name while its
 // content is still on its way (tdp F7, D3): the turning frame, or a blank
-// cell of the same width when nothing is loading, so the title and what
-// follows it never shift (L2).
+// space of the same width when nothing is loading — as many cells as the
+// terminal gives an icon (width.go) — so the title and what follows it
+// never shift (L2).
 func loadingIcon(loading bool) string {
 	if loading {
 		return spinnerFrame()
 	}
-	return " "
+	return strings.Repeat(" ", iconCells)
 }
 
 // Nerd Font glyphs. Never a PUA literal in source — built from the rune so

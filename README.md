@@ -56,6 +56,7 @@ Three things to know:
 - **Chromium is downloaded on the first launch**, once, into a cache directory (about 175–250 MB), with a progress line. After an upgrade that needs a newer Chromium, run `webu browser update`.
 - **A [Nerd Font](https://www.nerdfonts.com/) is required** in your terminal — links, fields, panels and parts are drawn with its glyphs.
 - **A truecolor terminal is required** — the colours, and how the layers under a popup fade, are drawn in 24-bit colour.
+- Fonts that draw the icons two cells wide (some CJK Nerd Fonts) are detected when webu starts; if the frames still come out crooked, set `WEBU_ICON_WIDTH=2` (or `1`).
 
 To uninstall (it asks before removing your settings, data and the downloaded Chromium):
 
