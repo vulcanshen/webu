@@ -1,8 +1,12 @@
 # webu — terminu fix
 
-webu 還沒符合 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.19/principle)（tdp v0.1.19）的地方，逐條待修。
+webu 還沒符合 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.20/principle)（tdp v0.1.20）的地方，逐條待修。
 修好一條就刪掉一條，並同步 README（兩份）與 `docs/dev-remarks.md` 裡描述該行為的段落。有意不修的，改寫成
 `dev-remarks.md`「偏離 tdp」的一條並附理由。
+
+> **v0.1.20（2026-09-29）**：K11 / D3 —— 模式名夾在兩個框線接頭之間（雙線 `╡Drag╞`、單線 `┤Visual├`），模式色加粗、盡量一個詞，
+> 放不下先截標題，panel 膠囊跟著外框換色；D6 —— icon 寬度量的是游標實際前進幾格，參考實作的完整清單、`<APP>_ICON_WIDTH`
+> 覆寫、只在 unix 探測、做完的驗收。filu 的參考實作已完成，icon 寬度那一條現在可以做。本清單的每一條已照 v0.1.20 重新核對過。
 
 > **v0.1.19（2026-09-29，這份清單寫完後才出）**：L5 —— focus 不能只靠顏色分辨（模式會換框色），家族預設雙線；K10 ——
 > 子程序還沒準備好時可以不轉送一般的鍵，但 `Ctrl-C` 照樣轉送。本清單的每一條已照 v0.1.19 重新核對過。
@@ -19,8 +23,8 @@ scratch 複本裡 render 量的（沒有動 webu 的工作樹）。
 - **每修一處補 model test，逐處 mutation**：把修正單獨改回舊行為，確認對應的測試會紅。量顏色要開顏色（`dim_test.go` 的
   `withColour`），預期值照實際輸出寫死、旁邊註明原色（lipgloss 會四捨五入）。
 - **同一個 commit 同步 README 兩份與 `docs/dev-remarks.md`**（`ux.md` / `ui.md` 有寫到的那一段也一起）；CHANGELOG 記在 `[Unreleased]`。
-- **修完拿 v0.1.19 的 rules 與 defaults 全文再逐條對一次**，不只看 CHANGELOG。`dev-remarks.md`「webu 照 tdp v0.1.17 逐條修完
-  （2026-09-29）」那句這次沒動；修完改成 v0.1.19 與修完的日期。
+- **修完拿 v0.1.20 的 rules 與 defaults 全文再逐條對一次**，不只看 CHANGELOG。`dev-remarks.md`「webu 照 tdp v0.1.17 逐條修完
+  （2026-09-29）」那句這次沒動；修完改成 v0.1.20 與修完的日期。
 - **不 push、不發版**：家族與 tdp 都穩定之前不發 release。
 - 修完把這一輪寫進 terminu repo 的 `.local/family-fix/webu/README.md`：開頭的清單加第 10 點，另加一節「第十輪（v0.1.18）」。
 - **第 5 條（icon 寬度）等 filu**：filu 的 `internal/ui/width.go` 是參考實作，filu 要先補完自己的內容列；webu 等 filu 做完再照搬。
@@ -34,7 +38,21 @@ scratch 複本裡 render 量的（沒有動 webu 的工作樹）。
 （第 1 條，visual mode 寫出模式名）、`0754472`（第 3 條，失焦 hint 變灰）、`a14771c`（第 2 條，finder 的 focus）、`bc5458f`
 （第 4 條，hint 整組捨棄）。只剩第 5 條，等 filu。
 
-## 5. icon 的實際寬度 —— D6（v0.1.18；等 filu 做完再照搬）
+## 5. icon 的實際寬度 —— D6（filu 已完成，照搬）
+
+**filu 的參考實作已完成**（2026-09-29，`e1de220`，filu 第六輪）。照搬的東西（v0.1.20 的 D6 有同一份清單，細節在 terminu
+`.local/family-fix/filu/README.md`「第六輪」最後的「D6 照搬清單」）：
+
+- filu `internal/ui/width.go` 整個檔：`iconCells` / `IconCells()`、`isWideIcon()`、`iconCount()`、`dispWidth()`、`dispClip()`、
+  `padDisp()`、`padDispRight()`、`truncate()`、`dispCutLeft()`、`compositeDisp()`（跟 `overlay.Composite` 同介面，直接換掉呼叫）、
+  `centerDisp()`（取代 `lipgloss.Place`）、`blockWidth()`、`joinH()` / `joinV()`（取代 lipgloss 的 Join）。
+- `iconwidth_unix.go` 的 `DetectIconWidth()`，在 `tea.NewProgram` 之前呼叫；手動覆寫用 `<APP>_ICON_WIDTH`（filu 是
+  `FILU_ICON_WIDTH`）。探測只在 unix 做，Windows 預設一格、靠環境變數覆寫。
+- 測試照 `d6_test.go`：icon 1 / 2 格下每一種 popup 各開一次，量**單獨的框**（並排的框量單一個）與**疊上去的整個畫面**每一列；
+  `compositeDisp()` 的四種邊界（popup 列有 icon、被蓋的列有 icon、icon 被左 / 右框邊切半）。
+- 驗收：`grep -n 'lipgloss.Width\|lipgloss.Size\|lipgloss.Place\|ansi.StringWidth\|ansi.Truncate' internal/ui/*.go` 只剩寬度函式本身。
+- filu 的提醒：寬度改走 `dispWidth()` 後，在 `iconCells = 1` 的終端機上畫面完全不變（既有測試原封不動通過），只有探測到 2 才作用。
+
 
 **現況**：webu 量寬度已經集中在少數幾個函式，但全都是 icon-blind（Nerd Font 的 icon 一律量成一格）。盤點：
 
@@ -80,6 +98,24 @@ scratch 複本裡 render 量的（沒有動 webu 的工作樹）。
 `ui.DetectIconWidth()`、探測在 `iconwidth_unix.go`），`webu version`、`webu help`、`webu browser update` 不探測。測試：
 `TestViewFitsTheTerminal` 多跑一次 icon 兩格，並加上有頁面內容（排版 golden 的頁面）與開著 popup 的畫面；`render_test.go` 的寬度檢查
 也跑兩種；mutation：`dispW()` 換回 `lipgloss.Width`，兩格那一輪要紅。文件：`dev-remarks.md` 運作方式寫明寬度一律走哪個函式、為什麼。
+
+
+## 8. 模式名沒有夾在框線接頭之間 —— K11、D3（v0.1.20）
+
+**現況**：`chrome.go` `panelChromeMode()` 在上框右側寫 ` Visual mode `（`selectmode.go` 的 `visualModeName`，跟 `?` 標題共用，前後
+各一個空白，沒有接頭），兩個詞；放不下時整個不寫。
+
+**規則**：K11（v0.1.20）—— 模式名夾在兩個框線接頭之間，像框上嵌了一個標籤；K11 也要求模式名**一律**顯示。D3 —— 接頭跟框同色、
+線型跟著框（雙線 `╡` `╞`、單線 `┤` `├`）；模式名用模式色加粗；盡量一個詞；**放不下先截標題、模式名留著**；panel 膠囊跟著外框換成
+模式色（webu 已經是）。
+
+**怎麼改**：`panelChromeMode()` 把名字畫成 `╡Visual╞`（`[2]` 在 visual mode 時是 focus 的雙線），接頭用框色、名字用 Yellow 加粗；
+名字改成一個詞 `Visual`（`?` 的標題要不要維持 `Visual mode`、拆成兩個常數由 webu 定）；放不下時先截膠囊後的標題、名字留著，不再
+整個不寫。測試：visual mode 的上框含 `╡Visual╞`、接頭是框色、名字是 Yellow（量名字本身的 SGR）；內寬 20、24、25 時名字都在、
+標題被截。參考 kbu `app.go` 的上框標籤（`248f883`）。
+
+**裁定**（2026-09-29，照建議）：框上寫一個詞 `Visual`（D3：窄的 panel 放不下兩個詞）；`?` 的標題維持 `Visual mode`（標題是一句話，
+不受一個詞的限制）。拆成兩個常數。
 
 
 ## 待確認
