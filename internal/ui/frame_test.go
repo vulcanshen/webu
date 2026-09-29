@@ -135,3 +135,34 @@ func TestModeNameGivesWay(t *testing.T) {
 		}
 	}
 }
+
+// On a panel without the focus the border hint is grey: keys Overlay0,
+// the colon, the words and the status Surface2. Blue is the focus's
+// colour, only where the keys go (tdp D2 v0.1.18).
+func TestUnfocusedHintIsGrey(t *testing.T) {
+	withColour(t)
+	const blue, overlay0, surface2 = "38;2;137;179;250m", "38;2;108;112;134m", "38;2;88;91;112m" // #89b4fa, #6c7086, #585b70 as lipgloss rounds them
+	for _, tc := range []struct {
+		focused   bool
+		key, rest string
+	}{{true, blue, overlay0}, {false, overlay0, surface2}} {
+		s := statusLegend("12 items", tc.focused, [2]string{"Enter", "stay"})
+		if !strings.Contains(s, tc.key+"Enter") || !strings.Contains(s, tc.rest+":stay") || !strings.Contains(s, tc.rest+"12 items") {
+			t.Errorf("focused %v: %q", tc.focused, s)
+		}
+	}
+
+	d := keysDriver(t)
+	d.m.tabs = []*tab{{id: 1, url: "https://example.com/", loading: true}}
+	d.m.shown = 0
+	for _, tc := range []struct {
+		focus panelID
+		want  string
+	}{{panelPage, overlay0}, {panelTabs, surface2}} {
+		d.m.focus = tc.focus
+		lines := strings.Split(d.m.pagePanel(80, 20), "\n")
+		if bottom := lines[len(lines)-1]; !strings.Contains(bottom, tc.want+"loading") {
+			t.Errorf("focus %v: %q", tc.focus, bottom)
+		}
+	}
+}

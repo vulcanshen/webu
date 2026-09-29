@@ -209,14 +209,17 @@ func popupW(screenW int) int { return max(10, min(screenW-2, 120)-2) }
 // is what it does — so the rule is learned once and holds everywhere (tdp M5).
 // Spacing is tighter than the footer's because a border line has no room to
 // breathe: one space inside a pair, two between them.
-func hintLegend(pairs [][2]string) string {
-	// The same blue as the footer, and for the same reason: these two ARE the
-	// one legend at two scales, so a key that is blue on the app's bottom row
-	// cannot be a different colour on a popup's (tdp M5).
-	// Written key:description, the colon going with the description, one
-	// space between items (tdp M5, D2).
-	k := lipgloss.NewStyle().Foreground(focusColor)
-	d := lipgloss.NewStyle().Foreground(dimColor)
+func hintLegend(pairs [][2]string) string { return legendIn(pairs, true) }
+
+// legendIn is a hint on a border that has the focus or not. With it: the
+// same blue as the footer, and for the same reason — these two ARE the one
+// legend at two scales, so a key that is blue on the app's bottom row cannot
+// be a different colour on a popup's (tdp M5). Without it, the keys are
+// Overlay0 and the rest Surface2: Blue is the focus's colour, only where the
+// keys go (tdp D2 v0.1.18). Written key:description, the colon going with
+// the description, one space between items (tdp M5, D2).
+func legendIn(pairs [][2]string, focused bool) string {
+	k, d := legendStyles(focused)
 	parts := make([]string, 0, len(pairs))
 	for _, p := range pairs {
 		parts = append(parts, k.Render(p[0])+d.Render(":"+p[1]))
@@ -228,12 +231,21 @@ func hintLegend(pairs [][2]string) string {
 // "loading", "2/26 · Intro · 40%" — in the description colour, followed by
 // the keys that go with it if any. It does not go through hintLegend: a
 // state written as a key would come out blue with a colon after it.
-func statusLegend(status string, pairs ...[2]string) string {
-	s := " " + lipgloss.NewStyle().Foreground(dimColor).Render(status)
+func statusLegend(status string, focused bool, pairs ...[2]string) string {
+	_, d := legendStyles(focused)
+	s := " " + d.Render(status)
 	if len(pairs) > 0 {
-		return s + hintLegend(pairs)
+		return s + legendIn(pairs, focused)
 	}
 	return s + " "
+}
+
+// legendStyles are a border legend's key and description styles.
+func legendStyles(focused bool) (lipgloss.Style, lipgloss.Style) {
+	if !focused {
+		return lipgloss.NewStyle().Foreground(dimColor), lipgloss.NewStyle().Foreground(borderDim)
+	}
+	return lipgloss.NewStyle().Foreground(focusColor), lipgloss.NewStyle().Foreground(dimColor)
 }
 
 // sameHotkey reports whether two declared keys are the same letter, ignoring

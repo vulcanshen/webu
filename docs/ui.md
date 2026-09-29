@@ -234,7 +234,7 @@ focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `
 |---|---|
 | Border title chip | `[1] Tabs`、`[2] Page`；讀一節 / 走進一件事時 `[2]` 的第二列變成 `☰ 2/26 節名` 或那件事的第一行 |
 | Panel tab bar | 面板都沒有；tab bar 只出現在 DevTools popup |
-| Border hint | `[2]` 下框：在哪（`2/26 · 節名 · 40%`、part 名）、loading。這些是狀態、不是鍵：用說明的 Overlay0 畫，不寫成 `鍵:說明`；手在 pagetab 上時後面接 `Enter:stay`（2026-09-29，tdp M5） |
+| Border hint | `[2]` 下框：在哪（`2/26 · 節名 · 40%`、part 名）、loading。這些是狀態、不是鍵：用說明的 Overlay0 畫，不寫成 `鍵:說明`；手在 pagetab 上時後面接 `Enter:stay`（2026-09-29，tdp M5）。`[2]` 失焦時整條變灰：鍵 Overlay0、冒號與說明與狀態字 Surface2 —— Blue 只給拿鍵的地方（2026-09-29，tdp D2 v0.1.18） |
 
 footer：`Space:menu ?:help Tab/1–2:panels q:quit`；list screen 上 `Space:menu ?:help Esc:web q:quit`。footer 與每個下框 hint 都寫 `鍵:說明`：鍵 Blue、冒號與說明 Overlay0，項目之間一個空格，寬度不夠從尾端整組捨棄（2026-09-29，tdp M5、D1、D2 v0.1.15）。
 
