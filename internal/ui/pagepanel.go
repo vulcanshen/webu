@@ -70,9 +70,10 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 		blue := lipgloss.NewStyle().Foreground(urlColor)
 		// While a section is open the URL wears its anchor: a section is
 		// a place, and the address bar is where a place is named.
-		shown := fitURL(t.url+t.sectionAnchor(), innerW-3)
-		out = append(out, blue.Render(" "+icon+" ")+blue.Render(shown)+
-			strings.Repeat(" ", max(0, innerW-3-dispW(shown))))
+		lead := " " + icon + " " // the icon takes what the terminal gives it (tdp D6)
+		shown := fitURL(t.url+t.sectionAnchor(), innerW-dispW(lead))
+		out = append(out, blue.Render(lead)+blue.Render(shown)+
+			strings.Repeat(" ", max(0, innerW-dispW(lead)-dispW(shown))))
 	}
 	out = append(out, m.pagetabRow(t, innerW))
 	rest := innerH - pageHeaderRows

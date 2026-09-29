@@ -374,11 +374,8 @@ func frameOf(tone borderTone) frame {
 	return frame{"╭", "╮", "╰", "╯", "─", "│", "┤", "├"}
 }
 
-// joinVertical / joinHorizontal are display-width aware block joins.
-func joinVertical(blocks ...string) string {
-	return lipgloss.JoinVertical(lipgloss.Left, blocks...)
-}
+// joinVertical / joinHorizontal are block joins by the terminal's width
+// (width.go: an icon takes what the terminal gives it).
+func joinVertical(blocks ...string) string { return joinV(blocks...) }
 
-func joinHorizontal(blocks ...string) string {
-	return lipgloss.JoinHorizontal(lipgloss.Top, blocks...)
-}
+func joinHorizontal(blocks ...string) string { return joinH(blocks...) }
