@@ -32,6 +32,7 @@ func TestIconWidthOverride(t *testing.T) {
 	was := iconCells
 	t.Cleanup(func() { iconCells = was })
 	t.Setenv("WEBU__ICON_WIDTH", "")
+	t.Setenv("TERMINU__ICON_WIDTH", "") // the one a family app outside may have set
 	t.Setenv("WEBU_ICON_WIDTH", "2")
 	iconCells = 1
 	DetectIconWidth()
@@ -42,5 +43,32 @@ func TestIconWidthOverride(t *testing.T) {
 	DetectIconWidth()
 	if iconCells != 2 {
 		t.Errorf("WEBU__ICON_WIDTH=2 gave %d cells", iconCells)
+	}
+}
+
+// The order is WEBU__ICON_WIDTH, then TERMINU__ICON_WIDTH (set by a family
+// app with a PTY for what runs in it), then the probe; only 1 or 2 counts
+// (tdp D6 v0.1.22). Not a terminal here, so the probe leaves 1.
+func TestIconWidthOrder(t *testing.T) {
+	was := iconCells
+	t.Cleanup(func() { iconCells = was })
+	for _, tc := range []struct {
+		own, family string
+		want        int
+	}{
+		{"1", "2", 1}, // the app's own wins
+		{"", "2", 2},  // inside another family app's PTY
+		{"3", "2", 2}, // an own value out of range counts as unset
+		{"", "x", 1},  // so does a family one: the probe
+		{"", "", 1},   // neither: the probe
+		{"2", "", 2},
+	} {
+		t.Setenv("WEBU__ICON_WIDTH", tc.own)
+		t.Setenv("TERMINU__ICON_WIDTH", tc.family)
+		iconCells = 1
+		DetectIconWidth()
+		if iconCells != tc.want {
+			t.Errorf("WEBU__ICON_WIDTH=%q TERMINU__ICON_WIDTH=%q: %d cells, want %d", tc.own, tc.family, iconCells, tc.want)
+		}
 	}
 }

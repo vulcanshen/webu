@@ -19,12 +19,19 @@ import (
 // borders. A glyph drawn wider than its cell with the cursor moving one is
 // one (tdp D6 v0.1.20). It probes with CPR: print an icon at column 1, ask
 // the terminal where the cursor ended up. Any failure (not a tty, no CPR
-// reply, timeout) leaves iconCells at its default of 1. WEBU__ICON_WIDTH (1
-// or 2) overrides it. Call once, before tea.NewProgram. The family builds
-// for unix only, so there is no other version of this file.
+// reply, timeout) leaves iconCells at its default of 1. Call once, before
+// tea.NewProgram. The family builds for unix only, so there is no other
+// version of this file.
+//
+// Before probing it reads, in order (tdp D6 v0.1.22): WEBU__ICON_WIDTH, the
+// user's own override; then TERMINU__ICON_WIDTH, which a family app with a
+// PTY sets for what runs in it — inside another app's PTY the probe is
+// answered by that app's terminal emulator, which counts an icon as one
+// cell. Only 1 or 2 is taken; anything else counts as unset. Either one
+// set, no probe is sent.
 func DetectIconWidth() {
-	if v := os.Getenv("WEBU__ICON_WIDTH"); v != "" { // manual override for flaky CPR
-		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 2 {
+	for _, name := range []string{"WEBU__ICON_WIDTH", "TERMINU__ICON_WIDTH"} {
+		if n, err := strconv.Atoi(os.Getenv(name)); err == nil && n >= 1 && n <= 2 {
 			iconCells = n
 			return
 		}

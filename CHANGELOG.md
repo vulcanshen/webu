@@ -4,6 +4,10 @@
 
 ### Changed
 
+- **Inside another terminu family app, webu takes the icon width that app
+  passes on** (`TERMINU__ICON_WIDTH`), where its own probe would be
+  answered by that app and always read one cell. `WEBU__ICON_WIDTH`
+  still comes first.
 - **The environment variables are renamed, and the old names are no
   longer read**: `WEBU_CONFIG` is now `WEBU__CONFIG`, `WEBU_DATA` is
   `WEBU__DATA`, `WEBU_CACHE` is `WEBU__CACHE`, `WEBU_ICON_WIDTH` is
