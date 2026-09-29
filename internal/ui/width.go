@@ -182,6 +182,12 @@ func cutLeft(s string, n int) string {
 // covers cannot push a line past the screen (tdp D6, L4). Left / Top at 0,
 // Center at half the background less half the foreground, Right / Bottom
 // flush; then moved by the offsets and kept on screen.
+//
+// A box wider or taller than the screen — drawn at the old size in the
+// frame a resize lands in — starts at 0 and is cut at the screen's edge,
+// and the screen keeps its size (tdp D6 v0.1.21). clampSpan alone gives a
+// negative start there, which panicked below; and a box larger both ways
+// used to come back whole, bigger than the screen.
 func composite(fg, bg string, xPos, yPos overlay.Position, xOff, yOff int) string {
 	if fg == "" {
 		return bg
@@ -192,15 +198,13 @@ func composite(fg, bg string, xPos, yPos overlay.Position, xOff, yOff int) strin
 	fgLines, bgLines := strings.Split(fg, "\n"), strings.Split(bg, "\n")
 	fgW, bgW := blockWidth(fgLines), blockWidth(bgLines)
 	fgH, bgH := len(fgLines), len(bgLines)
-	if fgW >= bgW && fgH >= bgH {
-		return fg
-	}
-	x := clampSpan(placeOffset(xPos, bgW, fgW)+xOff, bgW-fgW)
-	y := clampSpan(placeOffset(yPos, bgH, fgH)+yOff, bgH-fgH)
+	x := max(clampSpan(placeOffset(xPos, bgW, fgW)+xOff, bgW-fgW), 0)
+	y := max(clampSpan(placeOffset(yPos, bgH, fgH)+yOff, bgH-fgH), 0)
 	for i, line := range fgLines {
 		if y+i >= bgH {
 			break
 		}
+		line = clipANSI(line, bgW-x)
 		row := bgLines[y+i]
 		left := clipANSI(row, x)
 		left += strings.Repeat(" ", x-dispW(left)) // an icon cut at x, or a short row

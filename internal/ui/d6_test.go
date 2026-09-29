@@ -231,3 +231,45 @@ func TestD6CutCenterJoin(t *testing.T) {
 		t.Errorf("a block is its widest line: %d", got)
 	}
 }
+
+// A box wider or taller than the screen — drawn at the old size in the
+// frame a resize lands in — starts at 0 and is cut at the screen's edge;
+// it never panics, and the screen keeps its size (tdp D6 v0.1.21).
+func TestD6OversizedOverlayIsCut(t *testing.T) {
+	screen := strings.TrimSuffix(strings.Repeat("abcdefghij\n", 5), "\n") // 10 × 5
+	row := func(w int) string { return "[" + wideIcon + strings.Repeat("x", w-3) + "]" }
+	block := func(w, h int) string {
+		lines := make([]string, h)
+		for i := range lines {
+			lines[i] = row(w)
+		}
+		return strings.Join(lines, "\n")
+	}
+	for _, cells := range []int{1, 2} {
+		withIcons(t, cells)
+		for name, fg := range map[string]string{
+			"wider":  block(14, 3),
+			"taller": block(6, 8),
+			"both":   block(14, 8),
+		} {
+			for _, pos := range []struct {
+				x, y   overlay.Position
+				dx, dy int
+			}{{overlay.Center, overlay.Center, 0, 0}, {overlay.Center, overlay.Bottom, 0, -2}, {overlay.Left, overlay.Top, 3, 3}} {
+				var got string
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							t.Errorf("%s at %d cells: panicked: %v", name, cells, r)
+						}
+					}()
+					got = composite(fg, screen, pos.x, pos.y, pos.dx, pos.dy)
+				}()
+				if got == "" {
+					continue
+				}
+				exactRows(t, name+" at "+itoa(cells), got, 10, 5)
+			}
+		}
+	}
+}
