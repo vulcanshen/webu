@@ -353,17 +353,6 @@ func (m listPanel) hintPairs() [][2]string {
 	return append(pairs, [2]string{"Esc", "web"})
 }
 
-// fitLegend keeps as many pairs as fit in w cells, dropped from the right
-// the way the footer drops them (chrome.go keyLegend).
-func fitLegend(pairs [][2]string, w int) string {
-	for n := len(pairs); n > 0; n-- {
-		if s := hintLegend(pairs[:n]); dispW(s) <= w {
-			return s
-		}
-	}
-	return ""
-}
-
 // panel draws the screen: one framed panel, the keyboard's (focus blue),
 // a column header over the rows and the legend in the bottom border.
 func (m listPanel) panel(outerW, outerH int) string {

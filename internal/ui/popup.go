@@ -158,8 +158,9 @@ func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, inner
 	ts := lipgloss.NewStyle().Foreground(bc).Bold(true)
 
 	// A title or hint wider than the box would push the border out and shear the
-	// frame — clip both. The hint arrives pre-styled from hintLegend, so it has to
-	// be clipped ANSI-aware; only the title is styled here.
+	// frame — clip both. The hint arrives pre-styled and already fitted by
+	// fitLegend, whole items at a time; the clip is only the last guard.
+	// Only the title is styled here.
 	title = truncate(title, innerW-1)
 	hint = clipANSI(hint, innerW-1)
 
@@ -225,6 +226,30 @@ func legendIn(pairs [][2]string, focused bool) string {
 		parts = append(parts, k.Render(p[0])+d.Render(":"+p[1]))
 	}
 	return " " + strings.Join(parts, " ") + " "
+}
+
+// fitLegend keeps as many pairs as fit in w cells, dropped whole from the
+// right the way the footer drops them (chrome.go keyLegend), never cut in
+// the middle of one (tdp D3 v0.1.18). Every bottom border's hint goes
+// through it.
+func fitLegend(pairs [][2]string, w int) string {
+	for n := len(pairs); n > 0; n-- {
+		if s := hintLegend(pairs[:n]); dispW(s) <= w {
+			return s
+		}
+	}
+	return ""
+}
+
+// fitStatus is statusLegend in w cells: the keys go first, from the right,
+// and the status last.
+func fitStatus(status string, focused bool, pairs [][2]string, w int) string {
+	for n := len(pairs); n >= 0; n-- {
+		if s := statusLegend(status, focused, pairs[:n]...); dispW(s) <= w {
+			return s
+		}
+	}
+	return ""
 }
 
 // statusLegend is a bottom border that says a state, not a key — [2]'s

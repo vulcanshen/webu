@@ -88,6 +88,9 @@
 
 ### Fixed
 
+- A hint too long for its box loses whole items from its end: the
+  search's list beside its preview used to end in half a key, like `Esc`
+  without `:close`.
 - `Tab` or `1` while the page is zoomed ends the zoom: the focus used
   to move to the tab list without the tab list coming back on screen.
 - Adding a folder with a name that is taken no longer throws away what

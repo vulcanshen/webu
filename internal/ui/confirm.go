@@ -85,7 +85,7 @@ func (m confirmPopup) view() string {
 		rows = append(rows, style.Render(padRight("  "+l, innerW)))
 	}
 
-	hint := hintLegend([][2]string{{"Enter", m.accept}, {"Esc", "cancel"}})
+	hint := fitLegend([][2]string{{"Enter", m.accept}, {"Esc", "cancel"}}, innerW-1)
 	return drawPopupBox(popupLayerColor(m.layer), " "+m.glyph+" "+m.title+" ", hint,
 		animRows(m.anim, capRows(rows, m.screenH)), innerW)
 }

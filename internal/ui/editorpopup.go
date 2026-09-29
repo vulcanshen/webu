@@ -282,16 +282,15 @@ func (e editorPopup) view() string {
 	for len(rows) < vis+2 {
 		rows = append(rows, spaces(innerW))
 	}
-	var hint string
+	pairs := [][2]string{{"h/j/k/l", "move"}, {"i", "write"}, {"Enter", "set"}, {"Esc", "cancel"}}
 	if e.mode == editorWriting {
-		hint = hintLegend([][2]string{{"Enter", "new line"}, {"Esc", "out to the box"}})
-	} else {
-		hint = hintLegend([][2]string{{"h/j/k/l", "move"}, {"i", "write"}, {"Enter", "set"}, {"Esc", "cancel"}})
+		pairs = [][2]string{{"Enter", "new line"}, {"Esc", "out to the box"}}
 	}
 	where := ""
 	if len(e.lines) > vis {
 		where = " " + itoa(e.row+1) + "/" + itoa(len(e.lines)) + " "
 	}
+	hint := fitLegend(pairs, innerW-1-dispW(where))
 	return drawPopupBox(popupLayerColor(e.layer), " "+glyphPencil+" "+e.title+" ",
 		hint+where, animRows(e.anim, capRows(rows, e.screenH)), innerW)
 }

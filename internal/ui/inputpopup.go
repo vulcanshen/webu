@@ -230,7 +230,7 @@ func (m inputPopup) view() string {
 		rows = append(rows, spaces(innerW), warn.Render(padRight(" "+truncate(m.refused, innerW-2), innerW)))
 	}
 
-	hint := hintLegend(m.legend(fields, false))
+	hint := fitLegend(m.legend(fields, false), innerW-1)
 	return drawPopupBox(popupLayerColor(m.layer), " "+m.glyph+" "+m.title+" ",
 		hint, animRows(m.anim, rows), innerW)
 }

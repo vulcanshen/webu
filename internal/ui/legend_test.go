@@ -138,7 +138,7 @@ func TestLegendsWriteKeyColonDescription(t *testing.T) {
 	}{{"go", int(finderGo), 0}, {"search list", int(finderSearch), int(finderNav)}, {"search typing", int(finderSearch), int(finderInput)}} {
 		f.kind, f.mode = finderKind(st.kind), finderMode(st.mode)
 		_, h := f.titleAndHint()
-		checkLegend(t, "finder "+st.what, ansi.Strip(h))
+		checkLegend(t, "finder "+st.what, ansi.Strip(hintLegend(h)))
 	}
 
 	dt := newDevtoolsPopup()

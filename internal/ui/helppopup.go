@@ -215,7 +215,6 @@ func (m helpPopup) view() string {
 	if len(m.entries) > m.visible() {
 		pairs = append([][2]string{{"j/k", "scroll"}}, pairs...)
 	}
-	hint := hintLegend(pairs)
 	title := " " + glyphHelp + " " + m.title + " · keys "
 
 	// One width for every popup (tdp F7, D4): a description longer than the
@@ -225,6 +224,7 @@ func (m helpPopup) view() string {
 		keyW = max(keyW, dispW(e.key))
 	}
 	innerW := popupW(m.screenW)
+	hint := fitLegend(pairs, innerW-1)
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	key := lipgloss.NewStyle().Foreground(focusColor) // Blue, as in a hint (tdp D2)

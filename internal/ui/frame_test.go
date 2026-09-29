@@ -205,3 +205,100 @@ func TestFinderShowsWhichSideHasTheKeys(t *testing.T) {
 		t.Errorf("[go] keeps its colours:\n%q\n%q", rows[0], rows[2])
 	}
 }
+
+// A hint that does not fit loses whole items from its end, never half of
+// one (tdp D3 v0.1.18).
+func TestHintDropsWholeItems(t *testing.T) {
+	pairs := [][2]string{{"j/k", "move"}, {"Enter", "run"}, {"Esc", "close"}}
+	whole := dispW(hintLegend(pairs))
+	for _, tc := range []struct {
+		w    int
+		want string
+	}{
+		{whole, "j/k:move Enter:run Esc:close"},
+		{whole - 1, "j/k:move Enter:run"},
+		{dispW(hintLegend(pairs[:1])) - 1, ""},
+	} {
+		if got := strings.TrimSpace(ansi.Strip(fitLegend(pairs, tc.w))); got != tc.want {
+			t.Errorf("%d cells: %q, want %q", tc.w, got, tc.want)
+		}
+	}
+
+	// [2]'s border: the keys give way before the status.
+	keys := [][2]string{{"Enter", "stay"}}
+	full := dispW(statusLegend("12 items", true, keys...))
+	for _, tc := range []struct {
+		w    int
+		want string
+	}{
+		{full, "12 items Enter:stay"},
+		{full - 1, "12 items"},
+		{dispW(statusLegend("12 items", true)) - 1, ""},
+	} {
+		if got := strings.TrimSpace(ansi.Strip(fitStatus("12 items", true, keys, tc.w))); got != tc.want {
+			t.Errorf("status in %d cells: %q, want %q", tc.w, got, tc.want)
+		}
+	}
+
+	// The search's list box beside its preview is narrow: at 100 columns
+	// its hint ends on a whole item.
+	f := newFinder()
+	f.setSize(100, 30)
+	f.kind, f.mode = finderSearch, finderNav
+	f.hits = []hit{{node: para(text("alpha")), part: partMain, text: "alpha"}}
+	lines := strings.Split(ansi.Strip(f.view()), "\n")
+	var bottom string
+	for _, l := range lines {
+		if strings.Contains(l, "╰") {
+			bottom = l
+			break
+		}
+	}
+	m := boxHint.FindStringSubmatch(bottom)
+	if m == nil {
+		t.Fatalf("no list box bottom: %q", bottom)
+	}
+	_, all := f.titleAndHint()
+	ok := false
+	for n := 1; n <= len(all); n++ {
+		ok = ok || strings.TrimSpace(m[1]) == strings.TrimSpace(ansi.Strip(hintLegend(all[:n])))
+	}
+	if !ok {
+		t.Errorf("the hint should end on a whole item: %q", m[1])
+	}
+}
+
+// [2] narrow, the hand on the pagetab: Enter:stay gives way, the count
+// stays.
+func TestPageBorderKeepsTheStatusLast(t *testing.T) {
+	d := keysDriver(t)
+	tb := &tab{id: 1, url: "https://example.com/", parts: []part{{kind: partMain}, {kind: partFooter}}, pagetab: 1}
+	d.m.tabs, d.m.shown, d.m.focus = []*tab{tb}, 0, panelPage
+	for _, tc := range []struct {
+		outer int
+		want  string
+	}{{40, "0 items Enter:stay"}, {18, "0 items"}} {
+		lines := strings.Split(ansi.Strip(d.m.pagePanel(tc.outer, 12)), "\n")
+		m := boxHint.FindStringSubmatch(lines[len(lines)-1])
+		if m == nil || strings.TrimSpace(m[1]) != tc.want {
+			t.Errorf("%d wide: %q, want %q", tc.outer, lines[len(lines)-1], tc.want)
+		}
+	}
+}
+
+// DevTools draws its own frame; its hint gives way the same way.
+func TestDevtoolsHintDropsWholeItems(t *testing.T) {
+	hintAt := func(w int, tab devTab) string {
+		dt := newDevtoolsPopup()
+		dt.setSize(w, 30)
+		dt.tab = tab
+		lines := strings.Split(ansi.Strip(dt.view()), "\n")
+		return strings.TrimSpace(boxHint.FindStringSubmatch(lines[len(lines)-1])[1])
+	}
+	for _, tab := range []devTab{devNetwork, devStorage, devConsole, devSource} {
+		full, narrow := hintAt(300, tab), hintAt(40, tab)
+		if narrow == full || !strings.HasPrefix(full, narrow+" ") {
+			t.Errorf("%s at 40: %q should be whole items of %q", devTabLabels[tab], narrow, full)
+		}
+	}
+}

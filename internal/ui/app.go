@@ -3048,7 +3048,10 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	if hint == "" {
 		return panelChromeMode(innerW, body, "[2] Page", mode, tone)
 	}
-	return panelFrameLegend(innerW, body, "[2] Page", mode, statusLegend(hint, tone != toneIdle, keys...), tone)
+	// The frame draws a legend that leaves four cells of rule; keys give
+	// way first, the status last (tdp D3).
+	legend := fitStatus(hint, tone != toneIdle, keys, innerW-4)
+	return panelFrameLegend(innerW, body, "[2] Page", mode, legend, tone)
 }
 
 // footer is the mandatory disclosure of the entry keys (tdp M1): one

@@ -349,7 +349,7 @@ func (m devtoolsPopup) body() string {
 	default:
 		pairs = [][2]string{{"Enter", "detail"}, {"i", "eval"}, {"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
 	}
-	hint := clipANSI(hintLegend(pairs), innerW-1)
+	hint := fitLegend(pairs, innerW-1)
 	b.WriteString(bs.Render("╰─") + hint + bs.Render(strings.Repeat("─", max(0, innerW-1-dispW(hint)))+"╯"))
 	return b.String()
 }

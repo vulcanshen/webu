@@ -425,8 +425,8 @@ func (f finder) geometry() (side bool, listW, listRows, prevW, prevRows int) {
 func (f finder) view() string {
 	bc := popupLayerColor(f.layer)
 	side, listW, listRows, prevW, prevRows := f.geometry()
-	title, hint := f.titleAndHint()
-	list := drawPopupBoxPad(bc, title, hint, animRows(f.anim, f.listColumn(listW, listRows)), listW, false)
+	title, pairs := f.titleAndHint()
+	list := drawPopupBoxPad(bc, title, fitLegend(pairs, listW-1), animRows(f.anim, f.listColumn(listW, listRows)), listW, false)
 	if f.kind == finderGo {
 		return list
 	}
@@ -447,17 +447,17 @@ func (f finder) view() string {
 	return joinVertical(list, prev)
 }
 
-func (f finder) titleAndHint() (string, string) {
+func (f finder) titleAndHint() (string, [][2]string) {
 	if f.kind == finderGo {
-		return " " + glyphList + " Go to line ", hintLegend([][2]string{
-			{"0–9", "filter"}, {"j/k", "move"}, {"Enter", "go"}, {"Esc", "close"}})
+		return " " + glyphList + " Go to line ", [][2]string{
+			{"0–9", "filter"}, {"j/k", "move"}, {"Enter", "go"}, {"Esc", "close"}}
 	}
 	title := " " + glyphSearch + " Search "
 	if f.mode == finderNav {
-		return title, hintLegend([][2]string{
-			{"j/k/u/d", "move"}, {"Enter", "go"}, {"Tab", "query"}, {"Esc", "close"}})
+		return title, [][2]string{
+			{"j/k/u/d", "move"}, {"Enter", "go"}, {"Tab", "query"}, {"Esc", "close"}}
 	}
-	return title, hintLegend([][2]string{{"Tab", "list"}, {"Esc", "close"}})
+	return title, [][2]string{{"Tab", "list"}, {"Esc", "close"}}
 }
 
 // listColumn is the query bar, a rule, and the hits, exactly rows tall.
