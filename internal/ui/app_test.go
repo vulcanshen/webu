@@ -648,7 +648,7 @@ func TestGotoOffersThePageURL(t *testing.T) {
 	if d.m.input.value != "" || d.m.input.placeholder != "https://example.com/a" {
 		t.Fatalf("value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
 	}
-	if v := d.m.input.view(); !strings.Contains(v, "Tab accept") || !strings.Contains(v, "Bksp decline") || strings.Contains(v, "→") {
+	if v := d.m.input.view(); !strings.Contains(v, "Tab:accept") || !strings.Contains(v, "Backspace:decline") || strings.Contains(v, "→") {
 		t.Errorf("a single box's legend should offer Tab to accept, one key for it:\n%s", v)
 	}
 	// In a single box Tab accepts the offer (tdp K2, v0.1.6); typing then

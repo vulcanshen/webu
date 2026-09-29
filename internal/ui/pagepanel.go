@@ -474,15 +474,6 @@ func (m AppModel) pageW() int {
 	return max(1, m.w-sideW-2)
 }
 
-// panelFrame is panelChromeTone with a hint in the bottom border — where
-// panel [2] says "loading" and "12 of 40" (ui.md §5).
-func panelFrame(innerW int, body []string, title, hint string, tone borderTone) string {
-	if hint == "" {
-		return panelChromeTone(innerW, body, title, tone)
-	}
-	return panelFrameLegend(innerW, body, title, hintLegend([][2]string{{hint, ""}}), tone)
-}
-
 // panelFrameLegend is the same frame with a whole key legend in the bottom
 // border: a screen's operations, listed the way a popup's hint lists them.
 func panelFrameLegend(innerW int, body []string, title, legend string, tone borderTone) string {

@@ -317,7 +317,7 @@ func (m devtoolsPopup) body() string {
 	case m.tab == devSource:
 		pairs = [][2]string{{"j/k", "scroll"}, {"u/d", "half page"}, {"/", "grep"}, {"h/l", "tab"}, {"Esc", "close"}}
 	default:
-		pairs = [][2]string{{"Enter", "detail"}, {"i", "insert: eval"}, {"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
+		pairs = [][2]string{{"Enter", "detail"}, {"i", "eval"}, {"C", "clear"}, {"/", "filter"}, {"h/l", "tab"}, {"Esc", "close"}}
 	}
 	hint := clipANSI(hintLegend(pairs), innerW-1)
 	b.WriteString(bs.Render("╰─") + hint + bs.Render(strings.Repeat("─", max(0, innerW-1-dispW(hint)))+"╯"))

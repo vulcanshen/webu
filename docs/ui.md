@@ -23,7 +23,7 @@
 │                              ││  5    Attributes                      223 l… │
 │                              ││                                               │
 ╰──────────────────────────────╯╰────────────────────── 1/26 · <iframe> HTML … ─╯  ← 下框 hint：在哪
- space menu   ? help   tab/1-2 panels   q quit                      ← footer
+ Space:menu ?:help Tab/1–2:panels q:quit                            ← footer
 ```
 
 兩個面板並列，編號左到右。頂部一列 header：五個 screen 的 chip chain（sshu 的 tab 列作法，
@@ -234,9 +234,9 @@ focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `
 |---|---|
 | Border title chip | `[1] Tabs`、`[2] Page`；讀一節 / 走進一件事時 `[2]` 的第二列變成 `☰ 2/26 節名` 或那件事的第一行 |
 | Panel tab bar | 面板都沒有；tab bar 只出現在 DevTools popup |
-| Border hint | `[2]` 下框：在哪（`2/26 · 節名 · 40%`、part 名）、loading；讀一節時下框本身是進度條 |
+| Border hint | `[2]` 下框：在哪（`2/26 · 節名 · 40%`、part 名）、loading；讀一節時下框本身是進度條。這些是狀態、不是鍵：用說明的 Overlay0 畫，不寫成 `鍵:說明`；手在 pagetab 上時後面接 `Enter:stay`（2026-09-29，tdp M5） |
 
-footer：`space menu   ? help   tab/1-2 panels   q quit`；list screen 上 `space menu   ? help   esc web   q quit`。
+footer：`Space:menu ?:help Tab/1–2:panels q:quit`；list screen 上 `Space:menu ?:help Esc:web q:quit`。footer 與每個下框 hint 都寫 `鍵:說明`：鍵 Blue、冒號與說明 Overlay0，項目之間一個空格，寬度不夠從尾端整組捨棄（2026-09-29，tdp M5、D1、D2 v0.1.15）。
 
 `docs/icon.svg` 是 terminu family mark 的 webu 版；`V` 觸發 splash 彩蛋（家族同鍵，visual mode 因此是小寫 `v`）。
 **Nerd Font 是設計、必裝**：role glyph、part glyph、spinner、powerline 鏈都靠它，排版量它的寬。

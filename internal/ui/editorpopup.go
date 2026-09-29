@@ -286,7 +286,7 @@ func (e editorPopup) view() string {
 	if e.mode == editorWriting {
 		hint = hintLegend([][2]string{{"Enter", "new line"}, {"Esc", "out to the box"}})
 	} else {
-		hint = hintLegend([][2]string{{"hjkl", "move"}, {"i", "write"}, {"Enter", "set"}, {"Esc", "cancel"}})
+		hint = hintLegend([][2]string{{"h/j/k/l", "move"}, {"i", "write"}, {"Enter", "set"}, {"Esc", "cancel"}})
 	}
 	where := ""
 	if len(e.lines) > vis {

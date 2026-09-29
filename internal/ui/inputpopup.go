@@ -249,13 +249,13 @@ func (m inputPopup) legend(fields []groupField, widest bool) [][2]string {
 		}
 	}
 	// One key per action on the legend: a single box accepts with Tab, a
-	// group with → (→ works in a single box too, unlisted). Bksp declines.
+	// group with → (→ works in a single box too, unlisted). Backspace declines.
 	if offer {
 		take := "Tab"
 		if len(fields) > 1 {
 			take = "→"
 		}
-		pairs = append(pairs, [2]string{take, "accept"}, [2]string{"Bksp", "decline"})
+		pairs = append(pairs, [2]string{take, "accept"}, [2]string{"Backspace", "decline"})
 	}
 	return append(pairs, [2]string{"Esc", "cancel"})
 }

@@ -344,8 +344,8 @@ func TestVisualModeFooterShowsHelp(t *testing.T) {
 	d := keysDriver(t)
 	d.m.sel.on = true
 	// ? leads it; Space does nothing in a mode and is not shown (tdp K11).
-	if f := d.m.footer(); !strings.HasPrefix(strings.TrimSpace(f), "? help") || strings.Contains(f, "space") {
-		t.Errorf("visual mode's footer should lead with ? and not show space: %q", f)
+	if f := d.m.footer(); !strings.HasPrefix(strings.TrimSpace(f), "?:help") || strings.Contains(f, "Space") {
+		t.Errorf("visual mode's footer should lead with ? and not show Space: %q", f)
 	}
 }
 
@@ -530,7 +530,7 @@ func TestInputGroupLegendFits(t *testing.T) {
 	if v := ansi.Strip(d.m.input.view()); !strings.Contains(v, d.m.tabs[0].url) {
 		t.Errorf("the box should open wide enough to show the offer whole:\n%s", v)
 	}
-	if !strings.Contains(bottom, "Esc cancel") || !strings.Contains(bottom, "→ accept") || !strings.Contains(bottom, "Bksp decline") {
+	if !strings.Contains(bottom, "Esc:cancel") || !strings.Contains(bottom, "→:accept") || !strings.Contains(bottom, "Backspace:decline") {
 		t.Errorf("the whole legend should fit on the bottom border, → accepting in a group: %q", bottom)
 	}
 	d.send(tea.KeyMsg{Type: tea.KeyTab})

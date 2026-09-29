@@ -3009,6 +3009,7 @@ func (m AppModel) tabsPanel(outerW, outerH int) string {
 func (m AppModel) pagePanel(outerW, outerH int) string {
 	innerW, innerH := outerW-2, outerH-2
 	hint := ""
+	var keys [][2]string
 	if t := m.shownTab(); t != nil {
 		switch {
 		case t.working():
@@ -3019,6 +3020,7 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 			// The hand on the pagetab: what that part holds, and whether
 			// it is the one being shown.
 			hint = truncate(partHint(t), max(1, innerW-8))
+			keys = [][2]string{{"Enter", "stay"}}
 		case t.listing(), t.read:
 			// Which piece of how many, and what it is called — the one
 			// thing a sheet of text cannot say about itself (section.go).
@@ -3037,11 +3039,14 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	// Inside an open section the border itself reads to how far down it
 	// the reader is: the progress bar costs no row (pagepanel).
 	body := fitLines(m.pageBody(innerW, innerH), innerW, innerH)
-	if t := m.shownTab(); t != nil && t.read && hint != "" && !t.loading {
-		return panelFrameFilled(innerW, body, "[2] Page",
-			hintLegend([][2]string{{hint, ""}}), tone, t.readPct(innerH-pageHeaderRows))
+	if hint == "" {
+		return panelChromeTone(innerW, body, "[2] Page", tone)
 	}
-	return panelFrame(innerW, body, "[2] Page", hint, tone)
+	legend := statusLegend(hint, keys...)
+	if t := m.shownTab(); t != nil && t.read && !t.loading {
+		return panelFrameFilled(innerW, body, "[2] Page", legend, tone, t.readPct(innerH-pageHeaderRows))
+	}
+	return panelFrameLegend(innerW, body, "[2] Page", legend, tone)
 }
 
 // footer is the mandatory disclosure of the entry keys (tdp M1): one
@@ -3049,12 +3054,12 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 // that work there (ux.md §B: the footer is honest).
 func (m AppModel) footer() string {
 	if m.screen != screenWeb {
-		return keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"esc", "web"}, {"q", "quit"}}, m.w)
+		return keyLegend([][2]string{{"Space", "menu"}, {"?", "help"}, {"Esc", "web"}, {"q", "quit"}}, m.w)
 	}
 	if m.sel.on && !m.popupOpen() {
 		return keyLegend(selectLegendPairs(m.sel.typing), m.w)
 	}
-	return keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"tab/1-2", "panels"}, {"q", "quit"}}, m.w)
+	return keyLegend([][2]string{{"Space", "menu"}, {"?", "help"}, {"Tab/1–2", "panels"}, {"q", "quit"}}, m.w)
 }
 
 // openFinder opens [/] or [go] over the shown tab.
