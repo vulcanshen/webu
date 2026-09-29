@@ -10,6 +10,8 @@
   border still says where you are and how far in (`2/26 · Intro · 40%`).
 - **Visual mode names itself** at the top right of the page's frame,
   besides turning it yellow.
+- **The page's bottom border goes grey when the focus is elsewhere**: a
+  key there is no longer blue while pressing it would go to the tab list.
 - **Every popup is one width**: the terminal less a column on either
   side, at most 120 columns, whatever it holds — menus, questions, text
   boxes, help, the search, DevTools and the toast alike.

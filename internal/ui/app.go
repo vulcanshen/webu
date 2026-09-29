@@ -3048,7 +3048,7 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	if hint == "" {
 		return panelChromeMode(innerW, body, "[2] Page", mode, tone)
 	}
-	return panelFrameLegend(innerW, body, "[2] Page", mode, statusLegend(hint, keys...), tone)
+	return panelFrameLegend(innerW, body, "[2] Page", mode, statusLegend(hint, tone != toneIdle, keys...), tone)
 }
 
 // footer is the mandatory disclosure of the entry keys (tdp M1): one
