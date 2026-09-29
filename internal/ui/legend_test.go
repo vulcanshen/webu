@@ -355,3 +355,84 @@ func isCore(k string) bool {
 	}
 	return false
 }
+
+// rowOff is whether the row a key reaches is dimmed, in the Space menu and
+// in ?; ok false when there is no such row.
+func rowOff(t *testing.T, d *driver, key string) (off, ok bool) {
+	t.Helper()
+	items, _ := d.m.panelMenu()
+	for _, it := range items {
+		if it.key == key {
+			off, ok = it.disabled, true
+		}
+	}
+	for _, e := range keyReference(items) {
+		k := e.key
+		if k == "Enter" {
+			k = "enter"
+		}
+		if k == key && e.disabled != off {
+			t.Errorf("%s: ? says disabled %v, the Space menu %v", key, e.disabled, off)
+		}
+	}
+	return off, ok
+}
+
+// A row lit in the Space menu runs when pressed: what it needs is what
+// dims it, not a toast after the press (tdp M6).
+func TestRowsDimWhenTheyCannotRun(t *testing.T) {
+	d := keysDriver(t)
+	tb := &tab{id: 1, url: "https://example.com/", title: "Example"}
+	d.m.tabs, d.m.shown, d.m.focus = []*tab{tb}, 0, panelPage
+
+	// Back and forward: only with a page to go to.
+	tb.apply(pageMsg{tabID: 1, url: tb.url, back: true}, 80)
+	if p, _ := rowOff(t, d, "P"); p {
+		t.Error("Previous should be lit with a page to go back to")
+	}
+	if n, _ := rowOff(t, d, "N"); !n {
+		t.Error("Next should be dimmed with nothing ahead")
+	}
+	tb.apply(pageMsg{tabID: 1, url: tb.url, forward: true}, 80)
+	if p, _ := rowOff(t, d, "P"); !p {
+		t.Error("Previous should be dimmed with nothing behind")
+	}
+	if n, _ := rowOff(t, d, "N"); n {
+		t.Error("Next should be lit with a page ahead")
+	}
+
+	// Visual mode and search: only with a page captured.
+	tb.root = nil
+	for _, k := range []string{"v", "/"} {
+		if off, _ := rowOff(t, d, k); !off {
+			t.Errorf("%s should be dimmed before the page is captured", k)
+		}
+	}
+
+	// History: Clear with nothing to clear.
+	d.key("H")
+	if off, ok := rowOff(t, d, "C"); !ok || !off {
+		t.Errorf("History Clear should be listed and dimmed with no visit: listed %v", ok)
+	}
+
+	// Downloads: Open file only on a finished one; Clear done only with
+	// something finished or cancelled.
+	d.m.dls = []download{{name: "a.zip", state: dlRunning}}
+	d.key("D")
+	if off, _ := rowOff(t, d, "enter"); !off {
+		t.Error("Open file should be dimmed while downloading")
+	}
+	if off, _ := rowOff(t, d, "C"); !off {
+		t.Error("Clear done should be dimmed with only a running download")
+	}
+	for _, st := range []downloadState{dlCancelled, dlDone} {
+		d.m.dls = []download{{name: "a.zip", state: st}}
+		d.m.lists.setEntries(d.m.listEntries(listDownloads))
+		if off, _ := rowOff(t, d, "enter"); off != (st != dlDone) {
+			t.Errorf("state %d: Open file disabled %v", st, off)
+		}
+		if off, _ := rowOff(t, d, "C"); off {
+			t.Errorf("state %d: Clear done should be lit", st)
+		}
+	}
+}

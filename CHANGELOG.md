@@ -41,6 +41,12 @@
   cannot be pressed now — close the other tabs with only one open, back
   with no page — is listed and dimmed, where it used to look like any
   other.
+- **A row is dimmed whenever it cannot run**, instead of lit and
+  answering with a note: `Previous` and `Next` with no page behind or
+  ahead, `Search` and `Visual mode` before the page has been read,
+  `Open file` on a download still running or cancelled, History's
+  `Clear` with nothing recorded, Downloads' `Clear done` with nothing
+  finished.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The
