@@ -167,7 +167,7 @@ func TestLegendColonIsOverlay0(t *testing.T) {
 	}
 }
 
-// [2]\x27s bottom border saying a state is not a key: no colon, the
+// [2]'s bottom border saying a state is not a key: no colon, the
 // description colour, not Blue (tdp D2; webu 2026-09-29).
 func TestPageStatusIsNotAKey(t *testing.T) {
 	withColour(t)
@@ -447,7 +447,7 @@ func helpOff(e []helpEntry) map[string]bool {
 	return off
 }
 
-// A float\x27s ? dims the keys that do nothing there now (tdp M6): the
+// A float's ? dims the keys that do nothing there now (tdp M6): the
 // DevTools keys of another tab, Enter on an empty list, j/k on a message
 // that fits.
 func TestFloatKeyReferenceDimsWhatCannotRun(t *testing.T) {
