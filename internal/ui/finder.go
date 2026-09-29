@@ -486,18 +486,31 @@ func (f finder) listColumn(w, rows int) []string {
 		q = txt.Render(truncateHead(q, w-dispW(lead)-dispW(count)-3))
 	}
 	gap := max(1, w-dispW(lead)-dispW(q)-dispW(count)-1)
+	query := hand.Render(lead) + q + strings.Repeat(" ", gap) + dim.Render(count) + " "
+	// Only the side with the keys is bright (tdp F1, D3 v0.1.18): once Tab
+	// has taken the search to its list, the query row goes grey — plain
+	// Overlay0, not F8's fade, no caret — and the row under the hand turns
+	// the popup's layer colour, bold, as a menu's does.
+	listing := f.kind == finderSearch && f.mode == finderNav
+	if listing {
+		plain := truncateHead(f.query, w-dispW(lead)-dispW(count)-3)
+		query = dim.Render(lead + plain + strings.Repeat(" ", gap) + count + " ")
+	}
 	out := []string{
-		hand.Render(lead) + q + strings.Repeat(" ", gap) + dim.Render(count) + " ",
+		query,
 		dim.Render(strings.Repeat("─", w)),
 	}
 	listRows := rows - 2
 	// The row under the hand: the neutral hand colour while it is a
-	// preselection, the structural blue once j/k are moving it.
+	// preselection, the structural blue once j/k are moving it ([go]).
 	bg := handColor
 	if f.mode == finderNav {
 		bg = focusColor
 	}
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bg)
+	if listing {
+		cur = cur.Background(popupLayerColor(f.layer)).Bold(true)
+	}
 	if len(f.hits) == 0 {
 		note := "  no match"
 		if f.query == "" {

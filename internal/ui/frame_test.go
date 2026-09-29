@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -164,5 +165,43 @@ func TestUnfocusedHintIsGrey(t *testing.T) {
 		if bottom := lines[len(lines)-1]; !strings.Contains(bottom, tc.want+"loading") {
 			t.Errorf("focus %v: %q", tc.focus, bottom)
 		}
+	}
+}
+
+// Only the side of the search with the keys is bright (tdp F1, D3
+// v0.1.18): typing, the query is Text and the row under the hand a pale
+// Subtext1; on the list, the query row is all Overlay0 and the row under
+// the hand the popup's layer colour, bold.
+func TestFinderShowsWhichSideHasTheKeys(t *testing.T) {
+	withColour(t)
+	f := newFinder()
+	f.kind, f.layer, f.query = finderSearch, 1, "al"
+	f.hits = []hit{{part: partMain, text: "alpha"}, {part: partMain, text: "also"}}
+	const text, overlay0 = "38;2;205;214;243mal", "38;2;108;112;134m" // #cdd6f4, #6c7086 as lipgloss rounds them
+	subtext1 := "48;2;186;194;222m"                                   // #bac2de
+	layer := lipgloss.NewStyle().Background(popupLayerColor(1)).Render("x")
+	layerBg := layer[strings.Index(layer, "48;2;") : strings.Index(layer, "m")+1]
+
+	f.mode = finderInput
+	rows := f.listColumn(40, 6)
+	if !strings.Contains(rows[0], text) || !strings.Contains(rows[2], subtext1) {
+		t.Errorf("typing: the query should be Text and the hand Subtext1:\n%q\n%q", rows[0], rows[2])
+	}
+	f.mode = finderNav
+	rows = f.listColumn(40, 6)
+	if strings.Contains(rows[0], text) || !strings.Contains(rows[0], overlay0+" ") || strings.Count(rows[0], "\x1b[0m") != 1 {
+		t.Errorf("on the list: the query row should be one run of Overlay0: %q", rows[0])
+	}
+	if !strings.Contains(rows[2], layerBg) || !strings.Contains(rows[2], "\x1b[1;") {
+		t.Errorf("on the list: the hand should be the layer colour, bold: %q", rows[2])
+	}
+
+	// [go] has one phase — digits and j/k at once, no Tab — so it is not
+	// that finder: its number stays Text and its hand Blue.
+	f.kind, f.query = finderGo, "1"
+	f.hits = []hit{{line: 1, text: "alpha"}}
+	rows = f.listColumn(40, 6)
+	if !strings.Contains(rows[0], "38;2;205;214;243m1") || !strings.Contains(rows[2], "48;2;137;179;250m") { // #cdd6f4, #89b4fa
+		t.Errorf("[go] keeps its colours:\n%q\n%q", rows[0], rows[2])
 	}
 }
