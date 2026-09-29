@@ -78,6 +78,8 @@
 
 ### Fixed
 
+- `Tab` or `1` while the page is zoomed ends the zoom: the focus used
+  to move to the tab list without the tab list coming back on screen.
 - Adding a folder with a name that is taken no longer throws away what
   was typed: the box stays open and says so.
 - `Esc` and the keys now go to the popup drawn on top: a question that
