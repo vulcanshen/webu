@@ -1372,7 +1372,7 @@ func (m AppModel) listEntries(kind listKind) []listEntry {
 	case listDownloads:
 		for i := len(m.dls) - 1; i >= 0; i-- { // newest first, as Chrome lists them
 			d := m.dls[i]
-			out = append(out, listEntry{title: d.name, url: d.url, meta: d.describe(), at: d.at, ref: i})
+			out = append(out, listEntry{title: d.name, url: d.url, meta: d.describe(), at: d.at, ref: i, state: d.state})
 		}
 	case listHistory:
 		for i, v := range m.history {
@@ -1777,11 +1777,11 @@ func (m AppModel) pageMenuItems() []menuItem {
 		// The same T as [1]'s: a new tab is wanted from the page as often as
 		// from the list (revised 2026-09-20).
 		menuItem{label: "Tab", key: "T", hint: "a new one, at a URL"},
-		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
-		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
+		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil || !t.canBack},
+		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil || !t.canForward},
 		menuItem{label: "[/] Search", key: "/", hint: "every part of the page; [Enter] goes there",
-			disabled: t == nil || t.popupNode() != nil},
-		menuItem{label: "Visual mode", key: "v", hint: "walk the text by character, copy some", disabled: t == nil},
+			disabled: t == nil || t.root == nil || t.popupNode() != nil},
+		menuItem{label: "Visual mode", key: "v", hint: "walk the text by character, copy some", disabled: t == nil || t.root == nil},
 		menuItem{label: "Location", key: "L", hint: "a URL or a search; this page's own is offered"},
 		menuItem{label: "Add bookmark", key: "A", hint: "this page", disabled: t == nil},
 		pagetabItem(t),

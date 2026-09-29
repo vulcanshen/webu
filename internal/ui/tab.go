@@ -61,6 +61,10 @@ type tab struct {
 	// browser restores its scroll (user, 2026-09-23).
 	entry  int64
 	places map[int64]place
+	// canBack and canForward: whether the tab's history has a page before
+	// and after this one, as of the last capture — what dims Previous and
+	// Next (tdp M6).
+	canBack, canForward bool
 	// frames is the iframes the reader has opened, by frame id: each
 	// capture brings their documents along (page.Capture). wantDrill is
 	// the iframe Enter was pressed on, to go into once its document has
@@ -265,8 +269,10 @@ type pageMsg struct {
 	// on a page is remembered under it, so going back lands where the
 	// reader left (tab.places).
 	entry int64
-	cap   ir.Capture
-	err   error
+	// back and forward: the history has a page before / after this one.
+	back, forward bool
+	cap           ir.Capture
+	err           error
 }
 
 // place is where the reader was on a page: which part, the section
@@ -614,8 +620,8 @@ func capture(ctx context.Context, id, gen int, frames []cdp.FrameID) tea.Msg {
 	if err != nil {
 		err = fmt.Errorf("capture: %w", err)
 	}
-	entry, _ := page.Entry(ctx)
-	return pageMsg{tabID: id, gen: gen, url: url, title: title, entry: entry, cap: c, err: err}
+	h, _ := page.Entry(ctx)
+	return pageMsg{tabID: id, gen: gen, url: url, title: title, entry: h.ID, back: h.Back, forward: h.Forward, cap: c, err: err}
 }
 
 // apply takes a capture in: the page, its layout at the current width, and
@@ -623,6 +629,7 @@ func capture(ctx context.Context, id, gen int, frames []cdp.FrameID) tea.Msg {
 // when the page rebuilt its DOM and the IDs are new, by the nearest item.
 func (t *tab) apply(msg pageMsg, width int) {
 	t.loading, t.navigating = false, false
+	t.canBack, t.canForward = msg.back, msg.forward
 	if msg.err != nil {
 		t.errText = msg.err.Error()
 		t.root, t.lay = nil, layout{}

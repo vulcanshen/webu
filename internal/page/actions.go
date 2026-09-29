@@ -336,19 +336,34 @@ func Location(ctx context.Context) (url, title string, err error) {
 // Entry is the id of the history entry the tab is on: what a place on
 // a page is remembered under (ui tab.places), since a URL can be in the
 // stack twice and each visit is its own place.
-func Entry(ctx context.Context) (int64, error) {
-	var id int64
+func Entry(ctx context.Context) (History, error) {
+	var h History
 	err := run(ctx, func(ctx context.Context) error {
 		cur, entries, err := cdppage.GetNavigationHistory().Do(ctx)
 		if err != nil {
 			return err
 		}
 		if int(cur) >= 0 && int(cur) < len(entries) {
-			id = entries[cur].ID
+			h.ID = entries[cur].ID
 		}
+		h.Back = hasEntry(entries, int(cur)-1)
+		h.Forward = hasEntry(entries, int(cur)+1)
 		return nil
 	})
-	return id, err
+	return h, err
+}
+
+// History is where the tab is in its navigation stack: the entry shown,
+// and whether Back and Forward have somewhere to go.
+type History struct {
+	ID            int64
+	Back, Forward bool
+}
+
+// hasEntry is whether step has a page at i to go to: the about:blank a
+// tab starts on is not one.
+func hasEntry(entries []*cdppage.NavigationEntry, i int) bool {
+	return i >= 0 && i < len(entries) && entries[i].URL != "about:blank"
 }
 
 // ErrNoEntry is Back or Forward with nowhere to go.
@@ -371,7 +386,7 @@ func step(ctx context.Context, dir int) error {
 			return err
 		}
 		i := int(cur) + dir
-		if i < 0 || i >= len(entries) || entries[i].URL == "about:blank" {
+		if !hasEntry(entries, i) {
 			return ErrNoEntry
 		}
 		id = entries[i].ID

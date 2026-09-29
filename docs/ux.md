@@ -95,14 +95,17 @@ letter hotkey 在 menu 裡也有效。
 disabled）、`[n] Next section` / `[p] Previous section`（讀一節時）、`[I]nspect`（DevTools）、
 `[Z]oom`、`[Y]ank page url`、`Yank markdown`（menu-only）、`[C]lose`。Outline popup 已拿掉
 （2026-09-22）：目錄就是那個畫面。
+變暗的條件就是動作的前提（2026-09-29，tdp M6）：`[P]revious` / `[N]ext` 在分頁的 history 前 / 後沒有頁面時（最前面的
+`about:blank` 不算；capture 時跟 history entry 一起拿），`[/] Search`、`[v]isual mode` 在頁面還沒抓到時。導航中的一瞬間不變暗
+（`dispatch()` 吞鍵，頁面變暗與 URL 列的 icon 已經揭露）；頁面自己 `pushState` 不一定觸發 capture，按了才發現沒有上一頁時照舊 toast。
 
 **screen 內部**（2026-09-21 起未變）
 
 | screen | item operation | panel operation |
 |---|---|---|
 | Bookmarks | 書籤列：Enter 開新分頁、`[a] Add`、`[m] Move`、`[x] Delete`（confirm）、`[y] Yank`、`[r] Rename`；目錄列：Enter 開合、`[a]` 加在裡面、`[r]` 改名（底下跟著搬）、`[x]`（空的直接刪、有東西的 confirm 後整棵刪） | `[A] Add folder`（`a/b/c` 一次三層）、`[I] Import`（picker 選瀏覽器匯出的 HTML → 強制輸入根目錄名）、`[/] Filter` |
-| History | Enter 開新分頁、`[x] Delete`、`[y] Yank` | `[C] Clear`（confirm）、`[/]` |
-| Downloads | Enter 開檔、`[o]` 來源開新分頁、`[x] Remove`（進行中先取消）、`[y] Yank path` | `[C] Clear` 已完成的、`[/]` |
+| History | Enter 開新分頁、`[x] Delete`、`[y] Yank` | `[C] Clear`（confirm；沒有紀錄時變暗）、`[/]` |
+| Downloads | Enter 開檔（只有下載完成的列；進行中、已取消的變暗）、`[o]` 來源開新分頁、`[x] Remove`（進行中先取消）、`[y] Yank path` | `[C] Clear` 已完成的（沒有已完成 / 已取消的列時變暗）、`[/]` |
 | Settings | Enter → 文字框（目前值當提議；清空 = 預設）或翻開關 | — |
 | DevTools › Storage / Network / Console / Source | `[x]` / `[y]`、Enter detail、`[i]` REPL | `[C] Clear`、`[/]`；`h`/`l` 切分頁 |
 

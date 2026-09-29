@@ -32,6 +32,9 @@ type listEntry struct {
 	// a download's progress, a setting's value.
 	meta string
 	at   time.Time // History only
+	// state is a download's: only a finished one has a file to open, and
+	// only a running one is not cleared (Downloads only).
+	state downloadState
 	// ref is the row's index in what backs it — m.bookmarks, m.history,
 	// m.dls, the settings table — so a delete or a move lands on the right
 	// one whatever order the screen shows them in.
@@ -247,13 +250,19 @@ func (m listPanel) menuItems() []menuItem {
 		}
 		return []menuItem{{header: true, label: "item operation"}, {label: "Edit", key: "enter", hint: "change this setting; empty means the default"}}
 	case listDownloads:
+		// A row that cannot run now is dimmed, not left to answer with a
+		// toast (tdp M6).
+		settled := false
+		for _, d := range m.entries {
+			settled = settled || d.state != dlRunning
+		}
 		return itemRegion(ok, []menuItem{
-			{label: "Open file", key: "enter", hint: "with what the desktop opens it with"},
+			{label: "Open file", key: "enter", hint: "with what the desktop opens it with", disabled: e.state != dlDone},
 			{label: "Source in new tab", key: "o", hint: "where it came from"},
 			{label: "Remove", key: "x", hint: "this row; a download still running is stopped"},
 			{label: "Yank path", key: "y", hint: "to the clipboard"},
 		}, []menuItem{
-			{label: "Clear done", key: "C", hint: "the finished and cancelled rows"},
+			{label: "Clear done", key: "C", hint: "the finished and cancelled rows", disabled: !settled},
 			{label: "[/] Filter", key: "/", hint: "type to narrow the list"},
 		})
 	case listHistory:
@@ -262,7 +271,7 @@ func (m listPanel) menuItems() []menuItem {
 			{label: "Delete", key: "x", hint: "this visit"},
 			{label: "Yank url", key: "y", hint: "to the clipboard"},
 		}, []menuItem{
-			{label: "Clear", key: "C", hint: "every visit ever recorded"},
+			{label: "Clear", key: "C", hint: "every visit ever recorded", disabled: len(m.entries) == 0},
 			{label: "[/] Filter", key: "/", hint: "type to narrow the list"},
 		})
 	}
