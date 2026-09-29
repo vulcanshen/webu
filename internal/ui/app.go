@@ -854,9 +854,6 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case m.focus == panelPage:
 			// Nothing up, no mode on: Esc is the way onto the pagetab under
 			// the URL — the page's chrome — and back off it (2026-09-22).
-			if m.toast.anim.owns() {
-				return m, m.toast.close()
-			}
 			return m.togglePagetab()
 		}
 		return m.closeTop()

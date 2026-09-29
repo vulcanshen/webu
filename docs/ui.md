@@ -193,7 +193,7 @@ options、message、finder、confirm、picker、input、editor、help、quitAsk�
 | message | viewport | 表格格內容、code block 全文、Inspect |
 | page popup | 浮窗 | 頁面自己的彈窗（§2.4） |
 | DevTools | 帶 tab bar 的 viewport | Network / Storage / Console / Source；`h`/`l` 切分頁 |
-| toast | message | 下載、yank、拒絕的操作（disabled、popup 裡的 `/`）… |
+| toast | message | 下載、yank、拒絕的操作（disabled、popup 裡的 `/`）…；除了 `Esc` 不收鍵，其他鍵照樣到底下，toast 留著（tdp F1、F8 v0.1.14） |
 
 DevTools 的四個分頁與 2026-09-21 相同：Network（清單 + detail：headers / body）、Storage（cookie /
 local / session：刪、yank、清站資料）、Console（每筆完整折行、物件列 own property、`i` REPL）、

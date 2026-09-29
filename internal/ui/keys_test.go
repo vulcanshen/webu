@@ -374,6 +374,46 @@ func TestVisualModeHoldsThePanel(t *testing.T) {
 	}
 }
 
+// A toast takes no key but Esc (tdp F1 v0.1.14): the others go to what is
+// under it, and it stays.
+func TestToastTakesOnlyEsc(t *testing.T) {
+	d := keysDriver(t)
+	d.key("2")
+	d.exec(d.m.toast.show("copied", toastInfo))
+	d.key("1")
+	if d.m.focus != panelTabs || !d.m.toast.anim.owns() {
+		t.Errorf("1 under a toast should move the focus and leave the toast: focus %v toast %v", d.m.focus, d.m.toast.anim.owns())
+	}
+	d.key("B")
+	if d.m.screen != screenBookmarks || !d.m.toast.anim.owns() {
+		t.Errorf("B under a toast should open Bookmarks and leave the toast")
+	}
+	d.key("esc")
+	if d.m.toast.anim.owns() || d.m.screen != screenBookmarks {
+		t.Errorf("Esc should close the toast only")
+	}
+}
+
+// In visual mode the toast that answers Tab goes first: one Esc closes it
+// and the mode stays, the next leaves the mode (tdp K11 v0.1.14, K4).
+func TestVisualModeEscClosesTheToastFirst(t *testing.T) {
+	d := keysDriver(t)
+	d.key("2")
+	d.m.sel.on = true
+	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	if !d.m.toast.anim.owns() {
+		t.Fatal("Tab in visual mode should answer with a toast")
+	}
+	d.key("esc")
+	if d.m.toast.anim.owns() || !d.m.sel.on {
+		t.Fatalf("the first Esc should close the toast and keep the mode: toast %v mode %v", d.m.toast.anim.owns(), d.m.sel.on)
+	}
+	d.key("esc")
+	if d.m.sel.on {
+		t.Error("the second Esc should leave visual mode")
+	}
+}
+
 // A float opened from a menu leaves the menu under it (tdp F4, T1): Esc
 // comes back to the menu, and finishing the errand closes the whole stack
 // (tdp D3). The global operation popup's rows do the same.
