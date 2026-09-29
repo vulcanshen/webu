@@ -184,7 +184,7 @@ options、message、finder、confirm、picker、input、editor、help、quitAsk�
 | `?` key reference | viewport | 最前端 surface 的按鍵，唯讀：面板上是面板的鍵 + core key，浮層上是這個浮層的鍵。兩欄：鍵 Blue、說明 Text；鍵不加括號、不加冒號，幾個鍵做同一件事用 `/`（`j/k`、`q/Ctrl-C`），範圍用 `–`（`0–9`）（2026-09-29，tdp M5、D2 v0.1.15） |
 | Location | input | `L`：目前 URL 當提議（`Tab` 接受、Backspace 拒絕）；非 URL 當搜尋 |
 | input | input | 一行的欄位：**邊框寫型別**（`email`、`number`、`date · YYYY-MM-DD`、`password`、`email · invalid`），**框裡一行是欄位名**（2026-09-23 user 定：邊框是 chrome 說這是哪種框，框內那行說是哪一個欄位）；JS `prompt`；設定值。**input group**：一個框幾個欄位（加書籤 URL + 標題、HTTP auth 帳號 + 密碼遮罩），聚焦那一欄的名字亮起、只有它有游標，送出不成立時原因寫在最下面的錯誤列 —— 會失敗的框打開時就留著這一列，框的高度不變（2026-09-28，tdp F7） |
-| editor | 大框 | textarea / contenteditable：多行、**寫 / 移兩態**（Esc 出到框層 hjkl 走、`i`/`a`/`A`/`o` 回寫、Enter 設值、再 Esc 取消） |
+| editor | 大框 | textarea / contenteditable：多行、**寫 / 移兩態**（Esc 出到框層 h/j/k/l 走、`i`/`a`/`A`/`o` 回寫、Enter 設值、再 Esc 取消） |
 | **finder** | 三區（輸入 / 清單 / 預覽，filu 的 `/` 形式；寬 ≥ 96 欄並排、否則上下） | `/`：整頁四個 part 的節點索引（「持有文字的最小區塊」各一次），字面比對優先、名字模糊比對；清單列前綴 part 的 glyph；打字時 Enter 或 `Tab` 進清單，清單上 `Tab` 回輸入、Enter = **去那裡**（切 part、開節、沿路走進去、游標落定），不按；`Esc` 從哪一區都關掉整個 finder |
 | go | 清單 | `go` 後打數字：只管**行號**（目錄上是節的序號）；數字當前綴篩 |
 | options | menu | `<select>` 的 option；slider 的數字（10 列一窗、游標在目前值置中）；書籤搬移的目錄 picker |
