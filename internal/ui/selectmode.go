@@ -521,12 +521,12 @@ func selectLegendPairs(typing bool) [][2]string {
 // selectKeys are the mode's keys, as its ? key reference lists them —
 // read-only; the keys themselves are pressed directly (tdp K11).
 var selectKeys = []helpEntry{
-	{"h j k l", "move by character and row"},
-	{"w e b", "next word, word end, previous word"},
-	{"0 $", "start / end of the row"},
-	{"u d", "half a page up / down"},
-	{"gg G", "top / bottom of the page"},
-	{"v V", "select by character / by row"},
+	{"h/j/k/l", "move by character and row"},
+	{"w/e/b", "next word, word end, previous word"},
+	{"0/$", "start / end of the row"},
+	{"u/d", "half a page up / down"},
+	{"gg/G", "top / bottom of the page"},
+	{"v/V", "select by character / by row"},
 	{"y", "copy the selection (or this row)"},
 	{"/", "search; Enter finds, n N step"},
 	{"Enter", "click what the cursor is on"},

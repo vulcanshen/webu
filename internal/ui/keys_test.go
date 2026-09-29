@@ -129,7 +129,7 @@ func TestQuestionMarkOnAPanelReads(t *testing.T) {
 		t.Fatal("? on a panel should not open anything that runs")
 	}
 	e := d.m.help.entries
-	if !helpHas(e, "A") || !helpHas(e, "/") || !helpHas(e, "q · Ctrl+C") {
+	if !helpHas(e, "A") || !helpHas(e, "/") || !helpHas(e, "q/Ctrl-C") {
 		t.Errorf("the key reference should list the panel's keys and the core keys: %+v", e)
 	}
 	for _, x := range e {
@@ -250,7 +250,7 @@ func TestQuestionMarkOnAPopup(t *testing.T) {
 	d.until("the Space menu", func() bool { return d.m.spaceMenu.anim.isInteractive() })
 	d.key("?")
 	d.until("the menu's help", func() bool { return d.m.help.anim.isInteractive() })
-	if d.m.globalMenu.anim.owns() || !helpHas(d.m.help.entries, "Space · Esc") || helpHas(d.m.help.entries, "W · B · H · D · S") {
+	if d.m.globalMenu.anim.owns() || !helpHas(d.m.help.entries, "Space/Esc") || helpHas(d.m.help.entries, "W/B/H/D/S") {
 		t.Errorf("? on the Space menu should show the menu's keys: %+v", d.m.help.entries)
 	}
 	if v := d.m.View(); !strings.Contains(v, "a row's key") {

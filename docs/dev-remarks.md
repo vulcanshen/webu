@@ -208,7 +208,7 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
   - visual mode 是小寫 `v`，雖然它作用在整個面板：`V` 保留給 splash（tdp S1），而且模式不是 panel operation（`ux.md` §A.0.K，2026-09-21）。
   - 讀一節時的 `n` / `p`（下一節 / 上一節）是小寫的 panel operation：大寫的 `N` / `P` 已經是上一頁 / 下一頁。
   - `h` / `l` 是同一列左右移動、pagetab 上換 part，不是 D5 的「panel 內換分頁」：webu 的 `[2]` 沒有分頁，分頁在 `[1]`。
-- **visual mode 裡 `Space` 不作用** —— visual mode 是一個模式，它的鍵是移動與選字（`h j k l`、`w e b`、`v V`、`y`、`/`），直接按、連著按，不是對某個 item 的動作。所以模式裡沒有 Space menu，也沒有可以執行的按鍵清單：`Space` 不作用，`?` 是模式的 key reference（`selectKeys`，唯讀），footer 列 `?` 與模式的鍵（2026-09-28，tdp K11 v0.1.10）。這取代了 2026-09-27 的定案：當時 `Space` 打開一張 cheatsheet（message popup 的 `passKeys`），按上面的鍵就關掉並執行 —— 把直接按的鍵變成從清單挑來執行，只是多繞一步。
+- **visual mode 裡 `Space` 不作用** —— visual mode 是一個模式，它的鍵是移動與選字（`h/j/k/l`、`w/e/b`、`v/V`、`y`、`/`），直接按、連著按，不是對某個 item 的動作。所以模式裡沒有 Space menu，也沒有可以執行的按鍵清單：`Space` 不作用，`?` 是模式的 key reference（`selectKeys`，唯讀），footer 列 `?` 與模式的鍵（2026-09-28，tdp K11 v0.1.10）。這取代了 2026-09-27 的定案：當時 `Space` 打開一張 cheatsheet（message popup 的 `passKeys`），按上面的鍵就關掉並執行 —— 把直接按的鍵變成從清單挑來執行，只是多繞一步。
 - **Space menu 的 global operation 區只有一列（tdp M2）。** global 區固定一列 `Global operation`，`Enter` 打開 global operation popup，疊在 Space menu 上；全域動作在那裡、可以直接執行。這一列不標 `[?]`：Space menu 也是 popup，在它上面按 `?` 照 K6 顯示它自己的按鍵。2026-09-26 定案時 webu 把 `P` / `N`、`L`、`/`、`v` 也算全域動作（約十個，全列會比 panel 自己的動作還長，所以只放一列，當時是偏離 tdp v0.1.0 的 M2）；tdp v0.1.2 起 M2 規定固定一列，不再是偏離。2026-09-27 起全域動作只有五個畫面與離開：`P` / `N`、`L`、`/`、`v` 作用在頁面上，是 `[2]` 的 panel operation（tdp M3、P3）。
 
 ## 已否決，不要重提

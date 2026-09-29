@@ -13,7 +13,7 @@
 | Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
 |---|---|---|---|
 | **Contextual** | `Space` | footer 常駐 `Space:menu` | 當前 focus 的 contextual 動作 100% 在 Space menu 內；`[2]` 的 item operation menu-only、沒有 letter hotkey |
-| **Non-contextual** | `?` | footer 常駐 `? help` | `?` 是最前端 surface 的 key reference，唯讀；全域動作 100% 在 global operation popup內、可直接執行，由每個 Space menu 最後一列打開；header 五個 screen 的 chip 是 Layer 2 ambient 揭露 |
+| **Non-contextual** | `?` | footer 常駐 `?:help` | `?` 是最前端 surface 的 key reference，唯讀；全域動作 100% 在 global operation popup內、可直接執行，由每個 Space menu 最後一列打開；header 五個 screen 的 chip 是 Layer 2 ambient 揭露 |
 
 **規則（2026-09-22）：一個面板操作沒進 Space menu 就等於不存在。** core key（Enter / Esc / `/` / `go`）
 沒有字母可以括，所以鍵寫進 label 自己：`[Esc] Page parts`、`[Enter] Open section`、`[/] Search`、
