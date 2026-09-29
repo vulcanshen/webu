@@ -3040,17 +3040,11 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	case m.focus == panelPage:
 		tone = toneFocus
 	}
-	// Inside an open section the border itself reads to how far down it
-	// the reader is: the progress bar costs no row (pagepanel).
 	body := fitLines(m.pageBody(innerW, innerH), innerW, innerH)
 	if hint == "" {
 		return panelChromeTone(innerW, body, "[2] Page", tone)
 	}
-	legend := statusLegend(hint, keys...)
-	if t := m.shownTab(); t != nil && t.read && !t.loading {
-		return panelFrameFilled(innerW, body, "[2] Page", legend, tone, t.readPct(innerH-pageHeaderRows))
-	}
-	return panelFrameLegend(innerW, body, "[2] Page", legend, tone)
+	return panelFrameLegend(innerW, body, "[2] Page", statusLegend(hint, keys...), tone)
 }
 
 // footer is the mandatory disclosure of the entry keys (tdp M1): one
