@@ -12,6 +12,8 @@
   besides turning it yellow.
 - **The page's bottom border goes grey when the focus is elsewhere**: a
   key there is no longer blue while pressing it would go to the tab list.
+- **The search shows which side has the keys**: on its list, the query
+  row goes grey and the row under the hand turns the box's colour, bold.
 - **Every popup is one width**: the terminal less a column on either
   side, at most 120 columns, whatever it holds — menus, questions, text
   boxes, help, the search, DevTools and the toast alike.
