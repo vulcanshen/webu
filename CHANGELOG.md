@@ -34,6 +34,9 @@
   drawn in the plain hint colour.
 - **`?` writes keys the same way**, only without the colon — `j/k`,
   `q/Ctrl-C`, `0–9` — and draws them in the hints' blue.
+- **A key named in a sentence is in square brackets**: `Press [T] to open
+  one`, `this popup wants an answer: [Esc] does not close it`, and the same
+  in menu descriptions and prompts.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The

@@ -250,7 +250,7 @@ func globalMenuItems(on screen) []menuItem {
 		{label: "History", key: "H", hint: "every page visited"},
 		{label: "Downloads", key: "D", hint: "this session's"},
 		{label: "Settings", key: "S", hint: "config.yaml, in place"},
-		{label: "Quit", key: "q", hint: "Ctrl+C too; asks while a download runs"},
+		{label: "Quit", key: "q", hint: "[Ctrl-C] too; asks while a download runs"},
 	}
 	// The screen already up is a row that cannot run (tdp M4, M6): dimmed
 	// in its own words, not left out.

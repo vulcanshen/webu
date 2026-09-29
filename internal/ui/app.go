@@ -958,7 +958,7 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// The panel keys do not reach past the mode (tdp K2, K4): the mode
 		// is left first, with Esc, and a note says so (2026-09-27).
 		if !m.sel.typing && (msg.Type == tea.KeyTab || msg.String() == "1" || msg.String() == "2") {
-			return m, m.toast.show("leave visual mode first (Esc), then switch panels", toastInfo)
+			return m, m.toast.show("leave visual mode first with [Esc], then switch panels", toastInfo)
 		}
 		return m.selectKey(msg)
 	}
@@ -1054,7 +1054,7 @@ func (m AppModel) togglePagetab() (tea.Model, tea.Cmd) {
 	if t.popupNode() != nil {
 		// A popup is not left, it is answered (popup.go): the page put it
 		// up for a decision, and Esc would be that decision put off.
-		return m, m.toast.show("this popup wants an answer: Esc does not close it", toastInfo)
+		return m, m.toast.show("this popup wants an answer: [Esc] does not close it", toastInfo)
 	}
 	if t.read {
 		t.closeSection()
@@ -1306,7 +1306,7 @@ func (m AppModel) devtoolsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // over the DevTools popup. It stays open after each run, so the console is
 // a REPL — Esc is how it ends.
 func (m *AppModel) openEvalPrompt() tea.Cmd {
-	return m.input.ask(inputPopup{title: "Console", glyph: ">", prompt: "JavaScript, run in the page (Esc ends)",
+	return m.input.ask(inputPopup{title: "Console", glyph: ">", prompt: "JavaScript, run in the page ([Esc] ends)",
 		accept: "run", action: inputEval}, m.layer()+1)
 }
 
@@ -1422,7 +1422,7 @@ func (m AppModel) listAction(key string) (tea.Model, tea.Cmd) {
 		return m, m.startRename(e)
 	case "m":
 		if !ok || e.isFolder {
-			return m, m.toast.show("m moves a bookmark; put the cursor on one", toastInfo)
+			return m, m.toast.show("[m] moves a bookmark; put the cursor on one", toastInfo)
 		}
 		return m, m.movePicker(e.ref)
 	case "a":
@@ -1779,7 +1779,7 @@ func (m AppModel) pageMenuItems() []menuItem {
 		menuItem{label: "Tab", key: "T", hint: "a new one, at a URL"},
 		menuItem{label: "Previous", key: "P", hint: "back in this tab", disabled: t == nil},
 		menuItem{label: "Next", key: "N", hint: "forward in this tab", disabled: t == nil},
-		menuItem{label: "[/] Search", key: "/", hint: "every part of the page; Enter goes there",
+		menuItem{label: "[/] Search", key: "/", hint: "every part of the page; [Enter] goes there",
 			disabled: t == nil || t.popupNode() != nil},
 		menuItem{label: "Visual mode", key: "v", hint: "walk the text by character, copy some", disabled: t == nil},
 		menuItem{label: "Location", key: "L", hint: "a URL or a search; this page's own is offered"},
@@ -1812,7 +1812,7 @@ func pagetabItem(t *tab) menuItem {
 			hint: "header, body, others, footer", disabled: true}
 	case t.onPagetab():
 		return menuItem{label: "[Esc] Back to the page", key: "pagetab",
-			hint: "h/l show a part, Enter stays on it"}
+			hint: "[h]/[l] show a part, [Enter] stays on it"}
 	}
 	return menuItem{label: "[Esc] Page parts", key: "pagetab",
 		hint: "header, body, others, footer"}
@@ -1864,7 +1864,7 @@ func sectionsItem(t *tab) menuItem {
 func textboxItems(n *ir.Node) []menuItem {
 	items := []menuItem{}
 	if !n.Multiline {
-		items = append(items, menuItem{label: "Submit", key: "submit", hint: "press Enter in the field"})
+		items = append(items, menuItem{label: "Submit", key: "submit", hint: "press [Enter] in the field"})
 	}
 	return append(items,
 		menuItem{label: "Edit", key: "edit", hint: "change the value"},
@@ -2316,8 +2316,8 @@ func (m AppModel) enterOn(t *tab, n *ir.Node) (tea.Model, tea.Cmd) {
 		return m, m.askOpenLink(n)
 	}
 	return m, m.message.show(glyphInfo, "Enter", []string{
-		"Nothing is defined for Enter on this item yet.",
-		"Space lists what can be done with it."}, m.layer())
+		"Nothing is defined for [Enter] on this item yet.",
+		"[Space] lists what can be done with it."}, m.layer())
 }
 
 // enterCell is Enter on a data table's cell, drawn cut to its column
@@ -2613,7 +2613,7 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// confirm, then the page's own Enter in the field
 			// (2026-09-21). Esc keeps the value, unsent.
 			ask := m.confirm.ask(confirmPopup{glyph: glyphSearch, title: "Search",
-				lines:  []string{oneLine(value), "Enter in the field: the page searches"},
+				lines:  []string{oneLine(value), "[Enter] in the field: the page searches"},
 				accept: "search", action: confirmSubmitField, node: id}, m.layer())
 			return m, tea.Batch(m.input.close(), write, ask)
 		}

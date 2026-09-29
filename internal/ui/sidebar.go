@@ -16,7 +16,7 @@ import (
 func (m AppModel) tabsBody(innerW, innerH int) []string {
 	if len(m.tabs) == 0 {
 		return emptyBody(innerW, innerH, "no tabs",
-			emptyHint("Press T to open one", "T"))
+			emptyHint("Press [T] to open one", "[T]"))
 	}
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	curOff := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim)
