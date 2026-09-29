@@ -156,7 +156,7 @@ var (
 		{key: "Esc", desc: "cancel; the box keeps what it had"},
 	}
 	helpMessage = []helpEntry{
-		{key: "j/k", desc: "scroll, when it is longer than the box"},
+		{key: "j/k", desc: "scroll"},
 		{key: "Esc", desc: "close"},
 	}
 	helpDevtools = []helpEntry{
@@ -189,9 +189,9 @@ func (m AppModel) floatHelp() (string, []helpEntry) {
 	case m.options.anim.owns():
 		return m.options.title, helpOptions
 	case m.devtools.anim.owns():
-		return "DevTools", helpDevtools
+		return "DevTools", m.devtools.help()
 	case m.message.anim.owns():
-		return "Message", helpMessage
+		return "Message", m.message.help()
 	case m.globalMenu.anim.owns():
 		return "Global operation", append(append([]helpEntry{}, helpMenu[:len(helpMenu)-1]...),
 			helpEntry{key: "Esc", desc: "back to the Space menu"})

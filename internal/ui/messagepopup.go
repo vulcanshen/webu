@@ -32,6 +32,18 @@ func (m *messagePopup) show(glyph, title string, lines []string, layer int) tea.
 	return m.anim.open()
 }
 
+// help is helpMessage with j/k dimmed when the text fits and there is
+// nothing to scroll (tdp M6).
+func (m messagePopup) help() []helpEntry {
+	out := append([]helpEntry{}, helpMessage...)
+	for i := range out {
+		if out[i].key == "j/k" {
+			out[i].disabled = len(m.lines) <= m.visible()
+		}
+	}
+	return out
+}
+
 // visible is how many lines the box shows: capRows' budget.
 func (m messagePopup) visible() int { return max(1, m.screenH-6) }
 

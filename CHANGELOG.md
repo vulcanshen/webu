@@ -47,6 +47,8 @@
   `Open file` on a download still running or cancelled, History's
   `Clear` with nothing recorded, Downloads' `Clear done` with nothing
   finished.
+- **`?` on DevTools dims the keys of the other tabs**, and `Enter` on an
+  empty list; `?` on a message that fits dims `j/k`.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The
