@@ -2,7 +2,7 @@
 
 > 本文件講**版面與 surface**：面板、頁面的三個畫面、pagetab、popup、色帶、存檔。互動語意
 > （core-key、Space menu 內容、hotkey）在 `ux.md`；功能與 Chromium 邊界在 `function.md`；
-> 實作註記在 `dev-remarks.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.21/principle)（tdp）撰寫，每條版面決定標日期。
+> 實作註記在 `dev-remarks.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.22/principle)（tdp）撰寫，每條版面決定標日期。
 
 ---
 

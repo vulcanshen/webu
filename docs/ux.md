@@ -2,7 +2,7 @@
 
 > 本文件講**互動語意**：core-key、Space menu 內容、hotkey 分層、兩種游標、每種輸入怎麼填、
 > 浮層行為、時間軸。版面與 surface 在 `ui.md`，功能邊界在 `function.md`。
-> 依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.21/principle)（tdp）撰寫，章節編號對齊 kbu / filu / sshu（§A、§B 沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。
+> 依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.22/principle)（tdp）撰寫，章節編號對齊 kbu / filu / sshu（§A、§B 沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。
 
 ---
 
