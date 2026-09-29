@@ -32,21 +32,25 @@ func (m *helpPopup) close() tea.Cmd   { return m.anim.close() }
 func (m *helpPopup) setSize(w, h int) { m.screenW, m.screenH = w, h }
 
 // helpEntry is one line: a key and what it does, or with no key a group's
-// heading.
-type helpEntry struct{ key, desc string }
+// heading. disabled: the key is there but cannot be pressed now, dimmed as
+// its Space menu row is (tdp M6 v0.1.14).
+type helpEntry struct {
+	key, desc string
+	disabled  bool
+}
 
 // coreKeys close every panel's key reference.
 var coreKeys = []helpEntry{
-	{"Enter", "the item, as a click; where a click means nothing, go in"},
-	{"Esc", "one step back up"},
-	{"Space", "what can I do here: the item, the panel, the global operations"},
-	{"?", "these keys; on a popup, its keys"},
-	{"Tab/1–2", "next panel / this panel"},
-	{"j/k", "next / previous item"},
-	{"h/l", "along a row"},
-	{"u/d", "half a page"},
-	{"gg/G", "first / last"},
-	{"q/Ctrl-C", "quit"},
+	{key: "Enter", desc: "the item, as a click; where a click means nothing, go in"},
+	{key: "Esc", desc: "one step back up"},
+	{key: "Space", desc: "what can I do here: the item, the panel, the global operations"},
+	{key: "?", desc: "these keys; on a popup, its keys"},
+	{key: "Tab/1–2", desc: "next panel / this panel"},
+	{key: "j/k", desc: "next / previous item"},
+	{key: "h/l", desc: "along a row"},
+	{key: "u/d", desc: "half a page"},
+	{key: "gg/G", desc: "first / last"},
+	{key: "q/Ctrl-C", desc: "quit"},
 }
 
 // keyReference is a panel's ? from its Space menu rows: every row that a
@@ -70,7 +74,7 @@ func keyReference(items []menuItem) []helpEntry {
 		if it.hint != "" {
 			label += " — " + it.hint
 		}
-		out = append(out, helpEntry{k, label})
+		out = append(out, helpEntry{k, label, it.disabled})
 	}
 	// A heading with nothing of its own under it goes.
 	var kept []helpEntry
@@ -99,6 +103,9 @@ func rowKey(it menuItem) (string, string) {
 		}
 	}
 	switch {
+	case len(it.key) == 1 && strings.HasPrefix(it.label, it.key+" "):
+		// "X close others": the key already leads the label.
+		return it.key, it.label[len(it.key)+1:]
 	case len(it.key) == 1:
 		return it.key, it.label
 	case it.key == "enter":
@@ -111,56 +118,56 @@ func rowKey(it menuItem) (string, string) {
 // short form of the same list.
 var (
 	helpMenu = []helpEntry{
-		{"j/k", "move; off either end wraps"},
-		{"u/d", "half a window"},
-		{"gg/G", "first / last row"},
-		{"Enter", "run the row"},
-		{"a row's key", "run that row at once"},
-		{"Esc", "close"},
+		{key: "j/k", desc: "move; off either end wraps"},
+		{key: "u/d", desc: "half a window"},
+		{key: "gg/G", desc: "first / last row"},
+		{key: "Enter", desc: "run the row"},
+		{key: "a row's key", desc: "run that row at once"},
+		{key: "Esc", desc: "close"},
 	}
 	helpOptions = []helpEntry{
-		{"j/k", "move; off either end wraps"},
-		{"u/d", "half a window"},
-		{"gg/G", "first / last row"},
-		{"Enter", "choose the row"},
-		{"a row's key", "choose that row at once"},
-		{"Esc", "close; nothing is chosen"},
+		{key: "j/k", desc: "move; off either end wraps"},
+		{key: "u/d", desc: "half a window"},
+		{key: "gg/G", desc: "first / last row"},
+		{key: "Enter", desc: "choose the row"},
+		{key: "a row's key", desc: "choose that row at once"},
+		{key: "Esc", desc: "close; nothing is chosen"},
 	}
 	helpConfirm = []helpEntry{
-		{"Enter", "do it"},
-		{"Esc", "cancel"},
+		{key: "Enter", desc: "do it"},
+		{key: "Esc", desc: "cancel"},
 	}
 	helpFinder = []helpEntry{
-		{"j/k/u/d", "move through the hits"},
-		{"Enter", "go there; nothing is pressed"},
-		{"Tab", "back to the query"},
-		{"Esc", "close the search"},
+		{key: "j/k/u/d", desc: "move through the hits"},
+		{key: "Enter", desc: "go there; nothing is pressed"},
+		{key: "Tab", desc: "back to the query"},
+		{key: "Esc", desc: "close the search"},
 	}
 	helpGo = []helpEntry{
-		{"0–9", "narrow to a line number"},
-		{"j/k", "move"},
-		{"Enter", "go to the line"},
-		{"Esc", "close"},
+		{key: "0–9", desc: "narrow to a line number"},
+		{key: "j/k", desc: "move"},
+		{key: "Enter", desc: "go to the line"},
+		{key: "Esc", desc: "close"},
 	}
 	helpEditor = []helpEntry{
-		{"h/j/k/l", "move through the text"},
-		{"i/a/A/o", "write"},
-		{"Enter", "set the box to this text"},
-		{"Esc", "cancel; the box keeps what it had"},
+		{key: "h/j/k/l", desc: "move through the text"},
+		{key: "i/a/A/o", desc: "write"},
+		{key: "Enter", desc: "set the box to this text"},
+		{key: "Esc", desc: "cancel; the box keeps what it had"},
 	}
 	helpMessage = []helpEntry{
-		{"j/k", "scroll, when it is longer than the box"},
-		{"Esc", "close"},
+		{key: "j/k", desc: "scroll, when it is longer than the box"},
+		{key: "Esc", desc: "close"},
 	}
 	helpDevtools = []helpEntry{
-		{"h/l", "Network · Storage · Console · Source"},
-		{"j/k/u/d", "move"},
-		{"Enter", "a request's or a message's detail"},
-		{"/", "filter; in Source, grep"},
-		{"x/y", "Storage: delete / yank the value"},
-		{"C", "clear the list; in Storage, the site's data"},
-		{"i", "Console: evaluate JavaScript in the page"},
-		{"Esc", "close the detail, then DevTools"},
+		{key: "h/l", desc: "Network · Storage · Console · Source"},
+		{key: "j/k/u/d", desc: "move"},
+		{key: "Enter", desc: "a request's or a message's detail"},
+		{key: "/", desc: "filter; in Source, grep"},
+		{key: "x/y", desc: "Storage: delete / yank the value"},
+		{key: "C", desc: "clear the list; in Storage, the site's data"},
+		{key: "i", desc: "Console: evaluate JavaScript in the page"},
+		{key: "Esc", desc: "close the detail, then DevTools"},
 	}
 )
 
@@ -187,10 +194,10 @@ func (m AppModel) floatHelp() (string, []helpEntry) {
 		return "Message", helpMessage
 	case m.globalMenu.anim.owns():
 		return "Global operation", append(append([]helpEntry{}, helpMenu[:len(helpMenu)-1]...),
-			helpEntry{"Esc", "back to the Space menu"})
+			helpEntry{key: "Esc", desc: "back to the Space menu"})
 	}
 	return m.spaceMenu.title, append(append([]helpEntry{}, helpMenu[:len(helpMenu)-1]...),
-		helpEntry{"Space/Esc", "close"})
+		helpEntry{key: "Space/Esc", desc: "close"})
 }
 
 func (m *helpPopup) update(msg tea.KeyMsg) {
@@ -231,8 +238,12 @@ func (m helpPopup) view() string {
 			rows = append(rows, dim.Render(padRight(" "+e.desc, innerW)))
 			continue
 		}
-		rows = append(rows, key.Render(padRight("  "+e.key, keyW+4))+
-			txt.Render(padRight(truncate(e.desc, innerW-keyW-5), innerW-keyW-4)))
+		k, d := key, txt
+		if e.disabled {
+			k, d = dim, dim // as the Space menu draws a row that cannot run
+		}
+		rows = append(rows, k.Render(padRight("  "+e.key, keyW+4))+
+			d.Render(padRight(truncate(e.desc, innerW-keyW-5), innerW-keyW-4)))
 	}
 	return drawPopupBox(popupLayerColor(m.layer), title, hint,
 		animRows(m.anim, capRows(rows, m.screenH)), innerW)

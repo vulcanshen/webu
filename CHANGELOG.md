@@ -37,6 +37,10 @@
 - **A key named in a sentence is in square brackets**: `Press [T] to open
   one`, `this popup wants an answer: [Esc] does not close it`, and the same
   in menu descriptions and prompts.
+- **`?` dims the keys the Space menu dims**: a key that is there but
+  cannot be pressed now — close the other tabs with only one open, back
+  with no page — is listed and dimmed, where it used to look like any
+  other.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The
