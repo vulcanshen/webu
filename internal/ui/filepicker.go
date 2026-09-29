@@ -279,7 +279,7 @@ func (m filePicker) view() string {
 	}
 
 	title := " " + m.glyph + " " + m.title + "  " + foldHome(m.dir) + " "
-	hint := hintLegend([][2]string{{"↑↓", "select"}, {"Enter", "open / pick"}, {"Bksp", "up"}, {"Esc", "cancel"}})
+	hint := hintLegend([][2]string{{"↑/↓", "select"}, {"Enter", "open / pick"}, {"Backspace", "up"}, {"Esc", "cancel"}})
 	return drawPopupBoxPad(popupLayerColor(m.layer), title, hint,
 		animRows(m.anim, capRows(rows, m.screenH)), innerW, false)
 }

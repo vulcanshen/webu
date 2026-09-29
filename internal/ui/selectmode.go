@@ -511,7 +511,7 @@ func selectLegendPairs(typing bool) [][2]string {
 		{"/", "search"},
 		{"n/N", "next/prev"},
 		{"Enter", "click"},
-		{"hjkl", "move"},
+		{"h/j/k/l", "move"},
 		{"w/e/b", "word"},
 		{"0/$", "line ends"},
 		{"u/d", "half page"},

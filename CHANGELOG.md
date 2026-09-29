@@ -26,6 +26,12 @@
 - **A select's options and a slider's numbers open over the menu that
   asked for them**, in a box of their own: `Esc` goes back to that menu,
   where it used to close both.
+- **Hints and the footer read `key:description`**, one space apart:
+  `Space:menu ?:help Tab/1–2:panels q:quit`, `j/k:move Enter:run
+  Esc:close`. Keys go by the name on the key cap — `Backspace`, not
+  `Bksp`; `h/j/k/l`, not `hjkl`. What `[2]`'s bottom border says about
+  where you are (`loading`, `2/26 · Intro · 40%`) is not a key and is
+  drawn in the plain hint colour.
 - **`?` only reads.** It shows the keys of what is in front: on a panel,
   that panel's keys — taken from its Space menu, so the two always agree
   — and the core keys; on a popup, that popup's. Nothing in it runs. The

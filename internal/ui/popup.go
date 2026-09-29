@@ -213,13 +213,27 @@ func hintLegend(pairs [][2]string) string {
 	// The same blue as the footer, and for the same reason: these two ARE the
 	// one legend at two scales, so a key that is blue on the app's bottom row
 	// cannot be a different colour on a popup's (tdp M5).
+	// Written key:description, the colon going with the description, one
+	// space between items (tdp M5, D2).
 	k := lipgloss.NewStyle().Foreground(focusColor)
 	d := lipgloss.NewStyle().Foreground(dimColor)
 	parts := make([]string, 0, len(pairs))
 	for _, p := range pairs {
-		parts = append(parts, k.Render(p[0])+" "+d.Render(p[1]))
+		parts = append(parts, k.Render(p[0])+d.Render(":"+p[1]))
 	}
-	return " " + strings.Join(parts, "  ") + " "
+	return " " + strings.Join(parts, " ") + " "
+}
+
+// statusLegend is a bottom border that says a state, not a key — [2]'s
+// "loading", "2/26 · Intro · 40%" — in the description colour, followed by
+// the keys that go with it if any. It does not go through hintLegend: a
+// state written as a key would come out blue with a colon after it.
+func statusLegend(status string, pairs ...[2]string) string {
+	s := " " + lipgloss.NewStyle().Foreground(dimColor).Render(status)
+	if len(pairs) > 0 {
+		return s + hintLegend(pairs)
+	}
+	return s + " "
 }
 
 // sameHotkey reports whether two declared keys are the same letter, ignoring

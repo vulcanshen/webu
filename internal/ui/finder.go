@@ -450,7 +450,7 @@ func (f finder) view() string {
 func (f finder) titleAndHint() (string, string) {
 	if f.kind == finderGo {
 		return " " + glyphList + " Go to line ", hintLegend([][2]string{
-			{"0-9", "filter"}, {"j/k", "move"}, {"Enter", "go"}, {"Esc", "close"}})
+			{"0–9", "filter"}, {"j/k", "move"}, {"Enter", "go"}, {"Esc", "close"}})
 	}
 	title := " " + glyphSearch + " Search "
 	if f.mode == finderNav {

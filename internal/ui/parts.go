@@ -244,7 +244,7 @@ func partHint(t *tab) string {
 	for _, node := range t.parts[i].nodes {
 		n += countItems(node)
 	}
-	return plural(n, "item") + " · Enter to stay"
+	return plural(n, "item")
 }
 
 // glyph is the part's mark: one of a family of four, so a part is the

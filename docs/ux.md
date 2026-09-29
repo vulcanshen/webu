@@ -12,7 +12,7 @@
 
 | Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
 |---|---|---|---|
-| **Contextual** | `Space` | footer 常駐 `space menu` | 當前 focus 的 contextual 動作 100% 在 Space menu 內；`[2]` 的 item operation menu-only、沒有 letter hotkey |
+| **Contextual** | `Space` | footer 常駐 `Space:menu` | 當前 focus 的 contextual 動作 100% 在 Space menu 內；`[2]` 的 item operation menu-only、沒有 letter hotkey |
 | **Non-contextual** | `?` | footer 常駐 `? help` | `?` 是最前端 surface 的 key reference，唯讀；全域動作 100% 在 global operation popup內、可直接執行，由每個 Space menu 最後一列打開；header 五個 screen 的 chip 是 Layer 2 ambient 揭露 |
 
 **規則（2026-09-22）：一個面板操作沒進 Space menu 就等於不存在。** core key（Enter / Esc / `/` / `go`）
@@ -199,8 +199,8 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 原因寫在框的錯誤列（加書籤的 URL 不可空）。**錯誤列**（2026-09-28，tdp F7、K3）：送出可能失敗的框 —— 加書籤、日期時間顏色、設定、
 新增目錄、匯入名稱、改名 —— 打開時就有一列空白的錯誤列，拒絕時原因寫在那裡，框的高度不變、打的字留著；不會失敗的框（Location、
 欄位、登入、JS prompt、console）不留。原因不再丟到 toast。新增目錄也先檢查重名、再關框。group 裡 `Tab` 只換欄，空欄位上的提議用 `→` 接受；單欄框沒有別欄可換，`Tab` 接受提議（`→` 也可以）
-（2026-09-27，tdp K2 v0.1.6）。`Backspace` 在空欄位上拒絕提議。下框一個動作只露一個鍵：單欄 `Tab accept`、group `→ accept`，
-拒絕是 `Bksp decline`。
+（2026-09-27，tdp K2 v0.1.6）。`Backspace` 在空欄位上拒絕提議。下框一個動作只露一個鍵：單欄 `Tab:accept`、group `→:accept`，
+拒絕是 `Backspace:decline`。
 加書籤的標題提議跟著 URL 欄：URL 是目前這頁就提議頁面標題，否則提議 URL；欄位空著送出就用提議。`Esc` 取消整組。
 
 ### §2.2 Location（`L`）
