@@ -259,7 +259,7 @@ func (m devDetailPopup) view() string {
 	}
 	pairs := [][2]string{{"j/k", "scroll"}, {"u/d", "half page"}, {"Esc", "close"}}
 	return drawPopupBoxPad(popupLayerColor(m.layer), " "+glyphDevTools+" "+m.title+" "+loadingIcon(m.waiting)+" ",
-		hintLegend(pairs), animRows(m.anim, rows), innerW, false)
+		fitLegend(pairs, innerW-1), animRows(m.anim, rows), innerW, false)
 }
 
 // over composites the detail on top of the DevTools frame.

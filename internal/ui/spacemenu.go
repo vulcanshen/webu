@@ -209,11 +209,12 @@ func (m spaceMenu) view() string {
 	// A menu with nothing to run says so: j/k has nowhere to go and Enter has
 	// nothing to commit, so the legend names the one key that still works —
 	// the same honesty the pty footer keeps (tdp M5).
-	legend := hintLegend([][2]string{{"j/k", "move"}, {"Enter", "run"}, {"Esc", "close"}})
+	pairs := [][2]string{{"j/k", "move"}, {"Enter", "run"}, {"Esc", "close"}}
 	if acts == 0 {
-		legend = hintLegend([][2]string{{"Esc", "close"}})
+		pairs = [][2]string{{"Esc", "close"}}
 	}
 	innerW := popupW(m.screenW) // one width for every popup (tdp F7)
+	legend := fitLegend(pairs, innerW-1)
 	// When the box cannot hold both columns the hint yields: the label is what
 	// the action IS, the hint only elaborates on it.
 	hintW = max(0, min(hintW, innerW-labelW-3))

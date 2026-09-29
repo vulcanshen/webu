@@ -167,7 +167,7 @@ func (m AppModel) pagePopupFloats(t *tab) []popupFloat {
 		title := truncate(bt.popupTitleOf(p), w-6)
 		hint := ""
 		if top {
-			hint = hintLegend([][2]string{{"Enter", "act"}, {"Space", "menu"}, {"Esc", "does not close it"}})
+			hint = fitLegend([][2]string{{"Enter", "act"}, {"Space", "menu"}, {"Esc", "does not close it"}}, w-1)
 		}
 		box := drawPopupBox(popupLayerColor(i+1), " "+glyphPopup+" "+title+" ", hint, rows, w)
 		if !top {

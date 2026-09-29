@@ -72,12 +72,13 @@ func (m *messagePopup) scroll(k string) {
 func (m messagePopup) view() string {
 	vis := m.visible()
 	long := len(m.lines) > vis
-	hint := hintLegend([][2]string{{"Esc", "close"}})
+	pairs := [][2]string{{"Esc", "close"}}
 	if long {
 		// Longer than the box: the keys that move the window.
-		hint = hintLegend([][2]string{{"j/k", "scroll"}, {"Esc", "close"}})
+		pairs = [][2]string{{"j/k", "scroll"}, {"Esc", "close"}}
 	}
 	innerW := popupW(m.screenW)
+	hint := fitLegend(pairs, innerW-1)
 	txt := lipgloss.NewStyle().Foreground(textColor)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	lines := m.lines
