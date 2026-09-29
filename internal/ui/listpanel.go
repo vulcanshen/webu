@@ -377,7 +377,7 @@ func (m listPanel) panel(outerW, outerH int) string {
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)
 	frame := func(rows []string) string {
-		return panelFrameLegend(innerW, fitLines(rows, innerW, innerH), " "+glyph+" "+text+" ",
+		return panelFrameLegend(innerW, fitLines(rows, innerW, innerH), " "+glyph+" "+text+" ", "",
 			fitLegend(m.hintPairs(), innerW-4), toneFocus)
 	}
 

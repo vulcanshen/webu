@@ -8,6 +8,8 @@
   one, so the focus shows without relying on colour.
 - **Reading a section no longer fills the bottom border as a bar**; the
   border still says where you are and how far in (`2/26 · Intro · 40%`).
+- **Visual mode names itself** at the top right of the page's frame,
+  besides turning it yellow.
 - **Every popup is one width**: the terminal less a column on either
   side, at most 120 columns, whatever it holds — menus, questions, text
   boxes, help, the search, DevTools and the toast alike.

@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -77,6 +79,59 @@ func TestStatusBorderKeepsTheLine(t *testing.T) {
 		bottom := []rune(lines[len(lines)-1])
 		if !strings.Contains(string(bottom), "loading") || string(bottom[0]) != tc.left || string(bottom[len(bottom)-1]) != tc.right {
 			t.Errorf("focus %v: %q, want %s…%s", tc.focus, string(bottom), tc.left, tc.right)
+		}
+	}
+}
+
+// A mode names itself at the right end of its panel's top border, in the
+// border's Yellow, and is gone when the mode is (tdp K11 v0.1.18).
+func TestVisualModeNamesItself(t *testing.T) {
+	withColour(t)
+	for _, w := range []int{100, 40} {
+		d := keysDriver(t)
+		d.send(tea.WindowSizeMsg{Width: w, Height: 20})
+		d.m.tabs = []*tab{{id: 1, url: "https://example.com/", title: "Example"}}
+		d.m.shown = 0
+		d.key("2")
+		top := func() string {
+			for _, l := range strings.Split(d.m.View(), "\n") {
+				if strings.Contains(ansi.Strip(l), "[2] Page") {
+					return l
+				}
+			}
+			t.Fatalf("%d: no [2] top border", w)
+			return ""
+		}
+		d.m.sel.on = true
+		l := top()
+		if !strings.HasSuffix(ansi.Strip(l), " Visual mode ═╗") {
+			t.Errorf("%d: the top border should end with the mode: %q", w, ansi.Strip(l))
+		}
+		if !regexp.MustCompile("38;2;249;226;175m[^\x1b]*Visual mode").MatchString(l) { // #f9e2af
+			t.Errorf("%d: the mode should be Yellow: %q", w, l)
+		}
+		for i, row := range strings.Split(ansi.Strip(d.m.View()), "\n") {
+			if ansi.StringWidth(row) != w {
+				t.Errorf("%d: row %d is %d cells", w, i, ansi.StringWidth(row))
+			}
+		}
+		d.m.sel.on = false
+		if strings.Contains(ansi.Strip(top()), "Visual mode") {
+			t.Errorf("%d: out of the mode, the name goes", w)
+		}
+	}
+}
+
+// Where the capsule and the mode do not both fit, the mode is left out
+// and the border keeps its width.
+func TestModeNameGivesWay(t *testing.T) {
+	for _, w := range []int{20, 24, 25, 40} {
+		top := strings.Split(ansi.Strip(panelChromeMode(w, nil, "[2] Page", "Visual mode", toneSelect)), "\n")[0]
+		if ansi.StringWidth(top) != w+2 {
+			t.Errorf("inner %d: the top border is %d cells: %q", w, ansi.StringWidth(top), top)
+		}
+		if fits := w >= 10+14; strings.Contains(top, "Visual mode") != fits {
+			t.Errorf("inner %d: the mode should show only where it fits: %q", w, top)
 		}
 	}
 }
