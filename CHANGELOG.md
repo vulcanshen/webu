@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **The panel with the focus has a double border**, the other a round
+  one, so the focus shows without relying on colour.
 - **Every popup is one width**: the terminal less a column on either
   side, at most 120 columns, whatever it holds — menus, questions, text
   boxes, help, the search, DevTools and the toast alike.

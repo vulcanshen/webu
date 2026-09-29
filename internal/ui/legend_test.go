@@ -20,7 +20,7 @@ var (
 		"Delete": true, "Home": true, "End": true, "PgUp": true, "PgDn": true, "gg": true}
 	keyRange = regexp.MustCompile(`^[0-9]–[0-9]$`)
 	keyMod   = regexp.MustCompile(`^(Ctrl|Alt|Shift)-\S+$`)
-	boxHint  = regexp.MustCompile(`╰─*([^─╯╰]*?)─*╯`)
+	boxHint  = regexp.MustCompile(`[╰╚][─═]*([^─═╯╝╰╚]*?)[─═]*[╯╝]`) // round, or double where the focus is
 )
 
 // checkKeyName fails unless k is written the way tdp M5 writes a key.

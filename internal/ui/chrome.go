@@ -309,6 +309,7 @@ func panelChrome(innerW int, body []string, title string, focused bool) string {
 func panelChromeTone(innerW int, body []string, title string, tone borderTone) string {
 	bc := toneColor(tone)
 	bs := lipgloss.NewStyle().Foreground(bc)
+	f := frameOf(tone)
 
 	// An empty title means NO capsule. Rendering panelChip("") would still draw
 	// both round caps with nothing between them — two stray glyphs sitting on
@@ -322,14 +323,28 @@ func panelChromeTone(innerW int, body []string, title string, tone borderTone) s
 	}
 
 	out := make([]string, 0, len(body)+2)
-	out = append(out, bs.Render("╭")+chip+
-		bs.Render(strings.Repeat("─", max(0, innerW-chipW))+"╮"))
-	side := bs.Render("│")
+	out = append(out, bs.Render(f.tl)+chip+
+		bs.Render(strings.Repeat(f.h, max(0, innerW-chipW))+f.tr))
+	side := bs.Render(f.v)
 	for _, l := range body {
 		out = append(out, side+l+strings.Repeat(" ", max(0, innerW-dispW(l)))+side)
 	}
-	out = append(out, bs.Render("╰"+strings.Repeat("─", innerW)+"╯"))
+	out = append(out, bs.Render(f.bl+strings.Repeat(f.h, innerW)+f.br))
 	return strings.Join(out, "\n")
+}
+
+// frame is a panel border's glyphs.
+type frame struct{ tl, tr, bl, br, h, v string }
+
+// frameOf is the border a tone draws: a double line where the keyboard is,
+// a round one elsewhere. Colour alone does not tell the focus — a mode turns
+// the focused border Yellow — and the two are the same width, so nothing
+// moves when the focus does (tdp L5 v0.1.19, D2).
+func frameOf(tone borderTone) frame {
+	if tone == toneFocus || tone == toneSelect {
+		return frame{"╔", "╗", "╚", "╝", "═", "║"}
+	}
+	return frame{"╭", "╮", "╰", "╯", "─", "│"}
 }
 
 // joinVertical / joinHorizontal are display-width aware block joins.
