@@ -41,12 +41,12 @@ var coreKeys = []helpEntry{
 	{"Esc", "one step back up"},
 	{"Space", "what can I do here: the item, the panel, the global operations"},
 	{"?", "these keys; on a popup, its keys"},
-	{"Tab · 1 · 2", "next panel / this panel"},
-	{"j · k", "next / previous item"},
-	{"h · l", "along a row"},
-	{"u · d", "half a page"},
-	{"gg · G", "first / last"},
-	{"q · Ctrl+C", "quit"},
+	{"Tab/1–2", "next panel / this panel"},
+	{"j/k", "next / previous item"},
+	{"h/l", "along a row"},
+	{"u/d", "half a page"},
+	{"gg/G", "first / last"},
+	{"q/Ctrl-C", "quit"},
 }
 
 // keyReference is a panel's ? from its Space menu rows: every row that a
@@ -111,17 +111,17 @@ func rowKey(it menuItem) (string, string) {
 // short form of the same list.
 var (
 	helpMenu = []helpEntry{
-		{"j · k", "move; off either end wraps"},
-		{"u · d", "half a window"},
-		{"gg · G", "first / last row"},
+		{"j/k", "move; off either end wraps"},
+		{"u/d", "half a window"},
+		{"gg/G", "first / last row"},
 		{"Enter", "run the row"},
 		{"a row's key", "run that row at once"},
 		{"Esc", "close"},
 	}
 	helpOptions = []helpEntry{
-		{"j · k", "move; off either end wraps"},
-		{"u · d", "half a window"},
-		{"gg · G", "first / last row"},
+		{"j/k", "move; off either end wraps"},
+		{"u/d", "half a window"},
+		{"gg/G", "first / last row"},
 		{"Enter", "choose the row"},
 		{"a row's key", "choose that row at once"},
 		{"Esc", "close; nothing is chosen"},
@@ -131,33 +131,33 @@ var (
 		{"Esc", "cancel"},
 	}
 	helpFinder = []helpEntry{
-		{"j · k · u · d", "move through the hits"},
+		{"j/k/u/d", "move through the hits"},
 		{"Enter", "go there; nothing is pressed"},
 		{"Tab", "back to the query"},
 		{"Esc", "close the search"},
 	}
 	helpGo = []helpEntry{
-		{"0-9", "narrow to a line number"},
-		{"j · k", "move"},
+		{"0–9", "narrow to a line number"},
+		{"j/k", "move"},
 		{"Enter", "go to the line"},
 		{"Esc", "close"},
 	}
 	helpEditor = []helpEntry{
-		{"h j k l", "move through the text"},
-		{"i · a · A · o", "write"},
+		{"h/j/k/l", "move through the text"},
+		{"i/a/A/o", "write"},
 		{"Enter", "set the box to this text"},
 		{"Esc", "cancel; the box keeps what it had"},
 	}
 	helpMessage = []helpEntry{
-		{"j · k", "scroll, when it is longer than the box"},
+		{"j/k", "scroll, when it is longer than the box"},
 		{"Esc", "close"},
 	}
 	helpDevtools = []helpEntry{
-		{"h · l", "Network · Storage · Console · Source"},
-		{"j · k · u · d", "move"},
+		{"h/l", "Network · Storage · Console · Source"},
+		{"j/k/u/d", "move"},
 		{"Enter", "a request's or a message's detail"},
 		{"/", "filter; in Source, grep"},
-		{"x · y", "Storage: delete / yank the value"},
+		{"x/y", "Storage: delete / yank the value"},
 		{"C", "clear the list; in Storage, the site's data"},
 		{"i", "Console: evaluate JavaScript in the page"},
 		{"Esc", "close the detail, then DevTools"},
@@ -190,7 +190,7 @@ func (m AppModel) floatHelp() (string, []helpEntry) {
 			helpEntry{"Esc", "back to the Space menu"})
 	}
 	return m.spaceMenu.title, append(append([]helpEntry{}, helpMenu[:len(helpMenu)-1]...),
-		helpEntry{"Space · Esc", "close"})
+		helpEntry{"Space/Esc", "close"})
 }
 
 func (m *helpPopup) update(msg tea.KeyMsg) {
@@ -220,7 +220,7 @@ func (m helpPopup) view() string {
 	innerW := popupW(m.screenW)
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
-	key := lipgloss.NewStyle().Foreground(handColor)
+	key := lipgloss.NewStyle().Foreground(focusColor) // Blue, as in a hint (tdp D2)
 	txt := lipgloss.NewStyle().Foreground(textColor)
 
 	vis := m.visible()

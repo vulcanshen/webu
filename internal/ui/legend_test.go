@@ -181,3 +181,60 @@ func TestPageStatusIsNotAKey(t *testing.T) {
 		t.Errorf("the state should be Overlay0: %q", bottom)
 	}
 }
+
+// checkRefKeys fails unless every key in a key reference is written as
+// tdp M5 writes a key: no " · ", no spaces, no "+", a range with "–".
+func checkRefKeys(t *testing.T, where string, entries []helpEntry) {
+	t.Helper()
+	for _, e := range entries {
+		switch e.key {
+		case "", "a row\x27s key", "go": // a heading; a row, not a key; [go] a sequence like gg
+			continue
+		}
+		if strings.ContainsAny(e.key, " +") {
+			t.Errorf("%s: %q: keys are split by / (tdp M5)", where, e.key)
+			continue
+		}
+		checkKeyName(t, where, e.key)
+	}
+}
+
+// Every key reference writes its keys the way a hint does, only without
+// the colon: j/k, q/Ctrl-C, 0–9 (tdp M5 v0.1.15).
+func TestKeyReferenceWritesKeysByM5(t *testing.T) {
+	d := keysDriver(t)
+	d.m.tabs = []*tab{{id: 1, url: "https://example.com/", title: "Example"}}
+	d.m.shown = 0
+	for _, focus := range []panelID{panelTabs, panelPage} {
+		d.m.focus = focus
+		items, title := d.m.panelMenu()
+		checkRefKeys(t, title, keyReference(items))
+	}
+	for _, s := range []string{"B", "H", "D", "S"} {
+		d.key(s)
+		items, title := d.m.panelMenu()
+		checkRefKeys(t, title, keyReference(items))
+	}
+	for name, e := range map[string][]helpEntry{"menu": helpMenu, "options": helpOptions, "confirm": helpConfirm,
+		"finder": helpFinder, "go": helpGo, "editor": helpEditor, "message": helpMessage, "devtools": helpDevtools,
+		"visual mode": selectKeys} {
+		checkRefKeys(t, name, e)
+	}
+	_, e := d.m.floatHelp()
+	checkRefKeys(t, "Space menu", e)
+}
+
+// The key reference: keys Blue, descriptions Text (tdp D2 v0.1.15).
+func TestKeyReferenceColours(t *testing.T) {
+	withColour(t)
+	d := keysDriver(t)
+	d.exec(d.m.help.open("x", []helpEntry{{"j/k", "move"}}, 1))
+	d.until("the key reference", func() bool { return d.m.help.anim.isInteractive() })
+	v := d.m.help.view()
+	if !strings.Contains(v, "38;2;137;179;250m  j/k") { // #89b4fa, rounded as lipgloss does
+		t.Errorf("the key should be Blue: %q", v)
+	}
+	if !strings.Contains(v, "38;2;205;214;243mmove") { // #cdd6f4, f4 rounded to 243
+		t.Errorf("the description should be Text: %q", v)
+	}
+}
