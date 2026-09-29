@@ -8,6 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/vulcanshen/webu/internal/page"
 )
 
 // A key as tdp M5 names it: the name on the key cap, a letter as it is
@@ -434,5 +436,54 @@ func TestRowsDimWhenTheyCannotRun(t *testing.T) {
 		if off, _ := rowOff(t, d, "C"); off {
 			t.Errorf("state %d: Clear done should be lit", st)
 		}
+	}
+}
+
+func helpOff(e []helpEntry) map[string]bool {
+	off := map[string]bool{}
+	for _, x := range e {
+		off[x.key] = x.disabled
+	}
+	return off
+}
+
+// A float\x27s ? dims the keys that do nothing there now (tdp M6): the
+// DevTools keys of another tab, Enter on an empty list, j/k on a message
+// that fits.
+func TestFloatKeyReferenceDimsWhatCannotRun(t *testing.T) {
+	d := keysDriver(t)
+	d.m.devtools.tab = devNetwork
+	off := helpOff(d.m.devtools.help())
+	if !off["x/y"] || !off["i"] || !off["Enter"] || off["C"] || off["h/l"] {
+		t.Errorf("Network, empty: x/y, i and Enter dimmed, C and h/l lit: %v", off)
+	}
+	d.m.devtools.network.entries = []page.NetEntry{{URL: "https://example.com/"}}
+	if off := helpOff(d.m.devtools.help()); off["Enter"] {
+		t.Error("Network with a request: Enter should be lit")
+	}
+	d.m.devtools.tab = devSource
+	if off := helpOff(d.m.devtools.help()); !off["C"] || !off["Enter"] {
+		t.Errorf("Source: C and Enter dimmed: %v", off)
+	}
+	d.m.devtools.tab = devConsole
+	if off := helpOff(d.m.devtools.help()); off["i"] || !off["x/y"] {
+		t.Errorf("Console: i lit, x/y dimmed: %v", off)
+	}
+	d.m.devtools.anim.open()
+	if _, e := d.m.floatHelp(); !helpOff(e)["x/y"] {
+		t.Error("? on DevTools should be the list with this tab's dimming")
+	}
+	d.m.devtools.anim = newPopupAnimator("devtools")
+
+	d.exec(d.m.message.show("", "Note", []string{"one line"}, 1))
+	if off := helpOff(d.m.message.help()); !off["j/k"] {
+		t.Error("a message that fits: j/k dimmed")
+	}
+	if _, e := d.m.floatHelp(); !helpOff(e)["j/k"] {
+		t.Error("? on the message should be the list with its dimming")
+	}
+	d.exec(d.m.message.show("", "Note", make([]string, 200), 1))
+	if off := helpOff(d.m.message.help()); off["j/k"] {
+		t.Error("a message longer than the box: j/k lit")
 	}
 }

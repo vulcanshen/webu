@@ -235,6 +235,36 @@ func (m *devtoolsPopup) update(msg tea.KeyMsg) (devAction, string) {
 	return devNone, ""
 }
 
+// help is helpDevtools with the keys this tab cannot run now dimmed, as
+// update would ignore them (tdp M6): the other tabs are there, a h/l away,
+// so their keys are listed, not left out.
+func (m devtoolsPopup) help() []helpEntry {
+	f := m.filter[m.tab]
+	var row bool
+	switch m.tab {
+	case devStorage:
+		_, row = m.storage.current(f)
+	case devNetwork:
+		_, row = m.network.current(f)
+	case devConsole:
+		_, row = m.console.current(f)
+	}
+	out := append([]helpEntry{}, helpDevtools...)
+	for i, e := range out {
+		switch e.key {
+		case "Enter":
+			out[i].disabled = !row || (m.tab != devNetwork && m.tab != devConsole)
+		case "x/y":
+			out[i].disabled = !row || m.tab != devStorage
+		case "C":
+			out[i].disabled = m.tab == devSource
+		case "i":
+			out[i].disabled = m.tab != devConsole
+		}
+	}
+	return out
+}
+
 // escTyping is Esc while a filter is being typed: the filter goes, the
 // popup stays.
 func (m *devtoolsPopup) escTyping() bool {
