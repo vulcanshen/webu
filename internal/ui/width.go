@@ -16,9 +16,9 @@ import (
 // styled span and picks up its background.
 //
 // Width is how far the terminal's cursor moves (tdp D6 v0.1.20). A Nerd Font
-// icon is one cell to lipgloss and x/ansi, but some fonts (CJK ones such as
-// Maple Mono NF CN) draw it two cells wide and move the cursor two: counted
-// as one, every row with an icon pushes its right border out. iconCells is
+// icon is one cell to lipgloss and x/ansi, but with some terminal and font
+// pairs the cursor moves two cells for one: counted as one, every row with
+// an icon pushes its right border out. iconCells is
 // what DetectIconWidth measured at startup; at its default of 1 nothing here
 // differs from lipgloss's measure. The reference is filu's width.go.
 

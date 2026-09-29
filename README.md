@@ -56,7 +56,7 @@ Three things to know:
 - **Chromium is downloaded on the first launch**, once, into a cache directory (about 175–250 MB), with a progress line. After an upgrade that needs a newer Chromium, run `webu browser update`.
 - **A [Nerd Font](https://www.nerdfonts.com/) is required** in your terminal — links, fields, panels and parts are drawn with its glyphs.
 - **A truecolor terminal is required** — the colours, and how the layers under a popup fade, are drawn in 24-bit colour.
-- Fonts that draw the icons two cells wide (some CJK Nerd Fonts) are detected when webu starts; if the frames still come out crooked, set `WEBU__ICON_WIDTH=2` (or `1`). Run inside another terminu family app (kbu, filu, sshu), webu takes the width that app passes on.
+- **Icon width**: some terminal and font pairs move the cursor two cells for an icon instead of one. webu measures this when it starts; if the frames still come out crooked, set it yourself with `WEBU__ICON_WIDTH=2` (or `1`) for webu alone, or with `TERMINU__ICON_WIDTH`, which every terminu family app reads — set it once and they all follow (`WEBU__ICON_WIDTH` comes first). Inside another family app (kbu, filu, sshu), that app sets `TERMINU__ICON_WIDTH` for webu.
 
 To uninstall (it asks before removing your settings, data and the downloaded Chromium):
 
@@ -185,7 +185,7 @@ Settings and bookmarks are plain YAML you can edit by hand.
 
 ## terminu family
 
-webu follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.22/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [locku](https://github.com/vulcanshen/locku) (screen lock).
+webu follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [locku](https://github.com/vulcanshen/locku) (screen lock).
 
 ## License
 
