@@ -518,9 +518,13 @@ func selectLegendPairs(typing bool) [][2]string {
 	}
 }
 
-// visualModeName is the mode's name: on [2]'s top border while it is on,
-// and on its ? (tdp K11).
-const visualModeName = "Visual mode"
+// visualModeName is the mode's name as its ? is titled; visualModeTag is
+// the one word on [2]'s top border while it is on (tdp K11, D3 v0.1.20:
+// one word, or a narrow panel drops it).
+const (
+	visualModeName = "Visual mode"
+	visualModeTag  = "Visual"
+)
 
 // selectKeys are the mode's keys, as its ? key reference lists them —
 // read-only; the keys themselves are pressed directly (tdp K11).

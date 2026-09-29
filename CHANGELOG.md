@@ -9,7 +9,8 @@
 - **Reading a section no longer fills the bottom border as a bar**; the
   border still says where you are and how far in (`2/26 · Intro · 40%`).
 - **Visual mode names itself** at the top right of the page's frame,
-  besides turning it yellow.
+  besides turning it yellow: `╡Visual╞`, set into the border. On a
+  narrow panel the title is cut before the name.
 - **The page's bottom border goes grey when the focus is elsewhere**: a
   key there is no longer blue while pressing it would go to the tab list.
 - **The search shows which side has the keys**: on its list, the query

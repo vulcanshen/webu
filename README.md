@@ -141,7 +141,7 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
 
 ### Visual mode (`v`)
 
-Select text and copy it. `h/j/k/l`, `w/e/b`, `0/$`, `gg/G` move; `v/V` start a selection by character or line; `y` copies to the system clipboard; `/` searches with `n/N`; `Esc` leaves. While it is on, the page's frame turns yellow and says *Visual mode* at its top right.
+Select text and copy it. `h/j/k/l`, `w/e/b`, `0/$`, `gg/G` move; `v/V` start a selection by character or line; `y` copies to the system clipboard; `/` searches with `n/N`; `Esc` leaves. While it is on, the page's frame turns yellow and says *Visual* at its top right.
 
 ## Configuration
 

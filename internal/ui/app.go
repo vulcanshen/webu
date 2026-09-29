@@ -3042,7 +3042,7 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	}
 	mode := ""
 	if m.sel.on {
-		mode = visualModeName
+		mode = visualModeTag
 	}
 	body := fitLines(m.pageBody(innerW, innerH), innerW, innerH)
 	if hint == "" {
