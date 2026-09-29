@@ -518,6 +518,10 @@ func selectLegendPairs(typing bool) [][2]string {
 	}
 }
 
+// visualModeName is the mode's name: on [2]'s top border while it is on,
+// and on its ? (tdp K11).
+const visualModeName = "Visual mode"
+
 // selectKeys are the mode's keys, as its ? key reference lists them —
 // read-only; the keys themselves are pressed directly (tdp K11).
 var selectKeys = []helpEntry{

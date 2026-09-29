@@ -899,7 +899,7 @@ func (m AppModel) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.help.open(title, entries, m.layer()+1)
 		case m.sel.on:
 			// A mode has its own help (tdp K11): its keys, to read.
-			return m, m.help.open("Visual mode", selectKeys, m.layer())
+			return m, m.help.open(visualModeName, selectKeys, m.layer())
 		}
 		return m.openPanelHelp()
 	}
@@ -3040,11 +3040,15 @@ func (m AppModel) pagePanel(outerW, outerH int) string {
 	case m.focus == panelPage:
 		tone = toneFocus
 	}
+	mode := ""
+	if m.sel.on {
+		mode = visualModeName
+	}
 	body := fitLines(m.pageBody(innerW, innerH), innerW, innerH)
 	if hint == "" {
-		return panelChromeTone(innerW, body, "[2] Page", tone)
+		return panelChromeMode(innerW, body, "[2] Page", mode, tone)
 	}
-	return panelFrameLegend(innerW, body, "[2] Page", statusLegend(hint, keys...), tone)
+	return panelFrameLegend(innerW, body, "[2] Page", mode, statusLegend(hint, keys...), tone)
 }
 
 // footer is the mandatory disclosure of the entry keys (tdp M1): one

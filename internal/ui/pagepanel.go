@@ -479,8 +479,8 @@ func (m AppModel) pageW() int {
 //
 // Reading a section used to fill this border from the left as a progress
 // bar; it went (user, 2026-09-29): the status already says "40%".
-func panelFrameLegend(innerW int, body []string, title, legend string, tone borderTone) string {
-	out := panelChromeTone(innerW, body, title, tone)
+func panelFrameLegend(innerW int, body []string, title, mode, legend string, tone borderTone) string {
+	out := panelChromeMode(innerW, body, title, mode, tone)
 	lines := strings.Split(out, "\n")
 	bs := lipgloss.NewStyle().Foreground(toneColor(tone))
 	f := frameOf(tone)

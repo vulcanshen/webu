@@ -307,6 +307,14 @@ func panelChrome(innerW int, body []string, title string, focused bool) string {
 // two things a border can say, and spelling that as a bool at eleven call sites
 // reads better than a constant.
 func panelChromeTone(innerW int, body []string, title string, tone borderTone) string {
+	return panelChromeMode(innerW, body, title, "", tone)
+}
+
+// panelChromeMode is that frame with a mode named at the right end of the
+// top border, in the border's colour (tdp K11 v0.1.18): the panel says
+// which mode it is in, not only by turning Yellow. When the capsule and
+// the name do not both fit, the name is left out; the border never bends.
+func panelChromeMode(innerW int, body []string, title, mode string, tone borderTone) string {
 	bc := toneColor(tone)
 	bs := lipgloss.NewStyle().Foreground(bc)
 	f := frameOf(tone)
@@ -322,9 +330,22 @@ func panelChromeTone(innerW int, body []string, title string, tone borderTone) s
 		}
 	}
 
+	label, labelW := "", 0
+	if mode != "" {
+		label = " " + mode + " "
+		labelW = dispW(label) + 1 // and one rule cell before the corner
+		if chipW+labelW > innerW {
+			label, labelW = "", 0
+		}
+	}
+	top := f.h + f.tr
+	if label == "" {
+		top = f.tr
+	}
+
 	out := make([]string, 0, len(body)+2)
 	out = append(out, bs.Render(f.tl)+chip+
-		bs.Render(strings.Repeat(f.h, max(0, innerW-chipW))+f.tr))
+		bs.Render(strings.Repeat(f.h, max(0, innerW-chipW-labelW))+label+top))
 	side := bs.Render(f.v)
 	for _, l := range body {
 		out = append(out, side+l+strings.Repeat(" ", max(0, innerW-dispW(l)))+side)
