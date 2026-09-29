@@ -141,7 +141,7 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 |---|---|
 | 邊框 Blue / 雙線 | focus |
 | `[1]` 綠字 | `[2]` 正在顯示的分頁 |
-| 邊框 Yellow、上框右側寫 `Visual mode` | visual mode（tdp K11 v0.1.18：模式標示自己） |
+| 邊框 Yellow、上框右側嵌 `╡Visual╞` | visual mode（tdp K11 v0.1.18：模式標示自己） |
 | glyph | 一個 role 一個 glyph；一個 part 一個 glyph；碼位查字型不憑記憶 |
 | URL 列的圖示 | 靜止是地球、抓取中是圓餅填滿（settling 期間一直轉） |
 | pagetab 整條 rosewater 反色 | 手在 pagetab 上 |
@@ -162,7 +162,7 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 | Enter | §A.0.K.1 | 字元所屬節點的 Enter |
 | 選取 / 複製 | — | `v/V` 選、`y` 寫剪貼簿（OSC52 + pbcopy / wl-copy / xclip / xsel） |
 | `/` | **finder**（§1.1） | 逐字搜尋（smart case、`n`/`N`） |
-| 視覺 | Blue 雙線邊框 | Yellow 雙線邊框，上框右側寫 `Visual mode` |
+| 視覺 | Blue 雙線邊框 | Yellow 雙線邊框，上框右側嵌 `╡Visual╞` |
 | 即時更新 | 重畫、游標留位 | 凍結；Esc 離開時套用 |
 
 ### §1.1 finder（`/`）與 go

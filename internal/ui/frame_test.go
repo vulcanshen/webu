@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 
@@ -84,8 +83,9 @@ func TestStatusBorderKeepsTheLine(t *testing.T) {
 	}
 }
 
-// A mode names itself at the right end of its panel's top border, in the
-// border's Yellow, and is gone when the mode is (tdp K11 v0.1.18).
+// A mode names itself at the right end of its panel's top border, one word
+// between two junctions of the border's line, Yellow and bold, and is gone
+// when the mode is (tdp K11, D3 v0.1.20).
 func TestVisualModeNamesItself(t *testing.T) {
 	withColour(t)
 	for _, w := range []int{100, 40} {
@@ -105,11 +105,11 @@ func TestVisualModeNamesItself(t *testing.T) {
 		}
 		d.m.sel.on = true
 		l := top()
-		if !strings.HasSuffix(ansi.Strip(l), " Visual mode ═╗") {
-			t.Errorf("%d: the top border should end with the mode: %q", w, ansi.Strip(l))
+		if !strings.HasSuffix(ansi.Strip(l), "╡Visual╞═╗") {
+			t.Errorf("%d: the top border should end with the mode between junctions: %q", w, ansi.Strip(l))
 		}
-		if !regexp.MustCompile("38;2;249;226;175m[^\x1b]*Visual mode").MatchString(l) { // #f9e2af
-			t.Errorf("%d: the mode should be Yellow: %q", w, l)
+		if !strings.Contains(l, "1;38;2;249;226;175mVisual") { // #f9e2af, bold
+			t.Errorf("%d: the mode should be Yellow and bold: %q", w, l)
 		}
 		for i, row := range strings.Split(ansi.Strip(d.m.View()), "\n") {
 			if ansi.StringWidth(row) != w {
@@ -117,22 +117,41 @@ func TestVisualModeNamesItself(t *testing.T) {
 			}
 		}
 		d.m.sel.on = false
-		if strings.Contains(ansi.Strip(top()), "Visual mode") {
+		if strings.Contains(ansi.Strip(top()), "Visual") {
 			t.Errorf("%d: out of the mode, the name goes", w)
 		}
 	}
 }
 
-// Where the capsule and the mode do not both fit, the mode is left out
-// and the border keeps its width.
+// The junctions are the border's own line and colour; the name is the
+// mode's: on a round, unfocused border they differ.
+func TestModeTagJunctionsAreTheBorder(t *testing.T) {
+	withColour(t)
+	top := strings.Split(panelChromeMode(40, nil, "[2] Page", "Visual", toneIdle), "\n")[0]
+	if !strings.Contains(ansi.Strip(top), "┤Visual├") {
+		t.Errorf("a round border takes ┤ ├: %q", ansi.Strip(top))
+	}
+	if !strings.Contains(top, "38;2;88;91;112m┤") || !strings.Contains(top, "1;38;2;249;226;175mVisual") { // #585b70; #f9e2af bold
+		t.Errorf("junctions in the border's Surface2, the name Yellow and bold: %q", top)
+	}
+}
+
+// Where the capsule and the name do not both fit, the title is cut and the
+// name stays; the border keeps its width (tdp D3 v0.1.20).
 func TestModeNameGivesWay(t *testing.T) {
-	for _, w := range []int{20, 24, 25, 40} {
-		top := strings.Split(ansi.Strip(panelChromeMode(w, nil, "[2] Page", "Visual mode", toneSelect)), "\n")[0]
+	for _, w := range []int{12, 18, 19, 40} {
+		top := strings.Split(ansi.Strip(panelChromeMode(w, nil, "[2] Page", "Visual", toneSelect)), "\n")[0]
 		if ansi.StringWidth(top) != w+2 {
 			t.Errorf("inner %d: the top border is %d cells: %q", w, ansi.StringWidth(top), top)
 		}
-		if fits := w >= 10+14; strings.Contains(top, "Visual mode") != fits {
-			t.Errorf("inner %d: the mode should show only where it fits: %q", w, top)
+		if !strings.HasSuffix(top, "╡Visual╞═╗") {
+			t.Errorf("inner %d: the name should always show: %q", w, top)
+		}
+		if whole := w >= 10+9; strings.Contains(top, "[2] Page") != whole {
+			t.Errorf("inner %d: the title should be cut only where both do not fit: %q", w, top)
+		}
+		if w >= 18 && !strings.Contains(top, "[2]") {
+			t.Errorf("inner %d: cut, not dropped — its start stays: %q", w, top)
 		}
 	}
 }

@@ -224,7 +224,7 @@ Source（HTML + `/` grep）。
 | popup layer scale | 浮層層級，依 tdp D2 的插值 | — |
 | 語法色 | key Mauve、string Pink、number Flamingo、常數 Sky、註解 dim 斜體、標點 Overlay2 | — |
 
-focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。visual mode 邊框 Yellow、線型照 focus 的雙線，上框右側寫 `Visual mode`（跟 `?` 的標題同一個名字；膠囊加模式名放不下時不寫，框線不歪）（2026-09-29，tdp K11、L5）。
+focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。visual mode 邊框 Yellow、線型照 focus 的雙線，上框右側嵌一個標籤 `╡Visual╞`：接頭是框的線型與顏色，名字 Yellow 加粗、一個詞（`?` 的標題仍是 `Visual mode`）；放不下時先截膠囊的標題，名字一律留著，框線不歪（2026-09-29，tdp K11、L5、D3 v0.1.20）。
 
 ---
 

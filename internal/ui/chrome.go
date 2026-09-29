@@ -311,41 +311,46 @@ func panelChromeTone(innerW int, body []string, title string, tone borderTone) s
 }
 
 // panelChromeMode is that frame with a mode named at the right end of the
-// top border, in the border's colour (tdp K11 v0.1.18): the panel says
-// which mode it is in, not only by turning Yellow. When the capsule and
-// the name do not both fit, the name is left out; the border never bends.
+// top border (tdp K11): the panel says which mode it is in, not only by
+// turning Yellow. The name sits between two junctions of the border's line,
+// like a tag set into it — ╡Visual╞ on a double line, ┤Visual├ on a round
+// one — in the mode's colour, bold (tdp D3 v0.1.20). It always shows: where
+// the capsule and the name do not both fit, the title is cut first; the
+// border never bends.
 func panelChromeMode(innerW int, body []string, title, mode string, tone borderTone) string {
 	bc := toneColor(tone)
 	bs := lipgloss.NewStyle().Foreground(bc)
 	f := frameOf(tone)
 
+	label, labelW := "", 0
+	if mode != "" {
+		label = bs.Render(f.jl) + lipgloss.NewStyle().Foreground(selectColor).Bold(true).Render(mode) + bs.Render(f.jr)
+		labelW = dispW(mode) + 3 // the junctions, and one rule cell before the corner
+		if labelW > innerW {
+			label, labelW = "", 0
+		}
+	}
+
 	// An empty title means NO capsule. Rendering panelChip("") would still draw
 	// both round caps with nothing between them — two stray glyphs sitting on
 	// the border, which is what "no title" must not look like.
 	chip, chipW := "", 0
-	if title != "" {
-		chip, chipW = panelChip(title, tone), dispW(title)+2
-		if chipW > innerW {
-			chip, chipW = "", 0
+	if room := innerW - labelW; title != "" {
+		if dispW(title)+2 > room {
+			title = truncate(title, room-2)
+		}
+		if room >= 3 {
+			chip, chipW = panelChip(title, tone), dispW(title)+2
 		}
 	}
-
-	label, labelW := "", 0
-	if mode != "" {
-		label = " " + mode + " "
-		labelW = dispW(label) + 1 // and one rule cell before the corner
-		if chipW+labelW > innerW {
-			label, labelW = "", 0
-		}
-	}
-	top := f.h + f.tr
+	top := bs.Render(f.h + f.tr)
 	if label == "" {
-		top = f.tr
+		top = bs.Render(f.tr)
 	}
 
 	out := make([]string, 0, len(body)+2)
 	out = append(out, bs.Render(f.tl)+chip+
-		bs.Render(strings.Repeat(f.h, max(0, innerW-chipW-labelW))+label+top))
+		bs.Render(strings.Repeat(f.h, max(0, innerW-chipW-labelW)))+label+top)
 	side := bs.Render(f.v)
 	for _, l := range body {
 		out = append(out, side+l+strings.Repeat(" ", max(0, innerW-dispW(l)))+side)
@@ -354,8 +359,9 @@ func panelChromeMode(innerW int, body []string, title, mode string, tone borderT
 	return strings.Join(out, "\n")
 }
 
-// frame is a panel border's glyphs.
-type frame struct{ tl, tr, bl, br, h, v string }
+// frame is a panel border's glyphs; jl and jr are the junctions a tag on
+// the top border sits between.
+type frame struct{ tl, tr, bl, br, h, v, jl, jr string }
 
 // frameOf is the border a tone draws: a double line where the keyboard is,
 // a round one elsewhere. Colour alone does not tell the focus — a mode turns
@@ -363,9 +369,9 @@ type frame struct{ tl, tr, bl, br, h, v string }
 // moves when the focus does (tdp L5 v0.1.19, D2).
 func frameOf(tone borderTone) frame {
 	if tone == toneFocus || tone == toneSelect {
-		return frame{"╔", "╗", "╚", "╝", "═", "║"}
+		return frame{"╔", "╗", "╚", "╝", "═", "║", "╡", "╞"}
 	}
-	return frame{"╭", "╮", "╰", "╯", "─", "│"}
+	return frame{"╭", "╮", "╰", "╯", "─", "│", "┤", "├"}
 }
 
 // joinVertical / joinHorizontal are display-width aware block joins.
