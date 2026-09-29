@@ -665,3 +665,23 @@ func TestEveryPopupIsOneWidth(t *testing.T) {
 		frame("the file picker", d.m.picker.view())
 	}
 }
+
+// Zoom draws [2] alone; Tab or 1 taking the focus to [1] ends it, so the
+// panel with the focus is the one on screen (tdp L5; as sshu).
+func TestFocusLeavingZoomEndsIt(t *testing.T) {
+	for _, k := range []string{"tab", "1"} {
+		d := keysDriver(t)
+		d.key("2")
+		d.key("Z")
+		if !d.m.zoom {
+			t.Fatal("Z on [2] should zoom")
+		}
+		d.key(k)
+		if d.m.focus != panelTabs || d.m.zoom {
+			t.Errorf("%s: focus %v zoom %v; want [1] and no zoom", k, d.m.focus, d.m.zoom)
+		}
+		if !strings.Contains(ansi.Strip(d.m.View()), "[1] Tabs") {
+			t.Errorf("%s: [1] should be drawn", k)
+		}
+	}
+}

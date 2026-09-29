@@ -36,7 +36,7 @@ header 下一列分隔線，下載中兼進度條。URL 在 `[2]` 內部第一�
 |---|---|
 | 側欄寬 | 固定 24 欄 |
 | `[1]` 高 | header 與 footer 之間全部；分頁清單捲動 |
-| 窄寬 | `w < 72` 只畫焦點那一側；`Z` zoom 讓頁面佔滿（header / footer 仍在） |
+| 窄寬 | `w < 72` 只畫焦點那一側；`Z` zoom 讓頁面佔滿（header / footer 仍在）；focus 離開 `[2]`（`Tab`、`1`）就還原，focus 所在的 panel 一定畫出來（2026-09-29，tdp L5，照 sshu） |
 | chrome | header + 分隔線 + footer 共 3 列，鎖死不 reflow |
 | 寬度穩定 | 每一列都恰好是終端機寬（`TestViewFitsTheTerminal` 跨尺寸檢查）；URL 縮 path、host 永不縮；分頁標題截斷不折行 |
 | 文字欄寬 | 段落折行寬 = min(面板寬, `measure`)；`measure` 收 `full`（預設）或 ≥ 20 的數字；表格、code、分隔線用整個面板寬 |

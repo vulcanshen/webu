@@ -1095,11 +1095,18 @@ func (m AppModel) panelKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch k {
-	case "tab":
-		m.focus = (m.focus + 1) % 2
-		return m, nil
-	case "1", "2":
-		m.focus = panelID(k[0] - '1')
+	case "tab", "1", "2":
+		if k == "tab" {
+			m.focus = (m.focus + 1) % 2
+		} else {
+			m.focus = panelID(k[0] - '1')
+		}
+		// Zoom draws [2] alone: the focus leaving it ends the zoom, so the
+		// panel it lands on is on screen (tdp L5; sshu setFocus).
+		if m.focus != panelPage && m.zoom {
+			m.zoom = false
+			m.relayoutTabs()
+		}
 		return m, nil
 	case "W", "B", "H", "D", "S":
 		return m.switchScreen(k)
