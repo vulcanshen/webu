@@ -489,18 +489,19 @@ func panelFrameFilled(innerW int, body []string, title, legend string, tone bord
 	out := panelChromeTone(innerW, body, title, tone)
 	lines := strings.Split(out, "\n")
 	bs := lipgloss.NewStyle().Foreground(toneColor(tone))
+	f := frameOf(tone)
 	lw := dispW(legend)
 	if lw+4 > innerW {
 		return out
 	}
 	run := innerW - lw - 1
-	rule := bs.Render(strings.Repeat("─", run))
+	rule := bs.Render(strings.Repeat(f.h, run))
 	if pct >= 0 {
 		on := clamp(run*pct/100, 0, run)
 		rule = lipgloss.NewStyle().Foreground(toneColor(toneFocus)).Render(strings.Repeat("━", on)) +
-			bs.Render(strings.Repeat("─", run-on))
+			bs.Render(strings.Repeat(f.h, run-on))
 	}
-	lines[len(lines)-1] = bs.Render("╰") + rule + legend + bs.Render("─╯")
+	lines[len(lines)-1] = bs.Render(f.bl) + rule + legend + bs.Render(f.h+f.br)
 	return strings.Join(lines, "\n")
 }
 
