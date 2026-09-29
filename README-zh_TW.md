@@ -56,7 +56,7 @@ go install github.com/vulcanshen/webu/cmd/webu@latest
 - **Chromium 在第一次啟動時下載**，只下載一次，放在 cache 目錄（約 175–250 MB），有進度列。升級後若需要新版 Chromium，執行 `webu browser update`。
 - **終端機必須用 [Nerd Font](https://www.nerdfonts.com/)** —— 連結、欄位、面板與頁面的各部分都用它的 glyph 畫。
 - **終端機必須支援 truecolor** —— 顏色、以及 popup 底下各層變暗的樣子，都用 24-bit 色畫。
-- 把 icon 畫成兩格寬的字型（部分 CJK 用的 Nerd Font）會在啟動時自動偵測；框線仍然歪掉的話，設定 `WEBU_ICON_WIDTH=2`（或 `1`）。
+- 把 icon 畫成兩格寬的字型（部分 CJK 用的 Nerd Font）會在啟動時自動偵測；框線仍然歪掉的話，設定 `WEBU__ICON_WIDTH=2`（或 `1`）。
 
 移除（刪設定、資料與下載的 Chromium 之前都會先問）：
 
@@ -165,9 +165,9 @@ restore_session: true
 
 | | 內容 | 位置 |
 |---|---|---|
-| 設定 | `config.yaml`、`bookmarks.yaml` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`，或 `$WEBU_CONFIG`） |
-| 資料 | 歷史、session、下載、瀏覽器 profile（cookie、登入）、log | `~/.webu/datas`（`$WEBU_DATA`） |
-| cache | 下載的 Chromium | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$WEBU_CACHE`） |
+| 設定 | `config.yaml`、`bookmarks.yaml` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`，或 `$WEBU__CONFIG`） |
+| 資料 | 歷史、session、下載、瀏覽器 profile（cookie、登入）、log | `~/.webu/datas`（`$WEBU__DATA`） |
+| cache | 下載的 Chromium | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$WEBU__CACHE`） |
 
 設定與書籤都是可以手改的 YAML。
 

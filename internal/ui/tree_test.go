@@ -15,8 +15,8 @@ import (
 // opens it and its items appear under it, deeper; Enter on a leaf picks
 // it (user, 2026-09-23).
 func TestATreeIsATree(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")

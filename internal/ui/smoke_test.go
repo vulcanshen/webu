@@ -13,16 +13,16 @@ import (
 
 // The site smoke tests (function.md §11): three kinds of page, each has to
 // load, draw, and keep every unsupported role visible. They reach the
-// network, so they run only when asked — WEBU_SMOKE=1 — and never in CI by
+// network, so they run only when asked — WEBU__SMOKE=1 — and never in CI by
 // accident. They print the top of each page so a change in the renderer
 // can be judged by eye in the -v log.
 func smokeBrowser(t *testing.T) *browser.Browser {
 	t.Helper()
-	if os.Getenv("WEBU_SMOKE") == "" {
-		t.Skip("set WEBU_SMOKE=1 to run the site smoke tests (they use the network)")
+	if os.Getenv("WEBU__SMOKE") == "" {
+		t.Skip("set WEBU__SMOKE=1 to run the site smoke tests (they use the network)")
 	}
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")

@@ -151,8 +151,8 @@ func (d *driver) cursorOn(kind ir.Kind, want string) {
 }
 
 func TestAppNavigatesAndFillsAForm(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir()) // the history log goes to a scratch dir, not the user's
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir()) // the history log goes to a scratch dir, not the user's
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -306,8 +306,8 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 // bookmarks, the filter narrows them, x asks before deleting, and the
 // session written on the way out is what was open.
 func TestScreensAndSession(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	m := New(nil, "").WithStore(
 		[]store.Bookmark{{Title: "Hacker News", URL: "https://news.ycombinator.com/"}, {Title: "Go", URL: "https://go.dev"}},
 		nil, store.Config{}, nil)
@@ -635,8 +635,8 @@ func TestViewFitsTheTerminal(t *testing.T) {
 
 // L is Chrome's Cmd+L: the box opens with the page's own URL on offer.
 func TestGotoOffersThePageURL(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	d := newDriver(t, New(nil, ""))
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.m.tabs = []*tab{{id: 1, url: "https://example.com/a"}}
@@ -738,8 +738,8 @@ const importSample = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 // as soon as it is picked, the folder name is required and must be new,
 // and the whole tree lands under it.
 func TestImportBookmarks(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	dl := filepath.Join(home, "Downloads")
@@ -832,8 +832,8 @@ func TestImportBookmarks(t *testing.T) {
 // naming what goes, and then takes the whole tree; an empty folder goes
 // at once; what is outside the folder stays.
 func TestDeleteFolderTree(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	m := New(nil, "").WithStore([]store.Bookmark{
 		{Title: "Go", URL: "https://go.dev", Folder: "dev"},
 		{Title: "pkg", URL: "https://pkg.go.dev", Folder: "dev/go"},
@@ -884,8 +884,8 @@ func TestDeleteFolderTree(t *testing.T) {
 // the current one; r on a folder renames that level, and everything
 // under it follows; an empty or a taken name keeps the box.
 func TestRenameBookmarks(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	m := New(nil, "").WithStore([]store.Bookmark{
 		{Title: "Go", URL: "https://go.dev", Folder: "dev"},
 		{Title: "pkg", URL: "https://pkg.go.dev", Folder: "dev/go"},
@@ -954,8 +954,8 @@ func TestRenameBookmarks(t *testing.T) {
 // nav, main and footer are placed by WHERE Chromium laid them out, and
 // the same four come out of a page that marks up none of them.
 func TestPageParts(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -1034,8 +1034,8 @@ func TestPageParts(t *testing.T) {
 // it anywhere would invent a header. It stays whole, and the pagetab
 // does not appear (2026-09-23).
 func TestAFlatPageIsOnePart(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -1068,8 +1068,8 @@ func TestAFlatPageIsOnePart(t *testing.T) {
 }
 
 func TestTableCells(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -1114,8 +1114,8 @@ func TestTableCells(t *testing.T) {
 // options to choose from" (user, 2026-09-23). A combobox WITH options
 // still drops its list.
 func TestAComboboxWithNoOptionsOpensTheInput(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -1157,8 +1157,8 @@ func TestAComboboxWithNoOptionsOpensTheInput(t *testing.T) {
 // history entry has its own place, so a page in the stack twice is two
 // places.
 func TestBackReturnsToThePlaceLeft(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")

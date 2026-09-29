@@ -11,8 +11,8 @@ import (
 // keysDriver is an app with no browser behind it: the core keys route the
 // same whether or not a page is up.
 func keysDriver(t *testing.T) *driver {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	d := newDriver(t, New(nil, ""))
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	return d

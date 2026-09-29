@@ -247,12 +247,12 @@ footer：`Space:menu ?:help Tab/1–2:panels q:quit`；list screen 上 `Space:me
 
 | 資料 | 形式 | 位置 |
 |---|---|---|
-| 設定 | `config.yaml`：`search_engine`（預設 DuckDuckGo html）、`download_dir`、`measure`（`full` 或數字）、`restore_session` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`、`$WEBU_CONFIG`） |
+| 設定 | `config.yaml`：`search_engine`（預設 DuckDuckGo html）、`download_dir`、`measure`（`full` 或數字）、`restore_session` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`、`$WEBU__CONFIG`） |
 | 書籤 | flat yaml：`bookmarks:`（各帶 `folder`）+ `folders:` | 同上 |
-| 歷史 | YAML sequence，一次 append 一筆；無限保留 | `~/.webu/datas`（`$WEBU_DATA`） |
+| 歷史 | YAML sequence，一次 append 一筆；無限保留 | `~/.webu/datas`（`$WEBU__DATA`） |
 | session | 離開時寫下所有分頁 | 同上 |
 | 下載檔案 | `download_dir`，預設 `~/.webu/datas/downloads` | 同上 |
 | profile / log | Chromium user-data-dir；chromedp 的 log（絕不進終端機） | 同上 |
-| Chromium | 釘死 revision，可重新下載 | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$WEBU_CACHE`） |
+| Chromium | 釘死 revision，可重新下載 | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$WEBU__CACHE`） |
 
 分法：**使用者寫的**在 config、**webu 產生的**在 data、**可重抓的**在 cache。每次寫檔原子。

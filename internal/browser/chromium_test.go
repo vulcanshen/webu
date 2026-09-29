@@ -131,7 +131,7 @@ func TestDownloadInstallsAndReports(t *testing.T) {
 	old := snapshotHost
 	snapshotHost = srv.URL
 	defer func() { snapshotHost = old }()
-	t.Setenv("WEBU_CACHE", t.TempDir())
+	t.Setenv("WEBU__CACHE", t.TempDir())
 
 	if _, ok := Installed(); ok {
 		t.Fatal("installed before download")
@@ -166,7 +166,7 @@ func TestDownloadFailsCleanly(t *testing.T) {
 	old := snapshotHost
 	snapshotHost = srv.URL
 	defer func() { snapshotHost = old }()
-	t.Setenv("WEBU_CACHE", t.TempDir())
+	t.Setenv("WEBU__CACHE", t.TempDir())
 	if _, err := Download(context.Background(), nil); err == nil {
 		t.Fatal("a 404 was reported as success")
 	}
@@ -176,7 +176,7 @@ func TestDownloadFailsCleanly(t *testing.T) {
 }
 
 func TestProfileDirUnderData(t *testing.T) {
-	t.Setenv("WEBU_DATA", "/tmp/wd")
+	t.Setenv("WEBU__DATA", "/tmp/wd")
 	if d, _ := ProfileDir(); d != filepath.Join("/tmp/wd", "profile") {
 		t.Errorf("ProfileDir %q", d)
 	}

@@ -205,7 +205,7 @@ code block（JSON 自動縮排），不畫 Chrome 的 JSON viewer。**PDF 不支
 - **行為用瀏覽器測**：`internal/ui` 的測試在 `httptest` / `file://` 的小頁面上跑真的 Chromium
   ——彈窗、表單、frame（含跨站、巢狀）、slider、tabs、tree、listbox、popup 疊層、載入指示、
   finder、section、back 回到原位。沒裝 Chromium 就 skip。
-- **站級只做 smoke**（`WEBU_SMOKE=1`：Hacker News、GitHub）：整棵樹跑完不崩、未支援 role 看得見。
+- **站級只做 smoke**（`WEBU__SMOKE=1`：Hacker News、GitHub）：整棵樹跑完不崩、未支援 role 看得見。
 - Chromium 版本釘死（§9），fixture 不會因為引擎升版而漂。
 
 ---

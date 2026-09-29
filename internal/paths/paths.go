@@ -12,14 +12,14 @@ import (
 // bookmarks.yaml (ui.md §6) — ~/.config/webu on every platform. What webu
 // produces as it runs is under Data.
 //
-// WEBU_CONFIG overrides everything — it names the directory outright, for
+// WEBU__CONFIG overrides everything — it names the directory outright, for
 // demo recordings and isolated tests. Otherwise XDG_CONFIG_HOME wins when
 // set. The rest of the family lets os.UserConfigDir decide, which on macOS
 // is ~/Library/Application Support; webu departs from that (2026-09-21):
 // its settings and bookmarks are meant to be found, edited and synced by
 // hand, and ~/.config is where a terminal user looks for them.
 func Config() (string, error) {
-	if p := os.Getenv("WEBU_CONFIG"); p != "" {
+	if p := os.Getenv("WEBU__CONFIG"); p != "" {
 		return p, nil
 	}
 	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
@@ -36,9 +36,9 @@ func Config() (string, error) {
 // session, downloads, the Chromium profile and its log — ~/.webu/datas,
 // on every platform (revised 2026-09-21: settings under ~/.config/webu,
 // data under ~/.webu, so a config dir can be checked in or synced without
-// dragging a browser profile along). WEBU_DATA overrides outright.
+// dragging a browser profile along). WEBU__DATA overrides outright.
 func Data() (string, error) {
-	if p := os.Getenv("WEBU_DATA"); p != "" {
+	if p := os.Getenv("WEBU__DATA"); p != "" {
 		return p, nil
 	}
 	home, err := os.UserHomeDir()
@@ -59,9 +59,9 @@ func Downloads() (string, error) {
 
 // Cache is where the Chromium binary goes (function.md §9): a thing that can
 // be re-downloaded, so it lives with the caches rather than with the config.
-// WEBU_CACHE overrides outright; XDG_CACHE_HOME next; then os.UserCacheDir.
+// WEBU__CACHE overrides outright; XDG_CACHE_HOME next; then os.UserCacheDir.
 func Cache() (string, error) {
-	if p := os.Getenv("WEBU_CACHE"); p != "" {
+	if p := os.Getenv("WEBU__CACHE"); p != "" {
 		return p, nil
 	}
 	if x := os.Getenv("XDG_CACHE_HOME"); x != "" {

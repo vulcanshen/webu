@@ -91,8 +91,8 @@ func TestTheEditorHasTwoModes(t *testing.T) {
 // Against the page: Enter on a textarea opens the box, and what is set
 // lands in the field, newlines and all.
 func TestATextareaOpensTheEditor(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
