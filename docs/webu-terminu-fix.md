@@ -37,23 +37,9 @@ tdp 連結（README 兩份、docs、`.claude/rules`）已由 terminu session 從
 比畫面高、兩者都大；不 panic、每列剛好畫面寬、列數等於畫面高）。webu 保留自己的函式名（`composite`）即可。
 
 
-## 2. 環境變數沒照家族命名 —— D6（v0.1.21）
+## 已修完（2026-09-29）
 
-| 現在 | 意思 | 改成 |
-|---|---|---|
-| `WEBU_CONFIG`（`internal/paths/paths.go`） | 設定目錄 | `WEBU__CONFIG` |
-| `WEBU_DATA`（`paths.go`） | 資料目錄 | `WEBU__DATA` |
-| `WEBU_CACHE`（`paths.go`） | 快取目錄 | `WEBU__CACHE` |
-| `WEBU_ICON_WIDTH`（`internal/ui/iconwidth_unix.go`） | icon 寬度覆寫 | `WEBU__ICON_WIDTH` |
-| `WEBU_SMOKE`（`internal/ui/smoke_test.go`） | 測試用 | `WEBU__SMOKE` |
-
-**規則**：D6（v0.1.21）—— `<大寫 app 名>__<變數名>`，變數名全大寫、單字之間一個底線；app 自己讀的變數（含測試用、傳給自己子程序的）
-都照這個寫。共用名：`<APP>__CONFIG`（設定目錄）、`<APP>__STATE`（狀態目錄）、`<APP>__DATA`（資料目錄）、`<APP>__CACHE`（快取目錄）、
-`<APP>__ICON_WIDTH`。給別的程式讀的變數例外。**改名不留舊名**（user 裁定）。
-
-**怎麼改**：照上表改名。一起改的地方：`internal/ui` 各測試檔設的 `WEBU_CONFIG` / `WEBU_DATA`、`internal/paths/paths_test.go`、
-`internal/browser/chromium_test.go`、`.local/demos/` 的三個 tape（`demo`、`parts`、`sections`）、README 兩份、`docs/dev-remarks.md`、
-`docs/ui.md`、`docs/function.md`。改完 `grep -rn 'WEBU_[A-Z]' .` 除了 CHANGELOG 舊段落是零。
+第 2 條（環境變數改名 `WEBU__*`，舊名不再讀）已修完、已從本清單刪掉：`8b98d03`。只剩第 1 條，等 filu。
 
 
 ## 已經符合、不用修的（對照 v0.1.21 的改動）
