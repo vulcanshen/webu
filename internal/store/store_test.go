@@ -8,8 +8,8 @@ import (
 )
 
 func TestRoundTrips(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 
 	if b, _, err := LoadBookmarks(); err != nil || len(b) != 0 {
 		t.Fatalf("empty state: %v %v", b, err)
@@ -51,8 +51,8 @@ func TestRoundTrips(t *testing.T) {
 }
 
 func TestHistoryIsNewestFirstAndDeletable(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	t0 := time.Date(2026, 9, 20, 10, 0, 0, 0, time.UTC)
 	for i := 0; i < 3; i++ {
 		if err := AppendVisit(Visit{At: t0.Add(time.Duration(i) * time.Minute), URL: "https://x/" + string(rune('a'+i)), Title: "T\tab"}); err != nil {

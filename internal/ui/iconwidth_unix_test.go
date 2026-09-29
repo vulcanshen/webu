@@ -24,3 +24,23 @@ func TestParseCPRColumn(t *testing.T) {
 		}
 	}
 }
+
+// WEBU__ICON_WIDTH overrides the probe; the old WEBU_ICON_WIDTH is not
+// read (tdp D6 v0.1.21). Not a terminal here, so without the override the
+// probe leaves one cell.
+func TestIconWidthOverride(t *testing.T) {
+	was := iconCells
+	t.Cleanup(func() { iconCells = was })
+	t.Setenv("WEBU__ICON_WIDTH", "")
+	t.Setenv("WEBU_ICON_WIDTH", "2")
+	iconCells = 1
+	DetectIconWidth()
+	if iconCells != 1 {
+		t.Errorf("the old name set %d cells", iconCells)
+	}
+	t.Setenv("WEBU__ICON_WIDTH", "2")
+	DetectIconWidth()
+	if iconCells != 2 {
+		t.Errorf("WEBU__ICON_WIDTH=2 gave %d cells", iconCells)
+	}
+}

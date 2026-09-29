@@ -11,8 +11,8 @@ import (
 // mode is the lower-case v): the logo reveals in stages, the name and
 // version follow, and any key puts the screen back.
 func TestSplashEasterEgg(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	d := newDriver(t, New(nil, ""))
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 

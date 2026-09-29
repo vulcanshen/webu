@@ -116,8 +116,8 @@ func TestAPopupIsToldByBehaviour(t *testing.T) {
 // one uncovers the one below; a page that opens a dialog on load opens
 // on it.
 func TestPopupsStackAndOpenOnLoad(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -180,8 +180,8 @@ func TestPopupsStackAndOpenOnLoad(t *testing.T) {
 // Esc does not leave them, and answering them puts the page back; the
 // toast is content.
 func TestPopupsArePanelsUntilAnswered(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -285,8 +285,8 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 // put one press in six on whatever had moved under it (2026-09-23).
 // The page actions are serialised per tab now (tab.act).
 func TestAPressLandsWhereTheCursorIs(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -326,8 +326,8 @@ func TestAPressLandsWhereTheCursorIs(t *testing.T) {
 // A menu that opens from a button is a popup: over the page, its items
 // pressable, gone when one is pressed (the APG menu button, 2026-09-23).
 func TestAMenuButtonOpensAPopup(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -363,8 +363,8 @@ func TestAMenuButtonOpensAPopup(t *testing.T) {
 // of turning to the loading grey.
 func TestPopupBackdropFades(t *testing.T) {
 	withColour(t)
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")

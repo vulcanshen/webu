@@ -121,8 +121,8 @@ func TestGoFiltersByLineNumber(t *testing.T) {
 // [/] over a real page: the hit is found in another part, and Enter goes
 // there — the part switches, the cursor lands, nothing is pressed.
 func TestSearchGoesToAHitInAnotherPart(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
@@ -189,8 +189,8 @@ func TestSearchGoesToAHitInAnotherPart(t *testing.T) {
 // [go] over a page: the list is its lines, digits narrow it, Enter is
 // the line.
 func TestGoToLineOnAPage(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")

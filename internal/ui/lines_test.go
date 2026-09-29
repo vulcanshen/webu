@@ -58,8 +58,8 @@ func TestEveryPageHasLineNumbers(t *testing.T) {
 // the panel is that section, and "line 5" has to mean the fifth line of
 // what is being read.
 func TestLineNumbersCountWhatIsShown(t *testing.T) {
-	t.Setenv("WEBU_CONFIG", t.TempDir())
-	t.Setenv("WEBU_DATA", t.TempDir())
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
 	if !ok {
 		t.Skip("pinned Chromium not installed; run webu once")
