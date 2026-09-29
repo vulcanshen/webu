@@ -56,7 +56,7 @@ go install github.com/vulcanshen/webu/cmd/webu@latest
 - **Chromium 在第一次啟動時下載**，只下載一次，放在 cache 目錄（約 175–250 MB），有進度列。升級後若需要新版 Chromium，執行 `webu browser update`。
 - **終端機必須用 [Nerd Font](https://www.nerdfonts.com/)** —— 連結、欄位、面板與頁面的各部分都用它的 glyph 畫。
 - **終端機必須支援 truecolor** —— 顏色、以及 popup 底下各層變暗的樣子，都用 24-bit 色畫。
-- 把 icon 畫成兩格寬的字型（部分 CJK 用的 Nerd Font）會在啟動時自動偵測；框線仍然歪掉的話，設定 `WEBU__ICON_WIDTH=2`（或 `1`）。在 terminu 家族的其他 app（kbu、filu、sshu）裡面執行時，webu 會沿用那個 app 傳下來的寬度。
+- **icon 寬度**：有些終端機與字型的組合，印一個 icon 游標會前進兩格而不是一格。webu 啟動時會量；框線仍然歪掉的話，自己設定：`WEBU__ICON_WIDTH=2`（或 `1`）只給 webu，`TERMINU__ICON_WIDTH` 則是 terminu 家族每個 app 都讀的共用變數 —— 設一次全家族都跟著（`WEBU__ICON_WIDTH` 優先）。在家族的其他 app（kbu、filu、sshu）裡面執行時，那個 app 會替 webu 設好 `TERMINU__ICON_WIDTH`。
 
 移除（刪設定、資料與下載的 Chromium 之前都會先問）：
 
@@ -185,7 +185,7 @@ restore_session: true
 
 ## terminu family
 
-webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.22/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
+webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
 
 ## 授權
 

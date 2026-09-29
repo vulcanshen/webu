@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.22/principle)（tdp），是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp），是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -197,7 +197,7 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 - **一件事一列。** 佔好幾行的清單項目或 article 只畫第一行；`Enter` 走進去、`Esc` 出來，頁面巢多深就走多深。
 - **表單畫成表單。** label 一欄對齊、值靠一邊、label 永不截斷（擠不下就疊成兩列）。每一種輸入都定義了互動；日期、時間、顏色框不合瀏覽器的形狀就擋下來，不讓瀏覽器無聲丟掉。
 - **頁面自己的彈窗靠行為認** —— 按下之後出現、拿到 focus 或自己宣告或疊在別的東西上、裡面有東西可按 —— 從不看標籤。它要一個回答：`Esc` 不關。
-- **寬度是游標實際前進幾格**（2026-09-29，tdp D6 v0.1.20）。有些字型（Maple Mono NF CN 這類 CJK 字型）把 Nerd Font 的 icon 畫成兩格、游標也前進兩格，lipgloss 卻量成一格，每一列有 icon 的框線就被推出去。啟動時（`main.go` 在 `tea.NewProgram` 之前、`version` / `help` / `browser update` 不做）`DetectIconWidth()` 印一個 icon、用 CPR 問游標落在哪，量到的格數存在 `iconCells`；`WEBU__ICON_WIDTH`（1 或 2）可以蓋過它；沒設時讀家族共用的 `TERMINU__ICON_WIDTH` —— 有 PTY 的家族 app 設給子程序，因為在別的 app 的 PTY 裡，探測是由那個 app 的終端模擬器回答、icon 一律量成一格（2026-09-29，tdp D6 v0.1.22）；兩個都沒有才探測，只收 1、2。webu 自己沒有 PTY，不用設它。所有量寬度的地方都走 `width.go`：`dispW`（`truncate` / `padRight` 等逐字量，自然跟著對）、`clipANSI`、`cutLeft`，疊 popup 用 `composite`（取代 `overlay.Composite`）、置中用 `center`（取代 `lipgloss.Place`）、並排與堆疊用 `joinH` / `joinV`；`internal/ui` 裡除了 `width.go` 自己，沒有 `lipgloss.Width` / `Place` / `Join`、`ansi.StringWidth` / `Truncate`、`overlay.Composite`。`iconCells` 是 1 時量法與 lipgloss 完全一樣。參考實作是 filu 的 `width.go`（分頁用的羅馬數字 webu 沒有，不搬）；探測只在 unix，家族不出 Windows。`d6_test.go` 在一格與兩格下逐一打開每種 popup，量單獨的框與疊上去的整個畫面。`composite` 碰到比畫面寬或高的 popup（調整終端機大小那一格還是舊尺寸）時起點取 0、超出的部分切掉、畫面維持原尺寸，不 panic（2026-09-29，tdp D6 v0.1.21；filu 的參考實作原本會 panic，兩者都大時還會整個回傳 popup）。
+- **寬度是游標實際前進幾格**（2026-09-29，tdp D6 v0.1.20）。有些終端機與字型的組合印一個 Nerd Font 的 icon 游標會前進兩格，lipgloss 卻量成一格（不舉字型當例子：同一個字型在不同終端機上前進的格數可能不同 —— filu 實測 Maple Mono NF CN 的 icon 看起來兩格、游標只前進一格，tdp D7 v0.1.23），每一列有 icon 的框線就被推出去。啟動時（`main.go` 在 `tea.NewProgram` 之前、`version` / `help` / `browser update` 不做）`DetectIconWidth()` 印一個 icon、用 CPR 問游標落在哪，量到的格數存在 `iconCells`；`WEBU__ICON_WIDTH`（1 或 2）可以蓋過它；沒設時讀家族共用的 `TERMINU__ICON_WIDTH` —— 有 PTY 的家族 app 設給子程序，因為在別的 app 的 PTY 裡，探測是由那個 app 的終端模擬器回答、icon 一律量成一格（2026-09-29，tdp D6 v0.1.22）；兩個都沒有才探測，只收 1、2。webu 自己沒有 PTY，不用設它。所有量寬度的地方都走 `width.go`：`dispW`（`truncate` / `padRight` 等逐字量，自然跟著對）、`clipANSI`、`cutLeft`，疊 popup 用 `composite`（取代 `overlay.Composite`）、置中用 `center`（取代 `lipgloss.Place`）、並排與堆疊用 `joinH` / `joinV`；`internal/ui` 裡除了 `width.go` 自己，沒有 `lipgloss.Width` / `Place` / `Join`、`ansi.StringWidth` / `Truncate`、`overlay.Composite`。`iconCells` 是 1 時量法與 lipgloss 完全一樣。參考實作是 filu 的 `width.go`（分頁用的羅馬數字 webu 沒有，不搬）；探測只在 unix，家族不出 Windows。`d6_test.go` 在一格與兩格下逐一打開每種 popup，量單獨的框與疊上去的整個畫面。`composite` 碰到比畫面寬或高的 popup（調整終端機大小那一格還是舊尺寸）時起點取 0、超出的部分切掉、畫面維持原尺寸，不 panic（2026-09-29，tdp D6 v0.1.21；filu 的參考實作原本會 panic，兩者都大時還會整個回傳 popup）。
 - **frame 是一層。** 跨站 frame 是另一個 process、另一個 target，`Page.getFrameTree` 看不到；webu 用 `DOM.describeNode` 拿到它的 target、開一條自己的 session。frame 的 node id 從 1 重新數，所以帶進來時加上 `slot × 2^40`。巢狀 frame 一層一層接。
 - **顏色是概念，不是元素。** 可按的 sapphire、可填的 mauve、code pink、媒體灰、pagetab rosewater、填錯的值紅；heading 與目錄用五個 hue 表深度。沒有括號、沒有 emoji，每個控制項以 glyph 開頭。配色 catppuccin-mocha。
 - **頁面記得自己的位置**，每個 history entry 各記一份。還在長的頁面（SPA）spinner 一直轉到兩次看到的一樣為止。`Enter` 先 hover 再點。一次一個動作，快速走動不會把點擊拉離目標。
@@ -242,7 +242,7 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 - 頁面名字自帶 Nerd Font glyph（APG 的 tree 用 U+F07B 當資料夾 icon）看起來像多一格空白 —— 先放著
 - 滑鼠、Linux ARM
 
-webu 照 tdp v0.1.22 逐條修完（2026-09-29）；有意不照做的地方列在下一節。
+webu 照 tdp v0.1.23 逐條修完（2026-09-29）；有意不照做的地方列在下一節。
 
 ## 偏離 tdp
 
