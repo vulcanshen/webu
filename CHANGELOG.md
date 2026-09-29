@@ -94,6 +94,9 @@
 
 ### Fixed
 
+- Resizing the terminal smaller while a popup is open no longer crashes
+  webu: a popup still at the old size is cut at the screen's edge for the
+  moment it takes to redraw.
 - Frames no longer come out crooked on fonts that draw the icons two
   cells wide (some CJK Nerd Fonts): webu measures how far the cursor moves
   for an icon when it starts, and `WEBU_ICON_WIDTH` overrides it.
