@@ -346,10 +346,9 @@ func TestHeadingTitleDropsItsOwnAnchor(t *testing.T) {
 	}
 }
 
-// The panel's bottom border reads to how far through the open section the
-// reader is — a progress bar that costs no row, the same one the header
-// rule draws for a download. A section that fits on screen draws none.
-func TestBorderFillsAsYouRead(t *testing.T) {
+// The panel's bottom border says how far through the open section the
+// reader is, as a percentage; a section that fits on screen has none.
+func TestBorderSaysHowFarIn(t *testing.T) {
 	kids := []*ir.Node{hd(1, "Title"), para(text("lede"))}
 	for i := 0; i < 3; i++ {
 		kids = append(kids, hd(2, "Part "+itoa(i)))
@@ -366,10 +365,15 @@ func TestBorderFillsAsYouRead(t *testing.T) {
 	if got := tb.readPct(20); got <= 0 || got >= 100 {
 		t.Fatalf("at the top of a long section the reader is part way in: %d%%", got)
 	}
-	frame := panelFrameFilled(60, []string{}, "[2] Page", "1/4", toneFocus, tb.readPct(20))
+	// The border says how far in, in words; it is not a progress bar
+	// (user, 2026-09-29).
+	d := keysDriver(t)
+	tb.id, tb.url = 1, "https://example.com/"
+	d.m.tabs, d.m.shown = []*tab{tb}, 0
+	frame := d.m.pagePanel(62, 20+2+pageHeaderRows)
 	last := frame[strings.LastIndex(frame, "\n"):]
-	if !strings.Contains(last, "━") {
-		t.Errorf("the border should fill: %q", last)
+	if !strings.Contains(last, "%") || strings.Contains(last, "━") {
+		t.Errorf("the border should say the percentage and draw no bar: %q", last)
 	}
 	// Scrolled to the end, it is full.
 	tb.top = tb.secs[1].last

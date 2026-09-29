@@ -94,7 +94,7 @@ header 下一列分隔線，下載中兼進度條。URL 在 `[2]` 內部第一�
 | 畫面 | 內容 | 鍵 |
 |---|---|---|
 | **目錄** | 一列一節：序號（就是 `go` 的行號）、依深度縮排的標題、右欄 `󰓫 N`（表）`󰅩 N`（code）`󰋩 N`（媒體）與行數；標題用該深度的 ink（五個 hue 輪流，`levelColor`），游標列用同色反白 | `j`/`k`/`u`/`d`/`gg`/`G` 走、Enter 開一節、Esc 上 pagetab |
-| **一節** | 面板 header 列變成 `☰ 2/26 節名`（該深度的 ink），內容從節的本文開始（標題不再印第二次）；**一節包含它的子節**（2026-09-23：MDN 的「Try it」是 h2、內容全在它的 h4 底下，不含子節就是空的；章包含節，h1 = 整篇），下框 hint `2/26 · 節名 · 40%`，下框本身填成進度條 | `n`/`p` 同深度的下一節 / 上一節、Esc 回目錄 |
+| **一節** | 面板 header 列變成 `☰ 2/26 節名`（該深度的 ink），內容從節的本文開始（標題不再印第二次）；**一節包含它的子節**（2026-09-23：MDN 的「Try it」是 h2、內容全在它的 h4 底下，不含子節就是空的；章包含節，h1 = 整篇），下框 hint `2/26 · 節名 · 40%`（下框本身填成進度條的做法 2026-09-29 拿掉，user：狀態字已經有百分比） | `n`/`p` 同深度的下一節 / 上一節、Esc 回目錄 |
 | **一整張** | 從頭到尾一張紙 | Space menu 的 `One sheet` / `Sections` 切換 |
 
 不到三個標題、表單、app、搜尋結果：`shapeOne`，就是一整張。沒有內文只有連結的「節」（w3schools 的
@@ -234,7 +234,7 @@ focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `
 |---|---|
 | Border title chip | `[1] Tabs`、`[2] Page`；讀一節 / 走進一件事時 `[2]` 的第二列變成 `☰ 2/26 節名` 或那件事的第一行 |
 | Panel tab bar | 面板都沒有；tab bar 只出現在 DevTools popup |
-| Border hint | `[2]` 下框：在哪（`2/26 · 節名 · 40%`、part 名）、loading；讀一節時下框本身是進度條。這些是狀態、不是鍵：用說明的 Overlay0 畫，不寫成 `鍵:說明`；手在 pagetab 上時後面接 `Enter:stay`（2026-09-29，tdp M5） |
+| Border hint | `[2]` 下框：在哪（`2/26 · 節名 · 40%`、part 名）、loading。這些是狀態、不是鍵：用說明的 Overlay0 畫，不寫成 `鍵:說明`；手在 pagetab 上時後面接 `Enter:stay`（2026-09-29，tdp M5） |
 
 footer：`Space:menu ?:help Tab/1–2:panels q:quit`；list screen 上 `Space:menu ?:help Esc:web q:quit`。footer 與每個下框 hint 都寫 `鍵:說明`：鍵 Blue、冒號與說明 Overlay0，項目之間一個空格，寬度不夠從尾端整組捨棄（2026-09-29，tdp M5、D1、D2 v0.1.15）。
 
