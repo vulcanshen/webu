@@ -19,7 +19,7 @@ webu 開的是真正的網頁 —— 能登入、JavaScript 會跑、cookie 留�
 ## 為什麼用 webu
 
 - **它是真的瀏覽器。** 文字後面跑著一個釘死版本的 headless Chromium，有自己的持久 profile。網站登入之後會一直記得你、JavaScript 照跑，而且完全不碰你自己的 Chrome。
-- **一頁就是一份文件。** 有標題的頁面一打開是目錄；`Enter` 讀一節、`n` / `p` 上下一節、`Esc` 回目錄。`Space` › `One sheet` 把整頁一次攤開。
+- **一頁就是一份文件。** 有標題的頁面一打開是目錄；`Enter` 讀一節、`n/p` 上下一節、`Esc` 回目錄。`Space` › `One sheet` 把整頁一次攤開。
 - **header、正文、側欄、footer 分開放。** webu 依位置把每一頁切成幾個部分，文章就是文章，側欄在你要看之前不擋路。
 - **幾個鍵找到任何東西。** `/` 搜整頁每一段文字，命中清單帶預覽，選了直接帶你過去。
 - **表單就是表單。** 輸入框寫清楚它收什麼、textarea 開在編輯器裡、select 列出選項、slider 列出數字、日期和顏色送出前先檢查、檔案用 picker 選。
@@ -75,9 +75,9 @@ webu help                         # 完整的命令列說明
 
 接著：
 
-- 在文件頁 —— `j` / `k` 在目錄上移動、`Enter` 讀一節、`n` 下一節、`Esc` 回目錄。
+- 在文件頁 —— `j/k` 在目錄上移動、`Enter` 讀一節、`n` 下一節、`Esc` 回目錄。
 - 在任何頁 —— `/`、打一個字、`Enter`、`Enter`：你就到了。
-- `L` 輸入網址、`P` / `N` 上一頁 / 下一頁、`q` 離開。
+- `L` 輸入網址、`P/N` 上一頁 / 下一頁、`q` 離開。
 
 ## 五個鍵
 
@@ -105,15 +105,15 @@ webu help                         # 完整的命令列說明
 
 ## 按鍵
 
-下面每個字母同時也是該處 `Space` 選單裡的一列，括號印的就是要按的鍵：`[A]dd folder` 是 shift+A，`[a]dd` 是單按 `a`。
+下面每個字母同時也是該處 `Space` 選單裡的一列，括號印的就是要按的鍵：`[A]dd folder` 是 `Shift-A`，`[a]dd` 是單按 `a`。
 
 ### 到處都通
 
 ```
- screen    W / B / H / D / S           screen 上 Esc 回到 web
- 面板      1 / 2  ·  Tab
- 游標      j k    u d（半頁）          gg G      h l 同列移動
- 全域      Space 選單    ? 按鍵    q / Ctrl+C 離開
+ screen    W/B/H/D/S                   screen 上 Esc 回到 web
+ 面板      Tab/1–2
+ 游標      j/k    u/d（半頁）          gg/G      h/l 同列移動
+ 全域      Space 選單    ? 按鍵    q/Ctrl-C 離開
 ```
 
 ### 分頁
@@ -124,7 +124,7 @@ webu help                         # 完整的命令列說明
 
 `Enter` 在連結上先問再開；在按鈕上按下；在輸入框上開框打字；在 select 上列出選項；在標題上收合；在一節、長的清單項目或 frame 上走進去。`Esc` 走出來。
 
-`Space` 就是右鍵選單：連結開新分頁、複製連結或文字、送出、清除或編輯輸入框、檢查元素。對整頁：`R` 重新載入 · `T` 新分頁 · `P` / `N` 上一頁 / 下一頁 · `/` finder · `go` 跳到某行 · `n` / `p` 下一節 / 上一節 · `Sections` / `One sheet` · `v` visual mode · `L` 網址 · `A` 加書籤 · `I` DevTools · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。
+`Space` 就是右鍵選單：連結開新分頁、複製連結或文字、送出、清除或編輯輸入框、檢查元素。對整頁：`R` 重新載入 · `T` 新分頁 · `P/N` 上一頁 / 下一頁 · `/` finder · `go` 跳到某行 · `n/p` 下一節 / 上一節 · `Sections` / `One sheet` · `v` visual mode · `L` 網址 · `A` 加書籤 · `I` DevTools · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。
 
 `L` 開網址框時會帶著目前的網址：`Tab` 接過來改、`Backspace` 不要它。有好幾欄的框（加書籤、登入）用 `Tab` 換欄、`→` 接下提議，`Enter` 一次送出全部。
 
@@ -137,11 +137,11 @@ webu help                         # 完整的命令列說明
 
 ### DevTools（`I`）
 
-`h` / `l` 切換 **Network**（`Enter` 看 request 的 header 與 body）、**Storage**（cookie、local 與 session storage —— `x` 刪除、`y` 複製、`C` 清除站台資料）、**Console**（`i` 在頁面裡執行 JavaScript）與 **Source**（頁面 HTML，`/` 搜尋）。`Esc` 關閉。
+`h/l` 切換 **Network**（`Enter` 看 request 的 header 與 body）、**Storage**（cookie、local 與 session storage —— `x` 刪除、`y` 複製、`C` 清除站台資料）、**Console**（`i` 在頁面裡執行 JavaScript）與 **Source**（頁面 HTML，`/` 搜尋）。`Esc` 關閉。
 
 ### Visual mode（`v`）
 
-選字、複製。`h j k l`、`w e b`、`0 $`、`gg G` 移動；`v` / `V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 搜尋、`n` / `N` 下一個；`Esc` 離開。
+選字、複製。`h/j/k/l`、`w/e/b`、`0/$`、`gg/G` 移動；`v/V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 搜尋、`n/N` 下一個；`Esc` 離開。
 
 ## 設定
 

@@ -19,7 +19,7 @@ webu opens real web pages — logins, JavaScript, cookies and all — and lays t
 ## Why webu
 
 - **It is a real browser.** A pinned Chromium runs headless behind the text, with its own persistent profile. Sites log you in and keep you logged in, JavaScript runs, and your own Chrome is never touched.
-- **A page is a document.** A page with headings opens on its table of contents; `Enter` reads a section, `n` / `p` move to the next or previous one, `Esc` goes back. `Space` › `One sheet` shows the whole page at once.
+- **A page is a document.** A page with headings opens on its table of contents; `Enter` reads a section, `n/p` move to the next or previous one, `Esc` goes back. `Space` › `One sheet` shows the whole page at once.
 - **Header, body, sidebars, footer — kept apart.** webu splits every page into its parts by where they sit, so the article is the article and the sidebar stays out of the way until you want it.
 - **Find anything in a few keys.** `/` searches every block of text on the page, lists the hits with a preview, and takes you straight there.
 - **Forms that behave like forms.** Text boxes say what they take, a textarea opens in an editor, selects list their options, sliders list their numbers, dates and colours are checked before they are sent, files come from a picker.
@@ -75,9 +75,9 @@ webu help                         # the whole command line
 
 Then:
 
-- On a documentation page — `j` / `k` down the table of contents, `Enter` to read a section, `n` for the next, `Esc` back to the list.
+- On a documentation page — `j/k` down the table of contents, `Enter` to read a section, `n` for the next, `Esc` back to the list.
 - On any page — `/`, type a word, `Enter`, `Enter`: you are there.
-- `L` to go to an address, `P` / `N` for back and forward, `q` to quit.
+- `L` to go to an address, `P/N` for back and forward, `q` to quit.
 
 ## Five keys
 
@@ -105,15 +105,15 @@ Switch with a capital letter:
 
 ## Key bindings
 
-Every letter below is also a row in that place's `Space` menu, printed exactly as you press it: `[A]dd folder` is shift+A, `[a]dd` a bare `a`.
+Every letter below is also a row in that place's `Space` menu, printed exactly as you press it: `[A]dd folder` is `Shift-A`, `[a]dd` a bare `a`.
 
 ### Everywhere
 
 ```
- screens   W / B / H / D / S           Esc on a screen goes back to the web
- panels    1 / 2  ·  Tab
- cursor    j k    u d (half page)      gg G      h l along a row
- global    Space menu    ? keys    q / Ctrl+C quit
+ screens   W/B/H/D/S                   Esc on a screen goes back to the web
+ panels    Tab/1–2
+ cursor    j/k    u/d (half page)      gg/G      h/l along a row
+ global    Space menu    ? keys    q/Ctrl-C quit
 ```
 
 ### Tabs
@@ -124,7 +124,7 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
 
 `Enter` on a link asks, then opens; on a button presses; on a box opens it to type; on a select lists its options; on a heading folds it; on a section, a long list item or a frame goes in. `Esc` comes back out.
 
-`Space` is the right-click menu: open a link in a new tab, yank a link or text, submit, clear or edit a box, inspect an element. For the page: `R` reload · `T` new tab · `P` / `N` back / forward · `/` finder · `go` go to line · `n` / `p` next / previous section · `Sections` / `One sheet` · `v` visual mode · `L` location · `A` bookmark it · `I` DevTools · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab.
+`Space` is the right-click menu: open a link in a new tab, yank a link or text, submit, clear or edit a box, inspect an element. For the page: `R` reload · `T` new tab · `P/N` back / forward · `/` finder · `go` go to line · `n/p` next / previous section · `Sections` / `One sheet` · `v` visual mode · `L` location · `A` bookmark it · `I` DevTools · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab.
 
 `L` opens the address box with the current URL on offer: `Tab` accepts it to edit, `Backspace` declines it. In a box of several fields — adding a bookmark, signing in — `Tab` moves between them, `→` accepts an offer, and `Enter` sends them all.
 
@@ -137,11 +137,11 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
 
 ### DevTools (`I`)
 
-`h` / `l` switch between **Network** (`Enter` a request's headers and body), **Storage** (cookies, local and session storage — `x` delete, `y` yank, `C` clear site data), **Console** (`i` to evaluate JavaScript in the page) and **Source** (the page's HTML, `/` to grep). `Esc` closes.
+`h/l` switch between **Network** (`Enter` a request's headers and body), **Storage** (cookies, local and session storage — `x` delete, `y` yank, `C` clear site data), **Console** (`i` to evaluate JavaScript in the page) and **Source** (the page's HTML, `/` to grep). `Esc` closes.
 
 ### Visual mode (`v`)
 
-Select text and copy it. `h j k l`, `w e b`, `0 $`, `gg G` move; `v` / `V` start a selection by character or line; `y` copies to the system clipboard; `/` searches with `n` / `N`; `Esc` leaves.
+Select text and copy it. `h/j/k/l`, `w/e/b`, `0/$`, `gg/G` move; `v/V` start a selection by character or line; `y` copies to the system clipboard; `/` searches with `n/N`; `Esc` leaves.
 
 ## Configuration
 

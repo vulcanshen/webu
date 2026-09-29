@@ -23,7 +23,7 @@
 
 | Core-key | 一般模式 | visual mode |
 |---|---|---|
-| `Tab` | `[1]` ↔ `[2]`；`1` / `2` 直達 | 不作用，toast 說先 `Esc` 離開模式（2026-09-27，tdp K2、K4） |
+| `Tab` | `[1]` ↔ `[2]`；`1/2` 直達 | 不作用，toast 說先 `Esc` 離開模式（2026-09-27，tdp K2、K4） |
 | `Enter` | **滑鼠左鍵在 terminal 的對應**（定案 2026-09-21；0.3.0 起先 hover 再按）；左鍵沒有對應的才自定義——**進去**：目錄開一節、清單裡的一件事走進去、frame 走進去；heading / landmark 開合；pagetab 上 = 確認回頁面。細表在 §A.0.K.1 | 對字元所屬的節點做同一件事，並離開模式 |
 | `Esc` | **往上一層，一次一步**（2026-09-23）：關最上層浮層 → 走出一件事 / frame → 回目錄 → 上 pagetab → 再 Esc 回頁面。頁面自己的彈窗**不關**（toast：它要一個回答）。上一頁是 `P`，Esc 不兼職 | 打字中取消；否則離開模式 |
 | `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-27，tdp K5、F6） | **不作用**：模式沒有 Space menu、沒有可執行的按鍵清單（2026-09-28，tdp K11 v0.1.10） |
@@ -122,11 +122,11 @@ menu-only 的列不列），照 menu 的區塊標題分組，最後接 core key�
 | 全域動作 | 鍵 |
 |---|---|
 | screen | `W` `B` `H` `D` `S` |
-| 離開 | `q` / `Ctrl+C`：輸入框以外到處都通，浮層上、visual mode 裡也是；有下載進行中先 confirm，confirm 上再按 `Ctrl+C` 立刻離開（2026-09-27，tdp K9） |
+| 離開 | `q/Ctrl-C`：輸入框以外到處都通，浮層上、visual mode 裡也是；有下載進行中先 confirm，confirm 上再按 `Ctrl-C` 立刻離開（2026-09-27，tdp K9） |
 
-**只有作用在 app 上的才是全域動作**（2026-09-27，tdp M3、P3）：`P` / `N`、`L`、`/`、`v` 作用在頁面上，是 `[2]` 的
+**只有作用在 app 上的才是全域動作**（2026-09-27，tdp M3、P3）：`P/N`、`L`、`/`、`v` 作用在頁面上，是 `[2]` 的
 panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的兩個面板上都通（`[1]` 上也作用在顯示中的那一頁）。
-切面板的 `Tab`、`1` / `2` 是 core key。splash 彩蛋 `V` 不揭露（tdp S2）。
+切面板的 `Tab`、`1/2` 是 core key。splash 彩蛋 `V` 不揭露（tdp S2）。
 
 全域字母在浮層開著、visual mode、打字中三種狀態下不作用；`q` 例外，只有打字中不作用。
 
@@ -155,7 +155,7 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 | | item 游標（一般） | 字元游標（visual mode，`v`） |
 |---|---|---|
 | 單位 | item；文字是 flow | 字元 |
-| 移動 | `j/k` 換列、`h/l` 同列、`u/d` 半頁、`gg/G` | `hjkl`、`w/e/b`、`0/$`、`u/d`、`gg/G` |
+| 移動 | `j/k` 換列、`h/l` 同列、`u/d` 半頁、`gg/G` | `h/j/k/l`、`w/e/b`、`0/$`、`u/d`、`gg/G` |
 | Enter | §A.0.K.1 | 字元所屬節點的 Enter |
 | 選取 / 複製 | — | `v/V` 選、`y` 寫剪貼簿（OSC52 + pbcopy / wl-copy / xclip / xsel） |
 | `/` | **finder**（§1.1） | 逐字搜尋（smart case、`n`/`N`） |
@@ -212,7 +212,7 @@ Enter：像 URL（有 scheme 或 `host.tld`）→ 補 `https://`；不像 → �
 
 ### §2.3 editor popup（textarea）
 
-大框、多行。**寫**的狀態：打字、Enter 換行、`Tab` 縮排（插四個空白；多行文字的寫入狀態裡 `Tab` 是字元，tdp K8、K2）、Backspace 跨行合併；`Esc` 出到**移**的狀態：`hjkl`、`u`/`d`、
+大框、多行。**寫**的狀態：打字、Enter 換行、`Tab` 縮排（插四個空白；多行文字的寫入狀態裡 `Tab` 是字元，tdp K8、K2）、Backspace 跨行合併；`Esc` 出到**移**的狀態：`h/j/k/l`、`u`/`d`、
 `g`/`G`/`0`/`$` 走，`i`/`a`/`A`/`o` 回到寫，`Enter` 設值寫回，再 `Esc` 取消。`Space` 永不關框。
 `$EDITOR` 鏈未做。
 
@@ -224,14 +224,14 @@ Enter：像 URL（有 scheme 或 `host.tld`）→ 補 `https://`；不像 → �
 
 | 鍵 | 動作 |
 |---|---|
-| `j` / `k` | 上下一列。`[2]` 換列（跳到下一列有 item 的列、落在最近的欄位）、不繞；目錄與 menu 繞 |
-| `u` / `d` | 半頁 |
-| `gg` / `G` | 頭 / 尾（頁面、目錄、menu、editor 都通） |
-| `h` / `l` | `[2]` 同列的 item 之間；pagetab 上走 part（走到哪內容切到哪、會繞）；DevTools 切分頁 |
-| `n` / `p` | 讀一節時：同深度的下一節 / 上一節 |
+| `j/k` | 上下一列。`[2]` 換列（跳到下一列有 item 的列、落在最近的欄位）、不繞；目錄與 menu 繞 |
+| `u/d` | 半頁 |
+| `gg/G` | 頭 / 尾（頁面、目錄、menu、editor 都通） |
+| `h/l` | `[2]` 同列的 item 之間；pagetab 上走 part（走到哪內容切到哪、會繞）；DevTools 切分頁 |
+| `n/p` | 讀一節時：同深度的下一節 / 上一節 |
 | `Esc` | 往上一層（§A.0.K） |
 | `go` | 行號 |
-| `1` / `2` | 直達面板 |
+| `1/2` | 直達面板 |
 
 Mouse：不做；日後若加必須是鍵盤的 mapping。
 
@@ -243,7 +243,7 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `W` `B` `H` `D` `S`、`q`、`?`、`V`（彩蛋）；只在 `[W]eb`：`P` `N` `L`、`/`、`v`、`Tab`、`1` / `2` |
+| 全域 | `W` `B` `H` `D` `S`、`q`、`?`、`V`（彩蛋）；只在 `[W]eb`：`P` `N` `L`、`/`、`v`、`Tab`、`1/2` |
 | `[1]` item / panel | `c` `o` `r` `y` / `T` `X` `U` |
 | `[2]` item | 無（menu-only） |
 | `[2]` panel | `R` `T` `A` `I` `Z` `Y` `C`；`n` `p`（讀一節時）；`go`；`Esc` |
@@ -252,10 +252,10 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 | History | `x` `y` / `C` `/` |
 | Settings | Enter |
 | DevTools | `x` `y` / `C` `/`；`h` `l`；Console `i` |
-| visual mode | `hjkl` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
-| editor（移） | `hjkl` `u` `d` `g` `G` `0` `$` `i` `a` `A` `o` |
+| visual mode | `h/j/k/l` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
+| editor（移） | `h/j/k/l` `u` `d` `g` `G` `0` `$` `i` `a` `A` `o` |
 
-撞字：`n` / `p` 小寫只在讀一節時有意義，與 `N` / `P`（前後頁）只差大小寫、同 sshu 的 `[D]isconnect` 與 `d`；
+撞字：`n/p` 小寫只在讀一節時有意義，與 `N/P`（前後頁）只差大小寫、同 sshu 的 `[D]isconnect` 與 `d`；
 `O` Outline 已拿掉；其餘 2026-09-21 的檢查不變。
 
 ---
@@ -268,7 +268,7 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 **頁面自己的彈窗**是例外（`ui.md` §2.4）：它不是 webu 的浮層，是頁面的；`Esc` 不關、`Space` 是它的
 選單、要回答它才會走（按裡面的按鈕、或頁面自己收掉）。
 
-**離開的 confirm 疊在最上面**（2026-09-27，tdp D3、K4）：有下載進行中時 `q` / `Ctrl-C` 問的那一題是自己的浮層，疊在整疊
+**離開的 confirm 疊在最上面**（2026-09-27，tdp D3、K4）：有下載進行中時 `q/Ctrl-C` 問的那一題是自己的浮層，疊在整疊
 之上，不取代底下正在回答的 confirm；`Esc` 回到那一題。它的 `?` 也是自己的 help，順序 quit help > quit confirm > help > 其他。
 
 **source 留在底下**（2026-09-27，tdp F4、T1、D3）：從 Space menu、global operation popup或 options 開出的框（confirm、
@@ -285,7 +285,7 @@ History clear、Clear site data、憑證錯誤、`beforeunload`、link Open、�
 
 | 情境 | 行為 |
 |---|---|
-| 按下 / 導航 | 從按鍵那一刻起 URL 列的圖示轉；導航時 `P` / `N` / `R` / click 吞掉（連按 `PPP` 只算一次）；沒有上一頁 toast |
+| 按下 / 導航 | 從按鍵那一刻起 URL 列的圖示轉；導航時 `P/N` / `R` / click 吞掉（連按 `PPP` 只算一次）；沒有上一頁 toast |
 | settling | 每次 capture 算指紋；指紋不同、又在 8 秒寬限內 → 還在轉、游標不重設；兩次一樣才落地（`function.md` §6） |
 | 彈窗窗 | 按下 / 載入後 8 秒內新出現的子樹才可能是彈窗 |
 | 一次一個動作 | 每個分頁一把鎖：讀 box 與按下是同一個動作；對話框 / auth 的回答不排隊 |
