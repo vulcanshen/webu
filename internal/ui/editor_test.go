@@ -23,6 +23,22 @@ func TestTabIndentsInTheEditor(t *testing.T) {
 	}
 }
 
+// A paste goes in as if typed: its line breaks split the line as Enter
+// does, "\r\n" one, its tabs are Tab's indent, anything else that is not
+// text goes (terminu, 2026-10-06). It used to stay on one line.
+func TestAPasteInTheEditorBreaksLines(t *testing.T) {
+	e := newEditorPopup()
+	e.setSize(100, 30)
+	e.ask("text, several lines", "Notes", "[]", 7, 1)
+	e.anim.phase = animOpen
+	e.update(tea.KeyMsg{Type: tea.KeyLeft})
+	e.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("ab\r\ncd\tx\x1b\ry"), Paste: true})
+	if e.value() != "[ab\ncd    x\ny]" || len(e.lines) != 3 || e.row != 2 || e.col != 1 {
+		t.Errorf("the paste should be three lines, the cursor after it: %q, %d lines, at %d:%d",
+			e.value(), len(e.lines), e.row, e.col)
+	}
+}
+
 // The textarea's box: writing, then Esc out to the box, then Enter to
 // set — Esc layered so a paragraph is not lost to a reflex (user,
 // 2026-09-23).
