@@ -83,15 +83,21 @@ func TestNetworkDetailKeepsItsHeight(t *testing.T) {
 	}
 }
 
-// A box whose submit can fail opens with its error row; a refusal writes
-// there, the box keeps its height and what was typed (tdp F7, K3). A box
-// that cannot fail has no such row.
+// Every box opens with its error row; a refusal writes there, the box
+// keeps its height and what was typed (tdp F7, K3). Location's Enter
+// could not fail until a line break or a tab in a value was refused
+// everywhere (2026-10-06): now it keeps the row too.
 func TestInputErrorRow(t *testing.T) {
 	d := keysDriver(t)
 
 	d.key("L")
 	d.until("the location box", func() bool { return d.m.input.anim.isInteractive() })
 	plain := rowsOf(d.m.input.view())
+	d.send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a\nb"), Paste: true})
+	d.key("enter")
+	if got := rowsOf(d.m.input.view()); got != plain || !strings.Contains(ansi.Strip(d.m.input.view()), "a URL or a search can't have line breaks or tabs") {
+		t.Errorf("Location should say why in its error row, the height as it was: %d rows, then %d:\n%s", plain, got, ansi.Strip(d.m.input.view()))
+	}
 	d.key("esc")
 	d.until("closed", func() bool { return !d.m.input.anim.owns() })
 
@@ -103,8 +109,8 @@ func TestInputErrorRow(t *testing.T) {
 	d.key("A")
 	d.until("the folder box", func() bool { return d.m.input.anim.isInteractive() })
 	h := rowsOf(d.m.input.view())
-	if h != plain+2 {
-		t.Errorf("a box that can refuse should open with a blank row and its error row: %d rows, a plain one %d", h, plain)
+	if h != plain {
+		t.Errorf("one box, one shape: the folder box has %d rows, Location %d", h, plain)
 	}
 	d.key("news")
 	d.send(tea.KeyMsg{Type: tea.KeyCtrlU})

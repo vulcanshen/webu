@@ -203,12 +203,16 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 的篩選、visual mode 的搜尋。input popup 打開時預填的值與提議（頁面 `prompt()` 的預設值、欄位原本的值、書籤標題、設定值）走同一個
 過濾。灰的時候整列灰，`\n` 也灰：提議、沒在打的篩選、清單拿著鍵時 finder 的 query。按下去的 `Tab`、`Enter`、`Ctrl-J` 照舊，
 不變成字元。之前貼上的換行原樣進值，框的那一列被折斷。
+值裡有換行或 Tab 時，每一個 input popup 的 `Enter` 都不收：框留著、焦點到第一個有的欄位，錯誤列寫
+`<那一欄> can't have line breaks or tabs`（`a URL or a search`、`the field`、`the answer`、`the name` / `the password`、
+`a console line`、`a setting`、`a folder name`、`the URL` / `the title`、`a name` / `a title`），什麼都不送。console 也一樣：
+多行的 JS 片段要一行一行打。選檔 picker 的篩選、finder、go、visual mode 的搜尋、DevTools 與清單畫面的篩選只照樣畫、不擋：值只拿來找東西。
 
 **input group**（2026-09-27，tdp K3）：幾個欄位一起才有意義的，放進同一個 input popup —— 加書籤是 URL + 標題，HTTP 驗證是
 帳號 + 密碼（遮罩）。`Tab` / `Shift-Tab` 在欄位之間移動，`Enter` 一律送出整組；送出不成立時框留著、焦點回到那一欄、
-原因寫在框的錯誤列（加書籤的 URL 不可空）。**錯誤列**（2026-09-28，tdp F7、K3）：送出可能失敗的框 —— 加書籤、日期時間顏色、設定、
-新增目錄、匯入名稱、改名 —— 打開時就有一列空白的錯誤列，拒絕時原因寫在那裡，框的高度不變、打的字留著；不會失敗的框（Location、
-欄位、登入、JS prompt、console）不留。原因不再丟到 toast。新增目錄也先檢查重名、再關框。group 裡 `Tab` 只換欄，空欄位上的提議用 `→` 接受；單欄框沒有別欄可換，`Tab` 接受提議（`→` 也可以）
+原因寫在框的錯誤列（加書籤的 URL 不可空），group 裡那一欄的名字變 Red。**錯誤列**（2026-09-28，tdp F7、K3）：每個框打開時
+就有一列空白的錯誤列，拒絕時原因寫在那裡，框的高度不變、打的字留著。之前只有送出可能失敗的框（加書籤、日期時間顏色、設定、新增目錄、
+匯入名稱、改名）留；2026-10-06 起值裡有換行或 Tab 時每個框都會被拒，Location、欄位、登入、JS prompt、console 也留。原因不再丟到 toast。新增目錄也先檢查重名、再關框。group 裡 `Tab` 只換欄，空欄位上的提議用 `→` 接受；單欄框沒有別欄可換，`Tab` 接受提議（`→` 也可以）
 （2026-09-27，tdp K2 v0.1.6）。`Backspace` 在空欄位上拒絕提議。下框一個動作只露一個鍵：單欄 `Tab:accept`、group `→:accept`，
 拒絕是 `Backspace:decline`。
 加書籤的標題提議跟著 URL 欄：URL 是目前這頁就提議頁面標題，否則提議 URL；欄位空著送出就用提議。`Esc` 取消整組。

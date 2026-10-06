@@ -2589,6 +2589,12 @@ func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if !done {
 		return m, nil
 	}
+	// No box takes a line break or a tab, whatever it is for: it stays on
+	// the first field with one, saying so (oneline.go, tdp K3).
+	if i, ok := m.input.breakAt(); ok {
+		m.input.refuse(i, m.input.breakWhy(i))
+		return m, nil
+	}
 	t := m.shownTab()
 	switch m.input.action {
 	case inputGoto:

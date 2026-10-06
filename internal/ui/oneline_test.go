@@ -203,3 +203,58 @@ func TestTheFinderQueryIsGreyOnItsList(t *testing.T) {
 		t.Errorf("on the list: the `\\t` should be grey with its row: %q", rows[0])
 	}
 }
+
+// No box takes a value with a line break or a tab, whatever it is for:
+// Enter keeps it up, on the first field with one, the error row saying
+// which field and why; nothing is sent. In a group the field at fault
+// has its name red (tdp K3).
+func TestNoBoxTakesALineBreak(t *testing.T) {
+	withColour(t)
+	red := lipgloss.NewStyle().Foreground(warnColor).Render("x")
+	red = red[:strings.Index(red, "x")]
+	for _, c := range []struct {
+		p    inputPopup
+		at   int
+		says string
+	}{
+		{inputPopup{action: inputGoto, value: "a\nb"}, 0, "a URL or a search"},
+		{inputPopup{action: inputGotoNewTab, value: "a\tb"}, 0, "a URL or a search"},
+		{inputPopup{action: inputField, value: "a\nb"}, 0, "the field"},
+		{inputPopup{action: inputFill, value: "1\t2", shape: "YYYY-MM-DD"}, 0, "the field"},
+		{inputPopup{action: inputPrompt, value: "a\rb"}, 0, "the answer"},
+		{inputPopup{action: inputAuth, prompt: "name", value: "me", more: []groupField{{prompt: "password", value: "p\tq", masked: true}}}, 1, "the password"},
+		{inputPopup{action: inputAuth, prompt: "name", value: "m\ne", more: []groupField{{prompt: "password", value: "p\tq", masked: true}}}, 0, "the name"},
+		{inputPopup{action: inputEval, value: "1 +\n2"}, 0, "a console line"},
+		{inputPopup{action: inputSetting, value: "a\nb"}, 0, "a setting"},
+		{inputPopup{action: inputFolder, value: "a\tb"}, 0, "a folder name"},
+		{inputPopup{action: inputBookmark, prompt: "URL", value: "https://example.com", more: []groupField{{prompt: "title", value: "a\nb"}}}, 1, "the title"},
+		{inputPopup{action: inputImportName, value: "a\nb"}, 0, "a folder name"},
+		{inputPopup{action: inputRename, prompt: "title", value: "a\nb"}, 0, "a title"},
+	} {
+		d := keysDriver(t)
+		c.p.title, c.p.accept = "Box", "go"
+		if c.p.prompt == "" {
+			c.p.prompt = "value"
+		}
+		d.exec(d.m.input.ask(c.p, 1))
+		d.until("the box", func() bool { return d.m.input.anim.isInteractive() })
+		h := rowsOf(d.m.input.view())
+		before := d.m.input.fields()
+		d.key("enter")
+		want := c.says + " can't have line breaks or tabs"
+		v := d.m.input.view()
+		if !d.m.input.anim.owns() || d.m.input.refused != want || d.m.input.at != c.at || rowsOf(v) != h ||
+			!strings.Contains(ansi.Strip(v), want) {
+			t.Errorf("action %d: open %v, refused %q on field %d, %d rows then %d; want %q on field %d",
+				c.p.action, d.m.input.anim.owns(), d.m.input.refused, d.m.input.at, h, rowsOf(v), want, c.at)
+		}
+		for i, f := range d.m.input.fields() {
+			if f.value != before[i].value {
+				t.Errorf("action %d: field %d is now %q, was %q", c.p.action, i, f.value, before[i].value)
+			}
+		}
+		if len(c.p.more) > 0 && !strings.Contains(v, red+" "+d.m.input.fields()[c.at].prompt) {
+			t.Errorf("action %d: the field at fault should have its name red:\n%q", c.p.action, v)
+		}
+	}
+}
