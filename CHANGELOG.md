@@ -1,6 +1,16 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.0] — 2026-10-06
+
+**The environment variables are renamed, and the old names are no
+longer read**: `WEBU_CONFIG` is now `WEBU__CONFIG`, `WEBU_DATA` is
+`WEBU__DATA`, `WEBU_CACHE` is `WEBU__CACHE`, `WEBU_ICON_WIDTH` is
+`WEBU__ICON_WIDTH` (two underscores after the app's name, as across
+the family). If you set the old ones, set the new names: webu
+otherwise goes back to its defaults without a word.
+
+Frames, popups, hints and keys, brought in line with the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)
+(tdp v0.1.23) that kbu, filu, sshu and locku share.
 
 ### Changed
 
@@ -8,11 +18,6 @@
   passes on** (`TERMINU__ICON_WIDTH`), where its own probe would be
   answered by that app and always read one cell. `WEBU__ICON_WIDTH`
   still comes first.
-- **The environment variables are renamed, and the old names are no
-  longer read**: `WEBU_CONFIG` is now `WEBU__CONFIG`, `WEBU_DATA` is
-  `WEBU__DATA`, `WEBU_CACHE` is `WEBU__CACHE`, `WEBU_ICON_WIDTH` is
-  `WEBU__ICON_WIDTH` (two underscores after the app's name, as across
-  the family). Set the new names if you used the old ones.
 - **The panel with the focus has a double border**, the other a round
   one, so the focus shows without relying on colour.
 - **Reading a section no longer fills the bottom border as a bar**; the
