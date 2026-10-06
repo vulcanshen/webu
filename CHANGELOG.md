@@ -103,6 +103,10 @@
   the location, a field of the page, a password, a name, the search, a
   filter. Other control characters in a paste are dropped, and so are
   they in what a box opens with, such as a page's `prompt()` default.
+  `Enter` does not take a value with one, and says which field can't
+  have it, where it used to send the value as it was — Location and the
+  console too, which now keep a row for that. A search or a filter only
+  finds nothing.
 - Resizing the terminal smaller while a popup is open no longer crashes
   webu: a popup still at the old size is cut at the screen's edge for the
   moment it takes to redraw.

@@ -10,7 +10,9 @@ import (
 // a filter — and what comes into it (terminu, 2026-10-06; to be tdp's
 // components/input). A line break or a tab pasted in stays in the value,
 // and is drawn as a red `\n` or `\t`: two cells, never cut, told apart
-// from a `\` and an `n` typed. Any other control character is dropped.
+// from a `\` and an `n` typed. Any other control character is dropped. A
+// box whose value is used — sent, saved, run — will not take one with a
+// line break or a tab; a query or a filter only finds nothing.
 //
 // Until then a paste went in as it came: its line break broke the box's
 // row in two (user: show it as `\n` or `\t`, plainly — turning it into a
@@ -45,6 +47,9 @@ func takeText(rs []rune) string {
 // a setting: the same filter for both ways in, or an ESC in one would go
 // straight to the terminal.
 func cleanValue(s string) string { return takeText([]rune(s)) }
+
+// hasBreak reports whether v holds a line break or a tab.
+func hasBreak(v string) bool { return strings.ContainsAny(v, "\r\n\t") }
 
 // unitShown is how a rune of a value is drawn, and whether it is a line
 // break or a tab.

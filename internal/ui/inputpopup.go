@@ -96,14 +96,50 @@ func (m *inputPopup) focused() (*string, *string) {
 	return &f.value, &f.placeholder
 }
 
-// canFail reports whether a submit of this box can be refused: those boxes
-// open with an error row (tdp F7), blank until a refusal writes in it.
-func (a inputAction) canFail() bool {
-	switch a {
-	case inputBookmark, inputFill, inputSetting, inputFolder, inputImportName, inputRename:
-		return true
+// breakAt is the first field holding a line break or a tab, which no box
+// takes: what a box is given is sent, saved or run, and a line break in a
+// one-line value means nothing there (oneline.go). ok is false when no
+// field has one.
+func (m inputPopup) breakAt() (int, bool) {
+	for i, f := range m.fields() {
+		if hasBreak(f.value) {
+			return i, true
+		}
 	}
-	return false
+	return 0, false
+}
+
+// breakWhy is the error row's reason for field i, said as the boxes'
+// other refusals are (`a bookmark needs a URL`): what the field takes.
+func (m inputPopup) breakWhy(i int) string {
+	what := "the value"
+	switch m.action {
+	case inputGoto, inputGotoNewTab:
+		what = "a URL or a search"
+	case inputField, inputFill:
+		what = "the field"
+	case inputPrompt:
+		what = "the answer"
+	case inputAuth:
+		what = "the name"
+		if i > 0 {
+			what = "the password"
+		}
+	case inputEval:
+		what = "a console line"
+	case inputSetting:
+		what = "a setting"
+	case inputFolder, inputImportName:
+		what = "a folder name"
+	case inputBookmark:
+		what = "the URL"
+		if i > 0 {
+			what = "the title"
+		}
+	case inputRename:
+		what = "a " + m.prompt // name, or title
+	}
+	return what + " can't have line breaks or tabs"
 }
 
 // refuse keeps the box up on field i, saying why (tdp K3).
@@ -227,14 +263,19 @@ func (m inputPopup) view() string {
 		prompt := dim.Render(padRight(" "+f.prompt, innerW))
 		if on && len(fields) > 1 {
 			prompt = edit.Render(padRight(" "+f.prompt, innerW))
+			if m.refused != "" {
+				// The field a refused Enter came back to (tdp K3).
+				prompt = warn.Render(padRight(" "+f.prompt, innerW))
+			}
 		}
 		rows = append(rows, prompt, spaces(innerW), line)
 	}
-	// A box whose submit can fail has its error row from the start, so a
-	// refusal writes into it and the box keeps its height (tdp F7, K3).
-	if m.action.canFail() {
-		rows = append(rows, spaces(innerW), warn.Render(padRight(" "+truncate(m.refused, innerW-2), innerW)))
-	}
+	// Every box has its error row from the start, so a refusal writes into
+	// it and the box keeps its height (tdp F7, K3): every box's Enter can
+	// be refused, a line break or a tab being taken by none (2026-10-06;
+	// until then the boxes that could not fail — Location, a page's field,
+	// Sign in, prompt(), the console — kept no error row).
+	rows = append(rows, spaces(innerW), warn.Render(padRight(" "+truncate(m.refused, innerW-2), innerW)))
 
 	hint := fitLegend(m.legend(fields, false), innerW-1)
 	return drawPopupBox(popupLayerColor(m.layer), " "+m.glyph+" "+m.title+" ",
