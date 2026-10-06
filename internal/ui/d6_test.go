@@ -15,8 +15,8 @@ import (
 	"github.com/vulcanshen/webu/internal/page"
 )
 
-// wideIcon is a Nerd Font icon: one cell on a normal font, two on a CJK
-// icon font.
+// wideIcon is a Nerd Font icon: one cell where the terminal moves the
+// cursor one for it, two where it moves two.
 var wideIcon = string(rune(0xf015))
 
 // withIcons sets how many cells an icon takes for one test.

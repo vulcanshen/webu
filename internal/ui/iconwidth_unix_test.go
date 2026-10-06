@@ -11,7 +11,7 @@ func TestParseCPRColumn(t *testing.T) {
 		wantOK  bool
 	}{
 		{"\x1b[1;2R", 2, true}, // icon consumed 1 cell (cursor at col 2)
-		{"\x1b[1;3R", 3, true}, // icon consumed 2 cells (CJK font)
+		{"\x1b[1;3R", 3, true}, // icon consumed 2 cells
 		{"\x1b[24;80R", 80, true},
 		{"\x1b[1;R", 0, false}, // no column
 		{"\x1b[1;2", 0, false}, // no terminator
