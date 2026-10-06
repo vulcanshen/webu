@@ -107,6 +107,9 @@
   have it, where it used to send the value as it was — Location and the
   console too, which now keep a row for that. A search or a filter only
   finds nothing.
+- **Pasting several lines into a textarea's box gives several lines**, as
+  typing them does; they used to land on one line. A pasted tab indents
+  as `Tab` does.
 - Resizing the terminal smaller while a popup is open no longer crashes
   webu: a popup still at the old size is cut at the screen's edge for the
   moment it takes to redraw.

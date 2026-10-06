@@ -202,7 +202,7 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 控制字元丟掉。`Backspace` 一次刪掉整個。範圍是每一個單行的值：input popup、選檔 picker 的篩選、finder、清單畫面與 DevTools
 的篩選、visual mode 的搜尋。input popup 打開時預填的值與提議（頁面 `prompt()` 的預設值、欄位原本的值、書籤標題、設定值）走同一個
 過濾。灰的時候整列灰，`\n` 也灰：提議、沒在打的篩選、清單拿著鍵時 finder 的 query。按下去的 `Tab`、`Enter`、`Ctrl-J` 照舊，
-不變成字元。之前貼上的換行原樣進值，框的那一列被折斷。
+不變成字元。之前貼上的換行原樣進值，框的那一列被折斷。editor 是多行的，貼上的換行就是換行（§2.3）。
 值裡有換行或 Tab 時，每一個 input popup 的 `Enter` 都不收：框留著、焦點到第一個有的欄位，錯誤列寫
 `<那一欄> can't have line breaks or tabs`（`a URL or a search`、`the field`、`the answer`、`the name` / `the password`、
 `a console line`、`a setting`、`a folder name`、`the URL` / `the title`、`a name` / `a title`），什麼都不送。console 也一樣：
@@ -226,7 +226,8 @@ Enter：像 URL（有 scheme 或 `host.tld`）→ 補 `https://`；不像 → �
 
 ### §2.3 editor popup（textarea）
 
-大框、多行。**寫**的狀態：打字、Enter 換行、`Tab` 縮排（插四個空白；多行文字的寫入狀態裡 `Tab` 是字元，tdp K8、K2）、Backspace 跨行合併；`Esc` 出到**移**的狀態：`h/j/k/l`、`u`/`d`、
+大框、多行。**寫**的狀態：打字、Enter 換行、`Tab` 縮排（插四個空白；多行文字的寫入狀態裡 `Tab` 是字元，tdp K8、K2）、Backspace 跨行合併；
+貼上的跟打的一樣：換行斷行（`\r\n` 算一個）、Tab 插四個空白、其他控制字元丟掉（2026-10-06；之前整段插在游標處，換行原樣留在同一行）；`Esc` 出到**移**的狀態：`h/j/k/l`、`u`/`d`、
 `g`/`G`/`0`/`$` 走，`i`/`a`/`A`/`o` 回到寫，`Enter` 設值寫回，再 `Esc` 取消。`Space` 永不關框。
 `$EDITOR` 鏈未做。
 

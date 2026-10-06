@@ -100,11 +100,7 @@ func (e *editorPopup) update(msg tea.KeyMsg) (committed string, done bool) {
 	}
 	switch msg.Type {
 	case tea.KeyEnter:
-		line := e.lines[e.row]
-		rest := append([]rune(nil), line[e.col:]...)
-		e.lines[e.row] = line[:e.col]
-		e.lines = append(e.lines[:e.row+1], append([][]rune{rest}, e.lines[e.row+1:]...)...)
-		e.row, e.col = e.row+1, 0
+		e.newline()
 	case tea.KeyBackspace:
 		switch {
 		case e.col > 0:
@@ -136,10 +132,41 @@ func (e *editorPopup) update(msg tea.KeyMsg) (committed string, done bool) {
 	case tea.KeySpace:
 		e.insert([]rune(" "))
 	case tea.KeyRunes:
-		e.insert(msg.Runes)
+		e.paste(msg.Runes)
 	}
 	e.follow()
 	return "", false
+}
+
+// newline splits the line at the cursor: Enter while writing.
+func (e *editorPopup) newline() {
+	line := e.lines[e.row]
+	rest := append([]rune(nil), line[e.col:]...)
+	e.lines[e.row] = line[:e.col]
+	e.lines = append(e.lines[:e.row+1], append([][]rune{rest}, e.lines[e.row+1:]...)...)
+	e.row, e.col = e.row+1, 0
+}
+
+// paste puts in runes as if typed: a line break splits the line as Enter
+// does ("\r\n" one), a tab is Tab's four spaces, any other control
+// character is dropped (terminu, 2026-10-06). A bracketed paste comes
+// whole, as one KeyRunes; until then its line breaks went into the line
+// as they came, and a pasted `x\ny` stayed one line.
+func (e *editorPopup) paste(rs []rune) {
+	var run []rune
+	for _, r := range takeText(rs) {
+		switch r {
+		case '\n', '\r':
+			e.insert(run)
+			run = nil
+			e.newline()
+		case '\t':
+			run = append(run, []rune("    ")...)
+		default:
+			run = append(run, r)
+		}
+	}
+	e.insert(run)
 }
 
 // move is a key while moving: the page's vocabulary, i/a back to writing,
