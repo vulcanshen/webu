@@ -113,9 +113,9 @@
 - Resizing the terminal smaller while a popup is open no longer crashes
   webu: a popup still at the old size is cut at the screen's edge for the
   moment it takes to redraw.
-- Frames no longer come out crooked on fonts that draw the icons two
-  cells wide (some CJK Nerd Fonts): webu measures how far the cursor moves
-  for an icon when it starts, and `WEBU_ICON_WIDTH` overrides it.
+- Frames no longer come out crooked where the terminal moves the cursor
+  two cells for an icon: webu measures how far it moves when it starts,
+  and `WEBU__ICON_WIDTH` overrides it.
 - A hint too long for its box loses whole items from its end: the
   search's list beside its preview used to end in half a key, like `Esc`
   without `:close`.
