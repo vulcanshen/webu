@@ -376,7 +376,7 @@ func (f *finder) update(msg tea.KeyMsg) (hit, bool) {
 		f.query += " "
 		f.refilter()
 	case tea.KeyRunes:
-		f.query += string(msg.Runes)
+		f.query += takeText(msg.Runes)
 		f.refilter()
 	case tea.KeyUp, tea.KeyDown:
 		// The arrows move the preselection without leaving the query.
@@ -474,6 +474,8 @@ func (f finder) listColumn(w, rows int) []string {
 		count = itoa(f.cursor+1) + "/" + itoa(len(f.hits))
 	}
 	lead := " " + glyphSearch + " "
+	room := w - dispW(lead) - dispW(count) - 3
+	warn := lipgloss.NewStyle().Foreground(warnColor)
 	q := f.query
 	switch {
 	case f.kind == finderGo && q == "":
@@ -481,9 +483,10 @@ func (f finder) listColumn(w, rows int) []string {
 	case f.kind == finderGo:
 		q = txt.Render(q) + caret.Render(" ")
 	case f.mode == finderInput:
-		q = txt.Render(truncateHead(q, w-dispW(lead)-dispW(count)-3)) + caret.Render(" ")
+		q, _ = valueView(q, room, txt, warn, true)
+		q += caret.Render(" ")
 	default:
-		q = txt.Render(truncateHead(q, w-dispW(lead)-dispW(count)-3))
+		q, _ = valueView(q, room, txt, warn, true)
 	}
 	gap := max(1, w-dispW(lead)-dispW(q)-dispW(count)-1)
 	query := hand.Render(lead) + q + strings.Repeat(" ", gap) + dim.Render(count) + " "
@@ -493,7 +496,7 @@ func (f finder) listColumn(w, rows int) []string {
 	// the popup's layer colour, bold, as a menu's does.
 	listing := f.kind == finderSearch && f.mode == finderNav
 	if listing {
-		plain := truncateHead(f.query, w-dispW(lead)-dispW(count)-3)
+		plain, _ := valueView(f.query, room, lipgloss.NewStyle(), lipgloss.NewStyle(), true)
 		query = dim.Render(lead + plain + strings.Repeat(" ", gap) + count + " ")
 	}
 	out := []string{

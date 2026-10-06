@@ -188,7 +188,7 @@ func (m *listPanel) update(msg tea.KeyMsg) string {
 		case tea.KeySpace:
 			m.filter += " "
 		case tea.KeyRunes:
-			m.filter += string(msg.Runes)
+			m.filter += takeText(msg.Runes)
 		}
 		m.cursor = clamp(m.cursor, 0, max(0, len(m.visible())-1))
 		return ""
@@ -364,7 +364,6 @@ func (m listPanel) panel(outerW, outerH int) string {
 	// like the footer naming its keys, and the same band as both.
 	hdr := lipgloss.NewStyle().Foreground(focusColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
-	edit := lipgloss.NewStyle().Foreground(editColor)
 	frame := func(rows []string) string {
 		return panelFrameLegend(innerW, fitLines(rows, innerW, innerH), " "+glyph+" "+text+" ", "",
 			fitLegend(m.hintPairs(), innerW-4), toneFocus)
@@ -372,12 +371,7 @@ func (m listPanel) panel(outerW, outerH int) string {
 
 	rows := []string{}
 	if m.typing || m.filter != "" {
-		line := " / " + m.filter
-		if m.typing {
-			rows = append(rows, edit.Render(padRight(line, innerW-1))+cur.Render(" "))
-		} else {
-			rows = append(rows, dim.Render(padRight(line, innerW)))
-		}
+		rows = append(rows, filterRow(m.filter, m.typing, innerW, cur))
 	}
 	vis := m.visible()
 	h1, h2 := m.columns()

@@ -154,7 +154,7 @@ func (m *devtoolsPopup) update(msg tea.KeyMsg) (devAction, string) {
 		case tea.KeySpace:
 			m.filter[m.tab] += " "
 		case tea.KeyRunes:
-			m.filter[m.tab] += string(msg.Runes)
+			m.filter[m.tab] += takeText(msg.Runes)
 		}
 		return devNone, ""
 	}
@@ -292,8 +292,6 @@ func (m devtoolsPopup) body() string {
 	bc := popupLayerColor(m.layer)
 	bs := lipgloss.NewStyle().Foreground(bc)
 	ts := lipgloss.NewStyle().Foreground(bc).Bold(true)
-	dim := lipgloss.NewStyle().Foreground(dimColor)
-	edit := lipgloss.NewStyle().Foreground(editColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
 
 	// The title row: glyph and name, then the chip chain of tabs (the
@@ -307,12 +305,7 @@ func (m devtoolsPopup) body() string {
 
 	var rows []string
 	if m.typing || m.filter[m.tab] != "" {
-		line := " / " + m.filter[m.tab]
-		if m.typing {
-			rows = append(rows, edit.Render(padRight(line, innerW-1))+cur.Render(" "))
-		} else {
-			rows = append(rows, dim.Render(padRight(line, innerW)))
-		}
+		rows = append(rows, filterRow(m.filter[m.tab], m.typing, innerW, cur))
 	}
 	n := m.listRows()
 	switch m.tab {

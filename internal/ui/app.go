@@ -2584,7 +2584,7 @@ func fieldTakes(n *ir.Node) string {
 func (m AppModel) inputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	value, done := m.input.update(msg)
 	if m.input.action == inputBookmark {
-		m.input.more[0].placeholder = m.bookmarkTitleOffer(m.bookmarkURLInBox())
+		m.input.more[0].placeholder = cleanValue(m.bookmarkTitleOffer(m.bookmarkURLInBox()))
 	}
 	if !done {
 		return m, nil

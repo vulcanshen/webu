@@ -119,7 +119,12 @@ func (m *inputPopup) setSize(w, h int)   { m.screenW, m.screenH = w, h }
 // ask opens the box with value already filled in and the cursor at its end.
 // Pre-filling matters for an edit: most edits change part of a value, and
 // starting from empty makes the common case retype the whole thing.
+// What is filled in goes through the paste's filter (oneline.go).
 func (m *inputPopup) ask(p inputPopup, layer int) tea.Cmd {
+	p.value, p.placeholder = cleanValue(p.value), cleanValue(p.placeholder)
+	for i := range p.more {
+		p.more[i].value, p.more[i].placeholder = cleanValue(p.more[i].value), cleanValue(p.more[i].placeholder)
+	}
 	p.anim, p.layer = m.anim, layer
 	p.screenW, p.screenH = m.screenW, m.screenH
 	*m = p
@@ -179,7 +184,7 @@ func (m *inputPopup) update(msg tea.KeyMsg) (committed string, done bool) {
 	case tea.KeySpace:
 		*value += " "
 	case tea.KeyRunes:
-		*value += string(msg.Runes)
+		*value += takeText(msg.Runes)
 	default:
 		return "", false
 	}
@@ -212,11 +217,12 @@ func (m inputPopup) view() string {
 		if on {
 			caret = cur.Render(" ")
 		}
-		value := truncateHead(shown, innerW-3)
-		line := " " + edit.Render(value) + caret + spaces(max(0, innerW-2-dispW(value)))
+		value, vw := valueView(shown, innerW-3, edit, warn, true)
+		line := " " + value + caret + spaces(max(0, innerW-2-vw))
 		if f.value == "" && f.placeholder != "" {
-			ph := truncate(f.placeholder, innerW-3)
-			line = " " + caret + dim.Render(ph) + spaces(max(0, innerW-2-dispW(ph)))
+			// An offer is grey throughout, its `\n` too: not a value yet.
+			ph, pw := valueView(f.placeholder, innerW-3, lipgloss.NewStyle(), lipgloss.NewStyle(), false)
+			line = " " + caret + dim.Render(ph) + spaces(max(0, innerW-2-pw))
 		}
 		prompt := dim.Render(padRight(" "+f.prompt, innerW))
 		if on && len(fields) > 1 {
