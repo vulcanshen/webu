@@ -217,7 +217,7 @@ Source（HTML + `/` grep）。
 | Sapphire | page 側：**可按的**（連結底線） | `#74c7ec` |
 | Pink | code；code block 另鋪 surface0 底 | `#f5c2e7` |
 | Overlay0 | 媒體、frame、dim 旁白 | `#6c7086` |
-| Red（warn） | 填錯的值（`aria-invalid`）；override 色不參與層級 | — |
+| Red（warn） | 填錯的值（`aria-invalid`）；單行的值裡貼上的換行與 Tab，畫成 `\n`、`\t`（2026-10-06）；override 色不參與層級 | — |
 | 五個 hue 輪流 | 標題深度：目錄的縮排、節的 header 列、heading、tab 鏈、游標在標題上時的底 | `levelInk` |
 | Lavender | visual mode 的選取 | `#b4befe` |
 | Surface0 / Surface1 | 資料表底 / 表頭底 | `#313244` / `#45475a` |

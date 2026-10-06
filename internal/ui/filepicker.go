@@ -207,7 +207,7 @@ func (m *filePicker) update(msg tea.KeyMsg) (picked string, done bool) {
 		m.query += " "
 		m.refilter()
 	case tea.KeyRunes:
-		m.query += string(msg.Runes)
+		m.query += takeText(msg.Runes)
 		m.refilter()
 	}
 	m.scroll()
@@ -241,12 +241,15 @@ func (m filePicker) view() string {
 	txt := lipgloss.NewStyle().Foreground(textColor)
 	hand := lipgloss.NewStyle().Foreground(handColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
+	warn := lipgloss.NewStyle().Foreground(warnColor)
 
-	// Query row, with the caret parked at the end.
-	q := m.query + " "
+	// Query row, with the caret parked at the end; a query too long for
+	// it loses its front, the end with the caret stays.
+	lead := " " + glyphSearch + " "
+	q, qw := valueView(m.query, innerW-dispW(lead)-2, txt, warn, true)
 	rows := []string{
-		hand.Render(" "+glyphSearch+" ") + txt.Render(m.query) +
-			cur.Render(" ") + strings.Repeat(" ", max(0, innerW-4-dispW(q))),
+		hand.Render(lead) + q +
+			cur.Render(" ") + strings.Repeat(" ", max(0, innerW-dispW(lead)-2-qw)),
 		dim.Render(strings.Repeat("─", innerW)),
 	}
 	switch {

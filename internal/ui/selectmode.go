@@ -107,7 +107,7 @@ func (s *selectMode) key(msg tea.KeyMsg, visible int) (selResult, string) {
 			s.query += " "
 			s.search()
 		case tea.KeyRunes:
-			s.query += string(msg.Runes)
+			s.query += takeText(msg.Runes)
 			s.search()
 		}
 		return selNone, ""

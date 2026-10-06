@@ -57,7 +57,9 @@ func (m AppModel) pageBody(innerW, innerH int) []string {
 	// a search is being typed, the query and its count (ux.md §1.1): the
 	// page under it does not move.
 	if st := m.sel.status(); m.sel.on && st != "" {
-		out = append(out, lipgloss.NewStyle().Foreground(selectColor).Render(padRight(" "+st, innerW)))
+		sel := lipgloss.NewStyle().Foreground(selectColor)
+		v, vw := valueView(st, innerW-1, sel, lipgloss.NewStyle().Foreground(warnColor), false)
+		out = append(out, " "+v+spaces(innerW-1-vw))
 	} else {
 		// The glyph says what state the fetch is in and the URL says
 		// where: one pair, one colour (2026-09-22). The glyph alone —

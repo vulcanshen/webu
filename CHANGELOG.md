@@ -98,6 +98,11 @@
 
 ### Fixed
 
+- **A line break or a tab pasted into a one-line box stays in it, drawn
+  as a red `\n` or `\t`**, where it used to break the box's row in two:
+  the location, a field of the page, a password, a name, the search, a
+  filter. Other control characters in a paste are dropped, and so are
+  they in what a box opens with, such as a page's `prompt()` default.
 - Resizing the terminal smaller while a popup is open no longer crashes
   webu: a popup still at the old size is cut at the screen's edge for the
   moment it takes to redraw.

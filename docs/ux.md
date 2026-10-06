@@ -197,6 +197,13 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 
 打字中屏蔽所有 hotkey：`Space` 是空白、`?` 是問號。
 
+**單行的值裡的換行與 Tab**（2026-10-06，terminu 的 input 盤點）：貼上的換行（`\r\n` 算一個、存成 `\n`，單獨的 `\n`、`\r`
+也各算一個）與 Tab 留在值裡，畫成 Red 的 `\n`、`\t`，佔 2 格，跟手打的 `\`、`n` 分得開；截斷時整個留或整個去，不切開。其他
+控制字元丟掉。`Backspace` 一次刪掉整個。範圍是每一個單行的值：input popup、選檔 picker 的篩選、finder、清單畫面與 DevTools
+的篩選、visual mode 的搜尋。input popup 打開時預填的值與提議（頁面 `prompt()` 的預設值、欄位原本的值、書籤標題、設定值）走同一個
+過濾。灰的時候整列灰，`\n` 也灰：提議、沒在打的篩選、清單拿著鍵時 finder 的 query。按下去的 `Tab`、`Enter`、`Ctrl-J` 照舊，
+不變成字元。之前貼上的換行原樣進值，框的那一列被折斷。
+
 **input group**（2026-09-27，tdp K3）：幾個欄位一起才有意義的，放進同一個 input popup —— 加書籤是 URL + 標題，HTTP 驗證是
 帳號 + 密碼（遮罩）。`Tab` / `Shift-Tab` 在欄位之間移動，`Enter` 一律送出整組；送出不成立時框留著、焦點回到那一欄、
 原因寫在框的錯誤列（加書籤的 URL 不可空）。**錯誤列**（2026-09-28，tdp F7、K3）：送出可能失敗的框 —— 加書籤、日期時間顏色、設定、
