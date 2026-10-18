@@ -127,7 +127,7 @@ func (m *AppModel) buildBookmarks() {
 		Columns:    []terminu.Column{{Title: "Title", Flex: true}, {Title: "URL", Flex: true}},
 		Filterable: true,
 		EmptyFact:  "No bookmarks yet",
-		EmptyHint:  "Press [a] to add one, [I] to import a browser's, or [Space] to see what you can do here",
+		EmptyHint:  "Press [a] to add one, or [Space] to see what you can do here",
 	}
 	m.bmPanel = &terminu.Panel{Label: "Bookmarks", Body: m.bmList}
 	m.bmPanel.Actions = append(m.bookmarkActions(), m.bmList.Actions()...)
@@ -218,11 +218,11 @@ func (m *AppModel) bookmarkActions() []terminu.Action {
 				// screen was showing (revised 2026-09-21).
 				return m.openTab(m.bookmarks[r.ref].URL, true)
 			})},
-		{Key: "m", Label: "Move", Desc: "this bookmark to another folder", Scope: terminu.ItemScope, Hidden: onFolder,
+		{Key: "m", Label: "move", Desc: "this bookmark to another folder", Scope: terminu.ItemScope, Hidden: onFolder,
 			Do: m.do(func() tea.Cmd { r, _ := m.bmCurrent(); return m.moveSelect(r.ref) })},
-		{Key: "r", Label: "Rename", Desc: "a bookmark's title, or a folder's name", Scope: terminu.ItemScope, Hint: "rename",
+		{Key: "r", Label: "rename", Desc: "a bookmark's title, or a folder's name", Scope: terminu.ItemScope, Hint: "rename",
 			Do: m.do(func() tea.Cmd { r, _ := m.bmCurrent(); return m.startRename(r) })},
-		{Key: "y", Label: "Yank", Desc: "its URL", Scope: terminu.ItemScope, Hidden: onFolder,
+		{Key: "y", Label: "yank", Desc: "its URL", Scope: terminu.ItemScope, Hidden: onFolder,
 			Do: func() tea.Cmd { r, _ := m.bmCurrent(); return copyToClipboard(m.bookmarks[r.ref].URL) }},
 		{Key: "x", Label: "Delete", Desc: "this bookmark, or a folder and what is in it", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
@@ -237,7 +237,7 @@ func (m *AppModel) bookmarkActions() []terminu.Action {
 				return m.a.Confirm(terminu.Ask{Title: "Delete", Subject: oneLine(nameOr(b.Title, b.URL)), Details: []string{b.URL},
 					Question: "Delete this bookmark?", Verb: "delete"}, m.do(func() tea.Cmd { return m.deleteBookmark(b) }))
 			})},
-		{Key: "a", Label: "Add", Desc: "a bookmark, in the folder under the cursor", Scope: terminu.PanelScope, Hint: "add",
+		{Key: "a", Label: "add", Desc: "a bookmark, in the folder under the cursor", Scope: terminu.PanelScope, Hint: "add",
 			Do: m.do(func() tea.Cmd {
 				folder := ""
 				if r, ok := m.bmCurrent(); ok {

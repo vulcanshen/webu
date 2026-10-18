@@ -17,7 +17,7 @@ func (m *AppModel) buildHistory() {
 		Columns:    []terminu.Column{{Title: "Title", Flex: true}, {Title: "URL", Flex: true}, {Title: "When"}},
 		Filterable: true,
 		EmptyFact:  "No history yet",
-		EmptyHint:  "Pages land here as they load; [Space] shows what you can do here",
+		EmptyHint:  "Press [W] to browse, or [Space] to see what you can do here",
 	}
 	m.histPanel = &terminu.Panel{Label: "History", Body: m.histList, Actions: []terminu.Action{
 		{Key: "Enter", Label: "Open", Desc: "the page, in a new tab", Scope: terminu.ItemScope, Hint: "open",
@@ -27,7 +27,7 @@ func (m *AppModel) buildHistory() {
 				}
 				return nil
 			})},
-		{Key: "y", Label: "Yank", Desc: "its URL", Scope: terminu.ItemScope,
+		{Key: "y", Label: "yank", Desc: "its URL", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd {
 				if v, ok := m.histCurrent(); ok {
 					return copyToClipboard(v.URL)

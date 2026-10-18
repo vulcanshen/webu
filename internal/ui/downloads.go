@@ -51,20 +51,20 @@ func (m *AppModel) buildDownloads() {
 		Columns:    []terminu.Column{{Title: "File", Flex: true}, {Title: "State", Flex: true, Path: true}},
 		Filterable: true,
 		EmptyFact:  "No downloads this session",
-		EmptyHint:  "A link to a file saves it; [Space] shows what you can do here",
+		EmptyHint:  "Press [W] to browse, or [Space] to see what you can do here",
 	}
 	done := func() bool { d, ok := m.dlCurrent(); return !ok || d.state != dlDone }
 	m.dlPanel = &terminu.Panel{Label: "Downloads", Body: m.dlList, Actions: []terminu.Action{
 		{Key: "Enter", Label: "Open", Desc: "the file, in the desktop's app for it", Scope: terminu.ItemScope, Hint: "open",
 			Disabled: done, Do: m.do(m.openDownload)},
-		{Key: "o", Label: "Open source", Desc: "the page it came from, in a new tab", Scope: terminu.ItemScope,
+		{Key: "o", Label: "open source", Desc: "the page it came from, in a new tab", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
 				if d, ok := m.dlCurrent(); ok && d.url != "" {
 					return m.openTab(d.url, true)
 				}
 				return nil
 			})},
-		{Key: "y", Label: "Yank path", Desc: "where it was saved, or its URL while it is on its way", Scope: terminu.ItemScope,
+		{Key: "y", Label: "yank path", Desc: "where it was saved, or its URL while it is on its way", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd {
 				d, ok := m.dlCurrent()
 				switch {

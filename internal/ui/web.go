@@ -201,24 +201,24 @@ func (m *AppModel) tabActions() []terminu.Action {
 			ToDetails: func() bool { return true },
 			Do:        m.do(func() tea.Cmd { i, _ := m.cursorTab(); return m.showTab(i) })},
 		// c, the page panel's C in lower case.
-		{Key: "c", Label: "Close", Desc: "this tab", Scope: terminu.ItemScope, Hint: "close",
+		{Key: "c", Label: "close", Desc: "this tab", Scope: terminu.ItemScope, Hint: "close",
 			Do: m.do(func() tea.Cmd { i, _ := m.cursorTab(); return m.closeTab(i) })},
 		// o as on a download's row: this row's URL, in a new tab.
-		{Key: "o", Label: "Open in new tab", Desc: "the same page again", Scope: terminu.ItemScope,
+		{Key: "o", Label: "open in new tab", Desc: "the same page again", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
 				if _, t := m.cursorTab(); t != nil {
 					return m.openTab(t.url, true)
 				}
 				return nil
 			})},
-		{Key: "r", Label: "Reload", Desc: "this tab", Scope: terminu.ItemScope,
+		{Key: "r", Label: "reload", Desc: "this tab", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
 				if _, t := m.cursorTab(); t != nil {
 					return t.load(t.url)
 				}
 				return nil
 			})},
-		{Key: "y", Label: "Yank url", Desc: "to the clipboard", Scope: terminu.ItemScope,
+		{Key: "y", Label: "yank url", Desc: "to the clipboard", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd {
 				if _, t := m.cursorTab(); t != nil {
 					return copyToClipboard(t.url)

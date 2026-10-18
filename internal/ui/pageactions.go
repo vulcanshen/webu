@@ -271,7 +271,7 @@ func (m *AppModel) panelActions(t *tab) []terminu.Action {
 		}),
 		panel("/", "Search", "every part of the page; [Enter] goes there", "search",
 			func() bool { t := m.shownTab(); return t == nil || t.root == nil || t.popupNode() != nil }, m.openFinder),
-		panel("v", "Visual mode", "walk the text by character, copy some", "", noPage, m.enterSelect),
+		panel("v", "visual mode", "walk the text by character, copy some", "", noPage, m.enterSelect),
 		panel("L", "Location", "a URL or a search; this page's own is offered", "", nil, m.locationBox),
 		panel("A", "Add bookmark", "this page", "", noTab, func() tea.Cmd {
 			t := m.shownTab()
@@ -281,8 +281,8 @@ func (m *AppModel) panelActions(t *tab) []terminu.Action {
 			t := m.shownTab()
 			return t == nil || t.popupNode() != nil || t.lineCount() == 0
 		}, m.goLineBox),
-		panel("n", "Next section", "the one after this, at the same depth", "", reading, func() tea.Cmd { return m.stepSection(1) }),
-		panel("p", "Previous section", "the one before this, at the same depth", "", reading, func() tea.Cmd { return m.stepSection(-1) }),
+		panel("n", "next section", "the one after this, at the same depth", "", reading, func() tea.Cmd { return m.stepSection(1) }),
+		panel("p", "previous section", "the one before this, at the same depth", "", reading, func() tea.Cmd { return m.stepSection(-1) }),
 		m.sectionsAction(t),
 		panel("Z", "Zoom", "the page alone, or the grid back", "", nil, func() tea.Cmd {
 			m.zoom = !m.zoom

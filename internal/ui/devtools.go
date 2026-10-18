@@ -85,9 +85,9 @@ func (m *AppModel) buildDevtools() {
 	d := &devtools{pager: &terminu.Pager{EmptyFact: "Nothing under the cursor"}}
 	m.dev = d
 	facts := [4][2]string{
-		{"No requests yet", "Pages load here as they fetch; [Space] shows what you can do here"},
+		{"No requests yet", "Press [W] to browse, or [Space] to see what you can do here"},
 		{"No storage", "Press [R] to read it again"},
-		{"No console lines yet", "Press [i] to run a line of JavaScript in the page"},
+		{"No console lines yet", "Press [i] to run a line of JavaScript, or [Space] for more"},
 		{"No source", "Press [R] to read it again"},
 	}
 	cols := [4][]terminu.Column{
@@ -102,6 +102,14 @@ func (m *AppModel) buildDevtools() {
 			OnMove: func(r terminu.Row) tea.Cmd { return m.devMoved(i, r) }}
 	}
 	d.detail = &terminu.Panel{Label: "Detail", Body: d.pager}
+	// A text with no items: Enter is the panel's own, the whole of it in a
+	// viewer to scroll, select and copy (tdp K3).
+	d.detail.Actions = []terminu.Action{{Key: "Enter", Label: "Read", Desc: "the detail in full, to scroll, select and copy",
+		Scope: terminu.PanelScope, Hint: "read", Disabled: func() bool { return d.pager.Empty() },
+		Do: func() tea.Cmd {
+			return m.a.Viewer(&terminu.Viewer{Title: "Detail", Glyph: glyphDevTools, Lines: d.pager.Lines(),
+				Select: &terminu.Selection{Key: "v", Name: "Visual", Copy: copyToClipboard}})
+		}}}
 	d.panel = &terminu.Panel{Label: "Network", Tabs: []string{"Storage", "Console", "Source"}, Body: d.lists[devNetwork],
 		Details: d.detail, OnTab: m.devTab}
 	d.panel.Actions = m.devActions()
@@ -375,7 +383,7 @@ func (m *AppModel) devActions() []terminu.Action {
 	return []terminu.Action{
 		{Key: "Enter", Label: "Detail", Desc: "the row in full, in [2]", Scope: terminu.ItemScope, Hint: "detail",
 			ToDetails: func() bool { return true }},
-		{Key: "y", Label: "Yank", Desc: "the URL, the value, the line", Scope: terminu.ItemScope,
+		{Key: "y", Label: "yank", Desc: "the URL, the value, the line", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd {
 				r, ok := m.devList().Current()
 				if !ok {
@@ -399,7 +407,7 @@ func (m *AppModel) devActions() []terminu.Action {
 			}},
 		{Key: "x", Label: "Delete", Desc: "this cookie or storage item", Scope: terminu.ItemScope, Hidden: on(devStorage),
 			Do: m.do(m.deleteStorageRow)},
-		{Key: "i", Label: "Run JavaScript", Desc: "a line, in the page; its answer comes into the console", Scope: terminu.PanelScope,
+		{Key: "i", Label: "input JavaScript", Desc: "a line, in the page; its answer comes into the console", Scope: terminu.PanelScope,
 			Hint: "run", Hidden: on(devConsole), Disabled: noPage, Do: m.evalBox},
 		{Key: "R", Label: "Read again", Desc: "the storage, or the source, as it is now", Scope: terminu.PanelScope,
 			Hidden: on(devStorage, devSource), Disabled: noPage,
