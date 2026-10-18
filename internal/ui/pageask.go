@@ -41,48 +41,70 @@ type pageAsk struct {
 	pass     string
 	accept   func() tea.Cmd
 	cancel   func() tea.Cmd
+	top      int  // the first detail row in sight, when they do not all fit
+	over     bool // they do not: j|k is in the hint
 }
 
+// valueW is how wide the label column of the values is.
+const valueW = 10
+
 func (p *pageAsk) Size(sw, sh int) (int, int) {
-	w := max(dispW(p.question), 30)
+	w := dispW(p.question)
 	for _, d := range p.details {
 		w = max(w, dispW(d))
 	}
-	w = min(w+4, max(sw-4, 10))
-	return w, len(p.rows(w)) + 0
+	switch p.kind {
+	case askPrompt:
+		w = max(w, valueW+dispW(p.answer))
+	case askAuth:
+		w = max(w, valueW+dispW(p.name))
+	}
+	// A cell of margin either side; no wider than the screen allows.
+	w = min(w+2, max(min(sw-2, 120)-2, 10))
+	details, tail := p.parts(w)
+	return w, min(len(details)+len(tail), max(sh-6, 3))
 }
 
-// rows are what the popup holds, wrapped to w: what the page said, the
-// values that will be sent, the question.
-func (p *pageAsk) rows(w int) []string {
-	inner := max(w-4, 1)
-	var out []string
+// parts are what the popup holds, wrapped to w less its margins: what the
+// page said, which scrolls; then the values that will be sent and the
+// question, which stay.
+func (p *pageAsk) parts(w int) (details, tail []string) {
+	inner := max(w-2, 1)
 	for _, d := range p.details {
 		for _, l := range terminu.Wrap(d, inner) {
-			out = append(out, terminu.Fg(terminu.Overlay0).Render(l))
+			details = append(details, terminu.Fg(terminu.Overlay0).Render(l))
 		}
 	}
 	value := func(label, v string) string {
-		return terminu.Fg(terminu.Text).Render(padRight(label, 10)) + terminu.Fg(terminu.Lavender).Render(truncate(v, max(1, inner-10)))
+		return terminu.Fg(terminu.Text).Render(padRight(label, valueW)) + terminu.Fg(terminu.Lavender).Render(truncate(v, max(1, inner-valueW)))
 	}
 	switch p.kind {
 	case askPrompt:
-		out = append(out, "", value("ANSWER", p.answer))
+		tail = append(tail, "", value("ANSWER", p.answer))
 	case askAuth:
-		out = append(out, "", value("NAME", p.name), value("PASSWORD", strings.Repeat("•", len([]rune(p.pass)))))
+		tail = append(tail, "", value("NAME", p.name), value("PASSWORD", strings.Repeat("•", len([]rune(p.pass)))))
 	}
-	if len(out) > 0 {
-		out = append(out, "")
+	if len(details)+len(tail) > 0 {
+		tail = append(tail, "")
 	}
 	for _, l := range terminu.Wrap(p.question, inner) {
-		out = append(out, terminu.Fg(terminu.Text).Render(l))
+		tail = append(tail, terminu.Fg(terminu.Text).Render(l))
 	}
-	return out
+	return details, tail
 }
 
 func (p *pageAsk) Draw(w, h int, _ terminu.Color) []string {
+	details, tail := p.parts(w)
+	room := max(h-len(tail), 0)
+	p.top = min(max(p.top, 0), max(len(details)-room, 0))
+	p.over = len(details) > room
+	var rows []string
+	for i := p.top; i < len(details) && len(rows) < room; i++ {
+		rows = append(rows, details[i])
+	}
+	rows = append(rows, tail...)
 	out := make([]string, 0, h)
-	for _, r := range p.rows(w) {
+	for _, r := range rows {
 		out = append(out, " "+terminu.Pad(r, w-2)+" ")
 	}
 	return terminu.Pad2(out, w, h)
@@ -94,6 +116,12 @@ func (p *pageAsk) Key(key string, _ tea.KeyMsg) (bool, tea.Cmd) {
 		return true, tea.Batch(p.m.a.ClosePopup(p), p.accept())
 	case "Esc":
 		return true, tea.Batch(p.m.a.ClosePopup(p), p.cancel())
+	case "j", "↓":
+		p.top++
+		return true, nil
+	case "k", "↑":
+		p.top--
+		return true, nil
 	case "e":
 		if p.kind == askPrompt {
 			return true, p.m.a.Text(terminu.TextInput{Title: "Answer", Glyph: glyphPencil, Name: "The answer",
@@ -102,13 +130,13 @@ func (p *pageAsk) Key(key string, _ tea.KeyMsg) (bool, tea.Cmd) {
 		}
 	case "n":
 		if p.kind == askAuth {
-			return true, p.m.a.Text(terminu.TextInput{Title: "Name", Glyph: glyphPencil, Name: "The name",
+			return true, p.m.a.Text(terminu.TextInput{Title: "Sign in", Glyph: glyphPencil, Name: "The name",
 				Prompt: "Your name on this site", Verb: "set", Old: p.name,
 				Done: func(v string) tea.Cmd { p.name = v; return nil }})
 		}
 	case "p":
 		if p.kind == askAuth {
-			return true, p.m.a.Password(terminu.PasswordInput{Title: "Password", Glyph: glyphPencil,
+			return true, p.m.a.Password(terminu.PasswordInput{Title: "Sign in", Glyph: glyphPencil,
 				Prompt: "Your password on this site", Verb: "set", Set: p.pass != "",
 				Done: func(v string, clear bool) tea.Cmd {
 					p.pass = v
@@ -130,6 +158,9 @@ func (p *pageAsk) Hint() []terminu.KeyHint {
 	case askAuth:
 		h = append(h, terminu.KeyHint{Key: "n", Desc: "name"}, terminu.KeyHint{Key: "p", Desc: "password"})
 	}
+	if p.over {
+		h = append(h, terminu.KeyHint{Key: "j|k", Desc: "scroll"})
+	}
 	return append(h, terminu.KeyHint{Key: "Esc", Desc: "cancel"})
 }
 
@@ -141,7 +172,8 @@ func (p *pageAsk) Keys() []terminu.KeySection {
 	case askAuth:
 		rows = append(rows, terminu.KeyRow{Key: "n", Desc: "edit the name"}, terminu.KeyRow{Key: "p", Desc: "edit the password"})
 	}
-	rows = append(rows, terminu.KeyRow{Key: "Esc", Desc: "cancel: the page is told no"})
+	rows = append(rows, terminu.KeyRow{Key: "j|k", Desc: "scroll what the page said, when it is long"},
+		terminu.KeyRow{Key: "Esc", Desc: "cancel: the page is told no"})
 	return []terminu.KeySection{{Title: "the page asks", Rows: rows}}
 }
 
@@ -172,7 +204,7 @@ func (m *AppModel) askDialog(msg dialogMsg) tea.Cmd {
 	case cdppage.DialogTypePrompt:
 		title, p.kind, p.answer, p.question, p.verb = "The page asks", askPrompt, msg.defaultPrompt, "Send this answer?", "answer"
 	case cdppage.DialogTypeAlert:
-		p.question = "Go on?"
+		p.question, p.verb = "Dismiss the page's message?", "dismiss"
 	}
 	p.accept = func() tea.Cmd { cmd := m.answerDialog(true, p.answer); m.sync(); return cmd }
 	p.cancel = func() tea.Cmd { cmd := m.answerDialog(false, ""); m.sync(); return cmd }

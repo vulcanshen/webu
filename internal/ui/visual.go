@@ -69,7 +69,7 @@ func (m *AppModel) leaveSelect() {
 		msg := *t.frozen
 		t.frozen = nil
 		t.apply(msg, m.pageW())
-		m.recordVisit(t)
+		_ = m.recordVisit(t) // the mode is ending; a failed write shows on the next page
 	}
 	t.scrollToCursor(m.pageVisible())
 }

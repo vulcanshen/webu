@@ -201,7 +201,7 @@ func (m *AppModel) openDownload() tea.Cmd {
 		return nil
 	}
 	if err := openFile(d.path); err != nil {
-		return m.a.Error("Open", err.Error())
+		return m.a.Error("Open failed", err.Error())
 	}
 	return m.toast("Opened " + d.name)
 }

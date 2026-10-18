@@ -531,13 +531,20 @@ func (m *AppModel) enterCell(t *tab, n *ir.Node) tea.Cmd {
 	case len(ts) == 1 && oneLine(n.Text()) == oneLine(ts[0].node.Text()):
 		return m.enterOn(t, ts[0].node)
 	}
-	acts := []terminu.Action{m.item("Content", "the cell in full", func() tea.Cmd { return m.showCell(t, n) })}
+	// The title says what the menu is for; the column's name, the page's
+	// own words, goes in the Content row, kept as it is: App.Menu has no
+	// Subject, and the lib upper-cases its title (TODO(lib WB9)).
+	desc := "the cell in full"
+	if col := columnHeader(t.root, n); col != "" {
+		desc = "the " + truncate(oneLine(col), 40) + " cell in full"
+	}
+	acts := []terminu.Action{m.item("Content", desc, func() tea.Cmd { return m.showCell(t, n) })}
 	for i, x := range ts {
 		x := x
 		acts = append(acts, m.item(strings.Repeat("  ", x.depth)+truncate(targetLabel(x.node), 50), targetDesc(x.node, i),
 			func() tea.Cmd { return m.actOn(t, x.node, false) }))
 	}
-	return m.a.Menu(truncate(oneLine(nameOr(columnHeader(t.root, n), "cell")), 40), terminu.MenuSection{Actions: acts})
+	return m.a.Menu("Cell", terminu.MenuSection{Actions: acts})
 }
 
 // showCell is a cell's content in full: the column's header as the

@@ -23,7 +23,25 @@ code as the rest of the family's.
 - `go` asks for a line number; `/` in visual mode asks for what to find.
 - Adding a bookmark is a form: its URL and its title, then Add.
 - Settings has the family's `hide_secrets_in_preview` and
-  `input_tab_width`, and a switch flips in place.
+  `input_tab_width`, and a switch flips in place. `download_dir` is
+  picked in the file picker, and a value in `config.yaml` that a setting
+  will not take shows the setting's name in red.
+- `Enter` on a bookmark or a visit opens it in a new tab and stays on the
+  list, saying where it went.
+- A question opened from the Space menu goes back to the menu on `Esc`.
+  Deleting a bookmark folder is asked every time, empty or not.
+- Every viewer — Inspect, a table cell, a code block, DevTools' detail —
+  can select and copy (`v`).
+- A number field opens a number input; a filled password field shows
+  its dots and keeps its value when `Enter` is pressed on nothing.
+- The section list has a header and the same cursor as every list.
+- A page's message too long for its popup scrolls with `j|k`.
+- A page that cannot be fetched again keeps the copy you had, and says so.
+- A settings, bookmarks, history or session file that will not read is
+  shown in an error popup on the first screen, not printed on the
+  terminal behind it.
+- `Shift-Tab` no longer moves between panels; `PgUp` and `PgDn` scroll
+  the page and visual mode like `u` and `d`.
 - The powerline symbols' width is measured too, and can be set with
   `WEBU__POWERLINE_WIDTH` or the family's `TERMINU__POWERLINE_WIDTH`.
 - On macOS the downloaded Chromium goes to `~/Library/Caches/webu` even

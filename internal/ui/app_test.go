@@ -9,6 +9,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/chromedp/cdproto/cdp"
 	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
@@ -450,14 +451,21 @@ func TestScreensAndSession(t *testing.T) {
 	if d.m.a.Screen() != d.m.setScreen || !strings.Contains(d.view(), "SEARCH_ENGINE") {
 		t.Fatalf("the settings screen:\n%s", d.view())
 	}
+	// download_dir is picked: a path typed lists that directory, and Enter
+	// on its "." chooses it.
+	dl := filepath.Join(t.TempDir(), "dl")
+	if err := os.Mkdir(dl, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	d.key("j")
 	d.press("enter")
-	d.until("setting box", d.shows("SETTINGS: download_dir"))
-	d.key("backspace") // drop the offer
-	d.key("/tmp/dl")
+	d.until("the picker", d.shows("DOWNLOAD TO"))
+	d.key("/")
+	d.key(dl + "/")
+	d.key("enter")
 	d.press("enter")
-	d.until("saved", func() bool { return d.m.cfg.DownloadDir == "/tmp/dl" })
-	if cfg, _ := store.LoadConfig(); cfg.DownloadDir != "/tmp/dl" {
+	d.until("saved", func() bool { return d.m.cfg.DownloadDir == dl })
+	if cfg, _ := store.LoadConfig(); cfg.DownloadDir != dl {
 		t.Errorf("config.yaml after save: %+v", cfg)
 	}
 	d.key("j")
@@ -529,17 +537,18 @@ func TestFrameFitsTheTerminal(t *testing.T) {
 			m.tabs, m.shown = []*tab{tb}, 0
 			tb.relayout(m.pageW())
 			m.sync()
-			check := func(where string) {
+			fits := func(where string, sw, sh int) {
 				lines := m.a.Frame()
-				if len(lines) != size[1] {
-					t.Errorf("%v %dx%d %s: %d lines", widths, size[0], size[1], where, len(lines))
+				if len(lines) != sh {
+					t.Errorf("%v %dx%d %s: %d lines", widths, sw, sh, where, len(lines))
 				}
 				for i, l := range lines {
-					if w := terminu.Width(l); w != size[0] {
-						t.Errorf("%v %dx%d %s: line %d is %d wide: %q", widths, size[0], size[1], where, i, w, terminu.StripStyles(l))
+					if w := terminu.Width(l); w != sw {
+						t.Errorf("%v %dx%d %s: line %d is %d wide: %q", widths, sw, sh, where, i, w, terminu.StripStyles(l))
 					}
 				}
 			}
+			check := func(where string) { fits(where, size[0], size[1]) }
 			check("web, [1]")
 			d.key("2")
 			check("web, [2]")
@@ -556,6 +565,42 @@ func TestFrameFitsTheTerminal(t *testing.T) {
 			d.key("W")
 			d.press("L")
 			check("Location")
+			d.press("esc")
+
+			long := strings.Repeat("The page has a long thing to say, and says it. ", 12)
+			// The page's own dialog floats over the page panel (pagepopup.go).
+			dlg := &ir.Node{Kind: ir.Landmark, Role: "dialog", ID: 50, Modal: true,
+				Children: []*ir.Node{para(text(long)), link("Accept", "https://example.com/ok", 51)}}
+			tb.root, tb.popups = doc(hd(1, "Fitting"), para(text("Behind it.")), dlg), []cdp.BackendNodeID{50}
+			tb.relayout(m.pageW())
+			m.sync()
+			check("the page's dialog")
+			tb.root, tb.popups = root, nil
+			tb.relayout(m.pageW())
+			m.sync()
+			ask := &pageAsk{m: m, details: []string{long, "", long}, question: "Answer yes?", verb: "yes",
+				accept: func() tea.Cmd { return nil }, cancel: func() tea.Cmd { return nil }}
+			d.exec(m.a.Popup(terminu.Popup{Title: "The page asks", Glyph: glyphInfo, Body: ask}))
+			d.settle()
+			check("the page asks")
+			d.exec(m.a.ClosePopup(ask))
+			d.settle()
+			d.exec(m.a.Confirm(terminu.Ask{Title: "Delete", Subject: "Fitting", Question: "Delete it?", Verb: "delete",
+				Details: []string{long}}, func() tea.Cmd { return nil }))
+			d.settle()
+			check("a question")
+			d.press("esc")
+			var code []string
+			for i := range 60 {
+				code = append(code, itoa(i)+" "+long)
+			}
+			d.exec(m.a.Viewer(&terminu.Viewer{Title: "CODE", Subject: "Fitting", Glyph: glyphCode, Lines: code}))
+			d.settle()
+			check("a viewer")
+			// The screen shrinks under an open popup: the popup shrinks with it.
+			d.send(tea.WindowSizeMsg{Width: size[0] / 2, Height: size[1] / 2})
+			d.settle()
+			fits("a viewer, the screen shrunk under it", size[0]/2, size[1]/2)
 			d.press("esc")
 			m.Close()
 		}

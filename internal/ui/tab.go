@@ -154,6 +154,9 @@ type tab struct {
 	// certErr: the last navigation failed on the certificate; certAsked:
 	// the user has been asked about it once already for this page.
 	certErr, certAsked bool
+	// refreshErr is a look again at the page that failed, the page kept;
+	// the app toasts it once.
+	refreshErr string
 	// print is treePrint of the capture on screen, and settlingUntil how
 	// long the next one that differs from it still counts as the page
 	// arriving rather than the page living.
@@ -622,8 +625,15 @@ func capture(ctx context.Context, id, gen int, frames []cdp.FrameID) tea.Msg {
 // the cursor kept on the node it was on (function.md §4) — by ID first, and
 // when the page rebuilt its DOM and the IDs are new, by the nearest item.
 func (t *tab) apply(msg pageMsg, width int) {
+	nav := t.navigating
 	t.loading, t.navigating = false, false
 	t.canBack, t.canForward = msg.back, msg.forward
+	if msg.err != nil && !nav && t.root != nil && !strings.Contains(msg.err.Error(), "ERR_CERT") {
+		// A look again at the page on screen failed: it stays, and the app
+		// says so (layout/panel: the old content stays, the error is a toast).
+		t.refreshErr = msg.err.Error()
+		return
+	}
 	if msg.err != nil {
 		t.errText = msg.err.Error()
 		t.root, t.lay = nil, layout{}

@@ -341,7 +341,7 @@ func (m *AppModel) moveBookmark(ref, idx int) tea.Cmd {
 	}
 	m.bookmarks[ref].Folder = folder
 	if err := m.saveBookmarks(); err != nil {
-		return m.toastErr("bookmarks.yaml: " + err.Error())
+		return m.saveFailed("bookmarks.yaml", err)
 	}
 	m.refreshBookmarks()
 	m.bmList.Select(bmRowID(bmRow{ref: ref}))
@@ -382,7 +382,7 @@ func (m *AppModel) addFolderBox(parent string) tea.Cmd {
 func (m *AppModel) addFolder(full string) tea.Cmd {
 	m.folders = append(m.folders, full)
 	if err := m.saveBookmarks(); err != nil {
-		return m.toastErr("bookmarks.yaml: " + err.Error())
+		return m.saveFailed("bookmarks.yaml", err)
 	}
 	m.refreshBookmarks()
 	m.bmList.Select(bmRowID(bmRow{folder: full, isFolder: true}))
@@ -410,7 +410,7 @@ func (m *AppModel) deleteFolderTree(path string) tea.Cmd {
 	}
 	m.folders = keptFolders
 	if err := m.saveBookmarks(); err != nil {
-		return m.toastErr("bookmarks.yaml: " + err.Error())
+		return m.saveFailed("bookmarks.yaml", err)
 	}
 	m.refreshBookmarks()
 	msg := "Folder " + path + " removed"
@@ -429,7 +429,7 @@ func (m *AppModel) deleteBookmark(b store.Bookmark) tea.Cmd {
 		}
 	}
 	if err := m.saveBookmarks(); err != nil {
-		return m.toastErr("bookmarks.yaml: " + err.Error())
+		return m.saveFailed("bookmarks.yaml", err)
 	}
 	m.refreshBookmarks()
 	return nil
@@ -445,7 +445,7 @@ func (m *AppModel) addBookmark(title, url string) tea.Cmd {
 	}
 	m.bookmarks = append(m.bookmarks, store.Bookmark{Title: title, URL: url})
 	if err := m.saveBookmarks(); err != nil {
-		return m.toastErr("bookmarks.yaml: " + err.Error())
+		return m.saveFailed("bookmarks.yaml", err)
 	}
 	m.refreshBookmarks()
 	return m.toast("Added " + oneLine(nameOr(title, url)))
@@ -548,12 +548,12 @@ func (m *AppModel) uploadPicked(path string) tea.Cmd {
 func (m *AppModel) importPicked(path string) tea.Cmd {
 	f, err := os.Open(path)
 	if err != nil {
-		return m.a.Error("Import bookmarks", err.Error())
+		return m.a.Error("Import failed", err.Error())
 	}
 	defer f.Close()
 	imp, err := store.ParseNetscape(f)
 	if err != nil {
-		return m.a.Error("Import bookmarks", filepath.Base(path)+": "+err.Error())
+		return m.a.Error("Import failed", filepath.Base(path)+": "+err.Error())
 	}
 	prompt := fmt.Sprintf("%s: %s in %s. The folder to put them under",
 		filepath.Base(path), plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"))
@@ -590,7 +590,7 @@ func (m *AppModel) importBookmarks(root string, imp store.Import) tea.Cmd {
 		m.bookmarks = append(m.bookmarks, b)
 	}
 	if err := m.saveBookmarks(); err != nil {
-		return m.toastErr("bookmarks.yaml: " + err.Error())
+		return m.saveFailed("bookmarks.yaml", err)
 	}
 	m.refreshBookmarks()
 	m.bmList.Select(bmRowID(bmRow{folder: root, isFolder: true}))
@@ -624,7 +624,7 @@ func (m *AppModel) startRename(r bmRow) tea.Cmd {
 			return strings.TrimSpace(v)
 		}
 		return m.a.Text(terminu.TextInput{Title: "Rename folder", Subject: old, Glyph: glyphFolder, Name: "The name",
-			Prompt: "The folder's new name; what is in it moves with it", Verb: "rename", Old: folderBase(old),
+			Prompt: "New name for " + old + "; what is in it moves with it", Verb: "rename", Old: folderBase(old),
 			Check: func(v string) error {
 				switch {
 				case strings.TrimSpace(v) == "":
@@ -646,7 +646,7 @@ func (m *AppModel) startRename(r bmRow) tea.Cmd {
 	}
 	ref := r.ref
 	return m.a.Text(terminu.TextInput{Title: "Rename bookmark", Subject: oneLine(m.bookmarks[ref].Title), Glyph: glyphBookmark,
-		Name: "The title", Prompt: "The bookmark's new title", Verb: "rename", Old: m.bookmarks[ref].Title,
+		Name: "The title", Prompt: "New title for " + oneLine(nameOr(m.bookmarks[ref].Title, m.bookmarks[ref].URL)), Verb: "rename", Old: m.bookmarks[ref].Title,
 		Check: func(v string) error {
 			if strings.TrimSpace(v) == "" {
 				return errors.New("The title can't be empty")
@@ -656,7 +656,7 @@ func (m *AppModel) startRename(r bmRow) tea.Cmd {
 		Done: m.cmdDone(func(v string) tea.Cmd {
 			m.bookmarks[ref].Title = v
 			if err := m.saveBookmarks(); err != nil {
-				return m.toastErr("bookmarks.yaml: " + err.Error())
+				return m.saveFailed("bookmarks.yaml", err)
 			}
 			m.refreshBookmarks()
 			m.bmList.Select(bmRowID(bmRow{ref: ref}))
@@ -690,7 +690,7 @@ func (m *AppModel) renameFolder(old, to string) tea.Cmd {
 	}
 	m.foldedFolders = folded
 	if err := m.saveBookmarks(); err != nil {
-		return m.toastErr("bookmarks.yaml: " + err.Error())
+		return m.saveFailed("bookmarks.yaml", err)
 	}
 	m.refreshBookmarks()
 	m.bmList.Select(bmRowID(bmRow{folder: to, isFolder: true}))

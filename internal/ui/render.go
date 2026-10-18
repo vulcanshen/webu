@@ -1467,7 +1467,7 @@ func (r *renderer) add(a atom) {
 // dropLabel removes the text just before a field when it IS the field's
 // name. A <label> wrapping an input leaves its text in the flow AND gives
 // the input that text as its accessible name, so without this every field
-// reads "Name 󰛿 Name ____". Only plain text is eaten — never another item.
+// reads "Name <glyph> Name ____". Only plain text is eaten — never another item.
 func (r *renderer) dropLabel(name string) {
 	name = strings.TrimSpace(name)
 	if name == "" {

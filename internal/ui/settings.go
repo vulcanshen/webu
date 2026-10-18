@@ -2,6 +2,8 @@ package ui
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -77,7 +79,7 @@ var settings = []setting{
 	{key: "hide_secrets_in_preview", desc: "hide private keys and owner-only files in the file preview",
 		on:   func(c store.Config) bool { return c.HideSecretsInPreview },
 		flip: func(c *store.Config) { c.HideSecretsInPreview = !c.HideSecretsInPreview }},
-	{key: "input_tab_width", desc: "How many spaces Tab puts in a text of several lines",
+	{key: "input_tab_width", desc: "How many spaces [Tab] puts in a text of several lines",
 		get: func(c store.Config) string {
 			if c.InputTabWidth <= 0 {
 				return ""
@@ -106,7 +108,15 @@ func (m *AppModel) buildSettings() {
 	for i := range settings {
 		m.setValues.Fields = append(m.setValues.Fields, m.settingField(i))
 	}
-	m.setPanel = &terminu.Panel{Label: "Settings", Body: m.setValues}
+	m.setPanel = &terminu.Panel{Label: "Settings", Body: m.setValues, Actions: []terminu.Action{
+		// Enter is the Values panel's own; registered so that the Space menu
+		// and ? list it (tdp M3).
+		{Key: "Enter", Label: "Change", Desc: "edit the value, or flip the switch", Scope: terminu.ItemScope, Hint: "change",
+			Do: m.do(func() tea.Cmd {
+				_, cmd := m.setValues.Key("Enter", tea.KeyMsg{Type: tea.KeyEnter})
+				return cmd
+			})},
+	}}
 	m.setScreen = m.a.AddScreen(&terminu.Screen{Name: "Settings", Key: "S", Desc: "config.yaml, a key a row",
 		Panels: []*terminu.Panel{m.setPanel}})
 }
@@ -127,6 +137,13 @@ func (m *AppModel) settingField(i int) *terminu.Field {
 	}
 	f.Value = func() string { return s.get(m.cfg) }
 	f.Empty = "default: " + s.def(m)
+	f.Path = s.key == "download_dir"
+	// A value config.yaml holds that the setting refuses (written by hand):
+	// its label is Red.
+	f.Err = func() bool {
+		c := m.cfg
+		return s.set(&c, s.get(m.cfg)) != nil
+	}
 	f.Edit = m.do(func() tea.Cmd { return m.settingBox(i) })
 	return f
 }
@@ -156,7 +173,7 @@ func (m *AppModel) settingBox(i int) tea.Cmd {
 	}
 	done := m.cmdDone(func(v string) tea.Cmd {
 		if err := s.set(&m.cfg, strings.TrimSpace(v)); err != nil {
-			return m.a.Error("Settings", err.Error())
+			return m.a.Error("Settings failed", err.Error())
 		}
 		return m.saveConfig(s.key)
 	})
@@ -164,8 +181,20 @@ func (m *AppModel) settingBox(i int) tea.Cmd {
 		c := m.cfg
 		return s.set(&c, strings.TrimSpace(v))
 	}
-	prompt := s.desc + "; [Backspace] then [Enter] for the default"
+	if s.key == "download_dir" {
+		// A directory is picked, not typed (components/input/file-picker),
+		// from the nearest one there is: the default is not made until
+		// something lands in it.
+		root := cur
+		for fi, err := os.Stat(root); (err != nil || !fi.IsDir()) && root != filepath.Dir(root); fi, err = os.Stat(root) {
+			root = filepath.Dir(root)
+		}
+		return m.a.PickFile(terminu.FilePicker{Title: "Download to", Glyph: glyphFolder, Root: root, Value: cur, Dirs: true,
+			Done: done})
+	}
+	prompt := s.key + ": " + s.desc + "; [Backspace] then [Enter] for the default"
 	if s.number[1] > 0 {
+		prompt = s.key + ": " + s.desc + ", " + fmtNum(s.number[0]) + "-" + fmtNum(s.number[1]) + "; [Backspace] then [Enter] for the default"
 		return m.a.Number(terminu.NumberInput{Title: "Settings", Subject: s.key, Glyph: glyphSettings, Name: s.key,
 			Prompt: prompt, Verb: "save", Old: cur, Min: s.number[0], Max: s.number[1], Check: check, Done: done})
 	}
@@ -180,7 +209,7 @@ func (m *AppModel) saveConfig(key string) tea.Cmd {
 	m.applyConfig()
 	m.refreshSettings()
 	if err := store.SaveConfig(m.cfg); err != nil {
-		return m.toastErr("config.yaml: " + err.Error())
+		return m.saveFailed("config.yaml", err)
 	}
 	cmds := []tea.Cmd{m.toast(key + " saved to config.yaml")}
 	switch key {

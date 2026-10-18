@@ -73,6 +73,8 @@ type AppModel struct {
 	dls []download
 	// foldedFolders are the bookmark folder rows shut with Enter.
 	foldedFolders map[string]bool
+	// loadErrs are the files main could not read, said on the first frame.
+	loadErrs []string
 
 	// The screens (web.go, bookmarks.go, history.go, downloads.go,
 	// settings.go, devtools.go).
@@ -187,7 +189,11 @@ func (m *AppModel) build() {
 // start is the first frame: the event listener and what the app opens
 // with.
 func (m *AppModel) start() tea.Cmd {
-	return tea.Batch(waitEvent(m.events), m.firstFrame(), devTick())
+	cmds := []tea.Cmd{waitEvent(m.events), m.firstFrame(), devTick()}
+	if len(m.loadErrs) > 0 {
+		cmds = append(cmds, m.a.Error("Read failed", strings.Join(m.loadErrs, "\n")+"\nwebu runs without them."))
+	}
+	return tea.Batch(cmds...)
 }
 
 // sync puts webu's state where the lib reads it: panel [1]'s rows, panel
@@ -214,6 +220,12 @@ func (m *AppModel) toast(text string) tea.Cmd { return m.a.Toast(terminu.Info, t
 
 // toastErr says something went wrong (Rules F5).
 func (m *AppModel) toastErr(text string) tea.Cmd { return m.a.Toast(terminu.Error, text) }
+
+// saveFailed is one of webu's files not written: an error popup, the whole
+// of the reason readable (components/dialog/note).
+func (m *AppModel) saveFailed(file string, err error) tea.Cmd {
+	return m.a.Error("Save failed", file+": "+err.Error())
+}
 
 // status is the chip row's right end (layout/screen, statusbar): the
 // downloads still running, in Green.
@@ -299,7 +311,12 @@ func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 		return m.toast("Copied " + plural(msg.lines, "line"))
 
 	case actionErrMsg:
-		return m.toastErr(msg.err.Error())
+		// A closed tab's work comes back cancelled: the tab is gone, and
+		// so is anything to say about it.
+		if errors.Is(msg.err, context.Canceled) {
+			return nil
+		}
+		return m.a.Error("Action failed", msg.err.Error())
 
 	case navFailMsg:
 		_, t := m.tabByID(msg.tabID)
@@ -310,7 +327,7 @@ func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 		if errors.Is(msg.err, page.ErrNoEntry) {
 			return m.toast("Nothing to go " + msg.what + " to")
 		}
-		return m.toastErr(msg.what + ": " + msg.err.Error())
+		return m.a.Error("Going "+msg.what+" failed", msg.err.Error())
 
 	case pageEventMsg:
 		// Chromium says the tab moved or changed; look again shortly. Always
@@ -387,7 +404,17 @@ func (m *AppModel) applyPage(msg pageMsg) tea.Cmd {
 		// last one. Look again, and go on saying so.
 		return t.settle(300 * time.Millisecond)
 	}
-	m.recordVisit(t)
+	visited := m.recordVisit(t)
+	if t.refreshErr != "" {
+		// The page looked at again and could not be had: the one on screen
+		// stays, and a toast says so (layout/panel, loading and errors).
+		e := t.refreshErr
+		t.refreshErr = ""
+		return tea.Batch(visited, m.toastErr("Could not look at the page again: "+e))
+	}
+	if visited != nil {
+		return visited
+	}
 	if i == m.shown && t.certErr && !t.certAsked {
 		t.certAsked = true
 		// The address that failed, kept now: the error page Chromium draws
@@ -508,16 +535,26 @@ func (m *AppModel) relayoutTabs() {
 // recordVisit appends a loaded page to the history log (ux.md §6): the
 // final URL and title after the load, once per page, never about:blank or
 // an error page. Written synchronously — one line, a small file.
-func (m *AppModel) recordVisit(t *tab) {
+func (m *AppModel) recordVisit(t *tab) tea.Cmd {
 	if t.errText != "" || t.root == nil || t.url == "" || t.url == "about:blank" || t.url == t.lastVisit {
-		return
+		return nil
 	}
 	t.lastVisit = t.url
 	v := store.Visit{At: time.Now(), URL: t.url, Title: t.title}
-	if err := store.AppendVisit(v); err == nil {
-		m.history = append([]store.Visit{v}, m.history...)
-		m.refreshHistory()
+	if err := store.AppendVisit(v); err != nil {
+		return m.toastErr("history.yaml: " + err.Error())
 	}
+	m.history = append([]store.Visit{v}, m.history...)
+	m.refreshHistory()
+	return nil
+}
+
+// WithLoadErrors are the files main could not read: said in an error popup
+// on the first frame, where they are seen, rather than on a terminal the
+// screen is about to cover (Rules F5).
+func (m *AppModel) WithLoadErrors(errs []string) *AppModel {
+	m.loadErrs = errs
+	return m
 }
 
 // ------------------------------------------------------------------- tabs

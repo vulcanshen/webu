@@ -409,9 +409,9 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 	s := &m.sel
 	styles := segStyles()
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
-	sel := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(selectionBg)
-	hit := lipgloss.NewStyle().Foreground(textColor).Background(borderDim)
-	hitCur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(selectColor)
+	sel := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(selectColor)
+	hit := lipgloss.NewStyle().Foreground(selectColor).Underline(true)
+	hitCur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(selectColor).Underline(true)
 
 	out := make([]string, 0, innerH)
 	end := min(len(t.lay.rows), t.top+innerH)

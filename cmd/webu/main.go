@@ -93,17 +93,20 @@ func main() {
 	}
 
 	// webu's own files. None of them is fatal: a file that will not parse
-	// is news for the toast, not a reason to withhold the browser.
+	// is news for an error popup on the first frame, not a reason to
+	// withhold the browser — and not a line on a terminal the screen is
+	// about to cover.
 	bookmarks, folders, bmErr := store.LoadBookmarks()
 	cfg, cfgErr := store.LoadConfig()
 	history, histErr := store.LoadHistory()
 	session, sessErr := store.LoadSession()
+	var loadErrs []string
 	for _, e := range []struct {
 		name string
 		err  error
 	}{{"bookmarks.yaml", bmErr}, {"config.yaml", cfgErr}, {"history.yaml", histErr}, {"session.yaml", sessErr}} {
 		if e.err != nil {
-			fmt.Fprintf(os.Stderr, "webu: %s: %v (running without it)\n", e.name, e.err)
+			loadErrs = append(loadErrs, e.name+": "+e.err.Error())
 		}
 	}
 	// restore_session: false starts empty, or on the command line's URLs.
@@ -112,7 +115,7 @@ func main() {
 	if !cfg.Restore() {
 		session = store.Session{}
 	}
-	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session)
+	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session).WithLoadErrors(loadErrs)
 
 	// Whatever door the program leaves through — q, an outside SIGINT or
 	// SIGTERM, the terminal closing — Chromium goes too (terminu family: leave

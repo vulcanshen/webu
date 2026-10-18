@@ -75,10 +75,15 @@ func (m *AppModel) pageW() int {
 // rows above the page.
 func (m *AppModel) pageVisible() int {
 	_, h := m.a.Size()
-	if t := m.shownTab(); t != nil && t.popupNode() != nil {
+	t := m.shownTab()
+	if t != nil && t.popupNode() != nil {
 		return m.popupVisible()
 	}
-	return max(1, h-3-2-m.headRows(m.shownTab()))
+	header := 0
+	if t != nil && t.listing() {
+		header = 1 // the section list's header
+	}
+	return max(1, h-3-2-m.headRows(t)-header)
 }
 
 // popupVisible is how many of the page popup's rows the float shows.

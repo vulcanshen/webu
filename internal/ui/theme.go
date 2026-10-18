@@ -56,10 +56,6 @@ var (
 	// until mauve went to the page's input group, which needed a band
 	// more than the pagetab needed that particular one (user).
 	headerColor = lipgloss.Color("#f5e0dc") // rosewater
-	// visual mode's swept text: lavender under it, the band the family
-	// gives to "the thing you are changing" (an input under edit) — and a
-	// selection is that.
-	selectionBg = lipgloss.Color("#b4befe") // lavender
 	// the cursor row in a list.
 	rowSelColor = focusColor
 	// the URL on panel [2]'s first row: "where you are", which is the

@@ -233,6 +233,7 @@ func (b *pageBody) Scroll() string {
 	}
 	vis := max(1, b.h-m.headRows(t))
 	if t.listing() {
+		vis-- // the header
 		if len(t.secs) <= vis {
 			return ""
 		}
@@ -467,11 +468,7 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 			// way the section list's does: being under the hand must
 			// not cost a row the one thing it was saying. Not on a
 			// tab: the strip's chosen segment already wears it.
-			lit := st.cur
-			if row.heading > 0 && !t.loading && s.kind != segTabOn && s.kind != segTabOff {
-				lit = st.cur.Background(levelColor(row.heading))
-			}
-			b.WriteString(withAttr(lit, s.attr).Render(text))
+			b.WriteString(withAttr(st.cur, s.attr).Render(text))
 		case row.code:
 			style, ok := st.codeStyles[s.kind]
 			if !ok {

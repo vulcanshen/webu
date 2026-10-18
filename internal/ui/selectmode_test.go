@@ -39,7 +39,7 @@ func press(s *selectMode, keys ...string) (selResult, string) {
 
 func TestSelectMotionsAndYank(t *testing.T) {
 	tb := selectFixture()
-	if got := strings.Join([]string{tb.lay.rows[0].plain(), tb.lay.rows[2].plain()}, "|"); got != "alpha beta gamma|see 󰌷 the Link now" {
+	if got := strings.Join([]string{tb.lay.rows[0].plain(), tb.lay.rows[2].plain()}, "|"); got != "alpha beta gamma|see \U000f0337 the Link now" {
 		t.Fatalf("fixture rows: %q", got)
 	}
 	var s selectMode
@@ -77,7 +77,7 @@ func TestSelectMotionsAndYank(t *testing.T) {
 	}
 	press(&s, "V", "j", "j")
 	_, text = press(&s, "y")
-	if text != "alpha beta gamma\n\nsee 󰌷 the Link now" {
+	if text != "alpha beta gamma\n\nsee \U000f0337 the Link now" {
 		t.Errorf("V j j y → %q", text)
 	}
 	press(&s, "gg")
