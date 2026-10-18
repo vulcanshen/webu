@@ -1,3 +1,7 @@
+# terminu family template (tdp project/goreleaser.yaml), copied to an app's
+# .goreleaser.yaml. Replace webu with the app's name and fill the lines
+# marked "app:". An app with a Windows build uncomments the lines marked
+# "Windows"; nothing else changes.
 version: 2
 
 project_name: webu
@@ -10,49 +14,59 @@ builds:
     flags:
       - -trimpath
     ldflags:
+      # internal/version.Version takes the tag without its v; the app prints
+      # it with the v (internal/version.Display).
       - -s -w -X github.com/vulcanshen/webu/internal/version.Version={{.Version}}
     goos:
-      # unix-first, like the rest of the u-family — no windows target.
+      # unix-first: no Windows build unless the app needs one.
       - linux
       - darwin
+      # - windows   # Windows
     goarch:
       - amd64
       - arm64
+    # TODO(tdp WB1): not in the template. The Chromium snapshot bucket has no
+    # Linux ARM build and webu runs only the pinned snapshot, so a
+    # linux/arm64 binary could never fetch its engine; it is not shipped.
     ignore:
-      # The Chromium snapshot bucket has no Linux ARM build, and webu runs
-      # only the pinned snapshot (function.md §9): a binary that could never
-      # fetch its engine is not shipped.
       - goos: linux
         goarch: arm64
 
 archives:
   - formats:
       - tar.gz
+    # format_overrides:   # Windows
+    #   - goos: windows
+    #     formats:
+    #       - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: "checksums.txt"
 
+# The release notes come from CHANGELOG.md (.github/workflows/release.yml).
 changelog:
   disable: true
 
-# A formula, not a cask, like kbu / filu / sshu: a formula binary is never
-# stamped com.apple.quarantine, so an unsigned binary runs clean.
-#
-# The release ships the Go binary alone. Chromium is not bundled: webu
-# fetches the one pinned revision (~175–250 MB) into the cache directory on
-# first launch, with a progress line, and `webu browser update` is the door
-# to a new pin. Bundling would mean a 200 MB archive per platform and a
-# formula that downloads it again for every upgrade; the pin lives in the
-# binary, so the two stay in step either way.
+# A formula, not a cask: a formula binary is never stamped
+# com.apple.quarantine, so an unsigned binary runs clean.
 brews:
   - repository:
       owner: vulcanshen
       name: homebrew-tap
-      token: "{{ .Env.ACTION_TOKEN }}"
+      # One token for everything, GITHUB_TOKEN (user, 2026-09-25): a release
+      # run by hand takes the shell's; the workflow hands it the PAT in
+      # ACTION_TOKEN when one is set, since the built-in token cannot write
+      # to the tap repository.
+      token: "{{ .Env.GITHUB_TOKEN }}"
     homepage: "https://github.com/vulcanshen/webu"
-    description: "terminal browser (u-family) — headless Chromium's accessibility tree, drawn as a TUI: tabs, bookmarks, history, downloads, DevTools"
+    # app: one line, what the app is, ending in (u-family).
+    description: "webu: a terminal browser, headless Chromium's accessibility tree drawn as a TUI (u-family)"
+    # app: what to run first, where the settings and data live, the Nerd
+    # Font requirement, the platforms.
     caveats: |
+      Run `webu` to start.
+
       webu runs its own Chromium (a pinned revision), fetched once on the
       first launch — about 175–250 MB into the cache directory (macOS:
       ~/Library/Caches/webu, Linux: ~/.cache/webu). After an upgrade that
@@ -61,7 +75,17 @@ brews:
       Settings and bookmarks live in ~/.config/webu; history, session,
       downloads and the browser profile in ~/.webu/datas.
 
-      A Nerd Font terminal profile is required: links, media, panels and
-      the header are drawn with Nerd Font glyphs.
+      A Nerd Font terminal profile and a truecolor terminal are required.
+      macOS and Linux x86-64 (WSL too).
+    # app: dependencies, when the app calls other programs.
     test: |
       system "#{bin}/webu", "version"
+
+# scoops:   # Windows
+#   - repository:
+#       owner: vulcanshen
+#       name: scoop-bucket
+#       token: "{{ .Env.GITHUB_TOKEN }}"
+#     homepage: "https://github.com/vulcanshen/webu"
+#     # app: the same line as the brews description above.
+#     description: "webu: a terminal browser, headless Chromium's accessibility tree drawn as a TUI (u-family)"

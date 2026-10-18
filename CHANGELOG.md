@@ -1,5 +1,16 @@
 # Changelog
 
+Each release names the version of terminu design (tdp) it follows.
+
+## Unreleased
+
+- The repository takes the terminu family's shape (tdp project): the
+  Makefile includes the shared `family.mk`, and the release workflow,
+  the goreleaser config, `install.sh`, `uninstall.sh` and `.gitignore`
+  are the family's templates. `uninstall.sh` now finds the settings,
+  data and cache through `WEBU__CONFIG`, `WEBU__DATA` and `WEBU__CACHE`
+  too.
+
 ## [0.5.0] — 2026-10-06
 
 **The environment variables are renamed, and the old names are no
