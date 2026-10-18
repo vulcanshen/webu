@@ -19,7 +19,7 @@ webu 開的是真正的網頁 —— 能登入、JavaScript 會跑、cookie 留�
 ## 為什麼用 webu
 
 - **它是真的瀏覽器。** 文字後面跑著一個釘死版本的 headless Chromium，有自己的持久 profile。網站登入之後會一直記得你、JavaScript 照跑，而且完全不碰你自己的 Chrome。
-- **一頁就是一份文件。** 有標題的頁面一打開是目錄；`Enter` 讀一節、`n/p` 上下一節、`Esc` 回目錄。`Space` › `One sheet` 把整頁一次攤開。
+- **一頁就是一份文件。** 有標題的頁面一打開是目錄；`Enter` 讀一節、`n|p` 上下一節、`Esc` 回目錄。`Space` › `One sheet` 把整頁一次攤開。
 - **header、正文、側欄、footer 分開放。** webu 依位置把每一頁切成幾個部分，每個部分是頁面面板的一個 tab；文章就是文章，側欄在你用 `h|l` 過去之前不擋路。
 - **幾個鍵找到任何東西。** `/` 搜整頁每一段文字，命中清單帶預覽，選了直接帶你過去。
 - **表單就是表單。** 輸入框寫清楚它收什麼、textarea 開在編輯器裡、select 列出選項、slider 列出數字、日期和顏色送出前先檢查、檔案用 picker 選。
@@ -76,9 +76,9 @@ webu help                         # 完整的命令列說明
 
 接著：
 
-- 在文件頁 —— `j/k` 在目錄上移動、`Enter` 讀一節、`n` 下一節、`Esc` 回目錄。
+- 在文件頁 —— `j|k` 在目錄上移動、`Enter` 讀一節、`n` 下一節、`Esc` 回目錄。
 - 在任何頁 —— `/`、打一個字、`Enter`、`Enter`：你就到了。`h|l` 一次看頁面的一個部分（header、正文、側欄、footer），第一個 tab 是整頁。
-- `L` 輸入網址、`P/N` 上一頁 / 下一頁、`q` 離開。
+- `L` 輸入網址、`P|N` 上一頁 / 下一頁、`q` 離開。
 
 ## 五個鍵
 
@@ -112,10 +112,10 @@ webu help                         # 完整的命令列說明
 ### 到處都通
 
 ```
- screen    W/B/H/D/S/I
- 面板      Tab、Shift-Tab、1–2
- 游標      j/k    u/d（半頁）          gg/G      h/l 面板的 tab
- 全域      Space 選單    ? 按鍵    q/Ctrl-C 離開
+ screen    W|B|H|D|S|I
+ 面板      Tab、1–2
+ 游標      j|k    u|d（半頁）          gg|G      h|l 面板的 tab
+ 全域      Space 選單    ? 按鍵    q|Ctrl-C 離開
 ```
 
 ### 分頁
@@ -124,9 +124,9 @@ webu help                         # 完整的命令列說明
 
 ### 頁面
 
-`j/k` 照閱讀順序一個一個走 —— 先同一列、再往下 —— 到頭尾繞回。`h/l` 看整頁或其中一個部分。`Enter` 在連結上先問再開；在按鈕上按下；在輸入框上開框打字；在 select 上列出選項；在標題上收合；在一節、長的清單項目或 frame 上走進去。`Esc` 走出來。
+`j|k` 照閱讀順序一個一個走 —— 先同一列、再往下 —— 到頭尾繞回。`h|l` 看整頁或其中一個部分。`Enter` 在連結上先問再開；在按鈕上按下；在輸入框上開框打字；在 select 上列出選項；在標題上收合；在一節、長的清單項目或 frame 上走進去。`Esc` 走出來。
 
-`Space` 就是右鍵選單：連結開新分頁、複製連結或文字、送出、清除或複製輸入框的值、檢查元素。對整頁：`R` 重新載入 · `T` 新分頁 · `P/N` 上一頁 / 下一頁 · `/` finder · `go` 依行號跳到某行 · `n/p` 下一節 / 上一節 · `Sections` / `One sheet` · `v` visual mode · `L` 網址 · `A` 加書籤 · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。
+`Space` 就是右鍵選單：連結開新分頁、複製連結或文字、送出、清除或複製輸入框的值、檢查元素。對整頁：`R` 重新載入 · `T` 新分頁 · `P|N` 上一頁 / 下一頁 · `/` finder · `go` 依行號跳到某行 · `n|p` 下一節 / 上一節 · `Sections` / `One sheet` · `v` visual mode · `L` 網址 · `A` 加書籤 · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。
 
 `L` 開網址框時會用灰字提議目前的網址：`Tab` 接過來改、`Backspace` 不要它、直接打字就從頭打。頁面自己的問題 —— `alert`、`confirm`、要你輸入的 prompt、登入 —— 等你按 `Enter`；`Esc` 就是回答「不」。
 
@@ -139,11 +139,11 @@ webu help                         # 完整的命令列說明
 
 ### DevTools（`I`）
 
-看的是 Web 畫面上那一頁。`h/l` 切換 **Network**（各個 request；游標那一個的 header 與 body 完整顯示在旁邊的面板）、**Storage**（cookie、local 與 session storage —— `x` 刪除、`y` 複製、`C` 清除站台資料、`R` 重新讀取）、**Console**（`i` 在頁面裡執行一行 JavaScript）與 **Source**（頁面 HTML）。每個清單都能用 `/` 過濾。
+看的是 Web 畫面上那一頁。`h|l` 切換 **Network**（各個 request；游標那一個的 header 與 body 完整顯示在旁邊的面板）、**Storage**（cookie、local 與 session storage —— `x` 刪除、`y` 複製、`C` 清除站台資料、`R` 重新讀取）、**Console**（`i` 在頁面裡執行一行 JavaScript）與 **Source**（頁面 HTML）。每個清單都能用 `/` 過濾。
 
 ### Visual mode（`v`）
 
-選字、複製。`h/j/k/l`、`w/e/b`、`0/$`、`gg/G` 移動；`v/V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 問你要找什麼、`n/N` 在找到的之間走；`Enter` 按下游標所在的東西；`Esc` 離開。進入後頁面的框變黃，右上角寫著 *Visual*。
+選字、複製。`h|j|k|l`、`w|e|b`、`0|$`、`gg|G` 移動；`v|V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 問你要找什麼、`n|N` 在找到的之間走；`Enter` 按下游標所在的東西；`Esc` 離開。進入後頁面的框變黃，右上角寫著 *Visual*。
 
 ## 設定
 
@@ -191,7 +191,7 @@ input_tab_width: 4
 
 ## terminu family
 
-webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.7.4），建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、menu 與框 —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）。
+webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.7.4），建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、menu 與框 —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的狀態列）。
 
 ## 授權
 

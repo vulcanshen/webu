@@ -24,7 +24,7 @@ func TestATextareaOpensTheEditor(t *testing.T) {
 		t.Fatalf("the textarea is multiline: %+v", n)
 	}
 	d.press("enter")
-	d.until("the editor", d.shows("TEXT, SEVERAL LINES: Notes"))
+	d.until("the editor", d.shows("EDIT: Notes"))
 	if !strings.Contains(d.view(), "line one") {
 		t.Fatalf("the box holds the value:\n%s", d.view())
 	}

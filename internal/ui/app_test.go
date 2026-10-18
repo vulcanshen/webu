@@ -194,6 +194,13 @@ func nodeNamed(t *tab, name string) *ir.Node {
 	return nil
 }
 
+// bmSelect puts the bookmarks cursor on a row as a key would: the actions
+// that name the row are worked out again (OnMove runs after a message).
+func (d *driver) bmSelect(r bmRow) {
+	d.m.bmList.Select(bmRowID(r))
+	d.m.bmPanel.Actions = d.m.bookmarkActions()
+}
+
 // action runs one of the focused panel's actions by its label, as the
 // Space menu would.
 func (d *driver) action(label string) {
@@ -290,7 +297,7 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	// between. The title says what the box takes, the prompt which field.
 	d.cursorOn(ir.Textbox, "Name")
 	d.press("enter")
-	d.until("input popup", d.shows("TEXT"))
+	d.until("input popup", d.shows("EDIT: Name"))
 	if v := d.view(); !strings.Contains(v, "Name") {
 		t.Errorf("the field's name over the box:\n%s", v)
 	}
@@ -305,7 +312,7 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	// A password box is known as one while still empty, and is masked.
 	d.cursorOn(ir.Textbox, "Secret")
 	d.press("enter")
-	d.until("password box", d.shows("PASSWORD"))
+	d.until("password box", d.shows("EDIT: Secret"))
 	d.key("s3cret")
 	if strings.Contains(d.view(), "s3cret") {
 		t.Error("a password is masked from the first keystroke")
@@ -679,7 +686,7 @@ func TestDeleteFolderTree(t *testing.T) {
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.key("B")
-	m.bmList.Select(bmRowID(bmRow{folder: "dev", isFolder: true}))
+	d.bmSelect(bmRow{folder: "dev", isFolder: true})
 	d.press("x")
 	d.until("asked", d.shows("DELETE FOLDER"))
 	if v := d.view(); !strings.Contains(v, "2 bookmarks") || !strings.Contains(v, "2 folders") {
@@ -696,11 +703,17 @@ func TestDeleteFolderTree(t *testing.T) {
 	if d.m.bookmarks[0].Title != "HN" || strings.Join(d.m.folderNames(), "|") != "misc" {
 		t.Errorf("after: %+v %q", d.m.bookmarks, d.m.folderNames())
 	}
-	// An empty folder goes without a question.
-	m.bmList.Select(bmRowID(bmRow{folder: "misc", isFolder: true}))
+	// An empty folder asks too — a delete that asks, asks every time (tdp
+	// F6) — without the line about what goes with it.
+	d.bmSelect(bmRow{folder: "misc", isFolder: true})
 	d.press("x")
-	if len(d.m.folderNames()) != 0 || strings.Contains(d.view(), "DELETE FOLDER") {
-		t.Error("an empty folder should go at once")
+	d.until("asked about misc", d.shows("DELETE FOLDER: misc"))
+	if strings.Contains(d.view(), "everything in it") {
+		t.Errorf("an empty folder has nothing going with it:\n%s", d.view())
+	}
+	d.press("enter")
+	if len(d.m.folderNames()) != 0 {
+		t.Error("the empty folder should be gone")
 	}
 	if list, folders, err := store.LoadBookmarks(); err != nil || len(list) != 1 || len(folders) != 0 {
 		t.Errorf("saved: %d bookmarks, %d folders, %v", len(list), len(folders), err)

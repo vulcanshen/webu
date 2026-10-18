@@ -78,7 +78,7 @@ func TestGaugesDisclosuresAndShapedBoxes(t *testing.T) {
 	// A date box: the shape on the border, the value in the box.
 	d.cursorOn(ir.Textbox, "Day")
 	d.press("enter")
-	d.until("the date box", d.shows("DATE"))
+	d.until("the date box", d.shows("EDIT: Day"))
 	if v := d.view(); !strings.Contains(v, "YYYY-MM-DD") || !strings.Contains(v, "2026-09-23") {
 		t.Errorf("the box says the shape and offers the value:\n%s", v)
 	}
@@ -95,7 +95,7 @@ func TestGaugesDisclosuresAndShapedBoxes(t *testing.T) {
 	d.settle()
 	d.cursorOn(ir.Textbox, "Tint")
 	d.press("enter")
-	d.until("the colour box", d.shows("COLOR"))
+	d.until("the colour box", d.shows("EDIT: Tint"))
 	if v := d.view(); !strings.Contains(v, "#rrggbb") || !strings.Contains(v, "#336699") {
 		t.Errorf("the colour box:\n%s", v)
 	}

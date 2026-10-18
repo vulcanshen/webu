@@ -88,7 +88,6 @@ func (m *AppModel) buildDownloads() {
 			},
 			Do: m.do(func() tea.Cmd { m.clearDownloads(); return nil })},
 	}}
-	m.dlPanel.Actions = append(m.dlPanel.Actions, m.dlList.Actions()...)
 	m.dlScreen = m.a.AddScreen(&terminu.Screen{Name: "Downloads", Key: "D", Desc: "the files saved this session",
 		Panels: []*terminu.Panel{m.dlPanel}})
 }

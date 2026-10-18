@@ -82,7 +82,7 @@ type devtools struct {
 }
 
 func (m *AppModel) buildDevtools() {
-	d := &devtools{pager: &terminu.Pager{EmptyFact: "Nothing under the cursor"}}
+	d := &devtools{pager: &terminu.Pager{EmptyFact: "Nothing under the cursor", EmptyHint: "Press [1], then [j] or [k], to show a row here"}}
 	m.dev = d
 	facts := [4][2]string{
 		{"No requests yet", "Press [W] to browse, or [Space] to see what you can do here"},
@@ -108,10 +108,10 @@ func (m *AppModel) buildDevtools() {
 		Scope: terminu.PanelScope, Hint: "read", Disabled: func() bool { return d.pager.Empty() },
 		Do: func() tea.Cmd {
 			return m.a.Viewer(&terminu.Viewer{Title: "Detail", Glyph: glyphDevTools, Lines: d.pager.Lines(),
-				Select: &terminu.Selection{Key: "v", Name: "Visual", Copy: copyToClipboard}})
+				Select: selection()})
 		}}}
 	d.panel = &terminu.Panel{Label: "Network", Tabs: []string{"Storage", "Console", "Source"}, Body: d.lists[devNetwork],
-		Details: d.detail, OnTab: m.devTab}
+		Details: d.detail, OnTab: m.devTab, Stream: true}
 	d.panel.Actions = m.devActions()
 	d.screen = m.a.AddScreen(&terminu.Screen{Name: "DevTools", Key: "I", Desc: "the shown page's network, storage, console and source",
 		Panels: []*terminu.Panel{d.panel, d.detail},
@@ -135,13 +135,19 @@ func (m *AppModel) devTab(i int) tea.Cmd {
 	d.panel.Body = d.lists[i]
 	d.panel.Stream = i == devNetwork || i == devConsole
 	d.pager.SetLines(nil)
+	d.panel.Fail = nil
+	var fetch, detail tea.Cmd
 	switch i {
 	case devStorage:
-		return m.fetchStorage()
+		fetch = m.fetchStorage()
 	case devSource:
-		return m.fetchSource()
+		fetch = m.fetchSource()
 	}
-	return nil
+	// [2] shows the row under the cursor of the list now shown.
+	if r, ok := d.lists[i].Current(); ok {
+		detail = m.devMoved(i, r)
+	}
+	return tea.Batch(fetch, detail)
 }
 
 // devMsg is one of DevTools' messages.
@@ -158,8 +164,10 @@ func (m *AppModel) devMsg(msg tea.Msg) tea.Cmd {
 		if t != nil && msg.tabID == t.id {
 			d.panel.Loading = false
 			if msg.err != nil {
+				d.panel.Fail = &terminu.Failure{Fact: "Can't read the storage: " + msg.err.Error(), Hint: "Press [R] to try again"}
 				return m.toastErr("Storage: " + msg.err.Error())
 			}
+			d.panel.Fail = nil
 			d.storage = msg.data
 			m.refreshDev()
 		}
@@ -167,8 +175,10 @@ func (m *AppModel) devMsg(msg tea.Msg) tea.Cmd {
 		if t != nil && msg.tabID == t.id {
 			d.panel.Loading = false
 			if msg.err != nil {
+				d.panel.Fail = &terminu.Failure{Fact: "Can't read the source: " + msg.err.Error(), Hint: "Press [R] to try again"}
 				return m.toastErr("Source: " + msg.err.Error())
 			}
+			d.panel.Fail = nil
 			d.source = strings.Split(strings.ReplaceAll(msg.html, "\r\n", "\n"), "\n")
 			m.refreshDev()
 		}
@@ -417,8 +427,19 @@ func (m *AppModel) devActions() []terminu.Action {
 				}
 				return m.fetchSource()
 			})},
-		{Key: "C", Label: "Clear", Desc: "the list: requests, console lines; for storage, the site's data", Scope: terminu.PanelScope,
-			Hidden: on(devNetwork, devStorage, devConsole), Disabled: noPage, Do: m.do(m.devClear)},
+		{Key: "C", Label: "Clear", Desc: "the list: the requests, the console lines", Scope: terminu.PanelScope,
+			Hidden: on(devNetwork, devConsole), Disabled: noPage, Do: m.do(m.devClear)},
+		{Key: "C", Label: "Clear site data", Desc: "cookies, storage, caches: everything the site keeps", Scope: terminu.PanelScope,
+			Hidden: on(devStorage), Disabled: func() bool { return noPage() || d.storage.Origin == "" },
+			Ask: &terminu.Ask{Title: "Clear site data", Details: []string{"Cookies, storage, caches — everything Chromium keeps for the site.", "Logins there will be gone."},
+				Question: "Clear everything this site keeps?", Verb: "clear", Warn: []int{1}},
+			Do: m.do(func() tea.Cmd {
+				t, origin := m.shownTab(), d.storage.Origin
+				if t == nil || origin == "" {
+					return nil
+				}
+				return m.storageThen(t, func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) })
+			})},
 	}
 }
 
@@ -435,7 +456,7 @@ func (m *AppModel) fetchStorage() tea.Cmd {
 // command: a fetch sequenced after it would race the change it is meant
 // to show.
 func (m *AppModel) storageThen(t *tab, fn func(context.Context) error) tea.Cmd {
-	m.dev.panel.Loading = true
+	m.dev.panel.Loading, m.dev.panel.LoadingText = true, "reading the storage…"
 	ctx, url, id := t.ctx, t.url, t.id
 	return func() tea.Msg {
 		if fn != nil {
@@ -454,7 +475,7 @@ func (m *AppModel) fetchSource() tea.Cmd {
 	if t == nil {
 		return nil
 	}
-	m.dev.panel.Loading = true
+	m.dev.panel.Loading, m.dev.panel.LoadingText = true, "reading the source…"
 	ctx, id := t.ctx, t.id
 	return func() tea.Msg {
 		html, err := page.Source(ctx)
@@ -492,17 +513,6 @@ func (m *AppModel) devClear() tea.Cmd {
 		t.dev.ClearNet()
 	case devConsole:
 		t.dev.ClearConsole()
-	case devStorage:
-		origin := m.dev.storage.Origin
-		if origin == "" {
-			return m.toast("No site to clear")
-		}
-		return m.a.Confirm(terminu.Ask{Title: "Clear site data", Subject: origin,
-			Details:  []string{"Cookies, storage, caches — everything Chromium keeps for it.", "Logins there will be gone."},
-			Question: "Clear everything " + origin + " keeps?", Verb: "clear", Warn: []int{1}},
-			m.do(func() tea.Cmd {
-				return m.storageThen(t, func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) })
-			}))
 	}
 	m.refreshDev()
 	return nil

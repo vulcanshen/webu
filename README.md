@@ -19,7 +19,7 @@ webu opens real web pages — logins, JavaScript, cookies and all — and lays t
 ## Why webu
 
 - **It is a real browser.** A pinned Chromium runs headless behind the text, with its own persistent profile. Sites log you in and keep you logged in, JavaScript runs, and your own Chrome is never touched.
-- **A page is a document.** A page with headings opens on its table of contents; `Enter` reads a section, `n/p` move to the next or previous one, `Esc` goes back. `Space` › `One sheet` shows the whole page at once.
+- **A page is a document.** A page with headings opens on its table of contents; `Enter` reads a section, `n|p` move to the next or previous one, `Esc` goes back. `Space` › `One sheet` shows the whole page at once.
 - **Header, body, sidebars, footer — kept apart.** webu splits every page into its parts by where they sit; each part is a tab of the page panel, so the article is the article and the sidebar stays out of the way until you `h|l` over to it.
 - **Find anything in a few keys.** `/` searches every block of text on the page, lists the hits with a preview, and takes you straight there.
 - **Forms that behave like forms.** Text boxes say what they take, a textarea opens in an editor, selects list their options, sliders list their numbers, dates and colours are checked before they are sent, files come from a picker.
@@ -76,9 +76,9 @@ webu help                         # the whole command line
 
 Then:
 
-- On a documentation page — `j/k` down the table of contents, `Enter` to read a section, `n` for the next, `Esc` back to the list.
+- On a documentation page — `j|k` down the table of contents, `Enter` to read a section, `n` for the next, `Esc` back to the list.
 - On any page — `/`, type a word, `Enter`, `Enter`: you are there. `h|l` show the page's header, body, sidebars and footer one at a time; the first tab is the whole page.
-- `L` to go to an address, `P/N` for back and forward, `q` to quit.
+- `L` to go to an address, `P|N` for back and forward, `q` to quit.
 
 ## Five keys
 
@@ -112,10 +112,10 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
 ### Everywhere
 
 ```
- screens   W/B/H/D/S/I
- panels    Tab, Shift-Tab, 1–2
- cursor    j/k    u/d (half page)      gg/G      h/l the panel's tabs
- global    Space menu    ? keys    q/Ctrl-C quit
+ screens   W|B|H|D|S|I
+ panels    Tab, 1–2
+ cursor    j|k    u|d (half page)      gg|G      h|l the panel's tabs
+ global    Space menu    ? keys    q|Ctrl-C quit
 ```
 
 ### Tabs
@@ -124,9 +124,9 @@ The page follows the cursor. `Enter` go to the page · `c` close · `o` open aga
 
 ### Page
 
-`j/k` walk the items in reading order — along a row, then down — and come round at the ends. `h/l` show the whole page, or one of its parts. `Enter` on a link asks, then opens; on a button presses; on a box opens it to type; on a select lists its options; on a heading folds it; on a section, a long list item or a frame goes in. `Esc` comes back out.
+`j|k` walk the items in reading order — along a row, then down — and come round at the ends. `h|l` show the whole page, or one of its parts. `Enter` on a link asks, then opens; on a button presses; on a box opens it to type; on a select lists its options; on a heading folds it; on a section, a long list item or a frame goes in. `Esc` comes back out.
 
-`Space` is the right-click menu: open a link in a new tab, yank a link or text, submit, clear or yank a box, inspect an element. For the page: `R` reload · `T` new tab · `P/N` back / forward · `/` finder · `go` go to a line by its number · `n/p` next / previous section · `Sections` / `One sheet` · `v` visual mode · `L` location · `A` bookmark it · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab.
+`Space` is the right-click menu: open a link in a new tab, yank a link or text, submit, clear or yank a box, inspect an element. For the page: `R` reload · `T` new tab · `P|N` back / forward · `/` finder · `go` go to a line by its number · `n|p` next / previous section · `Sections` / `One sheet` · `v` visual mode · `L` location · `A` bookmark it · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab.
 
 `L` opens the address box with the current URL on offer, in grey: `Tab` takes it to edit, `Backspace` drops it, typing starts afresh. The page's own questions — `alert`, `confirm`, a prompt, a sign-in — wait for `Enter`; `Esc` answers no.
 
@@ -139,11 +139,11 @@ The page follows the cursor. `Enter` go to the page · `c` close · `o` open aga
 
 ### DevTools (`I`)
 
-Of the page the web screen shows. `h/l` switch between **Network** (the requests; the one under the cursor in full, headers and body, in the panel beside it), **Storage** (cookies, local and session storage — `x` delete, `y` yank, `C` clear site data, `R` read again), **Console** (`i` runs a line of JavaScript in the page) and **Source** (the page's HTML). `/` filters each list.
+Of the page the web screen shows. `h|l` switch between **Network** (the requests; the one under the cursor in full, headers and body, in the panel beside it), **Storage** (cookies, local and session storage — `x` delete, `y` yank, `C` clear site data, `R` read again), **Console** (`i` runs a line of JavaScript in the page) and **Source** (the page's HTML). `/` filters each list.
 
 ### Visual mode (`v`)
 
-Select text and copy it. `h/j/k/l`, `w/e/b`, `0/$`, `gg/G` move; `v/V` start a selection by character or line; `y` copies to the system clipboard; `/` asks what to find, `n/N` step through it; `Enter` presses what the cursor is on; `Esc` leaves. While it is on, the page's frame turns yellow and says *Visual* at its top right.
+Select text and copy it. `h|j|k|l`, `w|e|b`, `0|$`, `gg|G` move; `v|V` start a selection by character or line; `y` copies to the system clipboard; `/` asks what to find, `n|N` step through it; `Enter` presses what the cursor is on; `Esc` leaves. While it is on, the page's frame turns yellow and says *Visual* at its top right.
 
 ## Configuration
 
@@ -192,7 +192,7 @@ Settings and bookmarks are plain YAML you can edit by hand.
 
 ## terminu family
 
-webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.7.4) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock) and [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark).
+webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.7.4) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
 
 ## License
 

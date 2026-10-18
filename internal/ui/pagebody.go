@@ -195,8 +195,19 @@ func moveName(key string) string {
 		return "j"
 	case "↑":
 		return "k"
+	case "PgDn":
+		return "d"
+	case "PgUp":
+		return "u"
 	}
 	return key
+}
+
+// Empty reports a page that has not come yet: the lib draws the loading
+// icon and the panel's LoadingText in its middle (layout/panel).
+func (b *pageBody) Empty() bool {
+	t := b.m.shownTab()
+	return t != nil && t.root == nil && t.working()
 }
 
 // HasItem reports whether the cursor is on something item operations
@@ -241,13 +252,13 @@ func (b *pageBody) MoveKeys() []terminu.KeyRow {
 	if t := b.m.shownTab(); t != nil && t.listing() {
 		return []terminu.KeyRow{
 			{Key: "j|k", Desc: "next section, previous section"},
-			{Key: "u|d", Desc: "half a page up, down"},
+			{Key: "u|d", Desc: "half a page up, down (PgUp, PgDn too)"},
 			{Key: "gg|G", Desc: "first section, last section"},
 		}
 	}
 	return []terminu.KeyRow{
 		{Key: "j|k", Desc: "next item, previous item, in reading order"},
-		{Key: "u|d", Desc: "half a page up, down"},
+		{Key: "u|d", Desc: "half a page up, down (PgUp, PgDn too)"},
 		{Key: "gg|G", Desc: "first item, last item"},
 	}
 }
@@ -598,7 +609,7 @@ func lineNumW(n int) int {
 	if n <= 0 {
 		return 0
 	}
-	return len(itoa(n)) + 1
+	return len(itoa(n)) + 2 // a cell off the frame, a cell off the text
 }
 
 // lineNum draws one: right-aligned in the gutter, dim while the page is on
@@ -611,5 +622,5 @@ func lineNum(n, w int, dimmed bool) string {
 	if dimmed {
 		ink = dimColor
 	}
-	return lipgloss.NewStyle().Foreground(ink).Render(padLeft(itoa(n), w-1) + " ")
+	return lipgloss.NewStyle().Foreground(ink).Render(" " + padLeft(itoa(n), w-2) + " ")
 }

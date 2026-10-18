@@ -173,7 +173,6 @@ func (m *AppModel) build() {
 	a.Splash = splash()
 	a.Status = m.status
 	a.Progress = m.progress
-	a.ShiftTab = true
 	a.OnMsg = m.onMsg
 	a.Start = m.start
 	m.buildWeb()
@@ -219,11 +218,13 @@ func (m *AppModel) toastErr(text string) tea.Cmd { return m.a.Toast(terminu.Erro
 // status is the chip row's right end (layout/screen, statusbar): the
 // downloads still running, in Green.
 func (m *AppModel) status(w int) string {
+	// A field of its own width, whatever the count (tdp L2).
+	const field = 22
 	n := m.downloading()
 	if n == 0 {
-		return ""
+		return spaces(min(field, w))
 	}
-	return terminu.Fg(terminu.Green).Render(truncate(plural(n, "download")+" in flight", w))
+	return terminu.Fg(terminu.Green).Render(padLeft(plural(n, "download")+" in flight", min(field, w)))
 }
 
 // progress is the downloads' progress for the line under the chips.
@@ -393,7 +394,7 @@ func (m *AppModel) applyPage(msg pageMsg) tea.Cmd {
 		// instead is captured too, and by the time the question is answered
 		// the tab's URL is chrome-error://.
 		id, failed := t.id, t.url
-		return m.a.Confirm(terminu.Ask{Title: "Certificate error",
+		return m.a.Confirm(terminu.Ask{Title: "Continue",
 			Details:  []string{"Chromium does not trust this site's certificate.", failed},
 			Question: "Continue anyway, for this tab, for as long as it is open?",
 			Verb:     "continue", Warn: []int{0}}, m.do(func() tea.Cmd { return m.trustCert(id, failed) }))
@@ -548,6 +549,17 @@ func (m *AppModel) openTab(url string, show bool) tea.Cmd {
 		return tea.Batch(t.load(url), m.goWeb(), m.focusPage())
 	}
 	return t.load(url)
+}
+
+// openTabBehind opens url in a new tab, which [2] shows, and leaves the
+// screen and the focus where they are: Enter on a list does not move the
+// focus (tdp K3), so the toast says where the page went.
+func (m *AppModel) openTabBehind(url string) tea.Cmd {
+	t := m.newTab()
+	m.tabs = append(m.tabs, t)
+	m.leaveSelect()
+	m.shown = len(m.tabs) - 1
+	return tea.Batch(t.load(url), m.toast("Opened in a new tab; press [W] to see it"))
 }
 
 // remember keeps a closing tab's address for [U]ndo close.

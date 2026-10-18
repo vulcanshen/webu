@@ -20,7 +20,7 @@ func (m *AppModel) buildWeb() {
 		OnMove:    m.tabMoved,
 	}
 	m.page = &pageBody{m: m}
-	m.pagePanel = &terminu.Panel{Label: "Page", Body: m.page, OnTab: m.partTab, OnEsc: m.do(m.pageEsc)}
+	m.pagePanel = &terminu.Panel{Label: "Page", Body: m.page, OnTab: m.partTab}
 	m.tabsPanel = &terminu.Panel{Label: "Tabs", Body: m.tabsList, Details: m.pagePanel}
 	m.tabsPanel.Actions = m.tabActions()
 	m.syncPage()
@@ -37,8 +37,13 @@ func (m *AppModel) buildWeb() {
 // focus on [1] the grid is drawn, so the focused panel is on screen (tdp
 // L5).
 func (m *AppModel) webLayout(w, h int) []terminu.Rect {
-	if m.zoom && m.web.Focused() == m.pagePanel {
-		return []terminu.Rect{{X: 0, Y: 0, W: 0, H: h}, {X: 0, Y: 0, W: w, H: h}}
+	if m.zoom {
+		// Zoomed, the focused panel takes the whole width, the way a narrow
+		// screen draws it (layout/screen): Tab shows the other one.
+		if m.web.Focused() == m.pagePanel {
+			return []terminu.Rect{{X: 0, Y: 0, W: 0, H: h}, {X: 0, Y: 0, W: w, H: h}}
+		}
+		return []terminu.Rect{{X: 0, Y: 0, W: w, H: h}, {X: w, Y: 0, W: 0, H: h}}
 	}
 	side := min(sideW, w)
 	return []terminu.Rect{{X: 0, Y: 0, W: side, H: h}, {X: side, Y: 0, W: w - side, H: h}}

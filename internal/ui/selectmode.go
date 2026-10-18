@@ -111,10 +111,10 @@ func (s *selectMode) key(k string, visible int) (selResult, string) {
 	case "k", "↑":
 		s.row = max(0, s.row-1)
 		s.clampCol()
-	case "u":
+	case "u", "PgUp":
 		s.row = max(0, s.row-half)
 		s.clampCol()
-	case "d":
+	case "d", "PgDn":
 		s.row = min(n-1, s.row+half)
 		s.clampCol()
 	case "gg":

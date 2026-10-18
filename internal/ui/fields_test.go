@@ -47,7 +47,7 @@ func TestInvalidLegendAndCode(t *testing.T) {
 	}
 	d.cursorOn(ir.Textbox, "Email")
 	d.press("enter")
-	d.until("the box", d.shows("EMAIL"))
+	d.until("the box", d.shows("EDIT: Email"))
 	if !strings.Contains(d.view(), "the page says the value is not right") {
 		t.Errorf("the box says the value is wrong:\n%s", d.view())
 	}

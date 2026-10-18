@@ -27,6 +27,10 @@ func (m *AppModel) syncPage() {
 	}
 	t := m.shownTab()
 	p.Loading = t != nil && t.working()
+	p.LoadingText = ""
+	if t != nil {
+		p.LoadingText = "loading " + nameOr(hostOf(t.url), "the page") + "…"
+	}
 	p.Tabs, p.Tab = nil, 0
 	if t != nil && t.root != nil && len(t.parts) >= 2 && t.popupNode() == nil {
 		p.Tabs = partLabels(t.parts)
@@ -35,6 +39,11 @@ func (m *AppModel) syncPage() {
 		}
 	}
 	p.Actions = m.pageActions(t)
+	// Esc is listed, and does something, only where there is a level up.
+	p.OnEsc = nil
+	if t != nil && (t.drilled() || t.read || t.popupNode() != nil) {
+		p.OnEsc = m.do(m.pageEsc)
+	}
 }
 
 // partTab is h or l on panel [2]: the whole page, or one of its parts.
@@ -117,8 +126,19 @@ func (m *AppModel) enterAction(t *tab) *terminu.Action {
 	default:
 		label, desc, hint = enterWords(t, n)
 	}
-	return &terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint,
+	act := &terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint,
 		Disabled: m.busy, Do: m.do(m.enterItem)}
+	if n := t.current(); n != nil && !t.listing() && n.Kind == ir.Link && !n.Disabled && sameFragment(t.url, n.URL) == "" {
+		// A link would leave the page for somewhere the screen does not
+		// show: it asks first, its text and its address.
+		details := []string{oneLine(n.URL)}
+		if text := oneLine(n.Text()); text != "" {
+			details = append([]string{text}, details...)
+		}
+		act.Ask = &terminu.Ask{Title: "Open link", Details: details, Question: "Open it in this tab?", Verb: "open"}
+		act.Do = m.do(func() tea.Cmd { return m.click(t, n) })
+	}
+	return act
 }
 
 // enterWords names Enter on a node: the label, the line under it, the
@@ -210,7 +230,8 @@ func (m *AppModel) itemActions(t *tab, n *ir.Node) []terminu.Action {
 	return append(out,
 		m.item("Yank text", "what it says", func() tea.Cmd { return copyToClipboard(n.Text()) }),
 		m.item("Inspect", "role, name, state, node id", func() tea.Cmd {
-			return m.a.Viewer(&terminu.Viewer{Title: "Inspect", Subject: oneLine(nameOr(n.Name, n.Role)), Glyph: glyphInfo, Lines: inspectLines(n)})
+			return m.a.Viewer(&terminu.Viewer{Title: "Inspect", Subject: oneLine(nameOr(n.Name, n.Role)), Glyph: glyphInfo, Lines: inspectLines(n),
+				Select: selection()})
 		}))
 }
 
@@ -527,7 +548,7 @@ func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
 		text = "(empty)"
 	}
 	return m.a.Viewer(&terminu.Viewer{Title: "Cell", Subject: oneLine(nameOr(columnHeader(t.root, n), "")),
-		Glyph: glyphTable, Lines: strings.Split(text, "\n")})
+		Glyph: glyphTable, Lines: strings.Split(text, "\n"), Select: selection()})
 }
 
 // showCode is a code block in full: every line as the page wrote it,
@@ -535,7 +556,13 @@ func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
 func (m *AppModel) showCode(n *ir.Node) tea.Cmd {
 	text := strings.TrimRight(n.Text(), "\n")
 	return m.a.Viewer(&terminu.Viewer{Title: "Code", Subject: n.Lang, Glyph: glyphCode,
-		Lines: strings.Split(text, "\n"), Lang: n.Lang})
+		Lines: strings.Split(text, "\n"), Lang: n.Lang, Select: selection()})
+}
+
+// selection is a viewer's selection mode: v brings the cursor out, v
+// again starts selecting, y copies (components/dialog/note).
+func selection() *terminu.Selection {
+	return &terminu.Selection{Key: "v", Name: "Visual", Copy: copyToClipboard}
 }
 
 // actOn does to a node inside a cell what Enter does to it as an item: a
@@ -640,22 +667,28 @@ func inSearch(t *tab, n *ir.Node) bool {
 func (m *AppModel) editFieldAs(t *tab, n *ir.Node, search bool) tea.Cmd {
 	id := n.ID
 	name := oneLine(nameOr(n.Name, "the field"))
-	title := fieldTakes(n)
+	takes := fieldTakes(n)
 	typeIn := func(v string) tea.Cmd {
 		return t.press(func(ctx context.Context) error { return page.Type(ctx, id, v) })
 	}
 	switch {
 	case n.Protected:
 		// Never the old value: Chromium hands over dots, not the secret.
-		return m.a.Password(terminu.PasswordInput{Title: "Password", Glyph: glyphPencil, Prompt: name, Verb: "set",
+		return m.a.Password(terminu.PasswordInput{Title: "Edit", Subject: name, Glyph: glyphPencil, Name: "The password",
+			Prompt: "A password for " + name, Verb: "set", Set: n.Value != "",
 			Done: func(v string, _ bool) tea.Cmd { cmd := typeIn(v); m.sync(); return cmd }})
 	case n.Multiline:
-		return m.a.Textarea(terminu.Textarea{Title: title, Subject: name, Glyph: glyphPencil, Name: "The text", Old: n.Value,
+		return m.a.Textarea(terminu.Textarea{Title: "Edit", Subject: name, Glyph: glyphPencil, Name: "The text", Old: n.Value,
 			Done: m.cmdDone(typeIn)})
 	case n.Role == "slider":
 		return m.slideMenu(t, n)
 	}
-	in := terminu.TextInput{Title: title, Glyph: glyphPencil, Prompt: name, Verb: "set", Name: "The value", Old: cleanOld(n.Value)}
+	if n.Role == "spinbutton" || n.InputType == "number" {
+		return m.a.Number(terminu.NumberInput{Title: "Edit", Subject: name, Glyph: glyphPencil, Name: "The number",
+			Prompt: "A number for " + name, Verb: "set", Old: n.Value, Negative: true, Decimal: true,
+			Done: m.cmdDone(typeIn)})
+	}
+	in := terminu.TextInput{Title: "Edit", Subject: name, Glyph: glyphPencil, Prompt: takes + " for " + name, Verb: "set", Name: "The value", Old: n.Value}
 	if n.Invalid {
 		// The page marked what is there wrong: the one thing the box should
 		// say about the value it is about to replace.
@@ -692,15 +725,15 @@ func (m *AppModel) editFieldAs(t *tab, n *ir.Node, search bool) tea.Cmd {
 	return m.a.Text(in)
 }
 
-// cleanOld is a field's value as a one-line box can offer it: its line
-// breaks and tabs as spaces.
-func cleanOld(v string) string {
-	return strings.Map(func(r rune) rune {
-		if r == '\n' || r == '\r' || r == '\t' {
-			return ' '
-		}
-		return r
-	}, v)
+// hostOf is a URL's host, for saying which page is on its way.
+func hostOf(u string) string {
+	if i := strings.Index(u, "://"); i >= 0 {
+		u = u[i+3:]
+	}
+	if i := strings.IndexAny(u, "/?#"); i >= 0 {
+		u = u[:i]
+	}
+	return u
 }
 
 // slideMenu lists a slider's numbers, the cursor on where it stands;

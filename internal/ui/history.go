@@ -23,7 +23,7 @@ func (m *AppModel) buildHistory() {
 		{Key: "Enter", Label: "Open", Desc: "the page, in a new tab", Scope: terminu.ItemScope, Hint: "open",
 			Do: m.do(func() tea.Cmd {
 				if v, ok := m.histCurrent(); ok {
-					return m.openTab(v.URL, true)
+					return m.openTabBehind(v.URL)
 				}
 				return nil
 			})},
@@ -42,7 +42,6 @@ func (m *AppModel) buildHistory() {
 				Question: "Clear the whole history?", Verb: "clear", Warn: []int{0}},
 			Do: m.do(m.clearHistory)},
 	}}
-	m.histPanel.Actions = append(m.histPanel.Actions, m.histList.Actions()...)
 	m.histScreen = m.a.AddScreen(&terminu.Screen{Name: "History", Key: "H", Desc: "every page loaded",
 		Panels: []*terminu.Panel{m.histPanel}})
 }

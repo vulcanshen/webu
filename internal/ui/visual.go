@@ -23,7 +23,7 @@ func (m *AppModel) visualMode() *terminu.Mode {
 			key("h|j|k|l", "move by character and row", false, "h", "j", "k", "l", "←", "↓", "↑", "→"),
 			key("w|b|e", "next word, previous word, end of the word", false, "w", "b", "e"),
 			key("0|$", "start, end of the row", false, "0", "$"),
-			key("u|d", "half a page up, down", false, "u", "d"),
+			key("u|d", "half a page up, down (PgUp, PgDn too)", false, "u", "d", "PgUp", "PgDn"),
 			key("gg|G", "top, bottom of the page", false, "g", "G"),
 			key("v|V", "select", true, "v", "V"),
 			key("y", "copy", true, "y"),

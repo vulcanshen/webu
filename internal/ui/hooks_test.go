@@ -107,7 +107,7 @@ func TestCertificateErrorAsksOnce(t *testing.T) {
 	}))
 	defer srv.Close()
 	d := startAt(t, b, srv.URL, store.Config{})
-	d.until("the certificate question", d.shows("CERTIFICATE ERROR"))
+	d.until("the certificate question", d.shows("does not trust"))
 	d.settle()
 	if v := d.view(); !strings.Contains(v, "does not trust") || !strings.Contains(v, strings.TrimPrefix(srv.URL, "https://")) {
 		t.Errorf("the question says what and where:\n%s", v)
@@ -118,7 +118,7 @@ func TestCertificateErrorAsksOnce(t *testing.T) {
 	d.cursorOn(ir.Link, "two")
 	d.act()
 	d.until("second page", func() bool { return strings.HasSuffix(d.page().url, "/two") && !d.page().loading })
-	if strings.Contains(d.view(), "CERTIFICATE ERROR") {
+	if strings.Contains(d.view(), "does not trust") {
 		t.Error("asked again for the same tab")
 	}
 }
@@ -357,10 +357,12 @@ func TestBookmarkOpensANewTab(t *testing.T) {
 	if d.m.a.Screen() != d.m.bmScreen {
 		t.Fatal("B is the bookmarks screen")
 	}
+	// Enter opens it in a new tab and stays: Enter does not move the
+	// focus (tdp K3); the toast says where the page went.
 	d.key("enter")
 	d.settle()
-	if !d.m.onWeb() || len(d.m.tabs) != 2 || d.m.shown != 1 {
-		t.Fatalf("after Enter: on the web %v, %d tabs, shown %d", d.m.onWeb(), len(d.m.tabs), d.m.shown)
+	if d.m.onWeb() || len(d.m.tabs) != 2 || d.m.shown != 1 || !strings.Contains(d.view(), "new tab") {
+		t.Fatalf("after Enter: on the web %v, %d tabs, shown %d\n%s", d.m.onWeb(), len(d.m.tabs), d.m.shown, d.view())
 	}
 	d.until("page B in the new tab", d.loaded("Page B"))
 	if d.m.tabs[0].title != "Page A" {

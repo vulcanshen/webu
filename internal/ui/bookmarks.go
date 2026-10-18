@@ -128,9 +128,11 @@ func (m *AppModel) buildBookmarks() {
 		Filterable: true,
 		EmptyFact:  "No bookmarks yet",
 		EmptyHint:  "Press [a] to add one, or [Space] to see what you can do here",
+		// The delete questions name the row under the cursor.
+		OnMove: func(terminu.Row) tea.Cmd { m.bmPanel.Actions = m.bookmarkActions(); return nil },
 	}
 	m.bmPanel = &terminu.Panel{Label: "Bookmarks", Body: m.bmList}
-	m.bmPanel.Actions = append(m.bookmarkActions(), m.bmList.Actions()...)
+	m.bmPanel.Actions = m.bookmarkActions()
 	m.bmScreen = m.a.AddScreen(&terminu.Screen{Name: "Bookmarks", Key: "B", Desc: "the pages kept, in folders",
 		Panels: []*terminu.Panel{m.bmPanel}})
 }
@@ -216,7 +218,7 @@ func (m *AppModel) bookmarkActions() []terminu.Action {
 				}
 				// A bookmark opens in a NEW tab, never over the one the web
 				// screen was showing (revised 2026-09-21).
-				return m.openTab(m.bookmarks[r.ref].URL, true)
+				return m.openTabBehind(m.bookmarks[r.ref].URL)
 			})},
 		{Key: "m", Label: "move", Desc: "this bookmark to another folder", Scope: terminu.ItemScope, Hidden: onFolder,
 			Do: m.do(func() tea.Cmd { r, _ := m.bmCurrent(); return m.moveSelect(r.ref) })},
@@ -224,18 +226,21 @@ func (m *AppModel) bookmarkActions() []terminu.Action {
 			Do: m.do(func() tea.Cmd { r, _ := m.bmCurrent(); return m.startRename(r) })},
 		{Key: "y", Label: "yank", Desc: "its URL", Scope: terminu.ItemScope, Hidden: onFolder,
 			Do: func() tea.Cmd { r, _ := m.bmCurrent(); return copyToClipboard(m.bookmarks[r.ref].URL) }},
-		{Key: "x", Label: "Delete", Desc: "this bookmark, or a folder and what is in it", Scope: terminu.ItemScope,
+		{Key: "x", Label: "Delete", Desc: "this bookmark", Scope: terminu.ItemScope, Hidden: onFolder,
+			Ask: m.deleteAsk(),
 			Do: m.do(func() tea.Cmd {
-				r, ok := m.bmCurrent()
-				if !ok {
-					return nil
+				if r, ok := m.bmCurrent(); ok && !r.isFolder {
+					return m.deleteBookmark(m.bookmarks[r.ref])
 				}
-				if r.isFolder {
-					return m.deleteFolder(r.folder)
+				return nil
+			})},
+		{Key: "x", Label: "Delete folder", Desc: "this folder and everything in it", Scope: terminu.ItemScope,
+			Hidden: func() bool { return !onFolder() }, Ask: m.deleteAsk(),
+			Do: m.do(func() tea.Cmd {
+				if r, ok := m.bmCurrent(); ok && r.isFolder {
+					return m.deleteFolderTree(r.folder)
 				}
-				b := m.bookmarks[r.ref]
-				return m.a.Confirm(terminu.Ask{Title: "Delete", Subject: oneLine(nameOr(b.Title, b.URL)), Details: []string{b.URL},
-					Question: "Delete this bookmark?", Verb: "delete"}, m.do(func() tea.Cmd { return m.deleteBookmark(b) }))
+				return nil
 			})},
 		{Key: "a", Label: "add", Desc: "a bookmark, in the folder under the cursor", Scope: terminu.PanelScope, Hint: "add",
 			Do: m.do(func() tea.Cmd {
@@ -255,6 +260,38 @@ func (m *AppModel) bookmarkActions() []terminu.Action {
 			})},
 		{Key: "I", Label: "Import", Desc: "a browser's exported bookmarks", Scope: terminu.PanelScope, Do: m.startImport},
 	}
+}
+
+// deleteAsk is x's question for the row under the cursor (tdp F6): what
+// goes, every time — a folder with what is in it.
+func (m *AppModel) deleteAsk() *terminu.Ask {
+	r, ok := m.bmCurrent()
+	switch {
+	case !ok:
+		return &terminu.Ask{Title: "Delete", Question: "Delete it?", Verb: "delete"}
+	case r.isFolder:
+		books, folders := 0, 0
+		for _, b := range m.bookmarks {
+			if inFolder(b.Folder, r.folder) {
+				books++
+			}
+		}
+		for _, f := range m.folderNames() {
+			if f != r.folder && inFolder(f, r.folder) {
+				folders++
+			}
+		}
+		ask := &terminu.Ask{Title: "Delete folder", Subject: r.folder, Question: "Delete " + r.folder + "?", Verb: "delete"}
+		if books+folders > 0 {
+			ask.Details = []string{"And everything in it: " + plural(books, "bookmark") + ", " + plural(folders, "folder") + "."}
+			ask.Warn = []int{0}
+			ask.Question = "Delete " + r.folder + " and everything in it?"
+		}
+		return ask
+	}
+	b := m.bookmarks[r.ref]
+	return &terminu.Ask{Title: "Delete", Subject: oneLine(nameOr(b.Title, b.URL)), Details: []string{b.URL},
+		Question: "Delete this bookmark?", Verb: "delete"}
 }
 
 // toggleFolder is Enter on a folder row: shut, or open again.
@@ -352,32 +389,6 @@ func (m *AppModel) addFolder(full string) tea.Cmd {
 	return m.toast("Folder " + full)
 }
 
-// deleteFolder is x on a folder row. An empty one goes at once; one with
-// anything in it asks first — how many bookmarks and folders go with it —
-// and then the whole tree goes (revised 2026-09-21: an import lands as one
-// tree, and row by row was no way to undo it). Only that tree: the folders
-// above it stay, empty or not.
-func (m *AppModel) deleteFolder(path string) tea.Cmd {
-	books, folders := 0, 0
-	for _, b := range m.bookmarks {
-		if inFolder(b.Folder, path) {
-			books++
-		}
-	}
-	for _, f := range m.folderNames() {
-		if f != path && inFolder(f, path) {
-			folders++
-		}
-	}
-	if books+folders == 0 {
-		return m.deleteFolderTree(path)
-	}
-	return m.a.Confirm(terminu.Ask{Title: "Delete folder", Subject: path,
-		Details:  []string{"And everything in it: " + plural(books, "bookmark") + ", " + plural(folders, "folder") + "."},
-		Question: "Delete " + path + " and everything in it?", Verb: "delete", Warn: []int{0}},
-		m.do(func() tea.Cmd { return m.deleteFolderTree(path) }))
-}
-
 // deleteFolderTree takes path and everything under it out, and writes the
 // file.
 func (m *AppModel) deleteFolderTree(path string) tea.Cmd {
@@ -460,6 +471,11 @@ func (m *AppModel) startAddBookmark(folder string) tea.Cmd {
 			if strings.TrimSpace(url) == "" {
 				return "A bookmark needs a URL"
 			}
+			for _, x := range m.bookmarks {
+				if x.URL == m.resolveURL(url) {
+					return "Already bookmarked: " + x.URL
+				}
+			}
 			return ""
 		}}
 	titleField := &terminu.FormField{Label: "Title", Value: func() string { return title }, Empty: "the URL",
@@ -477,11 +493,6 @@ func (m *AppModel) startAddBookmark(folder string) tea.Cmd {
 			b := store.Bookmark{Folder: folder, URL: m.resolveURL(url), Title: strings.TrimSpace(title)}
 			if b.Title == "" {
 				b.Title = b.URL
-			}
-			for _, x := range m.bookmarks {
-				if x.URL == b.URL {
-					return nil, errors.New("Already bookmarked: " + b.URL)
-				}
 			}
 			m.bookmarks = append(m.bookmarks, b)
 			if err := m.saveBookmarks(); err != nil {
