@@ -29,7 +29,7 @@ import (
 const glyphCode = "\U000f0169" // nf-md-code_braces
 
 // sectionRows draws the list at innerW × innerH.
-func (m AppModel) sectionRows(t *tab, innerW, innerH int) []string {
+func (m *AppModel) sectionRows(t *tab, innerW, innerH int) []string {
 	if innerH <= 0 {
 		return nil
 	}
@@ -38,15 +38,10 @@ func (m AppModel) sectionRows(t *tab, innerW, innerH int) []string {
 	// The cursor takes the colour of the level it is on rather than the
 	// page cursor's own grey (user, 2026-09-22): the lit row still says
 	// how deep it sits, which is the one thing a highlight would
-	// otherwise take away. Off focus it drops to the register an
-	// unfocused chip wears, where depth is the border's business.
-	focused := m.focus == panelPage && !t.onPagetab()
+	// otherwise take away. Off focus the lib dims the panel, cursor and
+	// all (Principle P6).
 	cur := func(depth int) lipgloss.Style {
-		bg := levelColor(depth)
-		if !focused {
-			bg = borderDim
-		}
-		return lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(bg).Bold(true)
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(levelColor(depth)).Bold(true)
 	}
 	numW := len(itoa(len(t.secs)))
 	out := make([]string, 0, innerH)

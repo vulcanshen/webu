@@ -30,7 +30,7 @@ func TestEveryPageHasLineNumbers(t *testing.T) {
 	if tb.lineCount() != len(tb.lay.rows) {
 		t.Errorf("the whole page is the whole count: %d of %d", tb.lineCount(), len(tb.lay.rows))
 	}
-	m := AppModel{focus: panelPage, tabs: []*tab{tb}, shown: 0}
+	m := &AppModel{tabs: []*tab{tb}, shown: 0}
 	rows := m.pageRows(tb, 40, 6)
 	for i, want := range []string{"1", "2", "3"} {
 		if !strings.HasPrefix(strings.TrimSpace(rows[i]), want) {
@@ -83,12 +83,12 @@ func TestLineNumbersCountWhatIsShown(t *testing.T) {
 	// A list item that is nothing but its first line has no inside to
 	// go to: Enter on it is Enter on the link it holds (2026-09-23).
 	d.cursorOn(ir.ListItem, "B via nav")
-	d.key("enter")
+	d.press("enter")
 	if p.drilled() {
 		t.Fatal("a one-line item does not drill")
 	}
-	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
-	d.key("esc")
+	d.until("open link?", d.shows("OPEN LINK"))
+	d.press("esc")
 
 	// Inside an item with more than its first line, the count is that
 	// item's — past the first line, which is the header row now.
@@ -110,8 +110,8 @@ func TestLineNumbersCountWhatIsShown(t *testing.T) {
 		t.Errorf("its first line is line 1, the row after the header: top %d", tb.top)
 	}
 	// And the first line is drawn once: on the header row, not below it.
-	m := AppModel{focus: panelPage, tabs: []*tab{tb}, w: 100, h: 30}
-	if h := m.pagetabRow(tb, 60); !strings.Contains(h, "Card one") {
+	m := &AppModel{tabs: []*tab{tb}}
+	if h := m.headRowOf(tb, 60); !strings.Contains(h, "Card one") {
 		t.Errorf("the header row is the item's first line:\n%s", h)
 	}
 	for _, r := range m.pageRows(tb, 60, 8) {

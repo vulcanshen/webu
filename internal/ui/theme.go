@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -194,46 +193,6 @@ func hexRGB(s string) (int, int, int) {
 		return 0, 0, 0
 	}
 	return int(v >> 16 & 0xff), int(v >> 8 & 0xff), int(v & 0xff)
-}
-
-// spinnerFrames stands in for the web glyph in panel [2]'s URL row while
-// the page is on its way (2026-09-22). A page being fetched used to be
-// told only by the text dimming, which reads as a hang rather than as
-// work; something has to move.
-//
-// Braille dots were tried first — the terminal's own idiom for this —
-// and they were wrong here: a braille cell is one column and tall, the
-// web glyph is a Nerd Font one and square across two, so the row jumped
-// a column whenever a fetch began and the shape changed with it. These
-// are the Material Design circle slices, the same set the web glyph
-// comes from: one square cell filling round, in place, at the same size.
-// Codepoints read out of the installed Nerd Font's cmap, never
-// remembered (family rule).
-var spinnerFrames = []string{
-	string(rune(0xf0a9e)), string(rune(0xf0a9f)), string(rune(0xf0aa0)), string(rune(0xf0aa1)),
-	string(rune(0xf0aa2)), string(rune(0xf0aa3)), string(rune(0xf0aa4)), string(rune(0xf0aa5)),
-}
-
-// spinStep is how long one frame of it lasts.
-const spinStep = 90 * time.Millisecond
-
-// spinnerFrame is the frame due now. It is read from the clock rather
-// than counted, so the animation is right however many redraws land —
-// and a stray tick costs a redraw, never a jump.
-func spinnerFrame() string {
-	return spinnerFrames[(time.Now().UnixNano()/int64(spinStep))%int64(len(spinnerFrames))]
-}
-
-// loadingIcon is what a popup's title carries after its name while its
-// content is still on its way (tdp F7, D3): the turning frame, or a blank
-// space of the same width when nothing is loading — as many cells as the
-// terminal gives an icon (width.go) — so the title and what follows it
-// never shift (L2).
-func loadingIcon(loading bool) string {
-	if loading {
-		return spinnerFrame()
-	}
-	return strings.Repeat(" ", iconCells)
 }
 
 // Nerd Font glyphs. Never a PUA literal in source — built from the rune so

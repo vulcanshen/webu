@@ -113,30 +113,28 @@ func main() {
 		session = store.Session{}
 	}
 	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session)
-	// How many cells the terminal gives a Nerd Font icon, asked before the
-	// screen is taken (tdp D6); version, help and browser update never ask.
-	ui.DetectIconWidth()
-	p := tea.NewProgram(app, tea.WithAltScreen())
 
 	// Whatever door the program leaves through — q, an outside SIGINT or
 	// SIGTERM, the terminal closing — Chromium goes too (terminu family: leave
-	// with no child behind).
+	// with no child behind). Bubble Tea quits on SIGINT and SIGTERM itself;
+	// the terminal closing is SIGHUP, which it leaves alone, so it is turned
+	// into the SIGTERM it does know.
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sig, syscall.SIGHUP)
 	go func() {
 		<-sig
-		p.Quit()
+		_ = syscall.Kill(os.Getpid(), syscall.SIGTERM)
 	}()
 
-	final, runErr := p.Run()
-	if a, ok := final.(ui.AppModel); ok {
-		// The session is written on every way out, q or a signal, so the
-		// tabs come back next time (ux.md §6).
-		if err := store.SaveSession(a.Session()); err != nil {
-			fmt.Fprintln(os.Stderr, "webu: session.yaml:", err)
-		}
-		a.Close()
+	// The lib asks the terminal how wide an icon is before it takes the
+	// screen (tdp E5); version, help and browser update never ask.
+	runErr := app.Run()
+	// The session is written on every way out, q or a signal, so the tabs
+	// come back next time (ux.md §6).
+	if err := store.SaveSession(app.Session()); err != nil {
+		fmt.Fprintln(os.Stderr, "webu: session.yaml:", err)
 	}
+	app.Close()
 	b.Close()
 	switch {
 	case errors.Is(runErr, tea.ErrInterrupted):

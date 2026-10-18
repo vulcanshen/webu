@@ -20,12 +20,12 @@ webu 開的是真正的網頁 —— 能登入、JavaScript 會跑、cookie 留�
 
 - **它是真的瀏覽器。** 文字後面跑著一個釘死版本的 headless Chromium，有自己的持久 profile。網站登入之後會一直記得你、JavaScript 照跑，而且完全不碰你自己的 Chrome。
 - **一頁就是一份文件。** 有標題的頁面一打開是目錄；`Enter` 讀一節、`n/p` 上下一節、`Esc` 回目錄。`Space` › `One sheet` 把整頁一次攤開。
-- **header、正文、側欄、footer 分開放。** webu 依位置把每一頁切成幾個部分，文章就是文章，側欄在你要看之前不擋路。
+- **header、正文、側欄、footer 分開放。** webu 依位置把每一頁切成幾個部分，每個部分是頁面面板的一個 tab；文章就是文章，側欄在你用 `h|l` 過去之前不擋路。
 - **幾個鍵找到任何東西。** `/` 搜整頁每一段文字，命中清單帶預覽，選了直接帶你過去。
 - **表單就是表單。** 輸入框寫清楚它收什麼、textarea 開在編輯器裡、select 列出選項、slider 列出數字、日期和顏色送出前先檢查、檔案用 picker 選。
 - **頁面自己的對話框與選單浮在上面**，等你回答 —— `alert`、`confirm`、HTTP 認證、上傳、憑證警告也一樣。
 - **frame，包括別站的**，是一列，走得進去也走得出來。
-- **瀏覽器該有的都有**：分頁、有目錄的書籤（能從任何瀏覽器匯入）、歷史、下載、DevTools（Network、Storage、Console、Source）、visual mode 選字複製到剪貼簿、整頁輸出成 markdown。
+- **瀏覽器該有的都有**：分頁、有目錄的書籤（能從任何瀏覽器匯入）、歷史、下載、DevTools 畫面（Network、Storage、Console、Source）、visual mode 選字複製到剪貼簿、整頁輸出成 markdown。
 
 ## 安裝
 
@@ -56,7 +56,7 @@ go install github.com/vulcanshen/webu/cmd/webu@latest
 - **Chromium 在第一次啟動時下載**，只下載一次，放在 cache 目錄（約 175–250 MB），有進度列。升級後若需要新版 Chromium，執行 `webu browser update`。
 - **終端機必須用 [Nerd Font](https://www.nerdfonts.com/)** —— 連結、欄位、面板與頁面的各部分都用它的 glyph 畫。
 - **終端機必須支援 truecolor** —— 顏色、以及 popup 底下各層變暗的樣子，都用 24-bit 色畫。
-- **icon 寬度**：有些終端機與字型的組合，印一個 icon 游標會前進兩格而不是一格。webu 啟動時會量；框線仍然歪掉的話，自己設定：`WEBU__ICON_WIDTH=2`（或 `1`）只給 webu，`TERMINU__ICON_WIDTH` 則是 terminu 家族每個 app 都讀的共用變數 —— 設一次全家族都跟著（`WEBU__ICON_WIDTH` 優先）。在家族的其他 app（kbu、filu、sshu）裡面執行時，那個 app 會替 webu 設好 `TERMINU__ICON_WIDTH`。
+- **icon 寬度**：有些終端機與字型的組合，印一個 Nerd Font 的 icon 游標會前進兩格而不是一格，有些連 powerline 符號（框上膠囊的兩端、游標尾端的箭頭）也一樣。webu 啟動時兩種都會量；框線仍然歪掉的話，自己設定：`WEBU__ICON_WIDTH=2`（或 `1`）與 `WEBU__POWERLINE_WIDTH` 只給 webu，`TERMINU__ICON_WIDTH` 與 `TERMINU__POWERLINE_WIDTH` 則是 terminu 家族每個 app 都讀的共用變數 —— 設一次全家族都跟著（`WEBU__` 的優先）。在家族其他 app（kbu、filu、sshu）的終端機裡執行時，那個 app 會替 webu 設好 `TERMINU__` 的兩個。
 
 移除（刪設定、資料與下載的 Chromium 之前都會先問）：
 
@@ -77,7 +77,7 @@ webu help                         # 完整的命令列說明
 接著：
 
 - 在文件頁 —— `j/k` 在目錄上移動、`Enter` 讀一節、`n` 下一節、`Esc` 回目錄。
-- 在任何頁 —— `/`、打一個字、`Enter`、`Enter`：你就到了。
+- 在任何頁 —— `/`、打一個字、`Enter`、`Enter`：你就到了。`h|l` 一次看頁面的一個部分（header、正文、側欄、footer），第一個 tab 是整頁。
 - `L` 輸入網址、`P/N` 上一頁 / 下一頁、`q` 離開。
 
 ## 五個鍵
@@ -86,23 +86,24 @@ webu help                         # 完整的命令列說明
 |---|---|
 | **`Enter`** | 滑鼠點一下會做的事 —— 開連結（先問）、按按鈕、在框裡打字、拉開清單。點了沒意義的地方就**走進去**：進一節、進清單裡的一件事、進 frame |
 | **`Space`** | *這裡能做什麼？* —— 游標所在的東西與這個面板能做的全部。所有熱鍵都列在裡面，不用背 |
-| **`Esc`** | 往上一層：關 popup、走出項目或 frame、回目錄 |
-| **`Tab`** | 在分頁清單與頁面之間切換 |
+| **`Esc`** | 往上一層：關 popup、走出項目或 frame、回目錄。永遠不會離開 webu |
+| **`Tab`** | 下一個面板：分頁清單、頁面（`1`、`2` 直接到） |
 | **`?`** | *這裡能按哪些鍵？* —— 最前面那一層的按鍵，只能看：面板自己的鍵加上 core key，在 popup 上則是這個 popup 的鍵。能做的事在 `Space` 裡；每個 Space menu 最後一列是 `Global operation`，列著到處都能做的事 |
 
 ## 畫面
 
 ```
- [W]eb ╱ [B]ookmarks ╱ [H]istory ╱ [D]ownloads ╱ [S]ettings
+ [W]EB  [B]OOKMARKS  [H]ISTORY  [D]OWNLOADS  [S]ETTINGS  [I] DEVTOOLS
 ```
 
-用大寫字母切換：
+用大寫字母切換，或從 `Space` › `Global operation` 選：
 
-- **`W` Web** —— 分頁清單與頁面並排。網址列底下是頁面各部分的切換列，再下面是目錄、一節或整頁，左邊有行號、下框顯示你讀到哪。
+- **`W` Web** —— 分頁清單與頁面並排；頁面顯示分頁清單游標所在的那一頁，在清單上按 `Enter` 就過去。頁面的框上用 tab 寫出它的各部分（`PAGE HEADER BODY OTHERS FOOTER`）；網址列底下是目錄、一節或整頁，左邊有行號、下框顯示你讀到哪。
 - **`B` Bookmarks** —— 目錄樹；`a` 加目前頁、`A` 加目錄、`m` 搬移、`r` 改名、`I` 匯入瀏覽器的書籤匯出檔。
 - **`H` History** —— 所有看過的頁，新的在上。
 - **`D` Downloads** —— 這次開啟以來的下載與進度。
-- **`S` Settings** —— 就地編輯 `config.yaml`。
+- **`S` Settings** —— `config.yaml`，一列一個值，設好就存。
+- **`I` DevTools** —— Web 畫面上那一頁抓了什麼、存了什麼、印了什麼、原始碼是什麼。
 
 ## 按鍵
 
@@ -111,23 +112,23 @@ webu help                         # 完整的命令列說明
 ### 到處都通
 
 ```
- screen    W/B/H/D/S                   screen 上 Esc 回到 web
- 面板      Tab/1–2
- 游標      j/k    u/d（半頁）          gg/G      h/l 同列移動
+ screen    W/B/H/D/S/I
+ 面板      Tab、Shift-Tab、1–2
+ 游標      j/k    u/d（半頁）          gg/G      h/l 面板的 tab
  全域      Space 選單    ? 按鍵    q/Ctrl-C 離開
 ```
 
 ### 分頁
 
-`Enter` 切過去 · `c` 關閉 · `o` 在新分頁再開一次 · `r` 重新載入 · `y` 複製網址 · `T` 新分頁 · `X` 關閉其他 · `U` 重開剛關的
+頁面跟著游標換。`Enter` 到頁面 · `c` 關閉 · `o` 在新分頁再開一次 · `r` 重新載入 · `y` 複製網址 · `T` 新分頁 · `X` 關閉其他 · `U` 重開剛關的
 
 ### 頁面
 
-`Enter` 在連結上先問再開；在按鈕上按下；在輸入框上開框打字；在 select 上列出選項；在標題上收合；在一節、長的清單項目或 frame 上走進去。`Esc` 走出來。
+`j/k` 照閱讀順序一個一個走 —— 先同一列、再往下 —— 到頭尾繞回。`h/l` 看整頁或其中一個部分。`Enter` 在連結上先問再開；在按鈕上按下；在輸入框上開框打字；在 select 上列出選項；在標題上收合；在一節、長的清單項目或 frame 上走進去。`Esc` 走出來。
 
-`Space` 就是右鍵選單：連結開新分頁、複製連結或文字、送出、清除或編輯輸入框、檢查元素。對整頁：`R` 重新載入 · `T` 新分頁 · `P/N` 上一頁 / 下一頁 · `/` finder · `go` 跳到某行 · `n/p` 下一節 / 上一節 · `Sections` / `One sheet` · `v` visual mode · `L` 網址 · `A` 加書籤 · `I` DevTools · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。
+`Space` 就是右鍵選單：連結開新分頁、複製連結或文字、送出、清除或複製輸入框的值、檢查元素。對整頁：`R` 重新載入 · `T` 新分頁 · `P/N` 上一頁 / 下一頁 · `/` finder · `go` 依行號跳到某行 · `n/p` 下一節 / 上一節 · `Sections` / `One sheet` · `v` visual mode · `L` 網址 · `A` 加書籤 · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。
 
-`L` 開網址框時會帶著目前的網址：`Tab` 接過來改、`Backspace` 不要它。有好幾欄的框（加書籤、登入）用 `Tab` 換欄、`→` 接下提議，`Enter` 一次送出全部。
+`L` 開網址框時會用灰字提議目前的網址：`Tab` 接過來改、`Backspace` 不要它、直接打字就從頭打。頁面自己的問題 —— `alert`、`confirm`、要你輸入的 prompt、登入 —— 等你按 `Enter`；`Esc` 就是回答「不」。
 
 ### 書籤、歷史、下載、設定
 
@@ -138,11 +139,11 @@ webu help                         # 完整的命令列說明
 
 ### DevTools（`I`）
 
-`h/l` 切換 **Network**（`Enter` 看 request 的 header 與 body）、**Storage**（cookie、local 與 session storage —— `x` 刪除、`y` 複製、`C` 清除站台資料）、**Console**（`i` 在頁面裡執行 JavaScript）與 **Source**（頁面 HTML，`/` 搜尋）。`Esc` 關閉。
+看的是 Web 畫面上那一頁。`h/l` 切換 **Network**（各個 request；游標那一個的 header 與 body 完整顯示在旁邊的面板）、**Storage**（cookie、local 與 session storage —— `x` 刪除、`y` 複製、`C` 清除站台資料、`R` 重新讀取）、**Console**（`i` 在頁面裡執行一行 JavaScript）與 **Source**（頁面 HTML）。每個清單都能用 `/` 過濾。
 
 ### Visual mode（`v`）
 
-選字、複製。`h/j/k/l`、`w/e/b`、`0/$`、`gg/G` 移動；`v/V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 搜尋、`n/N` 下一個；`Esc` 離開。進入後頁面的框變黃，右上角寫著 *Visual*。
+選字、複製。`h/j/k/l`、`w/e/b`、`0/$`、`gg/G` 移動；`v/V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 問你要找什麼、`n/N` 在找到的之間走；`Enter` 按下游標所在的東西；`Esc` 離開。進入後頁面的框變黃，右上角寫著 *Visual*。
 
 ## 設定
 
@@ -159,6 +160,11 @@ download_dir: ~/Downloads
 measure: full
 # 啟動時開回上次的分頁。
 restore_session: true
+# terminu 家族共用的 key，每個家族 app 都一樣：
+# 上傳與匯入的檔案預覽裡，私鑰只顯示第一行、只有擁有者能讀的檔不顯示內容。
+hide_secrets_in_preview: false
+# 多行文字（textarea）裡按 Tab 插入幾個空白。
+input_tab_width: 4
 ```
 
 東西存在哪：
@@ -167,7 +173,7 @@ restore_session: true
 |---|---|---|
 | 設定 | `config.yaml`、`bookmarks.yaml` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`，或 `$WEBU__CONFIG`） |
 | 資料 | 歷史、session、下載、瀏覽器 profile（cookie、登入）、log | `~/.webu/datas`（`$WEBU__DATA`） |
-| cache | 下載的 Chromium | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$WEBU__CACHE`） |
+| cache | 下載的 Chromium | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$XDG_CACHE_HOME/webu`；或 `$WEBU__CACHE`） |
 
 設定與書籤都是可以手改的 YAML。
 
@@ -185,7 +191,7 @@ restore_session: true
 
 ## terminu family
 
-webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）。
+webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.7.4），建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、menu 與框 —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）。
 
 ## 授權
 

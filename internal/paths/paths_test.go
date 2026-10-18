@@ -1,7 +1,9 @@
 package paths
 
 import (
+	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -38,8 +40,42 @@ func TestDirsHonourOverrides(t *testing.T) {
 	if d, _ := Config(); d != filepath.Join("/tmp/x", "webu") {
 		t.Errorf("Config under XDG %q", d)
 	}
-	if d, _ := Cache(); d != filepath.Join("/tmp/y", "webu") {
-		t.Errorf("Cache under XDG %q", d)
+	if d, _ := Cache(); d != systemCache() {
+		t.Errorf("Cache is the system's cache directory (tdp E3): %q", d)
+	}
+}
+
+// systemCache is where tdp E3 puts the cache: os.UserCacheDir, which is
+// ~/Library/Caches on macOS and $XDG_CACHE_HOME or ~/.cache on Linux.
+func systemCache() string {
+	dir, _ := os.UserCacheDir()
+	return filepath.Join(dir, "webu")
+}
+
+// A Chromium fetched under XDG_CACHE_HOME on macOS, before tdp E3, is used
+// until one is fetched into the system's cache directory (WB5).
+func TestAnOldMacCacheIsStillRead(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS only")
+	}
+	home, xdg := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("WEBU__CACHE", "")
+	t.Setenv("XDG_CACHE_HOME", xdg)
+	if d, _ := Cache(); d != filepath.Join(home, "Library", "Caches", "webu") {
+		t.Errorf("nothing anywhere: the system's cache directory, got %q", d)
+	}
+	if err := os.MkdirAll(filepath.Join(xdg, "webu"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if d, _ := Cache(); d != filepath.Join(xdg, "webu") {
+		t.Errorf("the old cache is read while the new one is not there: %q", d)
+	}
+	if err := os.MkdirAll(filepath.Join(home, "Library", "Caches", "webu"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if d, _ := Cache(); d != filepath.Join(home, "Library", "Caches", "webu") {
+		t.Errorf("once the new one is there it wins: %q", d)
 	}
 }
 
@@ -61,7 +97,7 @@ func TestOldNamesAreNotRead(t *testing.T) {
 	if d, _ := Data(); d != filepath.Join("/tmp/h", ".webu", "datas") {
 		t.Errorf("Data %q", d)
 	}
-	if d, _ := Cache(); d != filepath.Join("/tmp/y", "webu") {
+	if d, _ := Cache(); d != systemCache() {
 		t.Errorf("Cache %q", d)
 	}
 }

@@ -319,28 +319,30 @@ func TestRowNavigation(t *testing.T) {
 	if len(tb.lay.items) != 4 {
 		t.Fatalf("items:\n%s", dumpLayout(tb.lay))
 	}
+	// j and k walk the items in reading order — along the row, then on to
+	// the next — and wrap at either end (tdp K12). h and l are panel [2]'s
+	// tabs, not the cursor's.
 	name := func() string { return tb.current().Name }
-	tb.moveItem("l", 10)
-	tb.moveItem("l", 10)
+	tb.moveItem("j", 10)
+	tb.moveItem("j", 10)
 	if name() != "C" {
-		t.Errorf("l l → %s", name())
-	}
-	tb.moveItem("l", 10)
-	if name() != "C" {
-		t.Errorf("l at the row's end stays: %s", name())
+		t.Errorf("j j → %s", name())
 	}
 	tb.moveItem("j", 10)
 	if name() != "D" {
-		t.Errorf("j → %s", name())
+		t.Errorf("j past the row's end goes on to the next row: %s", name())
+	}
+	tb.moveItem("j", 10)
+	if name() != "A" {
+		t.Errorf("j past the last item wraps to the first: %s", name())
 	}
 	tb.moveItem("k", 10)
-	if name() != "A" {
-		t.Errorf("k lands nearest the column (D starts at 0): %s", name())
+	if name() != "D" {
+		t.Errorf("k before the first wraps to the last: %s", name())
 	}
-	tb.moveItem("h", 10)
-	tb.moveItem("k", 10)
-	if name() != "A" {
-		t.Errorf("h and k at the top stay: %s", name())
+	tb.moveItem("l", 10)
+	if name() != "D" {
+		t.Errorf("l does not move the cursor: %s", name())
 	}
 }
 
@@ -390,10 +392,10 @@ func TestTableCellsAreItems(t *testing.T) {
 	if len(l.rows) < 3 || !l.rows[0].table || !l.rows[0].header || !l.rows[1].table || l.rows[1].header {
 		t.Errorf("the rows should carry the table's grounds, the header row its own:\n%s", dumpLayout(l))
 	}
-	// The cell is cut to its column; l moves along the row.
+	// The cell is cut to its column; j moves on to the next cell.
 	tb.cursor = 2
-	if tb.moveItem("l", 20); tb.lay.items[tb.cursor].node.Text() != "home" {
-		t.Errorf("l should walk to the next cell, is on %q", tb.lay.items[tb.cursor].node.Text())
+	if tb.moveItem("j", 20); tb.lay.items[tb.cursor].node.Text() != "home" {
+		t.Errorf("j should walk to the next cell, is on %q", tb.lay.items[tb.cursor].node.Text())
 	}
 	if got := columnHeader(root, tb.lay.items[tb.cursor].node); got != "Site" {
 		t.Errorf("the column's header names the cell: %q", got)
@@ -439,63 +441,6 @@ func TestSkipLinkIsDropped(t *testing.T) {
 // k from the top of the page puts the hand on the pagetab; h/l walk the
 // parts, wrap, and show each one as they reach it; j comes back down
 // into whatever is on screen.
-func TestPagetabHand(t *testing.T) {
-	box := func(x, y, w, h float64) ir.Box { return ir.Box{X: x, Y: y, W: w, H: h} }
-	lm := func(role string, id int, kids ...*ir.Node) *ir.Node {
-		return &ir.Node{Kind: ir.Landmark, Role: role, ID: cdp.BackendNodeID(id), Children: kids}
-	}
-	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
-		lm("banner", 1, para(link("Home", "https://x.test/", 11))),
-		lm("main", 2, para(link("Body", "https://x.test/b", 12))),
-		lm("contentinfo", 3, para(link("Terms", "https://x.test/t", 13))),
-	}}
-	tb := &tab{cursor: -1, root: root, boxes: map[cdp.BackendNodeID]ir.Box{
-		1: box(0, 0, 1000, 60), 11: box(0, 0, 100, 20),
-		2: box(0, 60, 1000, 900), 12: box(0, 60, 100, 20),
-		3: box(0, 960, 1000, 60), 13: box(0, 960, 100, 20),
-	}}
-	tb.relayout(60)
-	if len(tb.parts) != 3 || tb.at != partMain || tb.onPagetab() {
-		t.Fatalf("three parts, the body shown, the hand in the page: %+v at=%s", tb.parts, tb.at.word())
-	}
-	tb.cursor = 0
-	tb.moveItem("k", 10)
-	if !tb.onPagetab() || tb.parts[tb.pagetabIndex()].kind != partMain {
-		t.Errorf("k from the top goes to the part on screen: %d", tb.pagetabIndex())
-	}
-	tb.moveItem("k", 10)
-	if !tb.onPagetab() {
-		t.Error("k on the pagetab stays there")
-	}
-	// h walks the strip AND shows what it walks to: moving is choosing,
-	// so there is no second key (user, 2026-09-23).
-	tb.moveItem("h", 10)
-	if tb.parts[tb.pagetabIndex()].kind != partHeader {
-		t.Errorf("h wraps round the strip, is on %s", tb.parts[tb.pagetabIndex()].kind.word())
-	}
-	if tb.at != partHeader {
-		t.Errorf("and shows it: showing %s", tb.at.word())
-	}
-	if v := dumpLayout(tb.lay); strings.Contains(v, "Body") || !strings.Contains(v, "Home") {
-		t.Errorf("the panel is that part alone:\n%s", v)
-	}
-	// j comes down into the part it walked to, at its first item; the
-	// strip keeps it.
-	tb.moveItem("j", 10)
-	if tb.onPagetab() || tb.at != partHeader {
-		t.Errorf("j comes down onto the part on screen: pagetab %d at %s", tb.pagetab, tb.at.word())
-	}
-	// And round again: the strip wraps both ways, showing as it goes.
-	tb.enterPagetab()
-	tb.stepPagetab("l", 10)
-	if tb.at != partMain || !tb.onPagetab() {
-		t.Errorf("l from the header shows the body and stays up: at=%s", tb.at.word())
-	}
-	if v := dumpLayout(tb.lay); !strings.Contains(v, "Body") {
-		t.Errorf("the body is back:\n%s", v)
-	}
-}
-
 // target with nothing to stop on, is no jump.
 func TestJumpToAnchor(t *testing.T) {
 	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
@@ -530,46 +475,11 @@ func TestJumpToAnchor(t *testing.T) {
 	tb = &tab{cursor: 0, root: long, anchors: map[string]cdp.BackendNodeID{"far": 99},
 		parents: map[cdp.BackendNodeID]cdp.BackendNodeID{}}
 	tb.relayout(60)
-	tb.pagetab = 1 // and the hand was on the pagetab when it chose the anchor
 	if !tb.jumpToAnchor("far", 10) {
 		t.Fatal("the anchor should be found")
 	}
 	if row := tb.lay.items[tb.cursor].first; tb.top != row {
 		t.Errorf("the target should be the first row on screen: top %d, target row %d", tb.top, row)
-	}
-	if tb.onPagetab() {
-		t.Error("landing in the page takes the hand off the pagetab")
-	}
-}
-
-// TestSpinnerWhileFetching: panel [2]'s URL row turns while the page is
-// on its way and shows the web glyph at rest, and the glyph wears the
-// same blue as the URL beside it (2026-09-22).
-func TestSpinnerWhileFetching(t *testing.T) {
-	tb := &tab{id: 1, url: "https://x.test/", cursor: -1}
-	m := AppModel{w: 100, h: 30, tabs: []*tab{tb}}
-	row := func() string { return m.pageBody(80, 12)[0] }
-	if !strings.Contains(row(), glyphWeb) {
-		t.Errorf("at rest the row wears the web glyph: %q", row())
-	}
-	if m.fetching() {
-		t.Error("nothing is being fetched yet")
-	}
-	tb.loading = true
-	if !m.fetching() {
-		t.Error("a loading tab is a fetch in flight: what keeps the spinner armed")
-	}
-	spun := false
-	for _, f := range spinnerFrames {
-		if strings.Contains(row(), f) {
-			spun = true
-		}
-	}
-	if !spun || strings.Contains(row(), glyphWeb) {
-		t.Errorf("while fetching the glyph is replaced by a spinner frame: %q", row())
-	}
-	if len(spinnerFrames) < 4 {
-		t.Error("a spinner needs frames to spin")
 	}
 }
 
@@ -756,51 +666,6 @@ func TestABlockLabelIsNotPrintedTwice(t *testing.T) {
 	}}
 	if h := render(held, 100); len(h.items) != 2 {
 		t.Errorf("a row an item is on is never dropped:\n%s", dumpLayout(h))
-	}
-}
-
-// The hand parked on the pagetab has to survive a recapture. It is on a
-// KIND of part, and the kinds are a closed set — they outlive every node
-// behind them, which the ids do not: a page that keeps settling used to
-// drop the hand back into the page, which reads as Esc undoing itself
-// (user, 2026-09-22).
-func TestTheHandStaysOnThePagetab(t *testing.T) {
-	box := func(x, y, w, h float64) ir.Box { return ir.Box{X: x, Y: y, W: w, H: h} }
-	// A page of three bands, the bottom one rebuilt under new ids the way
-	// a page that keeps settling rebuilds its footer.
-	build := func(id int) ir.Capture {
-		return ir.Capture{
-			Nodes: []*accessibility.Node{
-				axNode(1, "RootWebArea", "Page", 1, 2, 9, id),
-				axNode(2, "navigation", "", 2, 3),
-				axNode(3, "link", "Home", 3),
-				axNode(9, "main", "", 9, 10),
-				axNode(10, "paragraph", "", 10),
-				axNode(id, "contentinfo", "", id, id+1),
-				axNode(id+1, "link", "Terms", id+1),
-			},
-			Boxes: map[cdp.BackendNodeID]ir.Box{
-				2: box(0, 0, 1000, 60), 3: box(0, 0, 80, 20),
-				9: box(0, 60, 1000, 900), 10: box(0, 60, 400, 40),
-				cdp.BackendNodeID(id): box(0, 960, 1000, 60), cdp.BackendNodeID(id + 1): box(0, 960, 80, 20),
-			},
-		}
-	}
-	tb := &tab{cursor: -1}
-	tb.apply(pageMsg{url: "https://x.test/p", title: "Page", cap: build(100)}, 80)
-	tb.lastVisit = "https://x.test/p"
-	if len(tb.parts) != 3 {
-		t.Fatalf("three bands are three parts: %d", len(tb.parts))
-	}
-	tb.focusPagetab(tb.partIndex(partFooter))
-
-	// The same page again, that part rebuilt under new ids.
-	tb.apply(pageMsg{url: "https://x.test/p", title: "Page", cap: build(777)}, 80)
-	if !tb.onPagetab() {
-		t.Fatal("the hand fell back into the page")
-	}
-	if got := tb.parts[tb.pagetabIndex()].kind; got != partFooter {
-		t.Errorf("the hand moved to %s, want footer", got.word())
 	}
 }
 

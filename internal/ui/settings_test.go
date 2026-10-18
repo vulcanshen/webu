@@ -27,7 +27,7 @@ func TestSettingsCoverConfig(t *testing.T) {
 		}
 	}
 	for _, s := range settings {
-		if (s.set == nil) == (s.toggle == nil) {
+		if (s.set == nil) == (s.flip == nil) {
 			t.Errorf("setting %q must be a text setting or a switch, not both or neither", s.key)
 		}
 	}

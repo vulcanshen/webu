@@ -4,6 +4,33 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
+webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
+the terminu family's shared library, following terminu design (tdp)
+v0.7.4: the frames, the menus, the popups and the keys are now the same
+code as the rest of the family's.
+
+- **The page's parts are the page panel's tabs.** Its frame reads
+  `[2] PAGE HEADER BODY OTHERS FOOTER` (the parts this page has); `h|l`
+  switch between them, and the first tab is the whole page. The strip
+  under the address bar, and `Esc` up onto it, are gone.
+- **`j|k` walk the page's items in reading order** — along a row, then
+  down — and come round at the ends. `h|l` no longer move along a row.
+- **The page follows the tab list's cursor**; `Enter` on the tab list
+  takes you to the page.
+- **DevTools is a screen of its own, `I`**: Network, Storage, Console and
+  Source are its list's tabs, each with a `/` filter, and the panel
+  beside shows the row under the cursor in full.
+- `go` asks for a line number; `/` in visual mode asks for what to find.
+- Adding a bookmark is a form: its URL and its title, then Add.
+- Settings has the family's `hide_secrets_in_preview` and
+  `input_tab_width`, and a switch flips in place.
+- The powerline symbols' width is measured too, and can be set with
+  `WEBU__POWERLINE_WIDTH` or the family's `TERMINU__POWERLINE_WIDTH`.
+- On macOS the downloaded Chromium goes to `~/Library/Caches/webu` even
+  when `XDG_CACHE_HOME` is set; one already fetched under
+  `XDG_CACHE_HOME` is used until then.
+- The certificate question's Continue loads the address that failed, not
+  the error page Chromium drew in its place.
 - The repository takes the terminu family's shape (tdp project): the
   Makefile includes the shared `family.mk`, and the release workflow,
   the goreleaser config, `install.sh`, `uninstall.sh` and `.gitignore`

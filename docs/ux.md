@@ -2,7 +2,18 @@
 
 > 本文件講**互動語意**：core-key、Space menu 內容、hotkey 分層、兩種游標、每種輸入怎麼填、
 > 浮層行為、時間軸。版面與 surface 在 `ui.md`，功能邊界在 `function.md`。
-> 依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp）撰寫，章節編號對齊 kbu / filu / sshu（§A、§B 沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。
+> 依 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp）撰寫，章節編號對齊 kbu / filu / sshu（§A、§B 沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。
+
+> **2026-10-18 起按鍵與選單由 terminu-go 處理（tdp v0.7.4）。** core key、Space menu、global operation popup、`?` 的 key
+> reference、hint、footer 都由 lib 從 webu 登記的動作產生；跟下面舊段落不同的地方：
+> - [2] 的 `h|l` 換頁面的 part（[2] 的 panel tab，第一個是整頁），不再在同一列的 item 之間走；`j|k` 照閱讀順序一個 item
+>   一個 item 走，到頭尾繞回；網址列下的 pagetab 與「`Esc` 上 pagetab」拿掉，`Esc` 在 [2] 是走出項目、回目錄，到頂不作用。
+> - [2] 是 [1] 的明細：[1] 的游標移到哪個分頁 [2] 就換成哪個；[1] 的 `Enter` 把 focus 送到 [2]。
+> - DevTools 是畫面 `I`（全域熱鍵），不再是 [2] 的 `[I]nspect`。
+> - `P`／`N`、`L`、`/`、`v` 只在 [2] 按得到；全域動作只有切畫面（`W` `B` `H` `D` `S` `I`）與離開。
+> - `go` 開 number input 問行號；visual mode 的 `/` 開 text input 問要找什麼，`Esc` 離開模式由 lib 處理。
+> - 加書籤是 form（URL、標題、Add）；頁面的 prompt 與 HTTP 登入是 webu 自己的 popup（`e` 改答案；`n`、`p` 改名字與密碼）。
+> - 清單畫面（書籤、歷史、下載）上 `Esc` 只清篩選，不回 Web；回 Web 用 `W`。
 
 ---
 
@@ -258,15 +269,15 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `W` `B` `H` `D` `S`、`q`、`?`、`V`（彩蛋）；只在 `[W]eb`：`P` `N` `L`、`/`、`v`、`Tab`、`1/2` |
+| 全域 | `W` `B` `H` `D` `S` `I`、`q`、`?`、`V`（彩蛋）；只在 [2]：`P` `N` `L`、`/`、`v`；`Tab`、`Shift-Tab`、`1/2` 換 panel |
 | `[1]` item / panel | `c` `o` `r` `y` / `T` `X` `U` |
 | `[2]` item | 無（menu-only） |
-| `[2]` panel | `R` `T` `A` `I` `Z` `Y` `C`；`n` `p`（讀一節時）；`go`；`Esc` |
+| `[2]` panel | `R` `T` `A` `Z` `Y` `C` `P` `N` `L` `/` `v`；`n` `p`（讀一節時）；`go`；`Esc`；`h` `l` 換 part |
 | Bookmarks | `a` `m` `r` `x` `y` / `A` `I` `/` |
 | Downloads | `o` `x` `y` / `C` `/` |
 | History | `x` `y` / `C` `/` |
 | Settings | Enter |
-| DevTools | `x` `y` / `C` `/`；`h` `l`；Console `i` |
+| DevTools（畫面 `I`） | `y`、Storage `x` / `C` `/` `R`；`h` `l` 換清單；Console `i`；Source `R` |
 | visual mode | `h/j/k/l` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
 | editor（移） | `h/j/k/l` `u` `d` `g` `G` `0` `$` `i` `a` `A` `o` |
 

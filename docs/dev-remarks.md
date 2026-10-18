@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp），是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.7.4），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.1.13）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -11,13 +11,13 @@ README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分�
 - **語意來自 accessibility tree，版面來自 DOM** —— screen reader 讀到的就是你看到的：role、名字、狀態；東西在頁面的哪裡來自版面快照。不讀 CSS 的顏色字型。webu 不認得的 role 畫成文字加標記，從不隱藏、仍然可點。
 - **每個支援的 role 都有 fixture**，對著釘死的 Chromium revision 抓，所以引擎升版是一個決定而不是漂移。支援清單在 [`support.md`](support.md)，由 role 表產生。
 - **一個釘死的 Chromium** —— revision 編進執行檔、不開放覆寫、永遠不碰使用者自己的 Chrome；webu 自己的持久 profile。頁面的問題都是 Chromium 的問題，webu 只畫答案。
-- **兩個選單、一張表** —— `Enter` 是 item 的操作，`Space` 是 item 加 panel；每個括號裡的字母由同一張表產生、key handler 也讀同一張，所以不在選單裡的熱鍵不可能存在。
-- **畫面穩定** —— 任何尺寸、任何內容，每一列都恰好是終端機的寬；有測試跨尺寸、面板、screen 檢查。
+- **一份登記、lib 產生其餘** —— webu 把每個畫面、panel、動作（鍵、名稱、說明、範圍、要不要先問、做什麼）登記給 terminu-go；Space menu、global operation popup、`?` 的 key reference、panel 下框的 hint、footer、confirm、淡化、`Esc` 一次一層都由 lib 從這一份登記產生，所以不在選單裡的熱鍵不可能存在。[2] 的動作跟著游標下的東西換，每次換頁、換游標都重新登記（`pageactions.go` 的 `syncPage`）。
+- **畫面穩定** —— 任何尺寸、任何內容，每一列都恰好是終端機的寬；`TestFrameFitsTheTerminal` 在 icon 一格／兩格、powerline 符號一格／兩格下，跨尺寸、每個畫面、疊 popup 檢查（tdp L4、E5、E6）。
 - **`[S]ettings` 與 `config.yaml` 同步** —— 檔案裡有的 key，Settings 一定有一列，有測試守著。
 - **存檔** —— 書籤每筆帶 `folder` 路徑，另有 `folders:` 清單讓空目錄留得住；歷史是一次 append 一筆的 YAML sequence；每次寫檔都是原子的。分法：使用者寫的在 config、webu 產生的在 data、可重抓的在 cache。
 - **unix-first、靜態執行檔** —— macOS + Linux，`CGO_ENABLED=0`。chromedp 的 log 進檔案，永遠不進 TUI 正在畫的終端機。
 - **Chromium 不在 release 裡** —— release 只有 Go 執行檔；第一次啟動下載到 cache。Chromium snapshot bucket 沒有 Linux ARM 版，所以沒有 Linux ARM build。
-- **Chromium 的啟動與關閉** —— flag 是 Puppeteer 那組減 `--enable-automation`，加 `--disable-blink-features=AutomationControlled`、`--headless=new`，三個 background throttling 關閉。下載串流到 `.zip.part`、解到 `.tmp`、最後 rename，保留 symlink（Mac bundle 的 `Versions/Current`）。關閉先 `chromedp.Cancel`（讓 profile flush）再 allocator cancel；不論從哪裡離開（`q`、外部的 SIGINT / SIGTERM、終端機關掉），Chromium 都跟著走。
+- **Chromium 的啟動與關閉** —— flag 是 Puppeteer 那組減 `--enable-automation`，加 `--disable-blink-features=AutomationControlled`、`--headless=new`，三個 background throttling 關閉。下載串流到 `.zip.part`、解到 `.tmp`、最後 rename，保留 symlink（Mac bundle 的 `Versions/Current`）。關閉先 `chromedp.Cancel`（讓 profile flush）再 allocator cancel；不論從哪裡離開（`q`、外部的 SIGINT / SIGTERM、終端機關掉），Chromium 都跟著走：SIGINT、SIGTERM 由 Bubble Tea 自己收，終端機關掉的 SIGHUP 它不收，`main.go` 把它轉成對自己的 SIGTERM。
 - **分頁的三種跑法** —— `press`（使用者的動作：設 loading / `settlingUntil` / `popupUntil`）、`act`（webu 自己的：Reveal、開 frame）、`unblock`（對話框 / auth 的回答：不排隊）。**action lock**（`tab.acting`）：讀 box 與按下之間曾被舊的 Reveal 捲走（六次漏一次），鎖住讓它們是一個動作；對話框開著時碰 renderer 會卡，所以回答不經鎖。動作後 300 ms `settle` 再 capture；`gen` 丟掉過期的。
 - **hover 送了不等** —— headless 下單獨的 `mouseMoved` 要等 renderer ack 5 秒，但頁面當下就處理了，所以 hover 用 100 ms 的 ctx 送出就走。
 
@@ -51,12 +51,15 @@ internal/ir/         翻譯層：role 單一宣告表（roles.go）、AX tree + 
                      Dump / Markdown、fixture、docs/support.md 產生器
 internal/page/       CDP 端：Capture（capture.go）、動作（actions.go）、hook（hooks.go）、
                      觀察與 DevTools 資料（observe.go / devlog.go）、跨站 frame 的 session（sessions.go）
-internal/ui/         TUI：app.go（key 路由、Space menu、dispatch）、tab.go（分頁模型：capture / apply /
-                     settling / places / drill / 移動）、render.go（IR → rows / items / marks）、
-                     parts.go（四個 part）、section.go + sectionlist.go（目錄與節）、finder.go（/ 與 go）、
-                     pagepopup.go（頁面的彈窗）、pagepanel.go（[2] 的畫法）、editorpopup.go、slider.go、
-                     fill.go、inputpopup.go / spacemenu.go / popup.go（webu 的浮層）、bookmarks.go /
-                     listpanel.go / settings.go（screen）、devtools*.go、selectmode.go、theme.go
+internal/ui/         TUI，建在 terminu-go 上：app.go（AppModel、向 lib 登記、onMsg、sync）、
+                     web.go（Web 畫面：[1] Tabs、版面）、pagebody.go（[2] 的 Body：網址列、內容、
+                     頁面的彈窗）、pageactions.go（[2] 的動作、Enter、各種輸入）、pageask.go（頁面的
+                     alert／confirm／prompt／登入）、visual.go + selectmode.go（visual mode）、finder.go
+                     （/ 的索引與落點）、tab.go（分頁模型：capture / apply / settling / places / drill /
+                     移動）、render.go（IR → rows / items / marks）、parts.go（四個 part）、section.go +
+                     sectionlist.go（目錄與節）、pagepopup.go（頁面彈窗的判定）、bookmarks.go /
+                     history.go / downloads.go / settings.go / devtools.go（其他畫面）、splash.go +
+                     icon.svg（docs/icon.svg 的副本）、width.go（lib 的寬度函式）、theme.go（頁面的配色與 glyph）
 internal/store/      config / bookmarks / history / session 的 YAML；Netscape 書籤匯入
 internal/paths/      三個目錄的解析
 tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
@@ -135,31 +138,26 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 
 #### parts（`parts.go`，2026-09-23）
 
-`splitParts(root, boxes, viewport)`：只看頂層區塊的幾何——最大面積是 body；`beside`（垂直重疊）是 others；前面 header、後面 footer。守門：頁面高 ≤ viewport、或最大區塊 < 25% 面積 → nil（整頁一塊）。`tab.parts` / `at` / `activePart`；`relayout` 從 `sansPopup(root)` 切、`base` 是 active part 的節點；pagetab 由 `partChain(labels, at, hand, focused, dimmed)` 畫（lit 整條 / dim 兩種）；`stepPagetab` 走到哪就 `relayout` 到哪；`enterPagetab` 在彈窗時 false。
+`splitParts(root, boxes, viewport)`：只看頂層區塊的幾何——最大面積是 body；`beside`（垂直重疊）是 others；前面 header、後面 footer。守門：頁面高 ≤ viewport、或最大區塊 < 25% 面積 → nil（整頁一塊）。`tab.parts` / `at` / `activePart`；`relayout` 從 `sansPopup(root)` 切、`base` 是 active part 的節點，`at` 是 `partWhole` 時是整頁。part 是 [2] 的 panel tab：第一個 tab 是整頁 `PAGE`，後面是這一頁有的 part（`syncPage` 填 `Panel.Tabs`／`Tab`），`h|l` 由 lib 換 tab、`partTab` 再 `showPart`。彈窗開著時不顯示 tab。
 
 #### sections（`section.go` / `sectionlist.go`）
 
-`sectionsOf(root, lay, url)`：從 `marks` 收 heading（scope 是 main）；`(top)` 是第一個標題前的內容；**一節的 `last` 延伸到下一個同級或更高級標題**（2026-09-23，原本是下一個任何標題——MDN「Try it」因此是空的）；`start()` 把 landmark 的 rule 併進下一節；`count` 數表 / code / 媒體 / 散文 / 連結；`pruneNav` 丟掉只有連結、沒子節的「節」（併進前一節，用 max 不縮短父節）；深度用 stack 算（h1 → h3 → h4 是三層）。`shapeOf`：≥ 3 個標題是 `shapeDoc`。`tab.listing()` / `read` / `sec` / `secTop` / `flat`；`openSection` / `closeSection` / `stepSection`（`siblingSection` 同 level）/ `sectionAt`（最內層）/ `rowRange`（讀一節時 `body..last`）；`recut` 重抓後用 heading 的 node id 留在原節；`sectionHint` / `readPct` 給下框的狀態字（`40%`；下框不再畫進度條，2026-09-29）；`headingTitle` 去掉標題尾巴的同頁錨點連結。
+`sectionsOf(root, lay, url)`：從 `marks` 收 heading（scope 是 main）；`(top)` 是第一個標題前的內容；**一節的 `last` 延伸到下一個同級或更高級標題**（2026-09-23，原本是下一個任何標題——MDN「Try it」因此是空的）；`start()` 把 landmark 的 rule 併進下一節；`count` 數表 / code / 媒體 / 散文 / 連結；`pruneNav` 丟掉只有連結、沒子節的「節」（併進前一節，用 max 不縮短父節）；深度用 stack 算（h1 → h3 → h4 是三層）。`shapeOf`：≥ 3 個標題是 `shapeDoc`。`tab.listing()` / `read` / `sec` / `secTop` / `flat`；`openSection` / `closeSection` / `stepSection`（`siblingSection` 同 level）/ `sectionAt`（最內層）/ `rowRange`（讀一節時 `body..last`）；`recut` 重抓後用 heading 的 node id 留在原節；`headingTitle` 去掉標題尾巴的同頁錨點連結。讀一節時網址列下多一列 `☰ 2/26 節名`（`headRowOf`），下框右邊是 lib 的捲動位置 `N-M of T`。
 
 #### drill、places、finder、go
 
 - **drill**：`drillInto(n)` / `leaveDrill`；`chainTo` / `chainOf` 算祖先路徑；`enterItem` 對一行的 ListItem 直接 `firstItemIn` → `enterOn`；`Media` 有 `Frame` 就 `openFrame`；Code → `showCode`。
 - **places**（`tab.go`）：`entry`（`Page.getNavigationHistory` 的 current entry id）、`places[entry] = place{at, flat, read, sec, top, cursor}`；`apply` 的 `fresh` = entry 不同（URL 判斷會被 settle 重設）。
-- **finder**（`finder.go`）：`indexPage` 走四個 part、`partOf` 記 part、Combobox 的子節點跳過、Option 可命中；`hit{node, part, trail, under, text, line}`；`hitScore` 字面優先、模糊 ≤ 64；`goToHit` 用 `chainOf` 沿路 drill、`rowOf` 找列；`geometry` 96 欄以上並排。`go`：`finderGo` 列 `lineText(n)`、`goToLine`。
-- **Esc 鏈**（`app.go` `escKey`）：pagetab → drill → 彈窗（拒絕）→ read → pagetab。
+- **finder**（`finder.go`）：`indexPage` 走四個 part、`partOf` 記 part、Combobox 的子節點跳過、Option 可命中；`hit{node, part, trail, under, text, line}`；清單、打字列、比對、預覽的框是 lib 的 `Finder`（比對照 components/input/finder），預覽是 `previewOf`；`goToHit` 用 `chainOf` 沿路 drill、`rowOf` 找列。`go`：lib 的 `NumberInput`（1 到行數）→ `goToLine`。
+- **Esc 鏈**（`pageactions.go` `pageEsc`，lib 的 `Panel.OnEsc`）：drill → 彈窗（拒絕，toast）→ read（回目錄）→ 到頂什麼都不做。popup 的 `Esc` 是 lib 的。
 
 #### 頁面的彈窗（`pagepopup.go`，2026-09-23）
 
-`noticePopup()` 在 `apply` 時跑：`findPopup(prev, skip, root, boxes)` 走整棵樹找 `prev` 沒有的子樹根；`isPopup(c, chain, boxes, parents)`：`countItems > 0`、且（`Modal` / dialog / alertdialog / menu / `hasFocus`）或 `overlap`「疊在無關的 box 上一半以上」（`parents` 排除 DOM 祖先 / 子孫——`main` 在 Accept 之後曾被誤判）。`popups` 是 stack：同一次 capture 有新的就 push、不丟舊的；`popupLays` 存下層的 layout 畫在後面（`pagePopupFloats` 錯開 3 欄 1 列）；`back` / `backParts` / `backRead` / `backSec` / `backTop` 存彈窗出現前的版面與位置，答完復原；`popupUntil` = press 後 8 秒；載入時 prev 空 → 全部算新（載入就在的彈窗算）。`popupWidth` / `popupVisible`；`pageBody` 用 `backdrop()`。
+`noticePopup()` 在 `apply` 時跑：`findPopup(prev, skip, root, boxes)` 走整棵樹找 `prev` 沒有的子樹根；`isPopup(c, chain, boxes, parents)`：`countItems > 0`、且（`Modal` / dialog / alertdialog / menu / `hasFocus`）或 `overlap`「疊在無關的 box 上一半以上」（`parents` 排除 DOM 祖先 / 子孫——`main` 在 Accept 之後曾被誤判）。`popups` 是 stack：同一次 capture 有新的就 push、不丟舊的；`popupLays` 存下層的 layout 畫在後面（`pagePopupFloats` 錯開 3 欄 1 列）；`back` / `backParts` / `backRead` / `backSec` / `backTop` 存彈窗出現前的版面與位置，答完復原；`popupUntil` = press 後 8 秒；載入時 prev 空 → 全部算新（載入就在的彈窗算）。`popupWidth` / `popupVisible`；`pageBody.Draw` 用 `backdrop()` 畫底下的頁面、`terminu.Dim` 淡化，再 `pagePopupFloats` 疊上去（`terminu.Composite`）。
 
 #### 兩套配色（`theme.go`）
 
-popup 開著時最上層以外畫暗（tdp F8）：`dim.go` `dimANSI` 把畫好的字串改色 —— 每個 SGR 裡的前景與背景（truecolor、256 色、16 色都先換
-RGB）照 tdp D2 往 base 淡化、每個通道取原值與淡化值較小的（絕不變亮），其他屬性（bold、reverse…）原樣保留，reset 與每個換行之後補
-`dim(Text)`；版面不動。參考實作是 filu 的 `dim.go`（2026-09-28 換上；較早的版本把前景全換成 `dimColor`、背景拿掉，拆掉了膠囊與游標列）。
-測試要在 truecolor 下跑才有色碼（`dim_test.go` `withColour`）；預期值用條文手算寫死（輸出時 hex 會被四捨五入，比對容許 ±2）。
-
-App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）與 Page palette（`pageText` / `pagePress` / `pageFill` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）分開。glyph 常數（`glyphHeader/Body/Others/Footer` = `page_layout_*`、`glyphPopup`、`glyphUpload`、`glyphInfo`…）的碼位查法見「建置與開發」。
+外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（components/color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、T2）。`theme.go` 只剩頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列與行號用 Blue（`urlColor`、`focusColor`），頁面上的 cursor 用 Subtext1 底，跟 lib 的 panel cursor 一樣。頁面內容照舊用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
 
 #### 動作（`page/actions.go`、`sessions.go`）
 
@@ -180,38 +178,38 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 
 | 事件 | 落地 |
 |---|---|
-| JS dialog | `dialogMsg` → confirm / input popup；`handleJavaScriptDialog` 回答；開著時 settle 暫停 |
+| JS dialog | `dialogMsg` → `pageask.go` 的 popup（Enter 答、Esc 取消；prompt 的 `e` 改答案）；`handleJavaScriptDialog` 回答；開著時 settle 暫停 |
 | `target=_blank` | `Target.targetCreated`（`OpenerID` 有值）→ `NewContext(WithTargetID)` → `Prepare` → 加到尾端切換 |
 | 憑證 | `ERR_CERT_*` → confirm → `setIgnoreCertificateErrors(true)` 重載；每分頁問一次 |
 | 下載 | `setDownloadBehavior` + 事件 → toast / Downloads screen / header 進度條 |
-| HTTP auth | `Fetch.enable(handleAuthRequests)`（每個 request pause 一次、goroutine 裡 continue）→ 兩個框 → `continueWithAuth` |
-| 檔案上傳 | `fileChooserOpened` → picker（`filepicker.go`，`importDir()` 起）→ `SetFiles` |
+| HTTP auth | `Fetch.enable(handleAuthRequests)`（每個 request pause 一次、goroutine 裡 continue）→ `pageask.go` 的登入 popup（`n` 名字、`p` 密碼、Enter 送出、Esc 取消）→ `continueWithAuth` |
+| 檔案上傳 | `fileChooserOpened` → lib 的 file-picker（`importDir()` 起）→ `SetFiles` |
 
 ## 設計決定
 
 0.2.x 把 accessibility tree 排成一長頁；0.3.0 把它讀成一份**文件**。各項的完整理由與日期在設計文件裡，這裡是摘要：
 
 - **一份文件三個畫面。** 有三個以上標題的頁面開頁先進**目錄**：一列一節、依深度縮排、右欄是它有幾張表、幾段 code、幾個媒體、多少行。`Enter` 讀**一節** —— 一節包含它的子節，章包含節 —— `n`/`p` 在同深度的節之間走、`Esc` 回目錄。`Space` › `One sheet` 攤成一整張，`Sections` 再切回來。
-- **四個 part，靠幾何切。** 頁面上最大的區塊是 **body**；在它旁邊的是 **others**；在它前面的是 **header**、後面的是 **footer**。不看標籤叫什麼 —— `nav` 也好、`div` 也好，位置決定。頁面比視窗矮、或沒有一塊獨大的頁面就是一塊。
+- **四個 part，靠幾何切。** 頁面上最大的區塊是 **body**；在它旁邊的是 **others**；在它前面的是 **header**、後面的是 **footer**。不看標籤叫什麼 —— `nav` 也好、`div` 也好，位置決定。頁面比視窗矮、或沒有一塊獨大的頁面就是一塊（[2] 沒有 tab）。
 - **finder，不是逐字搜。** `/` 的範圍是四個 part 裡每一個持有文字的區塊；清單上 `Enter` 是**去那裡**（切 part、開節、走進項目、游標落定），什麼都不按。`go` 加數字跳行；目錄上的行號就是節的序號。
 - **一件事一列。** 佔好幾行的清單項目或 article 只畫第一行；`Enter` 走進去、`Esc` 出來，頁面巢多深就走多深。
 - **表單畫成表單。** label 一欄對齊、值靠一邊、label 永不截斷（擠不下就疊成兩列）。每一種輸入都定義了互動；日期、時間、顏色框不合瀏覽器的形狀就擋下來，不讓瀏覽器無聲丟掉。
 - **頁面自己的彈窗靠行為認** —— 按下之後出現、拿到 focus 或自己宣告或疊在別的東西上、裡面有東西可按 —— 從不看標籤。它要一個回答：`Esc` 不關。
-- **寬度是游標實際前進幾格**（2026-09-29，tdp D6 v0.1.20）。有些終端機與字型的組合印一個 Nerd Font 的 icon 游標會前進兩格，lipgloss 卻量成一格（不舉字型當例子：同一個字型在不同終端機上前進的格數可能不同 —— filu 實測 Maple Mono NF CN 的 icon 看起來兩格、游標只前進一格，tdp D7 v0.1.23），每一列有 icon 的框線就被推出去。啟動時（`main.go` 在 `tea.NewProgram` 之前、`version` / `help` / `browser update` 不做）`DetectIconWidth()` 印一個 icon、用 CPR 問游標落在哪，量到的格數存在 `iconCells`；`WEBU__ICON_WIDTH`（1 或 2）可以蓋過它；沒設時讀家族共用的 `TERMINU__ICON_WIDTH` —— 有 PTY 的家族 app 設給子程序，因為在別的 app 的 PTY 裡，探測是由那個 app 的終端模擬器回答、icon 一律量成一格（2026-09-29，tdp D6 v0.1.22）；兩個都沒有才探測，只收 1、2。webu 自己沒有 PTY，不用設它。所有量寬度的地方都走 `width.go`：`dispW`（`truncate` / `padRight` 等逐字量，自然跟著對）、`clipANSI`、`cutLeft`，疊 popup 用 `composite`（取代 `overlay.Composite`）、置中用 `center`（取代 `lipgloss.Place`）、並排與堆疊用 `joinH` / `joinV`；`internal/ui` 裡除了 `width.go` 自己，沒有 `lipgloss.Width` / `Place` / `Join`、`ansi.StringWidth` / `Truncate`、`overlay.Composite`。`iconCells` 是 1 時量法與 lipgloss 完全一樣。參考實作是 filu 的 `width.go`（分頁用的羅馬數字 webu 沒有，不搬）；探測只在 unix，家族不出 Windows。`d6_test.go` 在一格與兩格下逐一打開每種 popup，量單獨的框與疊上去的整個畫面。`composite` 碰到比畫面寬或高的 popup（調整終端機大小那一格還是舊尺寸）時起點取 0、超出的部分切掉、畫面維持原尺寸，不 panic（2026-09-29，tdp D6 v0.1.21；filu 的參考實作原本會 panic，兩者都大時還會整個回傳 popup）。
-- **單行的值只過濾貼上的那一段**（2026-10-06，terminu 的 input 盤點）。Bubble Tea v1.3.10 的 bracketed paste 把整段原樣放進一個 `KeyRunes`（換行、`\r`、Tab、ESC 都在裡面），按下去的 Tab、Enter、Ctrl-J 是別的 `msg.Type`，本來就不會變成字元；所以六處收字（`inputPopup`、`filePicker`、`finder`、`listPanel`、`devtoolsPopup`、`selectMode`）都走 `oneline.go` 的 `takeText`，input popup 打開時預填的值與提議走同一個過濾（`cleanValue`；locku 的經驗：同一個值兩條路進來，用同一個過濾）。`\r\n` 存成一個 `\n`，一個 rune 就是一個單位，`Backspace`、遮罩、量寬都不用另外處理。畫一律走 `valueView`：值裡的 Tab、換行不能直接交給 lipgloss（`Render` 會把 Tab 換成空白、在換行處斷列），先換成 `\n`、`\t` 再上色；灰的列不分段，畫成純文字後整列一次上色（finder 清單階段的 query 列是「一整段 Overlay0」，`TestFinderShowsWhichSideHasTheKeys` 量的就是這個）。值裡有換行或 Tab 時 12 種 input 的 `Enter` 一律擋：`inputKey` 在依 `inputAction` 分派之前先問 `breakAt`，所以每個框都可能被拒，`canFail()` 拿掉、每個框打開時就留錯誤列。
 - **frame 是一層。** 跨站 frame 是另一個 process、另一個 target，`Page.getFrameTree` 看不到；webu 用 `DOM.describeNode` 拿到它的 target、開一條自己的 session。frame 的 node id 從 1 重新數，所以帶進來時加上 `slot × 2^40`。巢狀 frame 一層一層接。
 - **顏色是概念，不是元素。** 可按的 sapphire、可填的 mauve、code pink、媒體灰、pagetab rosewater、填錯的值紅；heading 與目錄用五個 hue 表深度。沒有括號、沒有 emoji，每個控制項以 glyph 開頭。配色 catppuccin-mocha。
 - **頁面記得自己的位置**，每個 history entry 各記一份。還在長的頁面（SPA）spinner 一直轉到兩次看到的一樣為止。`Enter` 先 hover 再點。一次一個動作，快速走動不會把點擊拉離目標。
 - **webu 簽自己的名字** —— Chromium 自報的 user agent，把 headless 版的 `HeadlessChrome/` 寫成 `Chrome/`、尾巴接 `webu/<version>`。不是偽裝，是一個真瀏覽器的名字。
 - **預設搜尋是 DuckDuckGo 的 HTML 端點**，因為 Google 對每一次 headless 搜尋都回 reCAPTCHA。
 - **沒有交棒給視窗** —— CAPTCHA、passkey、WebRTC 是牆，webu 明講；webu 必須能在沒有 display 的機器上跑，所以沒有視窗可以交棒。
-- **按鍵與家族習慣（tdp D5）** —— D5 記的是家族的按鍵習慣、不是規則；webu 有四處跟它不同：
-  - `[go] Go to line` 用 `g` 開頭：D5 把 `j k u d g G h l` 保留給移動，`go` 本身就是移動（游標跳到第幾行），跟 `gg` 同一族，不是動作。
-  - visual mode 是小寫 `v`，雖然它作用在整個面板：`V` 保留給 splash（tdp S1），而且模式不是 panel operation（`ux.md` §A.0.K，2026-09-21）。
-  - 讀一節時的 `n` / `p`（下一節 / 上一節）是小寫的 panel operation：大寫的 `N` / `P` 已經是上一頁 / 下一頁。
-  - `h` / `l` 是同一列左右移動、pagetab 上換 part，不是 D5 的「panel 內換分頁」：webu 的 `[2]` 沒有分頁，分頁在 `[1]`。
-- **visual mode 裡 `Space` 不作用** —— visual mode 是一個模式，它的鍵是移動與選字（`h/j/k/l`、`w/e/b`、`v/V`、`y`、`/`），直接按、連著按，不是對某個 item 的動作。所以模式裡沒有 Space menu，也沒有可以執行的按鍵清單：`Space` 不作用，`?` 是模式的 key reference（`selectKeys`，唯讀），footer 列 `?` 與模式的鍵（2026-09-28，tdp K11 v0.1.10）。這取代了 2026-09-27 的定案：當時 `Space` 打開一張 cheatsheet（message popup 的 `passKeys`），按上面的鍵就關掉並執行 —— 把直接按的鍵變成從清單挑來執行，只是多繞一步。
-- **Space menu 的 global operation 區只有一列（tdp M2）。** global 區固定一列 `Global operation`，`Enter` 打開 global operation popup，疊在 Space menu 上；全域動作在那裡、可以直接執行。這一列不標 `[?]`：Space menu 也是 popup，在它上面按 `?` 照 K6 顯示它自己的按鍵。2026-09-26 定案時 webu 把 `P` / `N`、`L`、`/`、`v` 也算全域動作（約十個，全列會比 panel 自己的動作還長，所以只放一列，當時是偏離 tdp v0.1.0 的 M2）；tdp v0.1.2 起 M2 規定固定一列，不再是偏離。2026-09-27 起全域動作只有五個畫面與離開：`P` / `N`、`L`、`/`、`v` 作用在頁面上，是 `[2]` 的 panel operation（tdp M3、P3）。
+- **畫面建在 terminu-go 上**（2026-10-18，tdp E8）：框、膠囊、Space menu、global operation popup、key reference、hint、footer、confirm、toast、每一種 input、viewer、finder、splash、淡化、icon 與 powerline 符號的寬度（探測、`WEBU__ICON_WIDTH`／`WEBU__POWERLINE_WIDTH`、`TERMINU__` 的兩個）全部是 lib 的；webu 原本自己做的那一份（popup、spacemenu、dim、width、iconwidth、splash、chrome、listpanel……）刪掉。webu 只畫 [2] 裡面的頁面。`go.mod` 寫 terminu-go 的 tag，開發時用不進版控的 `go.work` 接 `../terminu-go`。
+- **頁面的四個 part 是 [2] 的 panel tab**（2026-10-18，WB2 暫定）：第一個 tab 是整頁 `PAGE`，後面是這一頁有的 part；`h|l` 換 tab（tdp K12：有 tab 的 panel，`h|l` 給 tab）。原本網址列下那條 pagetab、`Esc` 上 pagetab、`h|l` 在同一列的 item 之間走都拿掉；`j|k` 照閱讀順序一個 item 一個 item 走（先同一列、再下一列），到頭尾繞回（K12），`u|d` 半頁。
+- **[2] 是 [1] 的明細**（2026-10-18，WB7 暫定）：[1] 的游標移到哪個分頁，[2] 就顯示哪個（還沒載入的分頁換到才載）；[1] 的 `Enter` 用 lib 的 ToDetails 把 focus 送到 [2]（tdp K3 唯一可以用 Enter 換 panel 的地方）。
+- **DevTools 是一個畫面**（2026-10-18，WB4 暫定）：`I`，[1] 是 Network／Storage／Console／Source 四個 panel tab（各是 lib 的 List，含 panel filter），[2] 是游標那一筆的明細（request 的標頭與 body、console 的全文）；看的是 Web 畫面正在顯示的分頁。
+- **visual mode 是 [2] 的 mode**（tdp K11）：lib 畫模式名與模式色、`Esc` 離開、`Space` 不作用、`Tab` 與數字鍵暫停（`Pause`）、`?` 列模式的鍵；模式裡的鍵（`h|j|k|l`、`w|b|e`、`0|$`、`u|d`、`gg|G`、`v|V`、`y`、`/`、`n|N`、`Enter`）是 `ModeKey`，做的事是 `selectMode` 的。`V` 登記在模式的鍵裡，lib 就不把它當 splash（`takesV`）。`/` 開 lib 的 TextInput 問要找什麼，`n|N` 在結果間走。
+- **visual mode 是小寫 `v`**：`V` 保留給 splash（tdp S1）。讀一節時的 `n`／`p` 是小寫的 panel operation：大寫的 `N`／`P` 已經是上一頁／下一頁。`[go] Go to line` 用 `g` 開頭（K12 允許 `g` 開頭的兩鍵組合當熱鍵），開 lib 的 NumberInput 問行號。
+- **[1] 與 [2] 的熱鍵各自歸各自的 panel**（tdp P3、M4）：`P`／`N`、`L`、`/`、`v` 作用在頁面上，只在 [2] 按得到；`T`（新分頁）兩邊都有。全域動作只有切畫面（`W`／`B`／`H`／`D`／`S`／`I`）與離開。
+- **離開只在有下載進行中時先問**（tdp K9 的離開流程由 app 決定）：`syncQuit` 依下載數設 `App.Quit`。
+- **Settings 是一列一個值的 panel**（lib 的 `Values`）：文字設定開 TextInput（目前生效的值當灰字提議，`Backspace` 再 `Enter` 是預設）、`input_tab_width` 開 NumberInput、開關是原地翻的 checkbox，設好就存（layout/panel 的一列一個值）。家族共用的 `hide_secrets_in_preview`、`input_tab_width`（tdp E3）也在這裡，交給 lib 的 `App.HideSecretsInPreview`、`App.InputTabWidth`。
 
 ## 已否決，不要重提
 
@@ -228,6 +226,9 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 | heading 用六級底色（09-22） | 五個 hue 輪流表深度（09-23） | `ui.md` §2 `[2]` |
 | 頁面的彈窗佔整個面板 | 浮在 `[2]` 上的框（2026-09-23） | `ui.md` §2 `[2]` |
 | `/` 進 visual mode 搜尋 | `/` 是 finder（2026-09-23） | `ux.md` §1.1 |
+| webu 自己的 popup、Space menu、淡化、寬度函式、splash（到 0.5.0） | terminu-go 的（2026-10-18，tdp E8） | 本檔「設計決定」 |
+| 網址列下的 pagetab、`Esc` 上 pagetab（2026-09-23） | part 是 [2] 的 panel tab（2026-10-18） | 本檔「設計決定」 |
+| DevTools popup（2026-09-21） | DevTools 畫面（2026-10-18） | 本檔「設計決定」 |
 
 ## 已知的牆與未做
 
@@ -243,16 +244,18 @@ App palette（`focusColor` / `handColor` / `headerColor` / `pagetabColor`…）�
 - 頁面名字自帶 Nerd Font glyph（APG 的 tree 用 U+F07B 當資料夾 icon）看起來像多一格空白 —— 先放著
 - 滑鼠、Linux ARM
 
-webu 照 tdp v0.1.23 逐條修完（2026-09-29）；有意不照做的地方列在下一節。
+- lib 還沒有的：從程式切換畫面、移動 focus（WB6，暫時送合成的按鍵）；confirm、input 被 Esc 關掉時通知 app（WB3，頁面的問題暫時是 webu 自己的 popup）。
+
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18）；有意不照做的地方列在下一節，還沒符合的列在 `docs/webu-terminu-fix.md`（有的話）。
 
 ## 偏離 tdp
 
-- **頁面自己的彈窗是 `[2]` 的內容，不是 webu 的 popup（K4、F3、K5、K6）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在頁面上的框（`ui.md` §2.4），看起來像 popup，但它是頁面的一部分：頁面放它上來要一個回答，webu 只是把頁面畫出來。所以它上面的鍵照 panel `[2]` 走，不照 popup 走：
-  - `Esc` 不關它（偏離 K4、F3）：關掉等於把頁面要的決定擱著。`Esc` 在它上面只 toast 說明，要按裡面的按鈕、或等頁面自己收掉（`ux.md` §5；`app.go` `togglePagetab`）。
-  - `Space` 在它上面打開 `[2]` 的 Space menu，疊在它之上（偏離 K5 的「popup 上不疊 Space menu」）：它的按鈕、連結是 `[2]` 的 item，要能用 Space menu 操作；焦點始終在 panel 上。
-  - `?` 是 `[2]` 的 key reference，不是「這個 popup 的鍵」（K6 以 panel 處理）。
-  - 它不屬於 F1 的六類（F1 點名 webu 的頁面彈窗），所以也不照 F7、F8：它的寬度（`popupWidth()`）、疊層錯開、開著時只把 `[2]` 畫暗當 backdrop，都是頁面內容的畫法。反過來，webu 的 popup 開在它上面時，它跟整個畫面一起照 F8 變暗（2026-09-28）。它自己的 backdrop（底下的頁面與下層的頁面彈窗）也照 D2 淡化，不再借「正在離開的頁面」那套全灰的樣式（2026-09-28）。
-  webu 自己的 popup 照 K4、K5、K6、F3、F7、F8。
+- **頁面自己的彈窗是 [2] 的內容，不是 webu 的 popup（tdp F1、K4、F3）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在 [2] 內容上的框（`ui.md` §2.4、`pagebody.go` 的 `pagePopupFloats`），它是頁面的一部分：頁面放它上來要一個回答，webu 只是把頁面畫出來。所以它不是 lib 的 popup、不在 F1 的七類裡（F1 點名 webu 的頁面彈窗是 app 的偏離），上面的鍵照 panel [2] 走：
+  - `Esc` 不關它（偏離 K4、F3）：關掉等於把頁面要的決定擱著；`Esc` 在它上面只 toast 說明（`pageEsc`）。
+  - `Space` 是 [2] 的 Space menu，`?` 是 [2] 的 key reference：它的按鈕、連結是 [2] 的 item。
+  - 它的寬度、疊層錯開（`popupWidth`、往右下錯開 3 欄 1 列）、底下的頁面淡化，都是頁面內容的畫法；webu 的 popup（lib 的）開在它上面時，它跟整個畫面一起被 lib 淡化。
+- **頁面的 alert／confirm／prompt／beforeunload 與 HTTP 登入是 webu 自己的 popup（tdp F1、components/dialog/confirm）。** `pageask.go`，用 lib 的 `App.Popup`：框、標題、層色、開關動畫、淡化、`?`、`q` 是 lib 的，裡面的字與按鍵是 webu 的，長相照 confirm（要先看的內容在上、問句最後、`Enter` 接受、`Esc` 取消）。原因：頁面必須收到「取消」這個回答才會繼續，而 lib 的 confirm、TextInput 被 `Esc` 關掉時不通知 app（WB3，回報為 lib 要補）。lib 補上之後換回 lib 的 confirm 與 input。
+- **goreleaser 排除 linux/arm64（tdp project 的範本檔）。** `.goreleaser.yaml` 的 builds 多一段 `ignore`（`TODO(tdp WB1)`）：Chromium 的 snapshot bucket 沒有 Linux ARM 版，webu 只跑釘死的 snapshot，這個平台的執行檔永遠抓不到引擎。範本沒有讓 app 排除平台的地方，回報為範本的缺漏。
 
 ## 設計文件導讀
 
@@ -269,21 +272,26 @@ webu 照 tdp v0.1.23 逐條修完（2026-09-29）；有意不照做的地方列�
 
 ### 用什麼做的
 
-Go、[Bubble Tea](https://github.com/charmbracelet/bubbletea) 與 [Lip Gloss](https://github.com/charmbracelet/lipgloss)、浮層用 [bubbletea-overlay](https://github.com/rmhubbert/bubbletea-overlay)、Chrome DevTools Protocol 用 [chromedp](https://github.com/chromedp/chromedp)、語法色用 [chroma](https://github.com/alecthomas/chroma)。瀏覽器是 Chromium 專案自己的 snapshot 版，依 revision 釘死。
+Go、家族的 [terminu-go](https://github.com/vulcanshen/terminu-go)（建在 [Bubble Tea](https://github.com/charmbracelet/bubbletea) v1 上；頁面內容用 [Lip Gloss](https://github.com/charmbracelet/lipgloss) 上色）、Chrome DevTools Protocol 用 [chromedp](https://github.com/chromedp/chromedp)、語法色用 [chroma](https://github.com/alecthomas/chroma)。瀏覽器是 Chromium 專案自己的 snapshot 版，依 revision 釘死。
 
 ### 從原始碼建置
 
 ```bash
 git clone https://github.com/vulcanshen/webu.git
 cd webu
-make build     # → ./webu（CGO_ENABLED=0、-trimpath、strip）
+make build     # → ./webu（CGO_ENABLED=0、-trimpath、strip；版本是 dev）
 ./webu
 ```
+
+頂層多出 tdp project 圖上沒有的兩樣：`tools/axdump`（看任何頁面的 accessibility tree，`make axdump`）與 `CLAUDE.md`（指向 2026-10-18 那次重構的交代，給 AI 協作時找回脈絡）。
+
+同時改 terminu-go 時，在 repo 旁邊放 `../terminu-go`，用不進版控的 `go.work` 接上：`go work init . ../terminu-go`。`make check` 有 `go.work` 時會多跑 `check-lib`（關掉 `go.work`、照 `go.mod` 寫的 tag 編譯與測試），過不了就是用到了 lib 還沒發版的東西。
 
 ```
 make build              → ./webu；第一次啟動會把釘死的 Chromium 下載到 cache
 make install / uninstall → $GOBIN
-make test               全部測試；需要瀏覽器的只在 Chromium 下載好之後跑，否則 skip
+make test / test-race   全部測試；需要瀏覽器的只在 Chromium 下載好之後跑，否則 skip
+make check              commit 前：fmt-check、vet、test-race，有 go.work 時加 check-lib
 make fixtures           用釘死的 Chromium 重抓 internal/ir 的 role fixture 與 docs/support.md
 WEBU__SMOKE=1 go test ./internal/ui -run TestSmoke -v     真站 smoke（Hacker News、GitHub）
 make axdump URL=https://…                                任何頁面的 accessibility tree，用本機 Chrome
@@ -291,18 +299,22 @@ make gif                從 .local/demos/demo.tape 重錄 docs/demo.gif（VHS、
 make snapshot           goreleaser 本機打包到 dist/
 ```
 
-`make` 列出全部。
+`make` 列出全部：家族共用的 target 在 `family.mk`（tdp project 的範本，不在 webu 裡改），webu 自己的（`fixtures`、`axdump`）在 `Makefile` 最後一段。
 
 - **fixture 與 golden**：`internal/ir/testdata/<group>.html` → `make fixtures`（只認釘死的 Chromium）→ `<group>.json` → `.golden`（`ir.Dump`）+ `.md`（`ir.Markdown`）；`internal/ui/testdata/<group>.render` 是同一批在 60 欄的排版。`-update` 重生 golden，改渲染時看 diff 決定。
 - **`go test ./...`**：ir 三份 golden、ui 的排版 golden、store、paths、browser（UA）、page（sessions）。
 - **瀏覽器測試**（需要釘死的 Chromium，沒有就 skip）：`hooks_test`（dialog、新視窗、憑證、下載、auth、上傳 picker、PDF、hover、iframe 同站）、`frame_test`（跨站 + 巢狀）、`popup_test`、`loading_test`、`lines_test`、`finder_test`、`editor_test`、`listbox_test`、`tree_test`、`tabs_test`、`slider_test`、`gauges_test`、`tooltip_test`、`section_test`、`parts_test`、`app_test`（back 回原位、combobox 沒 option）。
-- **測試 driver**（`app_test.go`）：`newDriver` / `startAt` / `until`（20 秒）/ `cursorOn` / `key`；`until` 的條件要寫 closure（`d.m` 是值，綁方法會綁到舊副本）。
+- **測試 driver**（`app_test.go`）：把訊息一個一個交給 lib 的 `App.Update`、在 goroutine 裡跑 command；`d.view()` 是去掉樣式的 `App.Frame()`，popup 開沒開看它的標題（例：`OPEN LINK`）；`d.press` 是按鍵後等開關動畫跑完（lib 在 popup 開完之前不收鍵）；`d.action(label)` 直接跑 focus 的 panel 的某個動作。`toast` 還在時第一個 `Esc` 先收 toast（tdp K4），測試要算進去。
 - **重現 TUI bug** 用 Go driver；要手動跑 `./webu` 重現時，把 `WEBU__CONFIG`、`WEBU__DATA` 指到暫存目錄，不碰自己的設定、書籤與登入。
 - **glyph 碼位**用 `fontTools` 讀已安裝 Nerd Font 的 cmap 查，不憑記憶。
-- **demo gif**：vhs 0.12.0 曾在 macOS 上 2 秒就結束、不出檔也不報錯；遇到時改用 0.11.x：`make gif VHS=<vhs 0.11 的路徑>`。
+- **demo gif**：`make gif`（family.mk，tape 在 `.local/demos/`）；vhs 0.12.0 曾在 macOS 上 2 秒就結束、不出檔也不報錯，0.12.1 正常。
+- **實機截圖**：照 terminu-go 的 `scripts/tmux-shot.sh`，用自己的 tmux server（`tmux -L …`）與 `codepoint-widths` 試 icon 兩格；設定與資料指到暫存目錄（`WEBU__CONFIG`、`WEBU__DATA`）。
 
 ## 發布
 
-走家族的做法：推一個 `v*` tag，GitHub Actions 在兩個平台跑測試、goreleaser 打包並更新 Homebrew tap（`vulcanshen/homebrew-tap` 的 `webu.rb`），release note 是 `CHANGELOG.md` 對應的那一節。
+照 tdp project 的「發布」：`make check` 通過 → CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C` → commit、打 tag `vX.Y.Z` → push commit 與 tag。`release.yml`（範本）在 ubuntu 與 macOS 跑 `go test -race`、goreleaser 建置並推 Homebrew tap（`vulcanshen/homebrew-tap` 的 `webu.rb`），再用 CHANGELOG 那一段蓋過 release 的內文（awk 抓 `## <tag>` 那一段）。0.5.0 以前的 CHANGELOG 標題照當時的寫法（`## [0.5.0] — 2026-10-06`），不改。
 
-發布後確認資產時看 `repos/<owner>/<repo>/releases/<id>/assets`；`gh release view` 與 `releases/tags/<tag>` 的 assets 剛發布時可能還是空的。**不要對已經成功的 run 重跑 release job** —— goreleaser 會因為資產已存在而失敗；真的要重來，先刪掉資產再重跑。
+- **token**：goreleaser 讀 `GITHUB_TOKEN`；workflow 在 secret `ACTION_TOKEN` 有設時用它（內建的 token 寫不了 tap）。
+- **`make release-check`**：goreleaser 把 `brews` 標成 deprecated，只有這個警告不算失敗。
+- 發布後確認資產時看 `repos/<owner>/<repo>/releases/<id>/assets`；`gh release view` 與 `releases/tags/<tag>` 的 assets 剛發布時可能還是空的。**不要對已經成功的 run 重跑 release job** —— goreleaser 會因為資產已存在而失敗；真的要重來，先刪掉資產再重跑。
+- 發版前 `check-lib` 一定要過：`go.mod` 寫的 terminu-go 必須是打過的 tag。

@@ -177,29 +177,6 @@ func TestReadingOneSection(t *testing.T) {
 	}
 }
 
-// The bottom border says which piece of how many, and inside a long one,
-// how far down it you are. That is the position sense the sheet lacked.
-func TestSectionHint(t *testing.T) {
-	kids := []*ir.Node{hd(1, "Title"), para(text("lede"))}
-	for i := 0; i < 3; i++ {
-		kids = append(kids, hd(2, "Part "+itoa(i)))
-		for j := 0; j < 30; j++ {
-			kids = append(kids, para(text("line "+itoa(j))))
-		}
-	}
-	root := doc(kids...)
-	tb := &tab{root: root, cursor: -1}
-	tb.relayout(40)
-	tb.sec = 2
-	if got := tb.sectionHint(10); got != "3/4 · Part 1" {
-		t.Errorf("list hint is %q", got)
-	}
-	tb.openSection(10)
-	if got := tb.sectionHint(10); !strings.HasPrefix(got, "3/4 · Part 1 · ") || !strings.HasSuffix(got, "%") {
-		t.Errorf("reading hint is %q, want a percentage on it", got)
-	}
-}
-
 // The user's word beats the cut: a page the sections suit badly goes back
 // to being one sheet, and the menu row that does it says so.
 func TestOneSheetOverrulesTheCut(t *testing.T) {
@@ -343,49 +320,6 @@ func TestHeadingTitleDropsItsOwnAnchor(t *testing.T) {
 		Children: []*ir.Node{link("func Split", "https://ex.test/p#Split", 7)}}
 	if got := headingTitle(only, "https://ex.test/p"); got != "func Split" {
 		t.Errorf("a heading that is one link keeps it: got %q", got)
-	}
-}
-
-// The panel's bottom border says how far through the open section the
-// reader is, as a percentage; a section that fits on screen has none.
-func TestBorderSaysHowFarIn(t *testing.T) {
-	kids := []*ir.Node{hd(1, "Title"), para(text("lede"))}
-	for i := 0; i < 3; i++ {
-		kids = append(kids, hd(2, "Part "+itoa(i)))
-		for j := 0; j < 40; j++ {
-			kids = append(kids, para(text("line "+itoa(j))))
-		}
-	}
-	root := doc(kids...)
-	tb := &tab{root: root, cursor: -1}
-	tb.relayout(60)
-	tb.sec, tb.read = 1, true
-	tb.top = tb.secs[1].first
-
-	if got := tb.readPct(20); got <= 0 || got >= 100 {
-		t.Fatalf("at the top of a long section the reader is part way in: %d%%", got)
-	}
-	// The border says how far in, in words; it is not a progress bar
-	// (user, 2026-09-29).
-	d := keysDriver(t)
-	tb.id, tb.url = 1, "https://example.com/"
-	d.m.tabs, d.m.shown = []*tab{tb}, 0
-	frame := d.m.pagePanel(62, 20+2+pageHeaderRows)
-	last := frame[strings.LastIndex(frame, "\n"):]
-	if !strings.Contains(last, "%") || strings.Contains(last, "━") {
-		t.Errorf("the border should say the percentage and draw no bar: %q", last)
-	}
-	// Scrolled to the end, it is full.
-	tb.top = tb.secs[1].last
-	if got := tb.readPct(20); got != 100 {
-		t.Errorf("at the end of a section the border is full, got %d%%", got)
-	}
-	// A section that fits reports nothing to fill: the last part, on a
-	// screen taller than it. (The h1 holds the whole page now, so it is
-	// not the one that fits.)
-	tb.sec, tb.top = len(tb.secs)-1, tb.secs[len(tb.secs)-1].first
-	if got := tb.readPct(200); got != -1 {
-		t.Errorf("a section that fits has no progress, got %d", got)
 	}
 }
 

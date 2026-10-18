@@ -41,11 +41,26 @@ type Config struct {
 	// Absent means yes; a pointer so that "not set" and "set to false"
 	// are told apart, since the default is the true side (2026-09-21).
 	RestoreSession *bool `yaml:"restore_session,omitempty"`
+	// HideSecretsInPreview is the family's key (tdp E3): the file-picker's
+	// preview shows only the first line of a private key, and nothing of a
+	// file only its owner may read.
+	HideSecretsInPreview bool `yaml:"hide_secrets_in_preview,omitempty"`
+	// InputTabWidth is the family's key (tdp E3): how many spaces Tab puts
+	// in a textarea; 0 is the default, 4.
+	InputTabWidth int `yaml:"input_tab_width,omitempty"`
 }
 
 // Restore reports whether the last session's tabs come back on launch.
 func (c Config) Restore() bool {
 	return c.RestoreSession == nil || *c.RestoreSession
+}
+
+// TabWidth is input_tab_width in force: 4 when unset.
+func (c Config) TabWidth() int {
+	if c.InputTabWidth > 0 {
+		return c.InputTabWidth
+	}
+	return 4
 }
 
 // Measure is the width a paragraph flows to in panel [2]: a number of

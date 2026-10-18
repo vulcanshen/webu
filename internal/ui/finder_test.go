@@ -71,53 +71,6 @@ func TestTheIndexListsEachThingOnce(t *testing.T) {
 	}
 }
 
-// A literal hit ranks above a fuzzy one, and prose is never fuzzy: a
-// subsequence of a long paragraph is nearly any word (finder.refilter).
-func TestHitsRankLiteralFirst(t *testing.T) {
-	long := strings.Repeat("the quick brown fox jumps over the lazy dog ", 4)
-	f := finder{kind: finderSearch, all: []hit{
-		{text: long}, {text: "Terminal emulator"}, {text: "a term of art"}, {text: "tea room"},
-	}}
-	f.query = "term"
-	f.refilter()
-	var got []string
-	for _, h := range f.hits {
-		got = append(got, h.text)
-	}
-	// "Terminal" at a word's start and first; "a term" next; "tea room"
-	// only as a subsequence; the paragraph not at all.
-	if strings.Join(got, "|") != "Terminal emulator|a term of art|tea room" {
-		t.Errorf("order: %q", got)
-	}
-	f.query = "quick brown"
-	f.refilter()
-	if len(f.hits) != 1 || f.hits[0].text != long {
-		t.Errorf("a literal phrase finds the paragraph: %d hits", len(f.hits))
-	}
-}
-
-// [go] filters by the number's digits, as typed.
-func TestGoFiltersByLineNumber(t *testing.T) {
-	f := finder{kind: finderGo, mode: finderNav}
-	for i := 1; i <= 25; i++ {
-		f.all = append(f.all, hit{line: i, text: "line " + itoa(i)})
-	}
-	f.query = "2"
-	f.refilter()
-	if len(f.hits) != 7 { // a prefix: 2, 20, 21, 22, 23, 24, 25 — not 12
-		var got []int
-		for _, h := range f.hits {
-			got = append(got, h.line)
-		}
-		t.Errorf("prefix 2: %v", got)
-	}
-	f.query = "25"
-	f.refilter()
-	if len(f.hits) != 1 || f.hits[0].line != 25 {
-		t.Errorf("25 is one line: %+v", f.hits)
-	}
-}
-
 // [/] over a real page: the hit is found in another part, and Enter goes
 // there — the part switches, the cursor lands, nothing is pressed.
 func TestSearchGoesToAHitInAnotherPart(t *testing.T) {
@@ -142,21 +95,14 @@ func TestSearchGoesToAHitInAnotherPart(t *testing.T) {
 		t.Fatalf("opens on the body, is on %s", p.at.word())
 	}
 
-	d.key("/")
-	d.until("the finder", func() bool { return d.m.finder.isInteractive() })
+	d.key("2")
+	d.press("/")
+	d.until("the finder", d.shows("SEARCH"))
 	d.key("bottom")
-	if len(d.m.finder.hits) != 1 || d.m.finder.hits[0].part != partFooter {
-		t.Fatalf("\"bottom\" is the footer's link: %+v", d.m.finder.hits)
-	}
-	if !d.m.typing() {
-		t.Error("with the keyboard on the query, every key is a character")
-	}
-	d.key("enter")
-	if d.m.finder.mode != finderNav || d.m.typing() {
-		t.Error("Enter hands the keyboard to the list")
-	}
-	d.key("enter")
-	d.until("finder gone", func() bool { return !d.m.finder.isActive() })
+	d.settle()
+	d.key("enter") // to the list
+	d.key("enter") // go there
+	d.settle()
 	if p.at != partFooter {
 		t.Errorf("Enter switches to the hit's part: on %s", p.at.word())
 	}
@@ -166,60 +112,24 @@ func TestSearchGoesToAHitInAnotherPart(t *testing.T) {
 	if !strings.Contains(p.url, "parts.html") || p.loading {
 		t.Error("nothing was pressed: still on the page")
 	}
-
-	// Tab moves between the query and the list, either way; Esc closes
-	// the finder from the list as from the query — a phase is not a layer
-	// (tdp F1, v0.1.9).
-	d.key("/")
-	d.until("the finder again", func() bool { return d.m.finder.isInteractive() })
-	d.key("side")
-	d.send(tea.KeyMsg{Type: tea.KeyTab})
-	if d.m.finder.mode != finderNav || d.m.typing() {
-		t.Fatal("Tab on the query hands the keyboard to the list")
-	}
-	d.send(tea.KeyMsg{Type: tea.KeyTab})
-	if d.m.finder.mode != finderInput || !d.m.typing() {
-		t.Fatal("Tab on the list is back to the query")
-	}
-	d.send(tea.KeyMsg{Type: tea.KeyTab})
-	d.key("esc")
-	d.until("closed from the list", func() bool { return !d.m.finder.anim.owns() })
 }
 
-// [go] over a page: the list is its lines, digits narrow it, Enter is
-// the line.
+// [go] over a page asks for a line by its number, and Enter is the line.
 func TestGoToLineOnAPage(t *testing.T) {
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	exe, ok := browser.Installed()
-	if !ok {
-		t.Skip("pinned Chromium not installed; run webu once")
-	}
-	b, err := browser.Launch(exe, t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Close()
-	abs, _ := filepath.Abs("testdata/nav.html")
-	d := newDriver(t, New(b, "file://"+abs))
+	b := launch(t)
+	d := newDriver(t, New(b, fixture("nav.html")))
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
+	d.key("2")
 	p := d.page()
 
 	d.key("g")
-	d.key("o")
-	d.until("the go finder", func() bool { return d.m.finder.isInteractive() && d.m.finder.kind == finderGo })
-	if len(d.m.finder.hits) != p.lineCount() {
-		t.Errorf("every line is listed: %d of %d", len(d.m.finder.hits), p.lineCount())
-	}
-	d.key("1")
-	d.key("6")
-	if len(d.m.finder.hits) != 1 || d.m.finder.hits[0].line != 16 {
-		t.Fatalf("16 narrows to line 16: %+v", d.m.finder.hits)
-	}
+	d.press("o")
+	d.until("the go box", d.shows("GO TO LINE"))
+	d.key("16")
 	d.key("enter")
-	d.until("finder gone", func() bool { return !d.m.finder.isActive() })
+	d.settle()
 	// Line 16 is the row of buttons: on screen, the cursor on its first.
 	if p.top > 15 || 15 >= p.top+d.m.pageVisible() {
 		t.Errorf("line 16 should be on screen: top %d", p.top)
@@ -258,7 +168,9 @@ func TestALandingSurvivesARebuild(t *testing.T) {
 	// The same page, rebuilt.
 	tb.root = build()
 	tb.relayout(60)
-	m := AppModel{w: 100, h: 30, tabs: []*tab{tb}}
+	m := New(nil, "")
+	m.a.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m.tabs, m.shown = []*tab{tb}, 0
 	if !m.goToHit(tb, deep) {
 		t.Fatal("the hit is the same node by id, and should land")
 	}

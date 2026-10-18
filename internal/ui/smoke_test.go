@@ -185,13 +185,13 @@ func TestSmokeSections(t *testing.T) {
 				t.Logf("  %2d  h%d  %-46s %3d lines  %2d prose %2d link  %dt %dc %dm",
 					i+1, s.level, truncate(s.title, 46), s.lines(), s.prose, s.links, s.tables, s.codes, s.media)
 			}
-			t.Logf("SCREEN\n%s", d.m.View())
+			t.Logf("SCREEN\n%s", d.view())
 			if !p.listing() {
 				return
 			}
 			d.key("j")
 			d.key("enter")
-			t.Logf("OPENED %q\n%s", p.secs[p.sec].title, d.m.View())
+			t.Logf("OPENED %q\n%s", p.secs[p.sec].title, d.view())
 		})
 	}
 }

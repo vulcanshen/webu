@@ -46,13 +46,12 @@ func TestInvalidLegendAndCode(t *testing.T) {
 		t.Errorf("an invalid value is drawn as one: %v", kinds)
 	}
 	d.cursorOn(ir.Textbox, "Email")
-	d.key("enter")
-	d.until("the box", func() bool { return d.m.input.isInteractive() })
-	if d.m.input.title != "email · invalid" {
-		t.Errorf("the box says the value is wrong: %q", d.m.input.title)
+	d.press("enter")
+	d.until("the box", d.shows("EMAIL"))
+	if !strings.Contains(d.view(), "the page says the value is not right") {
+		t.Errorf("the box says the value is wrong:\n%s", d.view())
 	}
-	d.key("esc")
-	d.until("box gone", func() bool { return !d.m.input.isActive() })
+	d.press("esc")
 
 	// Each legend once, bold, and not again as a label row.
 	v := dumpLayout(p.lay)
@@ -76,13 +75,9 @@ func TestInvalidLegendAndCode(t *testing.T) {
 	// The code block: a stop, Enter reads it whole with its long line
 	// unfolded.
 	d.cursorOn(ir.Code, "package main")
-	d.key("enter")
-	d.until("the code", func() bool { return d.m.message.isInteractive() })
-	if !strings.HasPrefix(d.m.message.title, "code") {
-		t.Errorf("titled as code: %q", d.m.message.title)
-	}
-	joined := strings.Join(d.m.message.lines, "\n")
-	if !strings.Contains(joined, `fmt.Println("a line of code that is rather long so that it folds at the width of the block, and then some")`) {
-		t.Errorf("the long line whole, on one line:\n%s", joined)
+	d.press("enter")
+	d.until("the code", d.shows("CODE"))
+	if v := d.view(); !strings.Contains(v, `fmt.Println("a line of code`) || !strings.Contains(v, "and then some") {
+		t.Errorf("the block in full, its long line folded under itself:\n%s", v)
 	}
 }

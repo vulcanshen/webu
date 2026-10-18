@@ -117,12 +117,6 @@ type tab struct {
 	// 2026-09-22). A page opens on its body.
 	parts []part
 	at    partKind
-	// pagetab is where the hand is when it is on the pagetab under the URL
-	// rather than in the page (pagepanel.pagetabRow): 0 in the page, i+1 on
-	// capsule i of lay.pagetab, pagetabMore on the "+N" that stands for the
-	// capsules the width left out. Zero in the page, so a tab starts
-	// there. The cursor keeps its place meanwhile: j comes back to it.
-	pagetab int
 
 	// secs is the page cut into sections (section.go) and shape says
 	// whether that cut is used at all: a document gets the section list,
@@ -678,13 +672,6 @@ func (t *tab) apply(msg pageMsg, width int) {
 	if t.cursor >= 0 && t.cursor < len(t.lay.items) {
 		wasID = int64(t.lay.items[t.cursor].node.ID)
 	}
-	// The hand on the pagetab is on a KIND of part, and the kinds are a
-	// closed set: they survive a recapture even when every node behind
-	// them is new (2026-09-22).
-	wasBar, wasBarKind := t.onPagetab(), partMain
-	if i := t.pagetabIndex(); wasBar && i >= 0 && i < len(t.parts) {
-		wasBarKind = t.parts[i].kind
-	}
 	t.root = ir.Build(msg.cap)
 	was := t.print
 	t.print = treePrint(t.root)
@@ -703,13 +690,11 @@ func (t *tab) apply(msg pageMsg, width int) {
 		if len(t.popups) == 0 && t.backRead && t.backSec < len(t.secs) {
 			t.read, t.sec = true, t.backSec
 			t.cursor, t.top = t.firstItem(), t.backTop
-			t.leavePagetab()
 			t.scrollToCursor(0)
 			t.backRead = false
 			return
 		}
 		t.cursor, t.top = t.firstItem(), 0
-		t.leavePagetab()
 		t.scrollToCursor(0)
 		return
 	}
@@ -722,7 +707,6 @@ func (t *tab) apply(msg pageMsg, width int) {
 		t.sec = clamp(t.sec, 0, max(0, len(t.secs)-1))
 		t.cursor = clamp(pl.cursor, -1, len(t.lay.items)-1)
 		t.top = clamp(pl.top, 0, max(0, len(t.lay.rows)-1))
-		t.leavePagetab()
 		return
 	}
 	if fresh {
@@ -736,7 +720,6 @@ func (t *tab) apply(msg pageMsg, width int) {
 		if t.cursor >= 0 {
 			t.top = clamp(t.lay.items[t.cursor].first, 0, max(0, len(t.lay.rows)-1))
 		}
-		t.leavePagetab()
 		return
 	}
 	t.cursor = -1
@@ -748,9 +731,6 @@ func (t *tab) apply(msg pageMsg, width int) {
 	}
 	if t.cursor < 0 && len(t.lay.items) > 0 {
 		t.cursor = clamp(wasIdx, 0, len(t.lay.items)-1)
-	}
-	if wasBar {
-		t.focusPagetab(t.partIndex(wasBarKind))
 	}
 	t.scrollToCursor(0)
 }
@@ -855,7 +835,6 @@ func (t *tab) jumpToAnchor(frag string, visible int) bool {
 // looking unmoved when the target was already on screen (2026-09-22).
 func (t *tab) landOn(i, visible int) {
 	t.cursor = i
-	t.leavePagetab()
 	t.top = clamp(t.lay.items[i].first, 0, max(0, len(t.lay.rows)-1))
 	t.scrollToCursor(visible)
 }
@@ -944,10 +923,6 @@ func (t *tab) relayout(width int) {
 			t.drillBody = at
 		}
 	}
-	// The page may have lost the part the hand was on.
-	if i := t.pagetabIndex(); i >= len(t.parts) {
-		t.leavePagetab()
-	}
 	t.recut()
 }
 
@@ -1030,7 +1005,7 @@ func (t *tab) textWidth() int {
 // cursor on it through the re-layout.
 func (t *tab) toggleFold(width int) {
 	n := t.current()
-	if t.onPagetab() || n == nil || (n.Kind != ir.Landmark && n.Kind != ir.Heading) {
+	if n == nil || (n.Kind != ir.Landmark && n.Kind != ir.Heading) {
 		return
 	}
 	if t.fold == nil {
@@ -1111,13 +1086,12 @@ func (t *tab) scrollToCursor(visible int) {
 	t.top = clamp(t.top, lo, max(lo, hi))
 }
 
-// current is the item under the cursor, or nil — including while the
-// hand is on the pagetab, where what it is on is a part, not an item.
+// current is the item under the cursor, or nil.
 func (t *tab) current() *ir.Node {
 	if t == nil {
 		return nil
 	}
-	if t.onPagetab() || t.cursor < 0 || t.cursor >= len(t.lay.items) {
+	if t.cursor < 0 || t.cursor >= len(t.lay.items) {
 		return nil
 	}
 	return t.lay.items[t.cursor].node
@@ -1133,87 +1107,17 @@ func (t *tab) currentTargets() ([]entryTarget, bool) {
 }
 
 // curFolded is whether the item under the cursor is a landmark drawn
-// shut — never on the pagetab, whose tabs do not fold.
+// shut.
 func (t *tab) curFolded() bool {
-	return !t.onPagetab() && t.cursor >= 0 && t.cursor < len(t.lay.items) && t.lay.items[t.cursor].folded
+	return t.cursor >= 0 && t.cursor < len(t.lay.items) && t.lay.items[t.cursor].folded
 }
 
-// The hand can be on the pagetab under the URL instead of in the page
-// (pagepanel.pagetabRow). tab.pagetab encodes where: 0 in the page, i+1
-// with the hand on part i.
-func (t *tab) onPagetab() bool    { return t.pagetab != 0 }
-func (t *tab) leavePagetab()      { t.pagetab = 0 }
-func (t *tab) focusPagetab(i int) { t.pagetab = i + 1 }
-
-// pagetabIndex is the part the hand is on, or -1.
-func (t *tab) pagetabIndex() int {
-	if t.pagetab > 0 {
-		return t.pagetab - 1
-	}
-	return -1
-}
-
-// enterPagetab puts the hand on the part being shown, which is where the
-// user's eye already is. False when the page has only the one part: there
-// is nothing to move between (app pagetabItem says so instead).
-func (t *tab) enterPagetab() bool {
-	if len(t.parts) < 2 || t.popupNode() != nil {
-		return false
-	}
-	t.focusPagetab(t.partIndex(t.at))
-	return true
-}
-
-// stepPagetab walks the hand along the parts, wrapping at either end the
-// way every menu of the family does — and the panel walks with it: the
-// part the hand reaches is the part on screen, at once (user,
-// 2026-09-23). Moving the hand and then pressing Enter to send it was
-// two steps for one decision; Enter is now the confirmation, which is to
-// take the hand back down (app.enterItem).
-func (t *tab) stepPagetab(k string, visible int) {
-	n := len(t.parts)
-	if n == 0 {
-		t.leavePagetab()
-		return
-	}
-	at := t.pagetabIndex()
-	if k == "h" || k == "left" {
-		at--
-	} else {
-		at++
-	}
-	at = (at + n) % n
-	t.showPart(t.parts[at].kind, t.layW, visible)
-	t.focusPagetab(at)
-}
-
-// moveItem walks the cursor by navigation key. The page is a grid of rows
-// with items on them: j/k step to the nearest row that has one, landing on
-// the item closest to the column the cursor was in; h/l walk the items of
-// the row. Nothing wraps — the page has a top and a bottom (ux.md §3) —
-// except that above the top is the pagetab under the URL, the page's chrome
-// (pagepanel.pagetabRow): k from the top puts the hand on its first capsule,
-// h/l walk the capsules and wrap the way a menu does, j comes back down
-// to the item the hand left, and any other key comes down first and then
-// does what it does.
+// moveItem walks the cursor by navigation key (Rules K12): j and k step
+// to the next and the previous item in reading order — along a row, then
+// on to the next row — and wrap at either end, the way every list of the
+// family does; u and d go half a page and stop at the ends; gg and G go to
+// the first and the last. h and l are panel [2]'s tabs, the page's parts.
 func (t *tab) moveItem(k string, visible int) {
-	if t.onPagetab() {
-		switch k {
-		case "h", "left", "l", "right":
-			t.stepPagetab(k, visible)
-			return
-		case "k", "up":
-			return
-		case "j", "down":
-			t.leavePagetab()
-			if t.cursor < 0 && len(t.lay.items) > 0 {
-				t.cursor = t.firstItem()
-			}
-			t.scrollToCursor(visible)
-			return
-		}
-		t.leavePagetab()
-	}
 	n := len(t.lay.items)
 	lo, hi := t.rowRange()
 	first, last := 0, n-1
@@ -1222,36 +1126,28 @@ func (t *tab) moveItem(k string, visible int) {
 	}
 	if n == 0 || first < 0 {
 		// Nothing to stop on — an empty page, or a section that is all
-		// prose: the keys scroll the text instead, and k at the top goes
-		// up onto the pagetab.
-		if (k == "k" || k == "up") && t.top <= lo && !t.read && t.enterPagetab() {
-			return
-		}
+		// prose: the keys scroll the text instead.
 		t.top = clamp(moveScroll(t.top-lo, max(0, hi-lo+1-visible), k, visible)+lo, lo, max(lo, hi))
+		return
+	}
+	if t.cursor < first || t.cursor > last {
+		t.cursor = first
+		t.scrollToCursor(visible)
 		return
 	}
 	half := max(1, visible/2)
 	switch k {
-	case "j", "down":
-		t.cursor = t.rowStep(1)
-	case "k", "up":
-		// Off the top: up onto the pagetab, which is the row above the
-		// page. Inside an open section it stops — a movement key moves
-		// the cursor and does not change which screen you are on; Esc is
-		// the one move up (user, 2026-09-22, the same objection as l
-		// opening a section).
-		if at := t.rowStep(-1); at != t.cursor && at >= first {
-			t.cursor = at
-		} else if !t.read && t.enterPagetab() {
-			return
+	case "j":
+		if t.cursor++; t.cursor > last {
+			t.cursor = first
 		}
-	case "l", "right":
-		t.cursor = t.alongRow(1)
-	case "h", "left":
-		t.cursor = t.alongRow(-1)
-	case "d", "ctrl+d":
+	case "k":
+		if t.cursor--; t.cursor < first {
+			t.cursor = last
+		}
+	case "d":
 		t.cursor = t.itemFromRow(t.lay.items[t.cursor].first+half, 1)
-	case "u", "ctrl+u":
+	case "u":
 		t.cursor = t.itemFromRow(t.lay.items[t.cursor].first-half, -1)
 	case "gg":
 		t.cursor = first
@@ -1262,58 +1158,25 @@ func (t *tab) moveItem(k string, visible int) {
 	t.scrollToCursor(visible)
 }
 
-// rowStep is the item on the nearest row of items in direction dir whose
-// column is closest to the cursor's; the cursor itself when there is none.
-func (t *tab) rowStep(dir int) int {
-	cur := t.lay.items[t.cursor]
-	target := -1
-	for _, it := range t.lay.items {
-		switch {
-		case dir > 0 && it.first > cur.first && (target < 0 || it.first < target):
-			target = it.first
-		case dir < 0 && it.first < cur.first && (target < 0 || it.first > target):
-			target = it.first
-		}
+// moveScroll moves a window's top by a navigation key when there is no
+// cursor to move: a line, half a page, the ends.
+func moveScroll(top, last int, k string, page int) int {
+	half := max(1, page/2)
+	switch k {
+	case "j":
+		top++
+	case "k":
+		top--
+	case "d":
+		top += half
+	case "u":
+		top -= half
+	case "gg":
+		top = 0
+	case "G":
+		top = last
 	}
-	if target < 0 {
-		return t.cursor
-	}
-	best, bestD := -1, 0
-	for i, it := range t.lay.items {
-		if it.first != target {
-			continue
-		}
-		d := it.col - cur.col
-		if d < 0 {
-			d = -d
-		}
-		if best < 0 || d < bestD {
-			best, bestD = i, d
-		}
-	}
-	return best
-}
-
-// alongRow is the next (dir 1) or previous item on the cursor's row, or
-// the cursor itself at the row's end.
-func (t *tab) alongRow(dir int) int {
-	cur := t.lay.items[t.cursor]
-	best := -1
-	for i, it := range t.lay.items {
-		if i == t.cursor || it.first != cur.first {
-			continue
-		}
-		switch {
-		case dir > 0 && it.col > cur.col && (best < 0 || it.col < t.lay.items[best].col):
-			best = i
-		case dir < 0 && it.col < cur.col && (best < 0 || it.col > t.lay.items[best].col):
-			best = i
-		}
-	}
-	if best < 0 {
-		return t.cursor
-	}
-	return best
+	return clamp(top, 0, max(0, last))
 }
 
 // itemFromRow is the first item at or after row (dir 1) or at or before it
@@ -1427,12 +1290,10 @@ func (t *tab) goToLine(n, visible int) bool {
 }
 
 // landRow is where a jump into the page arrives: the window scrolled so
-// the row is the first on screen, the hand off the pagetab, and the
-// cursor on the first item at or after the row when there is one.
+// the row is the first on screen, and the cursor on the first item at or after the row when there is one.
 func (t *tab) landRow(row, visible int) {
 	lo, hi := t.rowRange()
 	row = clamp(row, lo, hi)
-	t.leavePagetab()
 	t.top = clamp(row, lo, max(lo, hi-visible+1))
 	if at := t.itemAtOrAfter(row, true); at >= 0 && t.lay.items[at].first <= hi {
 		t.cursor = at

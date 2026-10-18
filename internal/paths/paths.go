@@ -6,6 +6,7 @@ package paths
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 // Config is where webu keeps what the user writes: config.yaml and
@@ -59,17 +60,32 @@ func Downloads() (string, error) {
 
 // Cache is where the Chromium binary goes (function.md §9): a thing that can
 // be re-downloaded, so it lives with the caches rather than with the config.
-// WEBU__CACHE overrides outright; XDG_CACHE_HOME next; then os.UserCacheDir.
+// WEBU__CACHE overrides outright; otherwise the system's cache directory
+// (tdp E3) — macOS ~/Library/Caches/webu, Linux $XDG_CACHE_HOME/webu or
+// ~/.cache/webu, which is os.UserCacheDir.
 func Cache() (string, error) {
 	if p := os.Getenv("WEBU__CACHE"); p != "" {
 		return p, nil
-	}
-	if x := os.Getenv("XDG_CACHE_HOME"); x != "" {
-		return filepath.Join(x, "webu"), nil
 	}
 	dir, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "webu"), nil
+	cache := filepath.Join(dir, "webu")
+	// TODO(tdp WB5): before tdp E3, XDG_CACHE_HOME was read on macOS too. A
+	// Chromium already fetched there is used until one is fetched into the
+	// system's cache directory, rather than fetched again.
+	if x := os.Getenv("XDG_CACHE_HOME"); x != "" && runtime.GOOS == "darwin" {
+		old := filepath.Join(x, "webu")
+		if !exists(cache) && exists(old) {
+			return old, nil
+		}
+	}
+	return cache, nil
+}
+
+// exists reports whether path is there.
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

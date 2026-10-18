@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,7 +11,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-
+	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/page"
 	"github.com/vulcanshen/webu/internal/store"
 )
@@ -18,13 +19,13 @@ import (
 // The Bookmarks screen's folders (ui.md §2, 2026-09-21): a path on each
 // bookmark — "dev/go" is go inside dev — plus the paths declared on their
 // own in bookmarks.yaml so an empty folder exists. The screen and the Move
-// picker show them as a tree, indented by depth; Enter on a folder's row
+// select show them as a tree, indented by depth; Enter on a folder's row
 // folds it.
 
 // folderNames is every folder there is — declared, in use by a bookmark,
 // or an ancestor of either — in tree order: a parent right before what is
 // in it.
-func (m AppModel) folderNames() []string {
+func (m *AppModel) folderNames() []string {
 	seen := map[string]bool{}
 	var out []string
 	add := func(f string) {
@@ -92,7 +93,7 @@ func inFolder(path, f string) bool {
 
 // underFold reports whether some folder above f (not f itself) is folded,
 // which hides f and everything in it.
-func (m AppModel) underFold(f string) bool {
+func (m *AppModel) underFold(f string) bool {
 	parts := strings.Split(f, "/")
 	for i := 1; i < len(parts); i++ {
 		if m.foldedFolders[strings.Join(parts[:i], "/")] {
@@ -102,40 +103,158 @@ func (m AppModel) underFold(f string) bool {
 	return false
 }
 
-// bookmarkEntries is the Bookmarks screen's rows: the top level first,
-// then each folder as a row of its own with what is in it under it, the
-// folders' rows indented by depth. A folded folder is one row, with a
-// count of what it hides.
-func (m AppModel) bookmarkEntries() []listEntry {
-	var out []listEntry
+// bmRow is one row of the Bookmarks screen: a bookmark (ref is its index
+// in m.bookmarks) or a folder's own row.
+type bmRow struct {
+	ref      int
+	folder   string // the bookmark's folder, or the folder itself
+	isFolder bool
+}
+
+// bmRowID is a row's ID in the list: what the cursor is kept by.
+func bmRowID(r bmRow) string {
+	if r.isFolder {
+		return "f:" + r.folder
+	}
+	return "b:" + strconv.Itoa(r.ref)
+}
+
+// buildBookmarks registers the Bookmarks screen (ui.md §2): a tree of
+// folders and bookmarks, Enter opening a bookmark in a new tab or a folder
+// open or shut.
+func (m *AppModel) buildBookmarks() {
+	m.bmList = &terminu.List{
+		Columns:    []terminu.Column{{Title: "Title", Flex: true}, {Title: "URL", Flex: true}},
+		Filterable: true,
+		EmptyFact:  "No bookmarks yet",
+		EmptyHint:  "Press [a] to add one, [I] to import a browser's, or [Space] to see what you can do here",
+	}
+	m.bmPanel = &terminu.Panel{Label: "Bookmarks", Body: m.bmList}
+	m.bmPanel.Actions = append(m.bookmarkActions(), m.bmList.Actions()...)
+	m.bmScreen = m.a.AddScreen(&terminu.Screen{Name: "Bookmarks", Key: "B", Desc: "the pages kept, in folders",
+		Panels: []*terminu.Panel{m.bmPanel}})
+}
+
+// bmCurrent is the row under the cursor.
+func (m *AppModel) bmCurrent() (bmRow, bool) {
+	r, ok := m.bmList.Current()
+	if !ok {
+		return bmRow{}, false
+	}
+	switch {
+	case strings.HasPrefix(r.ID, "f:"):
+		return bmRow{folder: strings.TrimPrefix(r.ID, "f:"), isFolder: true, ref: -1}, true
+	case strings.HasPrefix(r.ID, "b:"):
+		i, err := strconv.Atoi(strings.TrimPrefix(r.ID, "b:"))
+		if err != nil || i < 0 || i >= len(m.bookmarks) {
+			return bmRow{}, false
+		}
+		return bmRow{ref: i, folder: m.bookmarks[i].Folder}, true
+	}
+	return bmRow{}, false
+}
+
+// refreshBookmarks lists the bookmarks as the screen draws them: the top
+// level first, then each folder as a row of its own with what is in it
+// under it, indented by depth. A folded folder is one row, with a count of
+// what it hides.
+func (m *AppModel) refreshBookmarks() {
+	if m.bmList == nil {
+		return
+	}
+	var rows []terminu.Row
+	book := func(i, depth int) {
+		b := m.bookmarks[i]
+		title := strings.Repeat("  ", depth) + oneLine(nameOr(b.Title, b.URL))
+		rows = append(rows, terminu.Row{ID: bmRowID(bmRow{ref: i}), Cells: []string{title, oneLine(b.URL)}})
+	}
 	for i, b := range m.bookmarks {
 		if b.Folder == "" {
-			out = append(out, listEntry{title: b.Title, url: b.URL, ref: i})
+			book(i, 0)
 		}
 	}
 	for _, f := range m.folderNames() {
 		if m.underFold(f) {
 			continue
 		}
-		e := listEntry{title: folderBase(f), folder: f, isFolder: true, ref: -1, depth: folderDepth(f) - 1}
+		depth := folderDepth(f) - 1
+		name := strings.Repeat("  ", depth) + glyphFolder + " " + folderBase(f)
 		if m.foldedFolders[f] {
-			e.folded = true
+			n := 0
 			for _, b := range m.bookmarks {
 				if inFolder(b.Folder, f) {
-					e.count++
+					n++
 				}
 			}
-			out = append(out, e)
+			rows = append(rows, terminu.Row{ID: bmRowID(bmRow{folder: f, isFolder: true}),
+				Cells: []string{name + " " + terminu.Fg(terminu.Overlay0).Render("("+itoa(n)+" shut)"), ""}})
 			continue
 		}
-		out = append(out, e)
+		rows = append(rows, terminu.Row{ID: bmRowID(bmRow{folder: f, isFolder: true}), Cells: []string{name, ""}})
 		for i, b := range m.bookmarks {
 			if b.Folder == f {
-				out = append(out, listEntry{title: b.Title, url: b.URL, folder: f, ref: i, depth: folderDepth(f)})
+				book(i, folderDepth(f))
 			}
 		}
 	}
-	return out
+	m.bmList.SetRows(rows)
+}
+
+// bookmarkActions are the Bookmarks screen's (ux.md §A.1).
+func (m *AppModel) bookmarkActions() []terminu.Action {
+	onFolder := func() bool { r, ok := m.bmCurrent(); return ok && r.isFolder }
+	return []terminu.Action{
+		{Key: "Enter", Label: "Open", Desc: "a bookmark in a new tab; a folder: open or shut", Scope: terminu.ItemScope, Hint: "open",
+			Do: m.do(func() tea.Cmd {
+				r, ok := m.bmCurrent()
+				switch {
+				case !ok:
+					return nil
+				case r.isFolder:
+					m.toggleFolder(r.folder)
+					return nil
+				}
+				// A bookmark opens in a NEW tab, never over the one the web
+				// screen was showing (revised 2026-09-21).
+				return m.openTab(m.bookmarks[r.ref].URL, true)
+			})},
+		{Key: "m", Label: "Move", Desc: "this bookmark to another folder", Scope: terminu.ItemScope, Hidden: onFolder,
+			Do: m.do(func() tea.Cmd { r, _ := m.bmCurrent(); return m.moveSelect(r.ref) })},
+		{Key: "r", Label: "Rename", Desc: "a bookmark's title, or a folder's name", Scope: terminu.ItemScope, Hint: "rename",
+			Do: m.do(func() tea.Cmd { r, _ := m.bmCurrent(); return m.startRename(r) })},
+		{Key: "y", Label: "Yank", Desc: "its URL", Scope: terminu.ItemScope, Hidden: onFolder,
+			Do: func() tea.Cmd { r, _ := m.bmCurrent(); return copyToClipboard(m.bookmarks[r.ref].URL) }},
+		{Key: "x", Label: "Delete", Desc: "this bookmark, or a folder and what is in it", Scope: terminu.ItemScope,
+			Do: m.do(func() tea.Cmd {
+				r, ok := m.bmCurrent()
+				if !ok {
+					return nil
+				}
+				if r.isFolder {
+					return m.deleteFolder(r.folder)
+				}
+				b := m.bookmarks[r.ref]
+				return m.a.Confirm(terminu.Ask{Title: "Delete", Subject: oneLine(nameOr(b.Title, b.URL)), Details: []string{b.URL},
+					Question: "Delete this bookmark?", Verb: "delete"}, m.do(func() tea.Cmd { return m.deleteBookmark(b) }))
+			})},
+		{Key: "a", Label: "Add", Desc: "a bookmark, in the folder under the cursor", Scope: terminu.PanelScope, Hint: "add",
+			Do: m.do(func() tea.Cmd {
+				folder := ""
+				if r, ok := m.bmCurrent(); ok {
+					folder = r.folder
+				}
+				return m.startAddBookmark(folder)
+			})},
+		{Key: "A", Label: "Add folder", Desc: "a path like a/b/c makes each level", Scope: terminu.PanelScope,
+			Do: m.do(func() tea.Cmd {
+				parent := ""
+				if r, ok := m.bmCurrent(); ok {
+					parent = r.folder
+				}
+				return m.addFolderBox(parent)
+			})},
+		{Key: "I", Label: "Import", Desc: "a browser's exported bookmarks", Scope: terminu.PanelScope, Do: m.startImport},
+	}
 }
 
 // toggleFolder is Enter on a folder row: shut, or open again.
@@ -144,36 +263,36 @@ func (m *AppModel) toggleFolder(path string) {
 		m.foldedFolders = map[string]bool{}
 	}
 	m.foldedFolders[path] = !m.foldedFolders[path]
-	m.lists.setEntries(m.bookmarkEntries())
-	m.lists.cursorToFolder(path)
+	m.refreshBookmarks()
+	m.bmList.Select(bmRowID(bmRow{folder: path, isFolder: true}))
 }
 
-// movePicker is m on a bookmark: the folders to move it to as a tree,
-// keyed by number like a select's options, the top level first.
-func (m *AppModel) movePicker(ref int) tea.Cmd {
+// moveSelect is m on a bookmark: the folders to move it to as a tree, the
+// top level first, the one it is in chosen.
+func (m *AppModel) moveSelect(ref int) tea.Cmd {
 	if ref < 0 || ref >= len(m.bookmarks) {
 		return nil
 	}
-	m.moveRef = ref
-	m.optionsKind = optMoveTo
 	now := m.bookmarks[ref].Folder
-	items := []menuItem{{label: "(no folder)", key: "0", hint: "the top level"}}
-	if now == "" {
-		items[0].hint = "here now"
-	}
-	for i, f := range m.folderNames() {
-		hint := ""
+	names := m.folderNames()
+	opts := []string{"(no folder)"}
+	sel := 0
+	for i, f := range names {
 		if f == now {
-			hint = "here now"
+			sel = i + 1
 		}
-		label := strings.Repeat("  ", folderDepth(f)-1) + folderBase(f)
-		items = append(items, menuItem{label: label, key: strconv.Itoa(i + 1), hint: hint})
+		opts = append(opts, strings.Repeat("  ", folderDepth(f)-1)+folderBase(f))
 	}
-	m.options.setItems(items, "Move to…", m.layer())
-	return m.options.open()
+	return m.a.Select(terminu.Select{Title: "Move to", Subject: oneLine(nameOr(m.bookmarks[ref].Title, m.bookmarks[ref].URL)),
+		Glyph: glyphFolder, Options: opts, Selected: sel,
+		Done: func(i int) tea.Cmd {
+			cmd := m.moveBookmark(ref, i)
+			m.sync()
+			return cmd
+		}})
 }
 
-// moveBookmark puts bookmark ref in the folder the picker chose (0 is the
+// moveBookmark puts bookmark ref in the folder the select chose (0 is the
 // top level), writes the file, and keeps the cursor on it.
 func (m *AppModel) moveBookmark(ref, idx int) tea.Cmd {
 	if ref < 0 || ref >= len(m.bookmarks) {
@@ -185,51 +304,59 @@ func (m *AppModel) moveBookmark(ref, idx int) tea.Cmd {
 	}
 	m.bookmarks[ref].Folder = folder
 	if err := m.saveBookmarks(); err != nil {
-		return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
+		return m.toastErr("bookmarks.yaml: " + err.Error())
 	}
-	m.lists.setEntries(m.bookmarkEntries())
-	m.lists.cursorTo(ref)
+	m.refreshBookmarks()
+	m.bmList.Select(bmRowID(bmRow{ref: ref}))
 	return nil
 }
 
-// addFolder is the answer to A: a folder under parent — where the cursor
-// was — given as a name or a path: "dir1/dir2/dir3" makes all three at
-// once (revised 2026-09-21).
-func (m *AppModel) addFolder(parent, path string) tea.Cmd {
-	var parts []string
-	for _, p := range strings.Split(path, "/") {
-		if p = strings.TrimSpace(p); p != "" {
-			parts = append(parts, p)
-		}
-	}
-	if len(parts) == 0 {
-		return nil
-	}
-	full := strings.Join(parts, "/")
+// addFolderBox is A: a folder where the cursor is, given as a name or a
+// path — "dir1/dir2/dir3" makes all three at once (revised 2026-09-21).
+func (m *AppModel) addFolderBox(parent string) tea.Cmd {
+	prompt := "Folder to add; a path like a/b/c makes each level"
 	if parent != "" {
-		full = parent + "/" + full
+		prompt += ", inside " + parent
 	}
-	for _, f := range m.folderNames() {
-		if f == full {
-			m.input.refuse(0, "already a folder")
-			return nil
+	full := func(v string) string {
+		p := cleanFolderPath(v)
+		if p != "" && parent != "" {
+			p = parent + "/" + p
 		}
+		return p
 	}
+	return m.a.Text(terminu.TextInput{Title: "Add folder", Glyph: glyphFolder, Name: "The folder", Prompt: prompt, Verb: "create",
+		Check: func(v string) error {
+			f := full(v)
+			if f == "" {
+				return errors.New("The folder needs a name")
+			}
+			for _, x := range m.folderNames() {
+				if x == f {
+					return errors.New("The folder " + f + " is there already")
+				}
+			}
+			return nil
+		},
+		Done: m.cmdDone(func(v string) tea.Cmd { return m.addFolder(full(v)) })})
+}
+
+// addFolder makes the folder full and writes the file.
+func (m *AppModel) addFolder(full string) tea.Cmd {
 	m.folders = append(m.folders, full)
 	if err := m.saveBookmarks(); err != nil {
-		return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
+		return m.toastErr("bookmarks.yaml: " + err.Error())
 	}
-	m.lists.setEntries(m.bookmarkEntries())
-	m.lists.cursorToFolder(full)
-	return m.toast.show("folder "+full, toastInfo)
+	m.refreshBookmarks()
+	m.bmList.Select(bmRowID(bmRow{folder: full, isFolder: true}))
+	return m.toast("Folder " + full)
 }
 
 // deleteFolder is x on a folder row. An empty one goes at once; one with
-// anything in it asks first — how many bookmarks and folders go with it
-// — and then the whole tree goes (revised 2026-09-21: an import lands as
-// one tree, and row by row was no way to undo it; before, a folder with
-// anything in it was refused). Only that tree: the folders above it
-// stay, empty or not.
+// anything in it asks first — how many bookmarks and folders go with it —
+// and then the whole tree goes (revised 2026-09-21: an import lands as one
+// tree, and row by row was no way to undo it). Only that tree: the folders
+// above it stay, empty or not.
 func (m *AppModel) deleteFolder(path string) tea.Cmd {
 	books, folders := 0, 0
 	for _, b := range m.bookmarks {
@@ -245,13 +372,14 @@ func (m *AppModel) deleteFolder(path string) tea.Cmd {
 	if books+folders == 0 {
 		return m.deleteFolderTree(path)
 	}
-	return m.confirm.ask(confirmPopup{glyph: glyphWarn, title: "Delete folder",
-		lines:  []string{path, "and everything in it: " + plural(books, "bookmark") + ", " + plural(folders, "folder")},
-		accept: "delete", warn: true, action: confirmDeleteFolder, folder: path}, m.layer()+1)
+	return m.a.Confirm(terminu.Ask{Title: "Delete folder", Subject: path,
+		Details:  []string{"And everything in it: " + plural(books, "bookmark") + ", " + plural(folders, "folder") + "."},
+		Question: "Delete " + path + " and everything in it?", Verb: "delete", Warn: []int{0}},
+		m.do(func() tea.Cmd { return m.deleteFolderTree(path) }))
 }
 
-// deleteFolderTree takes path and everything under it out, and writes
-// the file.
+// deleteFolderTree takes path and everything under it out, and writes the
+// file.
 func (m *AppModel) deleteFolderTree(path string) tea.Cmd {
 	books := 0
 	kept := m.bookmarks[:0]
@@ -271,90 +399,104 @@ func (m *AppModel) deleteFolderTree(path string) tea.Cmd {
 	}
 	m.folders = keptFolders
 	if err := m.saveBookmarks(); err != nil {
-		return m.toast.show("bookmarks.yaml: "+err.Error(), toastError)
+		return m.toastErr("bookmarks.yaml: " + err.Error())
 	}
-	m.lists.setEntries(m.bookmarkEntries())
-	msg := "folder " + path + " removed"
+	m.refreshBookmarks()
+	msg := "Folder " + path + " removed"
 	if books > 0 {
 		msg += ", " + plural(books, "bookmark") + " with it"
 	}
-	return m.toast.show(msg, toastInfo)
+	return m.toast(msg)
+}
+
+// deleteBookmark takes one bookmark out and writes the file.
+func (m *AppModel) deleteBookmark(b store.Bookmark) tea.Cmd {
+	for i, x := range m.bookmarks {
+		if x == b {
+			m.bookmarks = append(m.bookmarks[:i], m.bookmarks[i+1:]...)
+			break
+		}
+	}
+	if err := m.saveBookmarks(); err != nil {
+		return m.toastErr("bookmarks.yaml: " + err.Error())
+	}
+	m.refreshBookmarks()
+	return nil
+}
+
+// addBookmark puts a page in Bookmarks, at the top level, and writes the
+// file; a page already there is not added twice.
+func (m *AppModel) addBookmark(title, url string) tea.Cmd {
+	for _, b := range m.bookmarks {
+		if b.URL == url {
+			return m.toast("Already bookmarked")
+		}
+	}
+	m.bookmarks = append(m.bookmarks, store.Bookmark{Title: title, URL: url})
+	if err := m.saveBookmarks(); err != nil {
+		return m.toastErr("bookmarks.yaml: " + err.Error())
+	}
+	m.refreshBookmarks()
+	return m.toast("Added " + oneLine(nameOr(title, url)))
 }
 
 // ---------------------------------------------------------- adding one
 
-// startAddBookmark is a on the Bookmarks screen: a bookmark typed in, URL
-// and title in one box (tdp K3), into the folder the cursor is in. The page
-// [W]eb is showing is on offer in both, so adding the current page is a,
-// Enter: here a field left on its offer TAKES it, because the offer is the
-// whole point of the box (unlike Location, where the offer is the page you
-// are already on).
+// startAddBookmark is a on the Bookmarks screen: a bookmark typed in, its
+// URL and its title, into the folder the cursor is in. The page the web
+// screen shows fills both at first, so adding the current page is a, then
+// the button.
 func (m *AppModel) startAddBookmark(folder string) tea.Cmd {
-	m.newBookmark = store.Bookmark{Folder: folder}
-	p := inputPopup{title: "Add bookmark", glyph: glyphBookmark, prompt: "URL",
-		accept: "add", action: inputBookmark, more: []groupField{{prompt: "title"}}}
+	url, title := "", ""
 	if t := m.shownTab(); t != nil && t.url != "" && t.url != "about:blank" {
-		p.placeholder = t.url
+		url, title = t.url, t.title
 	}
-	p.more[0].placeholder = m.bookmarkTitleOffer(p.placeholder)
-	return m.input.ask(p, m.layer())
-}
-
-// bookmarkURLInBox is the URL the box would add: what is typed, or the
-// offer.
-func (m *AppModel) bookmarkURLInBox() string {
-	if url := strings.TrimSpace(m.input.value); url != "" {
-		return url
+	urlField := &terminu.FormField{Label: "URL", Stacked: true, Value: func() string { return url }, Empty: "not set",
+		Edit: func() terminu.Input {
+			return terminu.TextInput{Title: "URL", Glyph: glyphPencil, Name: "The URL", Prompt: "The page to keep", Verb: "set", Old: url,
+				Done: func(v string) tea.Cmd { url = v; return nil }}
+		},
+		Check: func() string {
+			if strings.TrimSpace(url) == "" {
+				return "A bookmark needs a URL"
+			}
+			return ""
+		}}
+	titleField := &terminu.FormField{Label: "Title", Value: func() string { return title }, Empty: "the URL",
+		Edit: func() terminu.Input {
+			return terminu.TextInput{Title: "Title", Glyph: glyphPencil, Name: "The title", Prompt: "What to call it", Verb: "set", Old: title,
+				Done: func(v string) tea.Cmd { title = v; return nil }}
+		}}
+	where := "the top level"
+	if folder != "" {
+		where = folder
 	}
-	return m.input.placeholder
-}
-
-// bookmarkTitleOffer is the title offered for a URL: the page's own when
-// it is the page [W]eb shows, else the URL. It follows the URL field until
-// the title is typed.
-func (m *AppModel) bookmarkTitleOffer(url string) string {
-	if url == "" {
-		return ""
-	}
-	url = m.resolveURL(url)
-	if t := m.shownTab(); t != nil && t.url == url && t.title != "" {
-		return t.title
-	}
-	return url
-}
-
-// bookmarkGiven is the box submitted: the bookmark is written, or the box
-// stays on the URL, which is the one thing a bookmark cannot be without.
-func (m *AppModel) bookmarkGiven() tea.Cmd {
-	url := m.bookmarkURLInBox()
-	if url == "" {
-		m.input.refuse(0, "a bookmark needs a URL")
-		return nil
-	}
-	b := m.newBookmark
-	b.URL = m.resolveURL(url)
-	b.Title = strings.TrimSpace(m.input.more[0].value)
-	if b.Title == "" {
-		b.Title = m.bookmarkTitleOffer(url)
-	}
-	for _, x := range m.bookmarks {
-		if x.URL == b.URL {
-			return tea.Batch(m.input.close(), m.toast.show("already bookmarked", toastInfo))
-		}
-	}
-	m.bookmarks = append(m.bookmarks, b)
-	if err := m.saveBookmarks(); err != nil {
-		return tea.Batch(m.input.close(), m.toast.show("bookmarks.yaml: "+err.Error(), toastError))
-	}
-	m.lists.setEntries(m.bookmarkEntries())
-	m.lists.cursorTo(len(m.bookmarks) - 1)
-	return tea.Batch(m.input.close(), m.toast.show("added "+oneLine(nameOr(b.Title, b.URL)), toastInfo))
+	return m.a.Form(&terminu.Form{Title: "Add bookmark", Subject: where, Glyph: glyphBookmark, Name: "the new bookmark",
+		Fields: []*terminu.FormField{urlField, titleField}, Button: "Add",
+		Submit: func() (tea.Cmd, error) {
+			b := store.Bookmark{Folder: folder, URL: m.resolveURL(url), Title: strings.TrimSpace(title)}
+			if b.Title == "" {
+				b.Title = b.URL
+			}
+			for _, x := range m.bookmarks {
+				if x.URL == b.URL {
+					return nil, errors.New("Already bookmarked: " + b.URL)
+				}
+			}
+			m.bookmarks = append(m.bookmarks, b)
+			if err := m.saveBookmarks(); err != nil {
+				return nil, errors.New("bookmarks.yaml: " + err.Error())
+			}
+			m.refreshBookmarks()
+			m.bmList.Select(bmRowID(bmRow{ref: len(m.bookmarks) - 1}))
+			return m.toast("Added " + oneLine(b.Title)), nil
+		}})
 }
 
 // ---- Import (2026-09-21): a browser's export, into a folder of its own
 
-// importDir is where the picker opens for a browser's export: Downloads,
-// where every browser writes one, else home.
+// importDir is where the file-picker opens for a browser's export, and for
+// a page's upload: Downloads, where every browser writes one, else home.
 func importDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -367,25 +509,10 @@ func importDir() string {
 }
 
 // startImport is I on the Bookmarks screen: the file first, picked rather
-// than typed (filepicker.go).
+// than typed.
 func (m *AppModel) startImport() tea.Cmd {
-	return m.picker.open(glyphBookmark, "Import bookmarks", importDir(), m.layer())
-}
-
-// pickerKey drives the file picker; a pick goes to whichever of the two
-// things that open it is waiting — a page's file chooser, or the
-// Bookmarks import.
-func (m AppModel) pickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	path, done := m.picker.update(msg)
-	if !done {
-		return m, nil
-	}
-	closeCmd := m.picker.close()
-	if m.upload != nil {
-		return m, tea.Batch(closeCmd, m.uploadPicked(path))
-	}
-	cmd := m.importPicked(path)
-	return m, tea.Batch(closeCmd, cmd)
+	return m.a.PickFile(terminu.FilePicker{Title: "Import bookmarks", Glyph: glyphBookmark, Root: importDir(),
+		Done: m.cmdDone(m.importPicked)})
 }
 
 // uploadPicked hands the chosen file to the page's chooser.
@@ -410,40 +537,35 @@ func (m *AppModel) uploadPicked(path string) tea.Cmd {
 func (m *AppModel) importPicked(path string) tea.Cmd {
 	f, err := os.Open(path)
 	if err != nil {
-		return m.toast.show(err.Error(), toastError)
+		return m.a.Error("Import bookmarks", err.Error())
 	}
 	defer f.Close()
 	imp, err := store.ParseNetscape(f)
 	if err != nil {
-		return m.toast.show(filepath.Base(path)+": "+err.Error(), toastError)
+		return m.a.Error("Import bookmarks", filepath.Base(path)+": "+err.Error())
 	}
-	m.pendingImport = &imp
-	prompt := fmt.Sprintf("%s: %s in %s. The folder to put them under (required)",
+	prompt := fmt.Sprintf("%s: %s in %s. The folder to put them under",
 		filepath.Base(path), plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"))
-	return m.input.ask(inputPopup{title: "Import bookmarks", glyph: glyphFolder,
-		prompt: prompt, accept: "import", action: inputImportName}, m.layer())
+	return m.a.Text(terminu.TextInput{Title: "Import bookmarks", Glyph: glyphFolder, Name: "The folder", Prompt: prompt, Verb: "import",
+		Check: func(v string) error {
+			root := cleanFolderPath(v)
+			if root == "" {
+				return errors.New("The folder needs a name: the import goes under it")
+			}
+			for _, x := range m.folderNames() {
+				if x == root {
+					return errors.New("The folder " + root + " is there already")
+				}
+			}
+			return nil
+		},
+		Done: m.cmdDone(func(v string) tea.Cmd { return m.importBookmarks(cleanFolderPath(v), imp) })})
 }
 
-// importBookmarks puts the pending import under name — a folder that must
-// not exist yet, so two imports never run together and one is undone by
-// deleting its folder tree. An empty or a taken name keeps the box open.
-func (m *AppModel) importBookmarks(name string) tea.Cmd {
-	root := cleanFolderPath(name)
-	if root == "" {
-		m.input.refuse(0, "a folder name is needed: the import goes under it")
-		return nil
-	}
-	for _, f := range m.folderNames() {
-		if f == root {
-			m.input.refuse(0, "folder "+root+" exists; pick another name")
-			return nil
-		}
-	}
-	imp := m.pendingImport
-	if imp == nil {
-		return m.input.close()
-	}
-	m.pendingImport = nil
+// importBookmarks puts an import under root — a folder that did not exist,
+// so two imports never run together and one is undone by deleting its
+// folder tree.
+func (m *AppModel) importBookmarks(root string, imp store.Import) tea.Cmd {
 	m.folders = append(m.folders, root)
 	for _, f := range imp.Folders {
 		m.folders = append(m.folders, root+"/"+f)
@@ -456,18 +578,17 @@ func (m *AppModel) importBookmarks(name string) tea.Cmd {
 		}
 		m.bookmarks = append(m.bookmarks, b)
 	}
-	closeCmd := m.input.close()
 	if err := m.saveBookmarks(); err != nil {
-		return tea.Batch(closeCmd, m.toast.show("bookmarks.yaml: "+err.Error(), toastError))
+		return m.toastErr("bookmarks.yaml: " + err.Error())
 	}
-	m.lists.setEntries(m.bookmarkEntries())
-	m.lists.cursorToFolder(root)
-	return tea.Batch(closeCmd, m.toast.show(fmt.Sprintf("imported %s and %s under %s",
-		plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"), root), toastInfo))
+	m.refreshBookmarks()
+	m.bmList.Select(bmRowID(bmRow{folder: root, isFolder: true}))
+	return m.toast(fmt.Sprintf("Imported %s and %s under %s",
+		plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"), root))
 }
 
-// cleanFolderPath trims a typed folder path to its parts: blanks and
-// empty levels dropped, so " a / /b " is a/b.
+// cleanFolderPath trims a typed folder path to its parts: blanks and empty
+// levels dropped, so " a / /b " is a/b.
 func cleanFolderPath(path string) string {
 	var parts []string
 	for _, p := range strings.Split(path, "/") {
@@ -481,61 +602,62 @@ func cleanFolderPath(path string) string {
 // ---- Rename (2026-09-21): r on a bookmark's row, or a folder's
 
 // startRename is r on the Bookmarks screen: a bookmark's title, or a
-// folder's own name, in a box holding the current one to edit — most
-// renames change part of a name (inputPopup.ask).
-func (m *AppModel) startRename(e listEntry) tea.Cmd {
-	if e.isFolder {
-		m.renameFolder, m.renameRef = e.folder, -1
-		return m.input.ask(inputPopup{title: "Rename folder", glyph: glyphFolder, prompt: "name",
-			value: folderBase(e.folder), accept: "rename", action: inputRename}, m.layer())
+// folder's own name, the current one on offer.
+func (m *AppModel) startRename(r bmRow) tea.Cmd {
+	if r.isFolder {
+		old := r.folder
+		to := func(v string) string {
+			if i := strings.LastIndex(old, "/"); i >= 0 {
+				return old[:i+1] + strings.TrimSpace(v)
+			}
+			return strings.TrimSpace(v)
+		}
+		return m.a.Text(terminu.TextInput{Title: "Rename folder", Subject: old, Glyph: glyphFolder, Name: "The name",
+			Prompt: "The folder's new name; what is in it moves with it", Verb: "rename", Old: folderBase(old),
+			Check: func(v string) error {
+				switch {
+				case strings.TrimSpace(v) == "":
+					return errors.New("The name can't be empty")
+				case strings.Contains(v, "/"):
+					return errors.New("The name is a name, not a path: the folder stays where it is")
+				}
+				for _, f := range m.folderNames() {
+					if f == to(v) && f != old {
+						return errors.New("The folder " + f + " is there already")
+					}
+				}
+				return nil
+			},
+			Done: m.cmdDone(func(v string) tea.Cmd { return m.renameFolder(old, to(v)) })})
 	}
-	if e.ref < 0 || e.ref >= len(m.bookmarks) {
+	if r.ref < 0 || r.ref >= len(m.bookmarks) {
 		return nil
 	}
-	m.renameFolder, m.renameRef = "", e.ref
-	return m.input.ask(inputPopup{title: "Rename bookmark", glyph: glyphBookmark, prompt: "title",
-		value: m.bookmarks[e.ref].Title, accept: "rename", action: inputRename}, m.layer())
+	ref := r.ref
+	return m.a.Text(terminu.TextInput{Title: "Rename bookmark", Subject: oneLine(m.bookmarks[ref].Title), Glyph: glyphBookmark,
+		Name: "The title", Prompt: "The bookmark's new title", Verb: "rename", Old: m.bookmarks[ref].Title,
+		Check: func(v string) error {
+			if strings.TrimSpace(v) == "" {
+				return errors.New("The title can't be empty")
+			}
+			return nil
+		},
+		Done: m.cmdDone(func(v string) tea.Cmd {
+			m.bookmarks[ref].Title = v
+			if err := m.saveBookmarks(); err != nil {
+				return m.toastErr("bookmarks.yaml: " + err.Error())
+			}
+			m.refreshBookmarks()
+			m.bmList.Select(bmRowID(bmRow{ref: ref}))
+			return m.toast("Renamed to " + oneLine(v))
+		})})
 }
 
-// renameGiven is the box answered. A bookmark takes the title. A folder
-// takes the name — one level, no slash, not one already there — and
-// every bookmark and folder under it follows to the new path, folded or
-// not. An empty, taken or slashed name keeps the box open.
-func (m *AppModel) renameGiven(value string) tea.Cmd {
-	name := strings.TrimSpace(value)
-	if name == "" {
-		m.input.refuse(0, "a name is needed")
-		return nil
-	}
-	if m.renameFolder == "" {
-		if m.renameRef < 0 || m.renameRef >= len(m.bookmarks) {
-			return m.input.close()
-		}
-		m.bookmarks[m.renameRef].Title = name
-		if err := m.saveBookmarks(); err != nil {
-			return tea.Batch(m.input.close(), m.toast.show("bookmarks.yaml: "+err.Error(), toastError))
-		}
-		m.lists.setEntries(m.bookmarkEntries())
-		m.lists.cursorTo(m.renameRef)
-		return tea.Batch(m.input.close(), m.toast.show("renamed to "+oneLine(name), toastInfo))
-	}
-	if strings.Contains(name, "/") {
-		m.input.refuse(0, "a name, not a path: the folder stays where it is")
-		return nil
-	}
-	old := m.renameFolder
-	to := name
-	if i := strings.LastIndex(old, "/"); i >= 0 {
-		to = old[:i+1] + name
-	}
+// renameFolder moves folder old to to: every bookmark and folder under it
+// follows, folded or not.
+func (m *AppModel) renameFolder(old, to string) tea.Cmd {
 	if to == old {
-		return m.input.close()
-	}
-	for _, f := range m.folderNames() {
-		if f == to {
-			m.input.refuse(0, "folder "+to+" exists; pick another name")
-			return nil
-		}
+		return nil
 	}
 	move := func(p string) string { return to + strings.TrimPrefix(p, old) }
 	for i, b := range m.bookmarks {
@@ -557,9 +679,9 @@ func (m *AppModel) renameGiven(value string) tea.Cmd {
 	}
 	m.foldedFolders = folded
 	if err := m.saveBookmarks(); err != nil {
-		return tea.Batch(m.input.close(), m.toast.show("bookmarks.yaml: "+err.Error(), toastError))
+		return m.toastErr("bookmarks.yaml: " + err.Error())
 	}
-	m.lists.setEntries(m.bookmarkEntries())
-	m.lists.cursorToFolder(to)
-	return tea.Batch(m.input.close(), m.toast.show("folder "+old+" is now "+to, toastInfo))
+	m.refreshBookmarks()
+	m.bmList.Select(bmRowID(bmRow{folder: to, isFolder: true}))
+	return m.toast("Folder " + old + " is now " + to)
 }

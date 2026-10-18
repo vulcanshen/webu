@@ -81,16 +81,16 @@ setTimeout(() => { document.querySelector("#x").innerHTML += "<p>second batch</p
 
 	// The shell arrives first and webu must not call that arrival.
 	d.until("the shell", func() bool { return strings.Contains(dumpLayout(d.page().lay), "Shell") })
-	if v := d.m.View(); !strings.Contains(v, glyphLive) {
+	if v := d.view(); !strings.Contains(v, glyphLive) {
 		t.Errorf("the spinner should turn while the page is still filling in:\n%s", v)
 	}
 
 	d.until("everything", func() bool { return strings.Contains(dumpLayout(d.page().lay), "second batch") })
 	d.until("at rest", func() bool { return !d.page().working() })
-	if v := d.m.View(); !strings.Contains(v, glyphWeb) {
+	if v := d.view(); !strings.Contains(v, glyphWeb) {
 		t.Errorf("once it has settled the glyph is the web one:\n%s", v)
 	}
-	if !strings.Contains(d.m.View(), "second batch") {
+	if !strings.Contains(d.view(), "second batch") {
 		t.Error("and everything the page drew is on screen")
 	}
 }

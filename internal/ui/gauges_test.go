@@ -77,10 +77,10 @@ func TestGaugesDisclosuresAndShapedBoxes(t *testing.T) {
 
 	// A date box: the shape on the border, the value in the box.
 	d.cursorOn(ir.Textbox, "Day")
-	d.key("enter")
-	d.until("the date box", func() bool { return d.m.input.isInteractive() })
-	if d.m.input.title != "date · YYYY-MM-DD" || d.m.input.value != "2026-09-23" {
-		t.Errorf("the box says the shape and holds the value: %q %q", d.m.input.title, d.m.input.value)
+	d.press("enter")
+	d.until("the date box", d.shows("DATE"))
+	if v := d.view(); !strings.Contains(v, "YYYY-MM-DD") || !strings.Contains(v, "2026-09-23") {
+		t.Errorf("the box says the shape and offers the value:\n%s", v)
 	}
 	for i := 0; i < 10; i++ {
 		d.key("backspace")
@@ -92,11 +92,12 @@ func TestGaugesDisclosuresAndShapedBoxes(t *testing.T) {
 	d.until("the day set", func() bool { return rowWith("Day", "2026-10-01") })
 
 	// A colour box refuses a value not in its shape, and keeps the box.
+	d.settle()
 	d.cursorOn(ir.Textbox, "Tint")
-	d.key("enter")
-	d.until("the colour box", func() bool { return d.m.input.isInteractive() })
-	if d.m.input.title != "color · #rrggbb" || d.m.input.value != "#336699" {
-		t.Errorf("the colour box: %q %q", d.m.input.title, d.m.input.value)
+	d.press("enter")
+	d.until("the colour box", d.shows("COLOR"))
+	if v := d.view(); !strings.Contains(v, "#rrggbb") || !strings.Contains(v, "#336699") {
+		t.Errorf("the colour box:\n%s", v)
 	}
 	for i := 0; i < 7; i++ {
 		d.key("backspace")
@@ -105,8 +106,8 @@ func TestGaugesDisclosuresAndShapedBoxes(t *testing.T) {
 		d.key(string(c))
 	}
 	d.key("enter")
-	if !d.m.input.isInteractive() {
-		t.Error("a value not in the shape is refused and the box stays")
+	if !strings.Contains(d.view(), "wants #rrggbb") {
+		t.Errorf("a value not in the shape is refused and the box stays:\n%s", d.view())
 	}
 	for i := 0; i < 3; i++ {
 		d.key("backspace")

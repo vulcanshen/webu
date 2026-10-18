@@ -385,35 +385,6 @@ func (t *tab) sectionAnchor() string {
 	return ""
 }
 
-// sectionHint is what the panel's bottom border says while a page is being
-// read as sections: which one of how many, its name, and — inside one — how
-// far down it you are. It is the position sense a sheet of terminal text
-// cannot otherwise give, which is the whole reason the cut exists.
-func (t *tab) sectionHint(visible int) string {
-	if len(t.secs) == 0 {
-		return ""
-	}
-	s := t.secs[clamp(t.sec, 0, len(t.secs)-1)]
-	at := itoa(t.sec+1) + "/" + itoa(len(t.secs)) + " · " + s.title
-	if pct := t.readPct(visible); pct >= 0 {
-		return at + " · " + itoa(pct) + "%"
-	}
-	return at
-}
-
-// readPct is how far through the open section the reader is, or -1 when
-// the section fits on screen and there is no progress to report.
-func (t *tab) readPct(visible int) int {
-	if !t.read || t.sec >= len(t.secs) {
-		return -1
-	}
-	s := t.secs[t.sec]
-	if s.lines() <= visible {
-		return -1
-	}
-	return clamp((t.top-s.first+visible)*100/s.lines(), 0, 100)
-}
-
 // nodeByID finds the node Chromium gave this backend id, or nil when the
 // page has rebuilt that part of itself and it is gone.
 func nodeByID(root *ir.Node, id cdp.BackendNodeID) *ir.Node {
@@ -473,7 +444,6 @@ func (t *tab) drillInto(n *ir.Node, width, visible int) bool {
 		}
 	}
 	t.drill = append(t.drill, drillStep{id: n.ID, title: title})
-	t.leavePagetab()
 	t.relayout(width)
 	t.cursor, t.top = t.firstItem(), 0
 	t.scrollToCursor(visible)
@@ -508,31 +478,27 @@ func (t *tab) drillTitle() string {
 	return t.drill[len(t.drill)-1].title
 }
 
-// moveSection walks the section list. It does not wrap, and k off the top
-// goes up onto the pagetab: the list stands where the page stands, so it
-// answers the page's keys the way the page does (tab.moveItem).
-//
-// h and l do nothing here. In the page they walk the items ALONG a row,
-// and a list row holds one thing; opening a section was briefly on l and
-// that was wrong twice over — Enter is what opens, and a key does not
-// get a second meaning because a surface happens to have room for it
-// (user, 2026-09-22).
+// moveSection walks the section list: j and k wrap at either end, the
+// way every list of the family does; u and d go half a page and stop
+// (Rules K12). h and l are panel [2]'s tabs: Enter is what opens a
+// section.
 func (t *tab) moveSection(k string, visible int) {
 	if len(t.secs) == 0 {
 		return
 	}
 	half := max(1, visible/2)
 	switch k {
-	case "j", "down":
-		t.sec++
-	case "k", "up":
-		if t.sec == 0 && t.enterPagetab() {
-			return
+	case "j":
+		if t.sec++; t.sec >= len(t.secs) {
+			t.sec = 0
 		}
-		t.sec--
-	case "d", "ctrl+d":
+	case "k":
+		if t.sec--; t.sec < 0 {
+			t.sec = len(t.secs) - 1
+		}
+	case "d":
 		t.sec += half
-	case "u", "ctrl+u":
+	case "u":
 		t.sec -= half
 	case "gg":
 		t.sec = 0

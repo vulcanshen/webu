@@ -2,7 +2,13 @@
 
 > 本文件講**版面與 surface**：面板、頁面的三個畫面、pagetab、popup、色帶、存檔。互動語意
 > （core-key、Space menu 內容、hotkey）在 `ux.md`；功能與 Chromium 邊界在 `function.md`；
-> 實作註記在 `dev-remarks.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp）撰寫，每條版面決定標日期。
+> 實作註記在 `dev-remarks.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp）撰寫，每條版面決定標日期。
+
+> **2026-10-18 起畫面建在 terminu-go 上（tdp v0.7.4）。** 框、膠囊、畫面 chip 列、footer、每一種 popup、淡化、loading icon
+> 都是 lib 的，長相照 tdp components；本文件以下講 webu 自己的部分 —— [2] 裡面的頁面。跟下面舊段落不同的地方：
+> 頁面的四個 part 是 [2] 的 panel tab（`[2] PAGE HEADER BODY OTHERS FOOTER`，第一個 tab 是整頁），網址列下的 pagetab 拿掉；
+> [2] 跟著 [1] 的游標換分頁；DevTools 是第六個畫面 `[I] DEVTOOLS`；Settings 是 lib 的一列一個值；書籤、歷史、下載是 lib 的清單；
+> popup 的寬度、高度、層色、動畫照 tdp F2、F7、F8，由 lib 決定。
 
 ---
 
@@ -11,19 +17,15 @@
 ### 1.1 Grid
 
 ```
- [W]eb  [B]ookmarks  [H]istory  [D]ownloads  [S]ettings    1 download in flight   ← header，chip 列
-────────────────────────────────────────────────────────────────────────────────  ← 分隔線；下載中兼進度條
-╭ [1] Tabs ────────────────────╮╭ [2] Page ─────────────────────────────────────╮
-│ ▸ <iframe> HTML inline fra…  ││ 󰖟 developer.mozilla.org/en-US/docs/Web/HTML/… │  ← URL 列
-│   Hacker News                ││ 󰛼 header  󰛺 body  󰛽 others  󰛻 footer ─────── │  ← pagetab：四個 part
-│   Popups                     ││  1  <iframe> HTML inline frame element 300 l… │
-│                              ││  2    Try it                         󰋩 1  41 l… │  ← 目錄：一列一節
-│                              ││  3      HTML Demo: <iframe>              6 l… │
-│                              ││  4      OUTPUT                    󰋩 1  12 l… │
-│                              ││  5    Attributes                      223 l… │
-│                              ││                                               │
-╰──────────────────────────────╯╰────────────────────── 1/26 · <iframe> HTML … ─╯  ← 下框 hint：在哪
- Space:menu ?:help Tab/1–2:panels q:quit                            ← footer
+[W]EB[B]OOKMARKS[H]ISTORY[D]OWNLOADS[S]ETTINGS[I] DEVTOOLS        1 download in flight   ← 畫面 chip 列（lib）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← 分隔線；下載中兼進度條
+┌[1] TABS────────────┐┏[2]PAGEHEADERBODYOTHERSFOOTER━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓  ← part 是 [2] 的 tab
+│ TAB                  │┃ 󰖟 https://en.wikipedia.org/wiki/Terminal_emulator                  ┃  ← URL 列
+│   example.com        │┃  1  Terminal emulator                              󰓫 1  258 lines ┃  ← 目錄：一列一節
+│ ▓ Terminal emulator▓ │┃  2    Background                                         27 lines ┃
+│                      │┃  3      Character-oriented terminals                     19 lines ┃
+└─ Enter:read c:close ─┘┗━ Enter:open /:search ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1-16 of 16 ━┛  ← hint、捲動位置（lib）
+Space:menu ?:help Tab|1–2:panels q:quit                                                     ← footer（lib）
 ```
 
 兩個面板並列，編號左到右。頂部一列 header：五個 screen 的 chip chain（sshu 的 tab 列作法，
@@ -70,12 +72,12 @@ header 下一列分隔線，下載中兼進度條。URL 在 `[2]` 內部第一�
 **單一職責，永遠是頁面。** 第一列 URL（前面的地球在抓取中換成圓餅填滿的動畫，只要頁面還在
 長就一直轉——settling，`function.md` §6）；第二列是 **pagetab**；之後是頁面的三個畫面之一。
 
-#### 2.1 pagetab：頁面的四個 part
+#### 2.1 頁面的四個 part（2026-10-18 起是 [2] 的 panel tab）
 
 一頁被幾何切成四塊（`parts.go`，2026-09-23）：**body** 是最大面積的頂層區塊、**others** 在它
 旁邊（側欄、廣告欄）、**header** 在它前面、**footer** 在它後面。不看標籤叫什麼——`nav` 也好、
-`div` 也好，位置決定它是什麼。pagetab 是四節的 powerline 鏈，每節一個 glyph（`page_layout_header`
-/ `_body` / `_sidebar_left` / `_footer`），面板一次只顯示一個 part：
+`div` 也好，位置決定它是什麼。2026-10-18 起它們是 [2] 的 panel tab：第一個 tab `PAGE` 是整頁，後面是這一頁有的 part，
+`h|l` 換、一開頁在 BODY；只有一塊的頁面沒有 tab。下面是 2026-10-18 以前的 pagetab，留作紀錄：
 
 - `Esc` 上去（整條反色 rosewater、含到面板邊的那條線；目前的 part 深底 rosewater 字）、`h`/`l`
   走到哪**內容就切到哪**、`Enter` = 確認回頁面、`j` 也回頁面（2026-09-23 user 定案：走就是選）。
@@ -152,8 +154,12 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 
 ## §3 Popup
 
-全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint
-嵌下邊框、`Esc` 只在 `closeTop` 一處解析、`Space` 只開關 Space menu、在其他浮層上不作用、動畫 8 × 16 ms。
+2026-10-18 起 popup 全是 terminu-go 的（components/layout/popup、dialog、input）：寬度、高度、層色、開關動畫（9 × 32 ms）、
+淡化、loading icon、`Esc` 一次一層都照 tdp，webu 不再自己畫。webu 用到的：confirm（開連結、搜尋送出、憑證、刪除、清除）、
+text／password／number input（Location、新分頁、欄位、設定、目錄名、go 的行號）、textarea（頁面的多行欄位）、select（頁面的
+select、slider 的數字、書籤搬移）、file-picker（上傳、匯入）、finder（`/`）、form（新增書籤）、viewer（表格的格、code block、
+Inspect）、toast、error popup。頁面自己的 alert／confirm／prompt／登入是 webu 自己的 popup（`pageask.go`，lib 的 `App.Popup`；
+dev-remarks「偏離 tdp」）。以下是 2026-10-18 以前 webu 自己的 popup，留作紀錄：
 
 **一個寬度**（2026-09-28，tdp F7）：每個 popup 的外框都是 `min(terminal 寬 − 2, 120)`，水平置中（`popup.go` `popupW`）；不依內容
 算寬。說明、值太長就在框裡截尾或捲動，不加寬框。toast 同一個寬度，固定在畫面底部。finder `/` 的清單與預覽合起來是一個 popup，

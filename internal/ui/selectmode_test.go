@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
@@ -30,16 +29,10 @@ func press(s *selectMode, keys ...string) (selResult, string) {
 	var res selResult
 	var text string
 	for _, k := range keys {
-		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
-		switch k {
-		case "enter":
-			msg = tea.KeyMsg{Type: tea.KeyEnter}
-		case "esc":
-			msg = tea.KeyMsg{Type: tea.KeyEscape}
-		case " ":
-			msg = tea.KeyMsg{Type: tea.KeySpace}
+		if k == "enter" {
+			k = "Enter"
 		}
-		res, text = s.key(msg, 10)
+		res, text = s.key(k, 10)
 	}
 	return res, text
 }
@@ -50,7 +43,7 @@ func TestSelectMotionsAndYank(t *testing.T) {
 		t.Fatalf("fixture rows: %q", got)
 	}
 	var s selectMode
-	s.enter(tb, false)
+	s.enter(tb)
 	if !s.on || s.row != 0 || s.col != 0 {
 		t.Fatalf("enter: %+v", s)
 	}
@@ -104,17 +97,18 @@ func TestSelectMotionsAndYank(t *testing.T) {
 func TestSelectSearchSmartCaseAndClick(t *testing.T) {
 	tb := selectFixture()
 	var s selectMode
-	s.enter(tb, true)
-	if !s.typing {
-		t.Fatal("/ should start typing")
+	s.enter(tb)
+	find := func(q string) {
+		s.query = q
+		s.search()
+		s.jumpMatch(s.firstMatchFrom(s.row, s.col))
 	}
-	press(&s, "d", "e", "l", "t", "a")
+	find("delta")
 	if len(s.matches) != 2 {
 		t.Fatalf("lowercase query matches both cases: got %d", len(s.matches))
 	}
-	press(&s, "enter")
-	if s.typing || s.cur != 0 || s.row != 4 || s.col != 0 {
-		t.Errorf("Enter jumps to the first match: cur %d at %d/%d typing %v", s.cur, s.row, s.col, s.typing)
+	if s.cur != 0 || s.row != 4 || s.col != 0 {
+		t.Errorf("a search jumps to the first match: cur %d at %d/%d", s.cur, s.row, s.col)
 	}
 	press(&s, "n")
 	if s.cur != 1 || s.col != 6 {
@@ -128,12 +122,12 @@ func TestSelectSearchSmartCaseAndClick(t *testing.T) {
 		t.Errorf("status %q", st)
 	}
 
-	press(&s, "/", "D", "e", "l", "t", "a", "enter")
+	find("Delta")
 	if len(s.matches) != 1 {
 		t.Errorf("a capital makes it case-sensitive: %d matches", len(s.matches))
 	}
 
-	press(&s, "/", "L", "i", "n", "k", "enter")
+	find("Link")
 	if s.row != 2 {
 		t.Fatalf("Link is on row 2, cursor on %d", s.row)
 	}
@@ -145,16 +139,6 @@ func TestSelectSearchSmartCaseAndClick(t *testing.T) {
 		t.Errorf("Enter on a match asks for a click: %v", res)
 	}
 
-	// Esc while typing cancels the search and stays; Esc again leaves.
-	press(&s, "/", "x")
-	res, _ = press(&s, "esc")
-	if res != selNone || !s.on || s.query != "" || s.typing {
-		t.Errorf("Esc while typing: %v on=%v query=%q", res, s.on, s.query)
-	}
-	res, _ = press(&s, "esc")
-	if res != selLeave || s.on {
-		t.Errorf("Esc leaves: %v on=%v", res, s.on)
-	}
 }
 
 func TestSelectRowsDrawTheCursor(t *testing.T) {
@@ -162,7 +146,7 @@ func TestSelectRowsDrawTheCursor(t *testing.T) {
 	m := New(nil, "")
 	m.tabs = append(m.tabs, tb)
 	m.shown = 0
-	m.sel.enter(tb, false)
+	m.sel.enter(tb)
 	m.sel.col = 6
 	rows := m.selectRows(tb, 40, 3)
 	if len(rows) != 3 {
@@ -175,40 +159,6 @@ func TestSelectRowsDrawTheCursor(t *testing.T) {
 	}
 	if !strings.Contains(rows[0], "b") {
 		t.Errorf("row 0 lost its text: %q", rows[0])
-	}
-}
-
-func TestLowerVEntersSelectionFromAnyPanel(t *testing.T) {
-	m := New(nil, "")
-	tb := selectFixture()
-	m.tabs = append(m.tabs, tb)
-	m.shown = 0
-	model, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
-	mm := model.(AppModel)
-	if !mm.sel.on || mm.sel.typing || mm.focus != panelPage {
-		t.Errorf("V: on=%v typing=%v focus=%d", mm.sel.on, mm.sel.typing, mm.focus)
-	}
-	mm.focus = panelTabs
-	mm.sel.on = false
-	model, _ = mm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
-	mm = model.(AppModel)
-	if !mm.sel.on || mm.focus != panelPage {
-		t.Errorf("V from [1] moves to [2] first: on=%v focus=%d", mm.sel.on, mm.focus)
-	}
-}
-
-func TestWrapWords(t *testing.T) {
-	got := wrapWords("An iframe which has both allow-scripts and allow-same-origin", 20)
-	for i, l := range got {
-		if dispW(l) > 20 {
-			t.Errorf("line %d too wide: %q", i, l)
-		}
-	}
-	if strings.Join(got, " ") != "An iframe which has both allow-scripts and allow-same-origin" {
-		t.Errorf("words lost or reordered: %q", got)
-	}
-	if long := wrapWords(strings.Repeat("x", 25), 10); len(long) != 3 {
-		t.Errorf("a long word is cut: %q", long)
 	}
 }
 

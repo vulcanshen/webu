@@ -49,48 +49,26 @@ func TestASliderIsABarAndListsItsNumbers(t *testing.T) {
 		t.Fatalf("the ARIA slider too:\n%s", dumpLayout(p.lay))
 	}
 
-	// Enter lists the numbers: ten a window, the current one under the
-	// cursor and mid-window, the range in the title.
+	// Enter lists every number of the bar, the range in the title, the one
+	// it stands on chosen; G is the last, gg the first, Enter the one under
+	// the cursor.
+	if vals, at := sliderValues(nodeNamed(p, "Red")); len(vals) != 256 || vals[at] != "128" {
+		t.Errorf("every number of the bar, the cursor where it stands: %d, %q", len(vals), vals[at])
+	}
 	d.cursorOn(ir.Textbox, "Red")
-	d.key("enter")
-	d.until("the number list", func() bool { return d.m.choices.isInteractive() })
-	o := d.m.choices
-	if o.title != "Red · 0–255" || len(o.items) != 256 || o.visible() != 10 {
-		t.Errorf("every number of the bar, ten at a time, under the range: %q %d %d", o.title, len(o.items), o.visible())
-	}
-	if it := o.items[o.cursor]; it.label != "128" || it.hint != "current" {
-		t.Errorf("the cursor is on where it stands: %+v", it)
-	}
-	if o.top != o.cursor-5 {
-		t.Errorf("mid-window: top %d for cursor %d", o.top, o.cursor)
-	}
-	// G is the last number, gg the first; d is half a window, j one row;
-	// Enter is the number under the cursor.
+	d.press("enter")
+	d.until("the number list", d.shows("SLIDE: Red · 0–255"))
 	d.key("G")
-	if it := d.m.choices.items[d.m.choices.cursor]; it.label != "255" {
-		t.Errorf("G is the end of the bar: %q", it.label)
-	}
-	d.key("g")
-	d.key("g")
-	if it := d.m.choices.items[d.m.choices.cursor]; it.label != "0" {
-		t.Errorf("gg is its start: %q", it.label)
-	}
-	d.key("d")
-	d.key("j")
-	if it := d.m.choices.items[d.m.choices.cursor]; it.label != "6" {
-		t.Errorf("d then j is six rows down: %q", it.label)
-	}
 	d.key("enter")
-	d.until("red at 6", func() bool { return strings.HasSuffix(strings.TrimSpace(rowOf("Red")), " 6") })
+	d.until("red at 255", func() bool { return strings.HasSuffix(strings.TrimSpace(rowOf("Red")), " 255") })
+	d.settle()
 
 	// An ARIA slider has no value to set: it is walked there.
 	d.cursorOn(ir.Textbox, "Volume")
+	d.press("enter")
+	d.until("the number list", d.shows("SLIDE: Volume · 0–100"))
+	d.key("g")
+	d.key("g")
 	d.key("enter")
-	d.until("the number list", func() bool { return d.m.choices.isInteractive() })
-	if d.m.choices.title != "Volume · 0–100" {
-		t.Errorf("its range too: %q", d.m.choices.title)
-	}
-	d.key("u")
-	d.key("enter")
-	d.until("volume at 35", func() bool { return strings.Contains(rowOf("Volume"), "35") })
+	d.until("volume at 0", func() bool { return strings.Contains(rowOf("Volume"), " 0") })
 }

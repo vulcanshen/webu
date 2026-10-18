@@ -37,6 +37,8 @@ const (
 	partHeader
 	partOthers
 	partFooter
+	// partWhole is no part: the whole page, panel [2]'s first tab.
+	partWhole
 )
 
 func (k partKind) word() string {
@@ -185,6 +187,9 @@ func beside(a, b ir.Box) bool {
 // activePart is the part the panel is showing, or nil when the page has
 // none to show.
 func (t *tab) activePart() *part {
+	if t.at == partWhole {
+		return nil
+	}
 	for i := range t.parts {
 		if t.parts[i].kind == t.at {
 			return &t.parts[i]
@@ -231,22 +236,6 @@ func (t *tab) showPart(k partKind, width, visible int) {
 	t.scrollToCursor(visible)
 }
 
-// partHint is what the panel's bottom border says while the hand is on
-// the pagetab: how much is in the part under it. It no longer says
-// whether that part is the one on screen, because it always is now — the
-// hand and the panel move together (pagepanel.partChain).
-func partHint(t *tab) string {
-	i := t.pagetabIndex()
-	if i < 0 || i >= len(t.parts) {
-		return ""
-	}
-	n := 0
-	for _, node := range t.parts[i].nodes {
-		n += countItems(node)
-	}
-	return plural(n, "item")
-}
-
 // glyph is the part's mark: one of a family of four, so a part is the
 // same thing wherever it is named — on the pagetab, and against a hit in
 // the search list (user, 2026-09-23).
@@ -262,13 +251,12 @@ func (k partKind) glyph() string {
 	return glyphBody
 }
 
-// partLabels is the pagetab's segments: each part's own glyph and word.
-// One hamburger at the head used to stand for all of them, which said
-// "this row is a menu" and nothing about the row's contents.
+// partLabels are panel [2]'s tabs after the first, which is the whole
+// page: each part's word.
 func partLabels(parts []part) []string {
 	out := make([]string, 0, len(parts))
 	for _, p := range parts {
-		out = append(out, p.kind.glyph()+" "+p.kind.word())
+		out = append(out, p.kind.word())
 	}
 	return out
 }

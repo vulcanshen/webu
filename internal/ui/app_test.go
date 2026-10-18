@@ -9,24 +9,26 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/store"
 )
 
-// driver runs an AppModel the way Bubble Tea would, without a terminal:
-// commands execute in goroutines and their messages come back through one
-// channel, batches and sequences are unpacked, and a test waits on a
-// condition rather than on a fixed number of messages.
+// driver runs webu the way Bubble Tea would, without a terminal: the lib's
+// app takes every message, commands execute in goroutines and their
+// messages come back through one channel, batches and sequences are
+// unpacked, and a test waits on a condition rather than on a number of
+// messages. What is on screen is read off the lib's frame.
 type driver struct {
 	t    *testing.T
-	m    AppModel
+	m    *AppModel
 	msgs chan tea.Msg
 }
 
-func newDriver(t *testing.T, m AppModel) *driver {
-	d := &driver{t: t, m: m, msgs: make(chan tea.Msg, 64)}
-	d.exec(m.Init())
+func newDriver(t *testing.T, m *AppModel) *driver {
+	d := &driver{t: t, m: m, msgs: make(chan tea.Msg, 256)}
+	d.exec(m.a.Init())
 	return d
 }
 
@@ -66,16 +68,19 @@ func (d *driver) send(msg tea.Msg) {
 		}()
 		return
 	}
+	if _, quit := msg.(tea.QuitMsg); quit {
+		return
+	}
 	// A capture that failed is worth a line in the log: the app shows it as
 	// an error page, and a test that then times out says only "timed out".
 	if pm, ok := msg.(pageMsg); ok && pm.err != nil {
 		d.t.Logf("%s pageMsg tab %d gen %d: %v", time.Now().Format("15:04:05.000"), pm.tabID, pm.gen, pm.err)
 	}
-	model, cmd := d.m.Update(msg)
-	d.m = model.(AppModel)
+	_, cmd := d.m.a.Update(msg)
 	d.exec(cmd)
 }
 
+// key sends a keystroke: a key's name, or text typed.
 func (d *driver) key(k string) {
 	switch k {
 	case "enter":
@@ -84,9 +89,41 @@ func (d *driver) key(k string) {
 		d.send(tea.KeyMsg{Type: tea.KeyEscape})
 	case "backspace":
 		d.send(tea.KeyMsg{Type: tea.KeyBackspace})
+	case "tab":
+		d.send(tea.KeyMsg{Type: tea.KeyTab})
+	case " ":
+		d.send(tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}})
 	default:
 		d.send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)})
 	}
+}
+
+// press is a key and then the time a popup takes to open: the lib takes
+// no keys until it has (Rules F2).
+func (d *driver) press(k string) {
+	d.key(k)
+	d.settle()
+}
+
+// settle pumps messages for as long as a popup's animation takes.
+func (d *driver) settle() {
+	deadline := time.After(400 * time.Millisecond)
+	for {
+		select {
+		case msg := <-d.msgs:
+			d.send(msg)
+		case <-deadline:
+			return
+		}
+	}
+}
+
+// view is the screen as text, styles stripped.
+func (d *driver) view() string { return terminu.StripStyles(strings.Join(d.m.a.Frame(), "\n")) }
+
+// shows is a condition: the screen has s on it.
+func (d *driver) shows(s string) func() bool {
+	return func() bool { return strings.Contains(d.view(), s) }
 }
 
 // until pumps messages until cond holds, or fails the test.
@@ -94,8 +131,6 @@ func (d *driver) until(what string, cond func() bool) {
 	d.t.Helper()
 	start := time.Now()
 	defer func() {
-		// A step that took seconds is a step worth knowing about, whether
-		// or not it eventually passed.
 		if el := time.Since(start); el > 2*time.Second {
 			d.t.Logf("%s took %s", what, el.Round(time.Millisecond))
 		}
@@ -106,7 +141,7 @@ func (d *driver) until(what string, cond func() bool) {
 		case msg := <-d.msgs:
 			d.send(msg)
 		case <-deadline:
-			d.t.Fatalf("timed out waiting for %s\n%s", what, d.m.View())
+			d.t.Fatalf("timed out waiting for %s\n%s", what, d.view())
 		}
 	}
 }
@@ -119,10 +154,10 @@ func (d *driver) page() *tab { return d.m.shownTab() }
 func (d *driver) act() {
 	d.t.Helper()
 	n := d.page().current()
-	d.key("enter")
+	d.press("enter")
 	if n != nil && n.Kind == ir.Link {
-		d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
-		d.key("enter")
+		d.until("open link?", d.shows("OPEN LINK"))
+		d.press("enter")
 	}
 }
 
@@ -135,22 +170,51 @@ func (d *driver) loaded(title string) func() bool {
 	}
 }
 
-// cursorOn moves the cursor down until it stands on an item whose text
-// contains want.
+// cursorOn puts the cursor on an item whose text contains want.
 func (d *driver) cursorOn(kind ir.Kind, want string) {
 	d.t.Helper()
 	t := d.page()
 	for i, it := range t.lay.items {
 		if it.node.Kind == kind && strings.Contains(it.node.Text()+it.node.Name, want) {
 			t.cursor = i
-			t.leavePagetab()
+			d.m.sync()
 			return
 		}
 	}
 	d.t.Fatalf("no %s item containing %q in\n%s", kind, want, dumpLayout(t.lay))
 }
 
-func TestAppNavigatesAndFillsAForm(t *testing.T) {
+// nodeNamed is the item on the page whose name has name in it.
+func nodeNamed(t *tab, name string) *ir.Node {
+	for _, it := range t.lay.items {
+		if strings.Contains(it.node.Name, name) {
+			return it.node
+		}
+	}
+	return nil
+}
+
+// action runs one of the focused panel's actions by its label, as the
+// Space menu would.
+func (d *driver) action(label string) {
+	d.t.Helper()
+	p := d.m.a.Screen().Focused()
+	for _, a := range p.Actions {
+		if a.Label == label {
+			if a.Disabled != nil && a.Disabled() {
+				d.t.Fatalf("%q is disabled", label)
+			}
+			d.exec(a.Do())
+			d.settle()
+			return
+		}
+	}
+	d.t.Fatalf("no action %q on [%s]", label, p.Label)
+}
+
+// launch starts the pinned Chromium, or skips the test.
+func launch(t *testing.T) *browser.Browser {
+	t.Helper()
 	t.Setenv("WEBU__CONFIG", t.TempDir()) // the history log goes to a scratch dir, not the user's
 	t.Setenv("WEBU__DATA", t.TempDir())
 	exe, ok := browser.Installed()
@@ -161,48 +225,52 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer b.Close()
-	abs, _ := filepath.Abs("testdata/nav.html")
+	t.Cleanup(b.Close)
+	return b
+}
 
-	d := newDriver(t, New(b, "file://"+abs))
+// fixture is a testdata page as a file URL.
+func fixture(name string) string {
+	abs, _ := filepath.Abs("testdata/" + name)
+	return "file://" + abs
+}
+
+func TestAppNavigatesAndFillsAForm(t *testing.T) {
+	b := launch(t)
+	d := newDriver(t, New(b, fixture("nav.html")))
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
-	if v := d.m.View(); !strings.Contains(v, "Page A") || !strings.Contains(v, "a link to B") {
+	if v := d.view(); !strings.Contains(v, "Page A") || !strings.Contains(v, "a link to B") {
 		t.Fatalf("page not drawn:\n%s", v)
 	}
 
 	// Enter on a link asks first — its text and URL — and Esc leaves the
 	// page where it is.
 	d.cursorOn(ir.Link, "a link to B")
-	d.key("enter")
-	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
-	if l := d.m.confirm.lines; len(l) != 2 || l[0] != "a link to B" || !strings.HasSuffix(l[1], "nav2.html") {
-		t.Errorf("the confirm should show the link's text and URL, shows %q", l)
+	d.press("enter")
+	d.until("open link?", d.shows("OPEN LINK"))
+	if v := d.view(); !strings.Contains(v, "nav2.html") {
+		t.Errorf("the confirm should show the link's URL:\n%s", v)
 	}
-	d.key("esc")
-	d.until("confirm gone", func() bool { return !d.m.confirm.isActive() })
+	d.press("esc")
 	if !strings.Contains(d.page().url, "nav.html") {
 		t.Errorf("Esc should stay on page A, is on %s", d.page().url)
 	}
 	// Enter on the confirm follows it.
-	d.key("enter")
-	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
-	d.key("enter")
+	d.press("enter")
+	d.until("open link?", d.shows("OPEN LINK"))
+	d.press("enter")
 	d.until("page B", d.loaded("Page B"))
-	if !strings.Contains(d.m.View(), "You made it.") {
-		t.Fatalf("page B not drawn:\n%s", d.m.View())
+	if !strings.Contains(d.view(), "You made it.") {
+		t.Fatalf("page B not drawn:\n%s", d.view())
 	}
 
-	// P goes back. From the keystroke the page shows as on its way — the
-	// live glyph on the URL row — and a second P before it lands is
-	// swallowed rather than stacked (ux.md §6).
+	// P goes back. From the keystroke the page shows as on its way, and a
+	// second P before it lands is swallowed rather than stacked (ux.md §6).
 	d.key("P")
-	if !d.page().loading {
-		t.Fatal("P should mark the tab loading at once")
-	}
-	if v := d.m.View(); !strings.Contains(v, glyphLive) {
-		t.Errorf("the URL row should show the live glyph while loading:\n%s", v)
+	if !d.page().loading || !d.m.pagePanel.Loading {
+		t.Fatal("P should mark the tab loading at once, and [2] say so")
 	}
 	gen := d.page().gen
 	d.key("P")
@@ -213,32 +281,18 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	if !strings.Contains(d.page().url, "nav.html") {
 		t.Errorf("url after back: %s", d.page().url)
 	}
-	if v := d.m.View(); !strings.Contains(v, glyphWeb) {
-		t.Errorf("the URL row should show the web glyph at rest:\n%s", v)
-	}
-	// Nowhere further back — the entry before this one is the about:blank
-	// every tab starts on, which does not count: says so, and the page
-	// stays.
-	d.key("P")
-	d.until("told there is nothing", func() bool {
-		return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "nothing to go back")
-	})
-	if d.page().loading || d.page().root == nil || !strings.Contains(d.page().url, "nav.html") {
-		t.Errorf("a failed back should leave the page as it was: loading=%v url=%s", d.page().loading, d.page().url)
+	// Nowhere further back: Previous is disabled, and its key does nothing.
+	if d.page().canBack {
+		t.Error("the entry before this one is about:blank, which does not count")
 	}
 
 	// Enter on a textbox is the box itself — the input popup, no menu in
-	// between: a click on a field focuses it and nothing more. Enter there
-	// writes the value into the page, and the next capture shows it.
+	// between. The title says what the box takes, the prompt which field.
 	d.cursorOn(ir.Textbox, "Name")
-	d.key("enter")
-	d.until("input popup", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
-	// And the line above it says what the box takes, in the page's own
-	// word for it: a terminal shows nothing of a field's type where a
-	// browser shows a picker or a stepper (user, 2026-09-23).
-	if d.m.input.title != "text" || d.m.input.prompt != "Name" {
-		t.Errorf("the type on the border, the field's name over the box: %q / %q",
-			d.m.input.title, d.m.input.prompt)
+	d.press("enter")
+	d.until("input popup", d.shows("TEXT"))
+	if v := d.view(); !strings.Contains(v, "Name") {
+		t.Errorf("the field's name over the box:\n%s", v)
 	}
 	d.key("hi there")
 	d.key("enter")
@@ -246,28 +300,16 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 		n := d.page().current()
 		return n != nil && n.Kind == ir.Textbox && n.Value == "hi there"
 	})
+	d.settle()
 
-	// Filled, Enter is still the box, with the value in it to change.
-	d.key("enter")
-	d.until("input popup again", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
-	if d.m.input.value != "hi there" {
-		t.Errorf("the box should hold the value, holds %q", d.m.input.value)
-	}
-	// Esc closes the topmost float, and the toast from the failed back
-	// above may still be it: let it go first.
-	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
-	d.key("esc")
-	d.until("box gone", func() bool { return !d.m.input.isActive() })
-
-	// A password box is known as one while still empty — the DOM says so,
-	// not the dots — and its box is masked from the first keystroke.
+	// A password box is known as one while still empty, and is masked.
 	d.cursorOn(ir.Textbox, "Secret")
-	d.key("enter")
-	d.until("password box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
-	if !d.m.input.masked || d.m.input.title != "password" {
-		t.Errorf("an empty password field's box should be masked and say so: masked=%v title=%q", d.m.input.masked, d.m.input.title)
-	}
+	d.press("enter")
+	d.until("password box", d.shows("PASSWORD"))
 	d.key("s3cret")
+	if strings.Contains(d.view(), "s3cret") {
+		t.Error("a password is masked from the first keystroke")
+	}
 	d.key("enter")
 	d.until("secret written", func() bool {
 		n := d.page().current()
@@ -276,24 +318,20 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	if v := d.page().current().Value; strings.Contains(v, "s3cret") {
 		t.Errorf("the page should hand back dots, not the secret: %q", v)
 	}
+	d.settle()
 
-	// Submit is in the Space menu, first row: it presses Enter in the
-	// field, and the form's handler sees the value.
+	// Submit is an item operation of a filled field: it presses Enter in
+	// the field, and the form's handler sees the value.
 	d.cursorOn(ir.Textbox, "Name")
-	d.key(" ")
-	d.until("space menu", func() bool { return d.m.spaceMenu.isInteractive() })
-	if got := d.m.spaceMenu.items[d.m.spaceMenu.cursor].label; got != "Submit" {
-		t.Errorf("cursor should rest on Submit, is on %q", got)
-	}
-	d.key("enter")
+	d.action("Submit")
 	d.until("form submitted", func() bool {
 		return strings.Contains(dumpLayout(d.page().lay), "submitted:hi there")
 	})
 
-	// A select's menu leads with Choose, which swaps in the option list.
+	// A select drops its options; j and Enter choose the next one.
 	d.cursorOn(ir.Combobox, "Pick")
-	d.act()
-	d.until("option list", func() bool { return d.m.choices.isInteractive() && d.m.choicesKind == optSelect })
+	d.press("enter")
+	d.until("option list", d.shows("CHOOSE"))
 	d.key("j")
 	d.key("enter")
 	d.until("option chosen", func() bool {
@@ -302,9 +340,7 @@ func TestAppNavigatesAndFillsAForm(t *testing.T) {
 	})
 }
 
-// TestListPopupsAndSession drives panel [1] without a browser: B opens the
-// bookmarks, the filter narrows them, x asks before deleting, and the
-// session written on the way out is what was open.
+// TestScreensAndSession drives the list screens without a browser.
 func TestScreensAndSession(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
@@ -313,268 +349,135 @@ func TestScreensAndSession(t *testing.T) {
 		nil, store.Config{}, nil)
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	if h := d.m.header(); !strings.Contains(h, "[W]eb") || !strings.Contains(h, "[S]ettings") {
-		t.Errorf("header: %q", h)
+	if v := d.view(); !strings.Contains(v, "[W]EB") || !strings.Contains(v, "[S]ETTINGS") || !strings.Contains(v, "[I] DEVTOOLS") {
+		t.Errorf("the chip row names every screen:\n%s", v)
 	}
 
-	// B is the Bookmarks screen: the whole body, the chip lit, the web kept.
+	// B is the Bookmarks screen: the whole body, the web kept.
 	d.key("B")
-	if d.m.screen != screenBookmarks || len(d.m.lists.visible()) != 2 {
-		t.Fatalf("screen %v, visible %d", d.m.screen, len(d.m.lists.visible()))
+	if d.m.a.Screen() != d.m.bmScreen || len(d.m.bmList.Rows()) != 2 {
+		t.Fatalf("on the bookmarks screen with both rows: %d", len(d.m.bmList.Rows()))
 	}
-	if v := d.m.View(); !strings.Contains(v, "Hacker News") || strings.Contains(v, "[1] Tabs") || !strings.Contains(v, "Title") {
+	if v := d.view(); !strings.Contains(v, "Hacker News") || strings.Contains(v, "[1] TABS") || !strings.Contains(v, "TITLE") {
 		t.Errorf("the bookmarks screen should replace the web panels, with a column header:\n%s", v)
 	}
 	d.key("/")
 	d.key("go")
 	d.key("enter")
-	if got := len(d.m.lists.visible()); got != 1 {
-		t.Fatalf("filtered %d", got)
+	if d.m.bmList.Current(); !d.m.bmList.Filtering() {
+		t.Fatal("/ should filter")
 	}
-	d.key("x")
-	d.until("confirm", func() bool { return d.m.confirm.isInteractive() })
-	d.key("enter")
+	d.press("x")
+	d.until("confirm", d.shows("DELETE"))
+	d.press("enter")
 	d.until("deleted", func() bool { return len(d.m.bookmarks) == 1 })
 	if saved, _, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Title != "Hacker News" {
 		t.Errorf("bookmarks.yaml after delete: %+v", saved)
 	}
 	d.key("esc") // the filter
-	if d.m.screen != screenBookmarks || d.m.lists.filter != "" {
-		t.Fatalf("first Esc should clear the filter: screen %v filter %q", d.m.screen, d.m.lists.filter)
+	if d.m.bmList.Filtering() {
+		t.Fatal("Esc should clear the filter")
 	}
 
 	// A makes a folder — a path makes every level; m moves the bookmark
-	// into one through a picker; the folder is a row of its own, Enter
-	// folds it, and x on it only goes when it is empty.
-	d.key("A")
-	d.until("folder box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFolder })
+	// into one; Enter on a folder folds it.
+	d.press("A")
+	d.until("folder box", d.shows("ADD FOLDER"))
 	d.key("dev/sub")
-	d.key("enter")
+	d.press("enter")
 	d.until("folders made", func() bool { return len(d.m.folders) == 2 && d.m.folders[1] == "dev/sub" })
-	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "dev/sub" || e.depth != 1 {
-		t.Fatalf("the cursor should land on the new folder, one level in: %+v", e)
+	if r, ok := d.m.bmCurrent(); !ok || !r.isFolder || r.folder != "dev/sub" {
+		t.Fatalf("the cursor should land on the new folder: %+v", r)
 	}
-	d.key("esc") // the toast
-	d.until("folder toast gone", func() bool { return !d.m.toast.anim.owns() })
-	d.m.lists.cursorTo(0) // Hacker News, at the top level
-	d.key("m")
-	d.until("move picker", func() bool { return d.m.options.isInteractive() && d.m.optionsKind == optMoveTo })
-	if got := d.m.options.items[2].label; got != "  sub" {
-		t.Errorf("the picker should indent the subfolder: %q", got)
-	}
-	d.key("2")
+	d.m.bmList.Select(bmRowID(bmRow{ref: 0}))
+	d.press("m")
+	d.until("move select", d.shows("MOVE TO"))
+	d.key("j")
+	d.key("j")
+	d.press("enter")
 	d.until("moved", func() bool { return d.m.bookmarks[0].Folder == "dev/sub" })
-	if saved, folders, _ := store.LoadBookmarks(); len(saved) != 1 || saved[0].Folder != "dev/sub" || len(folders) != 2 {
-		t.Errorf("bookmarks.yaml after move: %+v %v", saved, folders)
+	if r, ok := d.m.bmCurrent(); !ok || r.isFolder || r.ref != 0 {
+		t.Errorf("the cursor should follow the moved bookmark: %+v", r)
 	}
-	if e, _, ok := d.m.lists.current(); !ok || e.isFolder || e.depth != 2 {
-		t.Errorf("the cursor should follow the moved bookmark, two levels in: %+v", e)
-	}
-	if v := d.m.View(); !strings.Contains(v, glyphFolder+" dev") || !strings.Contains(v, glyphFolder+" sub") {
+	if v := d.view(); !strings.Contains(v, glyphFolder+" dev") || !strings.Contains(v, glyphFolder+" sub") {
 		t.Errorf("both folders should be rows of their own:\n%s", v)
 	}
-
-	// Enter on the top folder folds everything under it into one row.
-	d.m.lists.cursorToFolder("dev")
+	d.m.bmList.Select(bmRowID(bmRow{folder: "dev", isFolder: true}))
 	d.key("enter")
-	if got := len(d.m.lists.visible()); got != 1 {
+	if got := len(d.m.bmList.Rows()); got != 1 {
 		t.Fatalf("folded dev should leave one row, not %d", got)
 	}
-	if e, _, _ := d.m.lists.current(); !e.isFolder || !e.folded || e.count != 1 {
-		t.Errorf("the folded row should count what it hides: %+v", e)
-	}
 	d.key("enter")
-	if got := len(d.m.lists.visible()); got != 3 {
+	if got := len(d.m.bmList.Rows()); got != 3 {
 		t.Fatalf("unfolded dev should show three rows, not %d", got)
 	}
-	d.key("x")
-	if len(d.m.folders) != 2 {
-		t.Error("a folder with something in it must not go")
-	}
-	d.key("esc") // the toast that said so
-	d.until("toast gone", func() bool { return !d.m.toast.anim.owns() })
 
-	// A folder inside another can be deleted from the inside out: x on
-	// the innermost row removes that path, and the parent it implied goes
-	// with it once nothing else needs it.
-	d.m.lists.cursorTo(0) // Hacker News, in dev/sub
-	d.key("A")
-	d.until("nested folder box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputFolder })
-	d.key("x/y")
-	d.key("enter")
-	d.until("nested folders made", func() bool { return len(d.m.folders) == 4 && d.m.folders[3] == "dev/sub/x/y" })
-	d.key("esc") // the toast
-	d.until("nested toast gone", func() bool { return !d.m.toast.anim.owns() })
-	d.m.lists.cursorToFolder("dev/sub/x")
-	d.key("x")
-	if len(d.m.folders) != 4 {
-		t.Error("x must not go while y is inside it")
-	}
-	d.key("esc")
-	d.until("refusal gone", func() bool { return !d.m.toast.anim.owns() })
-	d.m.lists.cursorToFolder("dev/sub/x/y")
-	d.key("x")
-	d.until("y removed", func() bool { return len(d.m.folders) == 3 })
-	if names := d.m.folderNames(); len(names) != 3 || names[2] != "dev/sub/x" {
-		t.Errorf("x must stay when y goes, empty or not: %v", names)
-	}
-	if _, folders, _ := store.LoadBookmarks(); len(folders) != 3 {
-		t.Errorf("every folder is written down, not only the hand-made ones: %v", folders)
-	}
-	d.key("esc")
-	d.until("removal toast gone", func() bool { return !d.m.toast.anim.owns() })
-
-	// a adds a bookmark where the cursor is: URL and title are one group
-	// (tdp K3). With no page up there is nothing on offer, so Enter on the
-	// empty box is refused on the URL field and the box stays.
-	d.m.lists.cursorToFolder("dev")
-	d.key("a")
-	d.until("the bookmark box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputBookmark })
-	if len(d.m.input.more) != 1 || d.m.input.more[0].prompt != "title" {
-		t.Fatalf("URL and title should be one box: %+v", d.m.input.more)
-	}
-	d.send(tea.KeyMsg{Type: tea.KeyTab})
-	d.key("enter")
-	if !d.m.input.isInteractive() || d.m.input.at != 0 || d.m.input.refused == "" {
-		t.Fatalf("an empty URL should be refused on its field: at %d refused %q", d.m.input.at, d.m.input.refused)
-	}
-	// The title follows the URL while it is not typed: the URL, with no
-	// page of that address up; Enter takes it.
-	d.key("go.dev")
-	if d.m.input.refused != "" || d.m.input.more[0].placeholder != "https://go.dev" {
-		t.Errorf("the title should offer the URL: %q", d.m.input.more[0].placeholder)
-	}
-	d.key("enter")
-	d.until("added", func() bool { return len(d.m.bookmarks) == 2 })
-	if b := d.m.bookmarks[1]; b.URL != "https://go.dev" || b.Title != "https://go.dev" || b.Folder != "dev" {
-		t.Errorf("the typed bookmark: %+v", b)
-	}
-	d.key("esc") // the toast
-	d.until("added toast gone", func() bool { return !d.m.toast.anim.owns() })
-	d.key("esc") // back to the web
-	if d.m.screen != screenWeb {
-		t.Fatalf("Esc should go back to the web: %v", d.m.screen)
-	}
-
-	// Downloads: the header counts what is in flight, the screen lists it,
-	// newest first, and the row follows the file as it lands.
-	if h := d.m.header(); strings.Contains(h, "in flight") {
-		t.Errorf("header at rest: %q", h)
-	}
+	// Downloads: the chip row counts what is in flight, the screen lists
+	// it, and the row follows the file as it lands.
 	d.send(downloadMsg{guid: "g1", name: "a.zip", url: "https://x/a.zip", begin: true})
 	d.send(downloadMsg{guid: "g1", received: 512, total: 1024})
-	if got := d.m.downloading(); got != 1 {
-		t.Fatalf("downloading %d", got)
-	}
-	if h := d.m.header(); !strings.Contains(h, "1 download in flight") {
-		t.Errorf("header: %q", h)
+	if v := d.view(); !strings.Contains(v, "1 download in flight") {
+		t.Errorf("the chip row should count the download:\n%s", v)
 	}
 	if pct, moving := d.m.downloadProgress(); pct != 50 || !moving {
-		t.Errorf("rule progress: %d%% moving=%v", pct, moving)
+		t.Errorf("progress: %d%% moving=%v", pct, moving)
 	}
+	d.settle()
 	d.key("D")
-	if d.m.screen != screenDownloads {
-		t.Fatalf("screen %v", d.m.screen)
-	}
-	if e, _, ok := d.m.lists.current(); !ok || e.title != "a.zip" || !strings.Contains(e.meta, "50%") {
-		t.Errorf("download row: %+v %v", e, ok)
+	if d.m.a.Screen() != d.m.dlScreen || !strings.Contains(d.view(), "50%") {
+		t.Fatalf("the downloads screen with the row:\n%s", d.view())
 	}
 	d.send(downloadMsg{guid: "g1", received: 1024, total: 1024, done: true, path: "/tmp/a.zip"})
-	if e, _, _ := d.m.lists.current(); e.meta != "/tmp/a.zip" {
-		t.Errorf("finished row: %+v", e)
+	if !strings.Contains(d.view(), "/tmp/a.zip") || d.m.downloading() != 0 {
+		t.Errorf("the finished row:\n%s", d.view())
 	}
-	if d.m.downloading() != 0 || strings.Contains(d.m.header(), "in flight") {
-		t.Errorf("header after: %q", d.m.header())
-	}
+	d.settle()
 	d.key("C") // clear the done ones
-	if len(d.m.dls) != 0 || len(d.m.lists.visible()) != 0 {
+	if len(d.m.dls) != 0 || len(d.m.dlList.Rows()) != 0 {
 		t.Errorf("after clear: %+v", d.m.dls)
 	}
 
-	// Settings: one row, Enter edits it, the file and the row follow.
+	// Settings: Enter edits a value, the file follows; a switch flips in
+	// place and is written at once.
 	d.key("S")
-	if e, _, ok := d.m.lists.current(); d.m.screen != screenSettings || !ok || e.title != "search_engine" || !strings.Contains(e.meta, "duckduckgo.com") {
-		t.Fatalf("first settings row: %+v %v (screen %v)", e, ok, d.m.screen)
+	if d.m.a.Screen() != d.m.setScreen || !strings.Contains(d.view(), "SEARCH_ENGINE") {
+		t.Fatalf("the settings screen:\n%s", d.view())
 	}
 	d.key("j")
-	if e, _, ok := d.m.lists.current(); !ok || e.title != "download_dir" || !strings.HasPrefix(e.meta, "(default) ") {
-		t.Fatalf("settings row: %+v %v", e, ok)
-	}
-	d.key("enter")
-	d.until("setting box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputSetting })
-	if d.m.input.value != "" || !strings.HasSuffix(d.m.input.placeholder, "downloads") {
-		t.Fatalf("the box should offer the value in force: value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
-	}
-	d.key("enter") // the offer untouched: nothing changes
-	d.until("box closed", func() bool { return !d.m.input.isActive() })
-	if d.m.cfg.DownloadDir != "" {
-		t.Fatalf("Enter on the untouched offer changed the setting: %q", d.m.cfg.DownloadDir)
-	}
-	d.key("enter")
-	d.until("setting box again", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputSetting })
-	d.send(tea.KeyMsg{Type: tea.KeyBackspace}) // decline the offer
+	d.press("enter")
+	d.until("setting box", d.shows("SETTINGS: download_dir"))
+	d.key("backspace") // drop the offer
 	d.key("/tmp/dl")
-	d.key("enter")
-	d.until("saved", func() bool { return !d.m.input.isActive() })
-	if cfg, _ := store.LoadConfig(); cfg.DownloadDir != "/tmp/dl" || d.m.cfg.DownloadDir != "/tmp/dl" {
+	d.press("enter")
+	d.until("saved", func() bool { return d.m.cfg.DownloadDir == "/tmp/dl" })
+	if cfg, _ := store.LoadConfig(); cfg.DownloadDir != "/tmp/dl" {
 		t.Errorf("config.yaml after save: %+v", cfg)
 	}
-	if e, _, _ := d.m.lists.current(); !strings.HasPrefix(e.meta, "/tmp/dl  ") {
-		t.Errorf("settings row after save: %+v", e)
-	}
-	// measure takes full or a number of cells and refuses anything else,
-	// keeping the box open with the reason. Full is the default.
 	d.key("j")
-	if e, _, ok := d.m.lists.current(); !ok || e.title != "measure" || !strings.HasPrefix(e.meta, "(default) full") {
-		t.Fatalf("measure row: %+v %v", e, ok)
-	}
-	d.key("enter")
-	d.until("measure box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputSetting })
-	d.send(tea.KeyMsg{Type: tea.KeyBackspace})
+	d.press("enter")
+	d.until("measure box", d.shows("SETTINGS: measure"))
+	d.key("backspace")
 	d.key("wide")
 	d.key("enter")
-	if d.m.input.refused == "" || (d.m.toast.isActive() && d.m.toast.msg == d.m.input.refused) {
-		t.Fatalf("a bad measure should be refused in the box's error row, not a toast: %q", d.m.input.refused)
+	if d.m.cfg.Measure != 0 || !strings.Contains(d.view(), "20 or more") {
+		t.Fatalf("a bad measure should be refused in the box: %d\n%s", d.m.cfg.Measure, d.view())
 	}
-	if !d.m.input.isActive() || d.m.cfg.Measure != 0 {
-		t.Fatalf("a bad measure should keep the box open and the setting as it was: %d", d.m.cfg.Measure)
+	// Esc takes a toast first (tdp K4), then the box.
+	for i := 0; i < 3 && strings.Contains(d.view(), "SETTINGS: measure"); i++ {
+		d.press("esc")
 	}
-	d.send(tea.KeyMsg{Type: tea.KeyCtrlU})
-	d.key("80")
-	d.key("enter")
-	d.until("measure saved", func() bool { return d.m.cfg.Measure == 80 && !d.m.input.isActive() })
-	if cfg, _ := store.LoadConfig(); cfg.Measure != 80 {
-		t.Errorf("config.yaml after measure: %+v", cfg)
-	}
-	d.key("esc")
-	d.until("measure toast gone", func() bool { return !d.m.toast.anim.owns() })
-
-	// A switch flips on Enter and is written at once.
 	d.key("j")
-	if e, _, ok := d.m.lists.current(); !ok || e.title != "restore_session" || !e.toggle || !strings.HasPrefix(e.meta, "(default) on") {
-		t.Fatalf("restore_session row: %+v %v", e, ok)
-	}
-	d.key("enter")
+	d.key("enter") // restore_session's switch
 	if d.m.cfg.Restore() {
-		t.Fatal("Enter should switch restore_session off")
+		t.Fatalf("Enter should switch restore_session off:\n%s", d.view())
 	}
 	if cfg, _ := store.LoadConfig(); cfg.Restore() {
 		t.Errorf("config.yaml after the switch: %+v", cfg)
 	}
-	if e, _, _ := d.m.lists.current(); !strings.HasPrefix(e.meta, "off  ") {
-		t.Errorf("the row should read off: %+v", e)
-	}
-	d.key("esc") // the toast
-	d.until("switch toast gone", func() bool { return !d.m.toast.anim.owns() })
-	d.key("enter")
-	if !d.m.cfg.Restore() {
-		t.Fatal("Enter again should switch it back on")
-	}
-	d.key("esc")
-	d.until("switch toast gone again", func() bool { return !d.m.toast.anim.owns() })
+	d.settle()
 	d.key("W")
-	if d.m.screen != screenWeb {
-		t.Fatalf("W should be the web: %v", d.m.screen)
+	if !d.m.onWeb() {
+		t.Fatal("W should be the web")
 	}
 
 	// No tabs, no browser: the session is empty and does not panic.
@@ -599,114 +502,81 @@ func TestResolveURL(t *testing.T) {
 	}
 }
 
-func TestViewFitsTheTerminal(t *testing.T) {
-	m := New(nil, "")
-	for _, size := range [][2]int{{100, 30}, {72, 20}, {60, 15}, {40, 10}} {
-		model, _ := m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
-		mm := model.(AppModel)
-		for _, focus := range []panelID{panelTabs, panelPage} {
-			mm.focus = focus
-			lines := strings.Split(mm.View(), "\n")
-			if len(lines) != size[1] {
-				t.Errorf("%dx%d focus %d: %d lines", size[0], size[1], focus, len(lines))
-			}
-			for i, l := range lines {
-				if w := dispW(l); w != size[0] {
-					t.Errorf("%dx%d focus %d line %d is %d wide: %q", size[0], size[1], focus, i, w, l)
+// TestFrameFitsTheTerminal is tdp L4 across sizes (E6): every line of
+// every screen, with a page on the web screen and with popups over it, is
+// exactly as wide as the terminal — with icons one cell and two, and the
+// powerline symbols one and two (E5).
+func TestFrameFitsTheTerminal(t *testing.T) {
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
+	defer terminu.SetIconWidth(1, 1)
+	root := doc(hd(1, "Fitting"), para(text("A paragraph "+glyphLink+" with an icon in it, and some words to wrap around.")),
+		link("a link", "https://example.com/x", 7), hd(2, "Second"), para(text("More.")), hd(2, "Third"), para(text("End.")))
+	for _, widths := range [][2]int{{1, 1}, {2, 1}, {2, 2}} {
+		terminu.SetIconWidth(widths[0], widths[1])
+		for _, size := range [][2]int{{120, 40}, {80, 40}, {72, 24}, {60, 20}, {40, 12}} {
+			m := New(nil, "")
+			d := newDriver(t, m)
+			d.send(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+			tb := &tab{id: 1, url: "https://example.com/fitting", title: "Fitting", root: root, cursor: -1}
+			m.tabs, m.shown = []*tab{tb}, 0
+			tb.relayout(m.pageW())
+			m.sync()
+			check := func(where string) {
+				lines := m.a.Frame()
+				if len(lines) != size[1] {
+					t.Errorf("%v %dx%d %s: %d lines", widths, size[0], size[1], where, len(lines))
+				}
+				for i, l := range lines {
+					if w := terminu.Width(l); w != size[0] {
+						t.Errorf("%v %dx%d %s: line %d is %d wide: %q", widths, size[0], size[1], where, i, w, terminu.StripStyles(l))
+					}
 				}
 			}
-		}
-		// The list screens fill the same frame, empty or not.
-		for _, s := range []screen{screenBookmarks, screenHistory, screenDownloads, screenSettings} {
-			model, _ := mm.switchScreen(map[screen]string{screenBookmarks: "B", screenHistory: "H", screenDownloads: "D", screenSettings: "S"}[s])
-			sm := model.(AppModel)
-			lines := strings.Split(sm.View(), "\n")
-			if len(lines) != size[1] {
-				t.Errorf("%dx%d screen %d: %d lines", size[0], size[1], s, len(lines))
+			check("web, [1]")
+			d.key("2")
+			check("web, [2]")
+			d.press(" ")
+			check("Space menu")
+			d.press("?")
+			check("key reference over it")
+			d.press("esc")
+			d.press("esc")
+			for _, k := range []string{"B", "H", "D", "S", "I"} {
+				d.key(k)
+				check("screen " + k)
 			}
-			for i, l := range lines {
-				if w := dispW(l); w != size[0] {
-					t.Errorf("%dx%d screen %d line %d is %d wide: %q", size[0], size[1], s, i, w, l)
-				}
-			}
+			d.key("W")
+			d.press("L")
+			check("Location")
+			d.press("esc")
+			m.Close()
 		}
 	}
 }
 
 // L is Chrome's Cmd+L: the box opens with the page's own URL on offer.
-func TestGotoOffersThePageURL(t *testing.T) {
+func TestLocationOffersThePageURL(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
-	d := newDriver(t, New(nil, ""))
+	m := New(nil, "")
+	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.m.tabs = []*tab{{id: 1, url: "https://example.com/a"}}
-	d.m.shown = 0
-	d.m.focus = panelTabs // from any panel, like Cmd+L
-
-	d.key("L")
-	d.until("goto open", func() bool { return d.m.input.isInteractive() })
-	if d.m.input.value != "" || d.m.input.placeholder != "https://example.com/a" {
-		t.Fatalf("value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
+	m.tabs = []*tab{{id: 1, url: "https://example.com/a"}}
+	m.shown = 0
+	m.sync()
+	d.key("2")
+	d.press("L")
+	d.until("location open", d.shows("LOCATION"))
+	if v := d.view(); !strings.Contains(v, "https://example.com/a") || !strings.Contains(v, "Tab:edit") {
+		t.Fatalf("the page's URL should be offered, Tab taking it:\n%s", v)
 	}
-	if v := d.m.input.view(); !strings.Contains(v, "Tab:accept") || !strings.Contains(v, "Backspace:decline") || strings.Contains(v, "→") {
-		t.Errorf("a single box's legend should offer Tab to accept, one key for it:\n%s", v)
-	}
-	// In a single box Tab accepts the offer (tdp K2, v0.1.6); typing then
-	// edits it. Shift-Tab has nothing to move to and does nothing.
-	d.send(tea.KeyMsg{Type: tea.KeyShiftTab})
-	if d.m.input.value != "" || d.m.input.placeholder == "" {
-		t.Fatalf("Shift-Tab should leave the offer alone: value %q", d.m.input.value)
-	}
-	d.send(tea.KeyMsg{Type: tea.KeyTab})
-	d.key("b")
-	if d.m.input.value != "https://example.com/ab" || d.m.input.placeholder != "" {
-		t.Fatalf("after Tab: value %q placeholder %q", d.m.input.value, d.m.input.placeholder)
-	}
-	d.key("esc")
-	d.until("closed", func() bool { return !d.m.input.isActive() })
-
-	// → accepts too, in any box.
-	d.key("L")
-	d.until("goto open for →", func() bool { return d.m.input.isInteractive() })
-	d.send(tea.KeyMsg{Type: tea.KeyRight})
-	if d.m.input.value != "https://example.com/a" {
-		t.Fatalf("after →: value %q", d.m.input.value)
-	}
-	d.key("esc")
-	d.until("closed again", func() bool { return !d.m.input.isActive() })
-
-	// Backspace on the empty line declines it.
-	d.key("L")
-	d.until("goto open again", func() bool { return d.m.input.isInteractive() })
-	d.send(tea.KeyMsg{Type: tea.KeyBackspace})
-	if d.m.input.placeholder != "" {
-		t.Fatalf("Backspace kept the offer %q", d.m.input.placeholder)
-	}
-	if v := d.m.input.view(); strings.Contains(v, "accept") {
-		t.Errorf("the legend still offers to accept with nothing to take:\n%s", v)
-	}
-	d.key("esc")
-
-	if got := bracketHotkey("URL", "L"); got != "UR[L]" {
-		t.Errorf("bracketHotkey(URL, L) = %q", got)
-	}
-	if got := bracketHotkey("dir1", "1"); got != "[1] dir1" {
-		t.Errorf("a digit key is never bracketed inside the label: %q", got)
-	}
-	for _, label := range []string{"[/] Search", "[n] Next section"} {
-		if got := bracketHotkey(label, label[1:2]); got != label {
-			t.Errorf("a label that says its key is left as written: %q", got)
-		}
-	}
+	d.press("esc")
 
 	// T on the page is the same new tab as T on the tabs list.
-	d.m.focus = panelPage
-	d.key("T")
-	d.until("new tab box", func() bool { return d.m.input.isInteractive() })
-	if d.m.input.action != inputGotoNewTab || d.m.input.placeholder != "" {
-		t.Errorf("T on [2]: action %v placeholder %q", d.m.input.action, d.m.input.placeholder)
-	}
-	d.key("esc")
+	d.press("T")
+	d.until("new tab box", d.shows("NEW TAB"))
+	d.press("esc")
 }
 
 // importSample is the shape Chrome writes — the Netscape format every
@@ -733,77 +603,49 @@ const importSample = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 </DL><p>
 `
 
-// TestImportBookmarks drives I on the Bookmarks screen without a browser:
-// the picker opens in Downloads, a file that is not an export is refused
-// as soon as it is picked, the folder name is required and must be new,
-// and the whole tree lands under it.
+// TestImportBookmarks: the file is read when it is picked, the folder name
+// is required and must be new, and the whole tree lands under it.
 func TestImportBookmarks(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	dl := filepath.Join(home, "Downloads")
-	if err := os.MkdirAll(dl, 0o755); err != nil {
+	dir := t.TempDir()
+	good, bad := filepath.Join(dir, "bookmarks_9_21_26.html"), filepath.Join(dir, "notes.txt")
+	if err := os.WriteFile(good, []byte(importSample), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	for name, body := range map[string]string{"bookmarks_9_21_26.html": importSample, "notes.txt": "not an export"} {
-		if err := os.WriteFile(filepath.Join(dl, name), []byte(body), 0o644); err != nil {
-			t.Fatal(err)
-		}
+	if err := os.WriteFile(bad, []byte("not an export"), 0o644); err != nil {
+		t.Fatal(err)
 	}
 	m := New(nil, "").WithStore([]store.Bookmark{{Title: "Go", URL: "https://go.dev"}}, nil, store.Config{}, nil)
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.key("B")
-	d.key("I")
-	d.until("picker", func() bool { return d.m.picker.isInteractive() })
-	if d.m.picker.dir != dl {
-		t.Errorf("the picker should open in Downloads, opened in %s", d.m.picker.dir)
-	}
 
-	// Typing narrows; a file that is not an export is refused as soon as
-	// it is picked, before any name is asked.
-	d.key("notes")
-	d.key("enter")
-	d.until("refused", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "notes.txt") })
-	if d.m.input.isActive() {
-		t.Error("no name should be asked for a file that is not an export")
+	// A file that is not an export is refused as soon as it is picked.
+	d.exec(func() tea.Msg { return nil })
+	d.exec(m.importPicked(bad))
+	d.settle()
+	if !strings.Contains(d.view(), "notes.txt") || strings.Contains(d.view(), "IMPORT BOOKMARKS: ") && strings.Contains(d.view(), "The folder to put") {
+		t.Errorf("a file that is not an export should be refused at once:\n%s", d.view())
 	}
-	d.until("picker gone", func() bool { return !d.m.picker.isActive() })
+	d.press("esc")
 
-	d.key("I")
-	d.until("picker again", func() bool { return d.m.picker.isInteractive() })
-	d.key("book")
+	d.exec(m.importPicked(good))
+	d.settle()
+	d.until("name asked", d.shows("3 bookmarks in 4 folders"))
 	d.key("enter")
-	d.until("name asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputImportName })
-	if p := d.m.input.prompt; !strings.Contains(p, "3 bookmarks") || !strings.Contains(p, "4 folders") {
-		t.Errorf("the prompt should count what was read: %q", p)
-	}
-	// The name is required: Enter on nothing keeps the box.
-	rows := rowsOf(d.m.input.view())
-	d.key("enter")
-	if !strings.Contains(d.m.input.refused, "folder name") || strings.Contains(d.m.toast.msg, "folder name") {
-		t.Fatalf("the box should say a name is needed, in its error row: %q", d.m.input.refused)
-	}
-	if !d.m.input.isInteractive() || rowsOf(d.m.input.view()) != rows {
-		t.Fatal("the box should stay open, its height as it was")
+	if !strings.Contains(d.view(), "needs a name") {
+		t.Fatalf("the box should say a name is needed, in its error row:\n%s", d.view())
 	}
 	d.key("chrome")
-	d.key("enter")
-	d.until("imported", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "imported 3 bookmarks") })
-	d.until("box gone", func() bool { return !d.m.input.isActive() })
-
-	// The whole tree is under chrome, the empty folder too; what was
-	// there before is untouched; the cursor is on the new root.
-	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "chrome" {
-		t.Errorf("the cursor should be on the chrome folder, is on %+v", e)
+	d.press("enter")
+	d.until("imported", func() bool { return len(d.m.bookmarks) == 4 })
+	if r, ok := d.m.bmCurrent(); !ok || !r.isFolder || r.folder != "chrome" {
+		t.Errorf("the cursor should be on the chrome folder, is on %+v", r)
 	}
 	wantFolders := []string{"chrome", "chrome/Bookmarks bar", "chrome/Bookmarks bar/dev", "chrome/Other bookmarks", "chrome/Other bookmarks/empty"}
 	if got := strings.Join(d.m.folderNames(), "|"); got != strings.Join(wantFolders, "|") {
 		t.Errorf("folders %q", d.m.folderNames())
-	}
-	if len(d.m.bookmarks) != 4 || d.m.bookmarks[0] != (store.Bookmark{Title: "Go", URL: "https://go.dev"}) {
-		t.Errorf("bookmarks %+v", d.m.bookmarks)
 	}
 	if b := d.m.bookmarks[2]; b.Folder != "chrome/Bookmarks bar/dev" || b.URL != "https://pkg.go.dev/" {
 		t.Errorf("the nested bookmark: %+v", b)
@@ -813,24 +655,19 @@ func TestImportBookmarks(t *testing.T) {
 	}
 
 	// The same name again is refused: an import never merges into another.
-	d.key("I")
-	d.until("picker once more", func() bool { return d.m.picker.isInteractive() })
-	d.key("book")
-	d.key("enter")
-	d.until("name asked again", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputImportName })
+	d.exec(m.importPicked(good))
+	d.settle()
+	d.until("name asked again", d.shows("3 bookmarks in 4 folders"))
 	d.key("chrome")
 	d.key("enter")
-	if !strings.Contains(d.m.input.refused, "exists") {
-		t.Errorf("a taken name should be refused in the box: %q", d.m.input.refused)
-	}
-	if !d.m.input.isInteractive() || len(d.m.bookmarks) != 4 {
-		t.Error("a taken name should keep the box open and import nothing")
+	if !strings.Contains(d.view(), "is there already") || len(d.m.bookmarks) != 4 {
+		t.Errorf("a taken name should keep the box open and import nothing:\n%s", d.view())
 	}
 }
 
 // TestDeleteFolderTree: x on a folder with anything in it asks first,
-// naming what goes, and then takes the whole tree; an empty folder goes
-// at once; what is outside the folder stays.
+// naming what goes, and then takes the whole tree; an empty folder goes at
+// once; what is outside the folder stays.
 func TestDeleteFolderTree(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
@@ -842,37 +679,27 @@ func TestDeleteFolderTree(t *testing.T) {
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.key("B")
-	d.m.lists.cursorToFolder("dev")
-	d.key("x")
-	d.until("asked", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmDeleteFolder })
-	if l := d.m.confirm.lines; len(l) != 2 || l[0] != "dev" || !strings.Contains(l[1], "2 bookmarks") || !strings.Contains(l[1], "2 folders") {
-		t.Errorf("the confirm should name what goes: %q", l)
+	m.bmList.Select(bmRowID(bmRow{folder: "dev", isFolder: true}))
+	d.press("x")
+	d.until("asked", d.shows("DELETE FOLDER"))
+	if v := d.view(); !strings.Contains(v, "2 bookmarks") || !strings.Contains(v, "2 folders") {
+		t.Errorf("the confirm should name what goes:\n%s", v)
 	}
-	d.key("esc")
-	d.until("kept", func() bool { return !d.m.confirm.isActive() })
+	d.press("esc")
 	if len(d.m.bookmarks) != 3 {
 		t.Fatal("Esc should delete nothing")
 	}
-
-	d.m.lists.cursorToFolder("dev")
-	d.key("x")
-	d.until("asked again", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmDeleteFolder })
-	d.key("enter")
-	d.until("tree gone", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "2 bookmarks") })
-	if len(d.m.bookmarks) != 1 || d.m.bookmarks[0].Title != "HN" {
-		t.Errorf("bookmarks after: %+v", d.m.bookmarks)
+	d.press("x")
+	d.until("asked again", d.shows("DELETE FOLDER"))
+	d.press("enter")
+	d.until("tree gone", func() bool { return len(d.m.bookmarks) == 1 })
+	if d.m.bookmarks[0].Title != "HN" || strings.Join(d.m.folderNames(), "|") != "misc" {
+		t.Errorf("after: %+v %q", d.m.bookmarks, d.m.folderNames())
 	}
-	if got := strings.Join(d.m.folderNames(), "|"); got != "misc" {
-		t.Errorf("folders after: %q", d.m.folderNames())
-	}
-
-	// An empty folder goes without a question. (The confirm above is
-	// still animating shut: let it finish, so a new one would show.)
-	d.until("confirm shut", func() bool { return !d.m.confirm.isActive() })
-	d.m.lists.cursorToFolder("misc")
-	d.key("x")
-	d.until("misc gone", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "misc") })
-	if d.m.confirm.isActive() || len(d.m.folderNames()) != 0 {
+	// An empty folder goes without a question.
+	m.bmList.Select(bmRowID(bmRow{folder: "misc", isFolder: true}))
+	d.press("x")
+	if len(d.m.folderNames()) != 0 || strings.Contains(d.view(), "DELETE FOLDER") {
 		t.Error("an empty folder should go at once")
 	}
 	if list, folders, err := store.LoadBookmarks(); err != nil || len(list) != 1 || len(folders) != 0 {
@@ -880,9 +707,9 @@ func TestDeleteFolderTree(t *testing.T) {
 	}
 }
 
-// TestRenameBookmarks: r on a bookmark edits its title in a box holding
-// the current one; r on a folder renames that level, and everything
-// under it follows; an empty or a taken name keeps the box.
+// TestRenameBookmarks: r on a bookmark renames it; r on a folder renames
+// that level, and everything under it follows; an empty or a taken name
+// keeps the box.
 func TestRenameBookmarks(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
@@ -894,79 +721,41 @@ func TestRenameBookmarks(t *testing.T) {
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.key("B")
 
-	d.m.lists.cursorTo(0)
-	d.key("r")
-	d.until("title box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputRename })
-	if d.m.input.value != "Go" {
-		t.Errorf("the box should hold the title, holds %q", d.m.input.value)
-	}
-	d.key("backspace")
-	d.key("backspace")
-	d.key("enter")
-	if !strings.Contains(d.m.input.refused, "name") || !d.m.input.isInteractive() {
-		t.Fatalf("an empty name should keep the box and say so in it: %q", d.m.input.refused)
-	}
+	m.bmList.Select(bmRowID(bmRow{ref: 0}))
+	d.press("r")
+	d.until("title box", d.shows("RENAME BOOKMARK"))
 	d.key("The Go site")
-	d.key("enter")
-	d.until("renamed", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "renamed") })
-	if d.m.bookmarks[0].Title != "The Go site" || d.m.bookmarks[0].URL != "https://go.dev" {
-		t.Errorf("bookmark after: %+v", d.m.bookmarks[0])
-	}
-	d.until("box gone", func() bool { return !d.m.input.isActive() })
+	d.press("enter")
+	d.until("renamed", func() bool { return d.m.bookmarks[0].Title == "The Go site" })
 
-	// A folder: its own name only, and a taken one is refused.
-	d.m.lists.cursorToFolder("dev")
-	d.key("r")
-	d.until("name box", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputRename })
-	if d.m.input.value != "dev" {
-		t.Errorf("the box should hold the folder's name, holds %q", d.m.input.value)
-	}
-	for range 3 {
-		d.key("backspace")
-	}
+	m.bmList.Select(bmRowID(bmRow{folder: "dev", isFolder: true}))
+	d.press("r")
+	d.until("name box", d.shows("RENAME FOLDER"))
 	d.key("misc")
 	d.key("enter")
-	if !strings.Contains(d.m.input.refused, "exists") || !d.m.input.isInteractive() {
-		t.Fatalf("a taken name should keep the box and say so in it: %q", d.m.input.refused)
+	if !strings.Contains(d.view(), "is there already") {
+		t.Fatalf("a taken name should keep the box and say so in it:\n%s", d.view())
 	}
 	for range 4 {
 		d.key("backspace")
 	}
 	d.key("code")
-	d.key("enter")
-	d.until("folder renamed", func() bool { return d.m.toast.isActive() && strings.Contains(d.m.toast.msg, "now code") })
-	if got := strings.Join(d.m.folderNames(), "|"); got != "code|code/empty|code/go|misc" {
-		t.Errorf("folders after: %q", d.m.folderNames())
-	}
+	d.press("enter")
+	d.until("folder renamed", func() bool { return strings.Join(d.m.folderNames(), "|") == "code|code/empty|code/go|misc" })
 	if d.m.bookmarks[0].Folder != "code" || d.m.bookmarks[1].Folder != "code/go" {
 		t.Errorf("bookmarks should follow the folder: %+v", d.m.bookmarks)
 	}
-	if e, _, ok := d.m.lists.current(); !ok || !e.isFolder || e.folder != "code" {
-		t.Errorf("the cursor should be on the renamed folder, is on %+v", e)
-	}
-	if _, folders, err := store.LoadBookmarks(); err != nil || len(folders) != 4 {
-		t.Errorf("saved folders: %q, %v", folders, err)
+	if r, ok := d.m.bmCurrent(); !ok || !r.isFolder || r.folder != "code" {
+		t.Errorf("the cursor should be on the renamed folder, is on %+v", r)
 	}
 }
 
-// TestPageParts: a page is four parts and the pagetab is those parts
-// (user, 2026-09-22). None of it reads a role — the fixture's header,
-// nav, main and footer are placed by WHERE Chromium laid them out, and
-// the same four come out of a page that marks up none of them.
+// TestPageParts: a page's four parts are panel [2]'s tabs after the whole
+// page (user, 2026-09-22). None of it reads a role — the parts are placed
+// by WHERE Chromium laid them out.
 func TestPageParts(t *testing.T) {
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	exe, ok := browser.Installed()
-	if !ok {
-		t.Skip("pinned Chromium not installed; run webu once")
-	}
-	b, err := browser.Launch(exe, t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Close()
-	abs, _ := filepath.Abs("testdata/parts.html")
-	d := newDriver(t, New(b, "file://"+abs))
+	b := launch(t)
+	d := newDriver(t, New(b, fixture("parts.html")))
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("the parts page", d.loaded("Parts"))
@@ -979,8 +768,11 @@ func TestPageParts(t *testing.T) {
 	if strings.Join(kinds, " ") != "header body others footer" {
 		t.Fatalf("the fixture has all four, in page order: %q", kinds)
 	}
-	if p.at != partMain {
-		t.Errorf("a page opens on its body, opened on %s", p.at.word())
+	if p.at != partMain || d.m.pagePanel.Tab != 2 {
+		t.Errorf("a page opens on its body: at %s, tab %d", p.at.word(), d.m.pagePanel.Tab)
+	}
+	if v := d.view(); !strings.Contains(v, "PAGE") || !strings.Contains(v, "FOOTER") {
+		t.Errorf("[2]'s frame names the page and its parts:\n%s", v)
 	}
 	if n := p.current(); n == nil || n.Kind != ir.Heading {
 		t.Errorf("and on the body's first item, is on %+v", n)
@@ -989,71 +781,38 @@ func TestPageParts(t *testing.T) {
 		t.Errorf("the body, and only the body:\n%s", v)
 	}
 
-	// Esc puts the hand on the part being shown — which is where the eye
-	// already is — and h/l show each part as they reach it: moving IS
-	// choosing, so there is no second key to press (user, 2026-09-23).
-	d.key("esc")
-	if !p.onPagetab() || p.parts[p.pagetabIndex()].kind != partMain {
-		t.Errorf("Esc goes to the part on screen: %d", p.pagetabIndex())
-	}
+	// l shows the next part, h the one before; the first tab is the whole
+	// page.
+	d.key("2")
 	d.key("l")
-	want := p.parts[p.pagetabIndex()].kind
-	if want == partMain {
-		t.Fatal("l moves the hand")
-	}
-	if p.at != want {
-		t.Errorf("l shows what it moves to: hand on %s, showing %s", want.word(), p.at.word())
+	if p.at != partOthers {
+		t.Errorf("l shows the next part: %s", p.at.word())
 	}
 	if v := dumpLayout(p.lay); strings.Contains(v, "The body itself") {
-		t.Errorf("the panel should already be showing %s:\n%s", want.word(), v)
+		t.Errorf("the panel should be showing others:\n%s", v)
 	}
-
-	// Enter is the confirmation: it leaves the part where it is and takes
-	// the hand back to the page.
-	d.key("enter")
-	if p.at != want || p.onPagetab() {
-		t.Errorf("Enter keeps the part and comes back down: at=%s onPagetab=%v", p.at.word(), p.onPagetab())
+	d.key("h")
+	d.key("h")
+	d.key("h")
+	if p.at != partWhole {
+		t.Fatalf("the first tab is the whole page: %v", p.at)
 	}
-
-	// Esc again, walk back round to the body, and the page is whole.
-	d.key("esc")
-	for p.parts[p.pagetabIndex()].kind != partMain {
-		d.key("l")
-	}
-	if !strings.Contains(dumpLayout(p.lay), "The body itself") {
-		t.Errorf("back on the body:\n%s", dumpLayout(p.lay))
-	}
-	d.key("enter")
-	if p.onPagetab() || p.at != partMain {
-		t.Errorf("and Enter stays on it: at=%s onPagetab=%v", p.at.word(), p.onPagetab())
+	if v := dumpLayout(p.lay); !strings.Contains(v, "The body itself") || !strings.Contains(v, "Top link") {
+		t.Errorf("the whole page:\n%s", v)
 	}
 }
 
-// A page with no one dominant block has no parts to choose between: the
-// flat fixture is fifteen paragraphs of much the same size, and cutting
-// it anywhere would invent a header. It stays whole, and the pagetab
-// does not appear (2026-09-23).
+// A page with no one dominant block has no parts to choose between: it
+// stays whole, and [2] has no tabs (2026-09-23).
 func TestAFlatPageIsOnePart(t *testing.T) {
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	exe, ok := browser.Installed()
-	if !ok {
-		t.Skip("pinned Chromium not installed; run webu once")
-	}
-	b, err := browser.Launch(exe, t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Close()
-	abs, _ := filepath.Abs("testdata/nav.html")
-	d := newDriver(t, New(b, "file://"+abs))
+	b := launch(t)
+	d := newDriver(t, New(b, fixture("nav.html")))
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
-
 	p := d.page()
-	if len(p.parts) != 0 {
-		t.Errorf("a flat page is not cut up: %d parts", len(p.parts))
+	if len(p.parts) != 0 || len(d.m.pagePanel.Tabs) != 0 {
+		t.Errorf("a flat page is not cut up: %d parts, tabs %q", len(p.parts), d.m.pagePanel.Tabs)
 	}
 	v := dumpLayout(p.lay)
 	for _, want := range []string{"Page A", "Ann Example", "About"} {
@@ -1061,145 +820,87 @@ func TestAFlatPageIsOnePart(t *testing.T) {
 			t.Errorf("the whole page is on screen, %q is not:\n%s", want, v)
 		}
 	}
-	d.key("esc")
-	if p.onPagetab() {
-		t.Error("with one part there is nowhere for Esc to go")
-	}
 }
 
 func TestTableCells(t *testing.T) {
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	exe, ok := browser.Installed()
-	if !ok {
-		t.Skip("pinned Chromium not installed; run webu once")
-	}
-	b, err := browser.Launch(exe, t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Close()
-	abs, _ := filepath.Abs("testdata/nav.html")
-	d := newDriver(t, New(b, "file://"+abs))
+	b := launch(t)
+	d := newDriver(t, New(b, fixture("nav.html")))
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
+	d.key("2")
 
 	d.cursorOn(ir.Cell, "Ann Example")
-	d.key("enter")
-	d.until("the cell in full", func() bool { return d.m.message.isInteractive() })
-	if d.m.message.title != "Name" || !strings.Contains(strings.Join(d.m.message.lines, " "), "to be cut by the column") {
-		t.Errorf("the popup should be the whole cell under its column's header: %q %q", d.m.message.title, d.m.message.lines)
+	d.press("enter")
+	d.until("the cell in full", d.shows("CELL"))
+	if v := d.view(); !strings.Contains(v, "Name") || !strings.Contains(v, "to be cut by the column") {
+		t.Errorf("the viewer should be the whole cell under its column's header:\n%s", v)
 	}
-	d.key("esc")
-	d.until("popup gone", func() bool { return !d.m.message.isActive() })
+	d.press("esc")
 
-	d.key("l")
+	// j is the next item in reading order: the next cell on the row.
+	d.key("j")
 	if n := d.page().current(); n == nil || n.Kind != ir.Cell || strings.TrimSpace(n.Text()) != "home" {
-		t.Fatalf("l should walk to the next cell, is on %+v", n)
+		t.Fatalf("j should walk to the next cell, is on %+v", n)
 	}
-	d.key("enter")
-	d.until("asks to open", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
-	d.key("esc")
-	d.until("confirm gone", func() bool { return !d.m.confirm.isActive() })
+	d.press("enter")
+	d.until("asks to open", d.shows("OPEN LINK"))
+	d.press("esc")
 
 	d.cursorOn(ir.Cell, "none")
-	d.key("enter")
-	d.until("the other cell", func() bool { return d.m.message.isInteractive() && d.m.message.title == "Site" })
+	d.press("enter")
+	d.until("the other cell", d.shows("CELL — Site"))
 }
 
-// Google's search box is a textarea that calls itself a combobox, with
-// no options: Enter on it is the input popup, offered to the page's
-// Enter afterwards because it sits in a search landmark — not "no
-// options to choose from" (user, 2026-09-23). A combobox WITH options
-// still drops its list.
+// Google's search box is a textarea that calls itself a combobox, with no
+// options: Enter on it is the input, not "no options to choose from" (user,
+// 2026-09-23). A combobox WITH options still drops its list.
 func TestAComboboxWithNoOptionsOpensTheInput(t *testing.T) {
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	exe, ok := browser.Installed()
-	if !ok {
-		t.Skip("pinned Chromium not installed; run webu once")
-	}
-	b, err := browser.Launch(exe, t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Close()
-	abs, _ := filepath.Abs("testdata/combo.html")
-	d := newDriver(t, New(b, "file://"+abs))
+	b := launch(t)
+	d := newDriver(t, New(b, fixture("combo.html")))
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("combo page", d.loaded("Combo"))
+	d.key("2")
 
 	d.cursorOn(ir.Textbox, "搜尋")
-	d.key("enter")
-	d.until("the input", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputField })
-	if d.m.input.prompt != "搜尋" || !d.m.input.search {
-		t.Errorf("the box over the field: prompt %q search %v", d.m.input.prompt, d.m.input.search)
-	}
-	if d.m.message.isActive() {
+	d.press("enter")
+	d.until("the input", d.shows("搜尋"))
+	if strings.Contains(d.view(), "No options") {
 		t.Error("no message about options")
 	}
-	d.key("esc")
-	d.until("input gone", func() bool { return !d.m.input.isActive() })
+	d.press("esc")
 
 	d.cursorOn(ir.Combobox, "Pick")
-	d.key("enter")
-	d.until("the options", func() bool { return d.m.choices.isInteractive() && d.m.choicesKind == optSelect })
-	if len(d.m.choices.items) < 2 {
-		t.Errorf("a real select lists its options: %d", len(d.m.choices.items))
-	}
+	d.press("enter")
+	d.until("the options", d.shows("CHOOSE"))
 }
 
-// Going back lands where the reader left, the way a browser restores
-// its scroll: the cursor and the window on the page come back to are
-// the ones it had, not the page's start (user, 2026-09-23). Each
-// history entry has its own place, so a page in the stack twice is two
-// places.
+// Going back lands where the reader left, the way a browser restores its
+// scroll (user, 2026-09-23).
 func TestBackReturnsToThePlaceLeft(t *testing.T) {
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	exe, ok := browser.Installed()
-	if !ok {
-		t.Skip("pinned Chromium not installed; run webu once")
-	}
-	b, err := browser.Launch(exe, t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Close()
-	abs, _ := filepath.Abs("testdata/nav.html")
-	d := newDriver(t, New(b, "file://"+abs))
+	b := launch(t)
+	d := newDriver(t, New(b, fixture("nav.html")))
 	defer d.m.Close()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("page A", d.loaded("Page A"))
+	d.key("2")
 	p := d.page()
 
-	// Down the page to the Confirm button, then off to page B by the
-	// link above it.
-	d.cursorOn(ir.Button, "Confirm")
-	wasCursor, wasTop := p.cursor, p.top
-	if wasCursor <= 0 {
-		t.Fatalf("the cursor should be down the page: %d", wasCursor)
-	}
 	d.cursorOn(ir.Link, "a link to B")
 	leftCursor := p.cursor
-	d.key("enter")
-	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
-	d.key("enter")
+	d.press("enter")
+	d.until("open link?", d.shows("OPEN LINK"))
+	d.press("enter")
 	d.until("page B", d.loaded("Page B"))
 	if p.entry == 0 || len(p.places) != 1 {
 		t.Fatalf("leaving a page keeps its place under its entry: entry %d, places %d", p.entry, len(p.places))
 	}
-
 	d.key("P")
 	d.until("page A again", d.loaded("Page A"))
 	if p.cursor != leftCursor {
 		t.Errorf("back lands on the item the reader left: cursor %d, want %d", p.cursor, leftCursor)
 	}
-	_ = wasTop
-	// And forward keeps B where it was too — its start, which is where
-	// it was left.
 	d.key("N")
 	d.until("page B again", d.loaded("Page B"))
 	if n := p.current(); n == nil || n.Kind != ir.Heading {

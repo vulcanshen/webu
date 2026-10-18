@@ -142,10 +142,10 @@ func TestPopupsStackAndOpenOnLoad(t *testing.T) {
 	if v := dumpLayout(p.lay); !strings.Contains(v, "Which cookies") || strings.Contains(v, "We use cookies") {
 		t.Errorf("the cursor walks the top dialog:\n%s", v)
 	}
-	if fl := d.m.pagePopupFloats(p); len(fl) != 2 || !strings.Contains(fl[1].box, "Which cookies") || !strings.Contains(fl[0].box, "We use cookies") {
+	if fl := d.m.pagePopupFloats(p, d.m.pageW()); len(fl) != 2 || !strings.Contains(strings.Join(fl[1].lines, "\n"), "Which cookies") || !strings.Contains(strings.Join(fl[0].lines, "\n"), "We use cookies") {
 		t.Errorf("both floats are drawn, the second over the first: %d", len(fl))
 	}
-	if v := d.m.View(); !strings.Contains(v, "Which cookies") || !strings.Contains(v, "We use cookies") {
+	if v := d.view(); !strings.Contains(v, "Which cookies") || !strings.Contains(v, "We use cookies") {
 		t.Errorf("the stack cascades, so the one under still shows:\n%s", v)
 	}
 	d.cursorOn(ir.Button, "Back")
@@ -211,32 +211,29 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 	}
 	// Drawn as a float over the page: the dialog in a box, the page
 	// still there under it.
-	if f := d.m.pagePopupView(p); !strings.Contains(f, "We use cookies") || !strings.Contains(f, "Accept") {
+	fl := d.m.pagePopupFloats(p, d.m.pageW())
+	if f := strings.Join(fl[len(fl)-1].lines, "\n"); !strings.Contains(f, "We use cookies") || !strings.Contains(f, "Accept") {
 		t.Errorf("the float is the dialog:\n%s", f)
 	}
-	if view := d.m.View(); !strings.Contains(view, "We use cookies") || !strings.Contains(view, "Some body text") {
+	if view := d.view(); !strings.Contains(view, "We use cookies") || !strings.Contains(view, "Some body text") {
 		t.Errorf("the page shows through under the float:\n%s", view)
 	}
 	d.key("esc")
-	if p.popupNode() == nil || !d.m.toast.isActive() {
-		t.Error("Esc does not leave a popup; it says so")
+	d.settle()
+	if p.popupNode() == nil || !strings.Contains(d.view(), "wants an answer") {
+		t.Errorf("Esc does not leave a popup; it says so:\n%s", d.view())
 	}
 	d.key("esc") // the toast
-	// No line numbers in a dialog, and nowhere for [go] to go.
+	// No line numbers in a dialog, and nowhere for [go] or [/] to go.
 	if p.gutter != 0 {
 		t.Errorf("a popup has no gutter: %d", p.gutter)
 	}
 	d.key("g")
-	d.key("o")
-	if d.m.finder.isActive() || !d.m.toast.isActive() {
-		t.Error("[go] in a popup says there is nowhere to go")
+	d.press("o")
+	d.press("/")
+	if v := d.view(); strings.Contains(v, "GO TO LINE") || strings.Contains(v, "SEARCH") {
+		t.Errorf("[go] and [/] do nothing on a popup:\n%s", v)
 	}
-	d.key("esc")
-	d.key("/")
-	if d.m.finder.isActive() || !d.m.toast.isActive() {
-		t.Error("[/] in a popup says it is answered, not searched")
-	}
-	d.key("esc")
 	d.cursorOn(ir.Button, "Accept")
 	d.key("enter")
 	d.until("answered", func() bool { return p.popupNode() == nil && strings.Contains(dumpLayout(p.lay), "accepted") })
@@ -260,8 +257,9 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 	// clicking on nothing.
 	d.cursorOn(ir.Button, "Nope")
 	d.key("enter")
-	if !d.m.toast.isActive() || !strings.Contains(d.m.toast.msg, "disabled") {
-		t.Errorf("Enter on a disabled button says so: %q", d.m.toast.msg)
+	d.settle()
+	if !strings.Contains(d.view(), "disabled on the page") {
+		t.Errorf("Enter on a disabled button says so:\n%s", d.view())
 	}
 	d.key("esc")
 
@@ -356,37 +354,4 @@ func TestAMenuButtonOpensAPopup(t *testing.T) {
 	d.cursorOn(ir.Button, "Action 3")
 	d.key("enter")
 	d.until("picked", func() bool { return p.popupNode() == nil && strings.Contains(dumpLayout(p.lay), "Action 3") })
-}
-
-// The page under its own popup fades the way everything under a popup
-// does (tdp D2, 2026-09-28): its heading keeps its hue, darker, instead
-// of turning to the loading grey.
-func TestPopupBackdropFades(t *testing.T) {
-	withColour(t)
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	exe, ok := browser.Installed()
-	if !ok {
-		t.Skip("pinned Chromium not installed; run webu once")
-	}
-	b, err := browser.Launch(exe, t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Close()
-	abs, _ := filepath.Abs("testdata/popup.html")
-	d := newDriver(t, New(b, "file://"+abs))
-	defer d.m.Close()
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.until("the popups page", d.loaded("Popups"))
-	p := d.page()
-	d.cursorOn(ir.Button, "Open dialog")
-	d.key("enter")
-	d.until("the dialog", func() bool { return p.popupNode() != nil })
-
-	// The h1 is peach, #fab387 (250,179,135): faded, 129,97,86.
-	v := fgs(d.m.View())
-	if !v.has("#816156") || v.has(levelInk[0]) {
-		t.Errorf("the backdrop heading should be its own colour, faded: %v", v)
-	}
 }

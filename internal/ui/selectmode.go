@@ -4,7 +4,6 @@ import (
 	"strings"
 	"unicode"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -29,7 +28,6 @@ type selectMode struct {
 	anchorCol int
 
 	query   string
-	typing  bool
 	matches []match
 	cur     int // index into matches, or -1
 
@@ -50,8 +48,8 @@ const (
 
 // enter starts the mode over a laid-out page, with the cursor on the item
 // cursor's row (or the top of the window).
-func (s *selectMode) enter(t *tab, typing bool) {
-	*s = selectMode{on: true, cur: -1, typing: typing}
+func (s *selectMode) enter(t *tab) {
+	*s = selectMode{on: true, cur: -1}
 	s.text = rowsRunes(t.lay)
 	s.row = clamp(t.top, 0, max(0, len(s.text)-1))
 	if n := t.current(); n != nil {
@@ -89,31 +87,7 @@ func (s *selectMode) clampCol() {
 
 // key handles one keystroke. visible is the page window's height, for the
 // half-page motions.
-func (s *selectMode) key(msg tea.KeyMsg, visible int) (selResult, string) {
-	if s.typing {
-		switch msg.Type {
-		case tea.KeyEscape:
-			s.typing, s.query, s.matches, s.cur = false, "", nil, -1
-		case tea.KeyEnter:
-			s.typing = false
-			s.search()
-			s.jumpMatch(s.firstMatchFrom(s.row, s.col))
-		case tea.KeyBackspace:
-			if r := []rune(s.query); len(r) > 0 {
-				s.query = string(r[:len(r)-1])
-			}
-			s.search()
-		case tea.KeySpace:
-			s.query += " "
-			s.search()
-		case tea.KeyRunes:
-			s.query += takeText(msg.Runes)
-			s.search()
-		}
-		return selNone, ""
-	}
-
-	k := msg.String()
+func (s *selectMode) key(k string, visible int) (selResult, string) {
 	if s.pendingG {
 		s.pendingG = false
 		if k == "g" {
@@ -127,23 +101,20 @@ func (s *selectMode) key(msg tea.KeyMsg, visible int) (selResult, string) {
 	n := len(s.text)
 	half := max(1, visible/2)
 	switch k {
-	case "esc":
-		s.on = false
-		return selLeave, ""
-	case "h", "left":
+	case "h", "←":
 		s.col = max(0, s.col-1)
-	case "l", "right":
+	case "l", "→":
 		s.col = min(max(0, len(s.line())-1), s.col+1)
-	case "j", "down":
+	case "j", "↓":
 		s.row = min(n-1, s.row+1)
 		s.clampCol()
-	case "k", "up":
+	case "k", "↑":
 		s.row = max(0, s.row-1)
 		s.clampCol()
-	case "u", "ctrl+u":
+	case "u":
 		s.row = max(0, s.row-half)
 		s.clampCol()
-	case "d", "ctrl+d":
+	case "d":
 		s.row = min(n-1, s.row+half)
 		s.clampCol()
 	case "gg":
@@ -151,9 +122,9 @@ func (s *selectMode) key(msg tea.KeyMsg, visible int) (selResult, string) {
 	case "G":
 		s.row = max(0, n-1)
 		s.clampCol()
-	case "0", "home":
+	case "0":
 		s.col = 0
-	case "$", "end":
+	case "$":
 		s.col = max(0, len(s.line())-1)
 	case "w":
 		s.wordForward()
@@ -169,10 +140,6 @@ func (s *selectMode) key(msg tea.KeyMsg, visible int) (selResult, string) {
 		text := s.selectedText()
 		s.selecting = false
 		return selYank, text
-	case "/":
-		s.typing = true
-		s.query = ""
-		s.matches, s.cur = nil, -1
 	case "n":
 		if len(s.matches) > 0 {
 			s.jumpMatch((s.cur + 1) % len(s.matches))
@@ -181,7 +148,7 @@ func (s *selectMode) key(msg tea.KeyMsg, visible int) (selResult, string) {
 		if len(s.matches) > 0 {
 			s.jumpMatch((s.cur - 1 + len(s.matches)) % len(s.matches))
 		}
-	case "enter":
+	case "Enter":
 		return selClick, ""
 	}
 	return selNone, ""
@@ -421,7 +388,7 @@ func (s *selectMode) matchAt(row, col int) (in, current bool) {
 
 // status is the URL row's text while searching: /query and the count.
 func (s *selectMode) status() string {
-	if !s.typing && s.query == "" {
+	if s.query == "" {
 		return ""
 	}
 	out := "/" + s.query
@@ -438,7 +405,7 @@ func (s *selectMode) status() string {
 // selectRows draws the page window with the character cursor, the
 // selection and the matches over the ordinary colours. Cell by cell: the
 // overlays cut across segment boundaries, so segments are not the unit.
-func (m AppModel) selectRows(t *tab, innerW, innerH int) []string {
+func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 	s := &m.sel
 	styles := segStyles()
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
@@ -492,51 +459,4 @@ func (m AppModel) selectRows(t *tab, innerW, innerH int) []string {
 		out = append(out, strings.Repeat(" ", innerW+gut))
 	}
 	return out
-}
-
-// selectLegendPairs is the footer while the mode is on (ux.md §B): only
-// the keys that mean something here. ? leads it whenever a search is not
-// being typed (tdp M1): it is where the mode's keys are listed. Space does
-// nothing in a mode and is not shown (K11); the mode's own keys drop off
-// the right when it is narrow.
-func selectLegendPairs(typing bool) [][2]string {
-	if typing {
-		return [][2]string{{"Enter", "find"}, {"Esc", "cancel"}}
-	}
-	return [][2]string{
-		{"?", "help"},
-		{"y", "copy"},
-		{"v/V", "select"},
-		{"Esc", "leave"},
-		{"/", "search"},
-		{"n/N", "next/prev"},
-		{"Enter", "click"},
-		{"h/j/k/l", "move"},
-		{"w/e/b", "word"},
-		{"0/$", "line ends"},
-		{"u/d", "half page"},
-	}
-}
-
-// visualModeName is the mode's name as its ? is titled; visualModeTag is
-// the one word on [2]'s top border while it is on (tdp K11, D3 v0.1.20:
-// one word, or a narrow panel drops it).
-const (
-	visualModeName = "Visual mode"
-	visualModeTag  = "Visual"
-)
-
-// selectKeys are the mode's keys, as its ? key reference lists them —
-// read-only; the keys themselves are pressed directly (tdp K11).
-var selectKeys = []helpEntry{
-	{key: "h/j/k/l", desc: "move by character and row"},
-	{key: "w/e/b", desc: "next word, word end, previous word"},
-	{key: "0/$", desc: "start / end of the row"},
-	{key: "u/d", desc: "half a page up / down"},
-	{key: "gg/G", desc: "top / bottom of the page"},
-	{key: "v/V", desc: "select by character / by row"},
-	{key: "y", desc: "copy the selection (or this row)"},
-	{key: "/", desc: "search; [Enter] finds, [n]/[N] step"},
-	{key: "Enter", desc: "click what the cursor is on"},
-	{key: "Esc", desc: "cancel the search, then leave"},
 }

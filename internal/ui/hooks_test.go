@@ -54,11 +54,12 @@ func TestNewWindowBecomesATab(t *testing.T) {
 	d.until("a second tab showing page B", func() bool {
 		return len(d.m.tabs) == 2 && d.m.shown == 1 && d.m.tabs[1].title == "Page B" && !d.m.tabs[1].loading
 	})
-	if d.m.cur2 != 1 || d.m.focus != panelPage {
-		t.Errorf("the new tab is where the cursor and keyboard went: cur2 %d focus %d", d.m.cur2, d.m.focus)
+	d.settle()
+	if _, ct := d.m.cursorTab(); ct != d.m.tabs[1] || !d.m.pageFocused() {
+		t.Errorf("the new tab is where the cursor and keyboard went: focus on [2] %v", d.m.pageFocused())
 	}
-	if !strings.Contains(d.m.View(), "You made it.") {
-		t.Errorf("page B not drawn:\n%s", d.m.View())
+	if !strings.Contains(d.view(), "You made it.") {
+		t.Errorf("page B not drawn:\n%s", d.view())
 	}
 }
 
@@ -70,28 +71,31 @@ func TestDialogsAreAnswered(t *testing.T) {
 
 	d.cursorOn(ir.Button, "Alert")
 	d.act()
-	d.until("alert shown", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmDialog })
-	if !strings.Contains(strings.Join(d.m.confirm.lines, " "), "hello from the page") {
-		t.Errorf("alert text: %v", d.m.confirm.lines)
+	d.until("alert shown", d.shows("THE PAGE SAYS"))
+	if !strings.Contains(d.view(), "hello from the page") {
+		t.Errorf("alert text:\n%s", d.view())
 	}
-	d.key("esc") // an alert has one answer; Esc gives it too
-	d.until("alert gone", func() bool { return !d.m.confirm.isActive() && d.m.dialog == nil })
+	d.press("esc") // an alert has one answer; Esc gives it too
+	d.until("alert gone", func() bool { return d.m.dialog == nil && !strings.Contains(d.view(), "THE PAGE SAYS") })
 
 	d.cursorOn(ir.Button, "Prompt")
 	d.act()
-	d.until("prompt shown", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputPrompt })
-	if d.m.input.value != "anon" {
-		t.Errorf("prompt default %q", d.m.input.value)
+	d.until("prompt shown", d.shows("THE PAGE ASKS"))
+	if !strings.Contains(d.view(), "anon") {
+		t.Errorf("the prompt's default is the answer at first:\n%s", d.view())
 	}
-	d.send(tea.KeyMsg{Type: tea.KeyCtrlU})
+	d.press("e")
+	d.until("the answer's box", d.shows("ANSWER"))
+	d.key("backspace") // drop the offer
 	d.key("bob")
-	d.key("enter")
+	d.press("enter")
+	d.press("enter")
 	d.until("prompt answered", func() bool { return strings.Contains(dumpLayout(d.page().lay), "answer:bob") })
 
 	d.cursorOn(ir.Button, "Confirm")
 	d.act()
-	d.until("confirm shown", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmDialog })
-	d.key("esc")
+	d.until("confirm shown", d.shows("THE PAGE ASKS"))
+	d.press("esc")
 	d.until("confirm declined", func() bool { return strings.Contains(dumpLayout(d.page().lay), "confirmed:false") })
 }
 
@@ -103,11 +107,10 @@ func TestCertificateErrorAsksOnce(t *testing.T) {
 	}))
 	defer srv.Close()
 	d := startAt(t, b, srv.URL, store.Config{})
-	d.until("the certificate question", func() bool {
-		return d.m.confirm.isInteractive() && d.m.confirm.action == confirmCert
-	})
-	if p := d.page(); !strings.Contains(p.errText, "ERR_CERT") {
-		t.Errorf("error text: %q", p.errText)
+	d.until("the certificate question", d.shows("CERTIFICATE ERROR"))
+	d.settle()
+	if v := d.view(); !strings.Contains(v, "does not trust") || !strings.Contains(v, strings.TrimPrefix(srv.URL, "https://")) {
+		t.Errorf("the question says what and where:\n%s", v)
 	}
 	d.key("enter")
 	d.until("page loads once allowed", d.loaded("Secure"))
@@ -115,7 +118,7 @@ func TestCertificateErrorAsksOnce(t *testing.T) {
 	d.cursorOn(ir.Link, "two")
 	d.act()
 	d.until("second page", func() bool { return strings.HasSuffix(d.page().url, "/two") && !d.page().loading })
-	if d.m.confirm.isActive() {
+	if strings.Contains(d.view(), "CERTIFICATE ERROR") {
 		t.Error("asked again for the same tab")
 	}
 }
@@ -138,9 +141,7 @@ func TestDownloadToasts(t *testing.T) {
 	d.until("files page", d.loaded("Files"))
 	d.cursorOn(ir.Link, "get the file")
 	d.act()
-	d.until("saved toast", func() bool {
-		return d.m.toast.isActive() && strings.HasPrefix(d.m.toast.msg, "saved ")
-	})
+	d.until("saved toast", d.shows("Saved "))
 	if _, err := os.Stat(filepath.Join(dir, "hello.txt")); err != nil {
 		t.Errorf("the file is not in the download dir: %v", err)
 	}
@@ -161,27 +162,25 @@ func TestHTTPAuthIsAsked(t *testing.T) {
 	}))
 	defer srv.Close()
 	d := startAt(t, b, srv.URL, store.Config{})
-	// Name and password are one group (tdp K3): Tab between them, one Enter.
-	d.until("sign in asked", func() bool { return d.m.input.isInteractive() && d.m.input.action == inputAuth })
-	if !strings.Contains(d.m.input.prompt, "the vault") {
-		t.Errorf("prompt names the realm: %q", d.m.input.prompt)
+	// Name and password, sent together with one Enter.
+	d.until("sign in asked", d.shows("SIGN IN"))
+	d.settle()
+	if !strings.Contains(d.view(), "the vault") {
+		t.Errorf("the question names the realm:\n%s", d.view())
 	}
-	if len(d.m.input.more) != 1 || !d.m.input.more[0].masked {
-		t.Fatalf("the password should be the same box's second field, masked: %+v", d.m.input.more)
-	}
+	d.press("n")
 	d.key("ann")
-	d.send(tea.KeyMsg{Type: tea.KeyTab})
+	d.press("enter")
+	d.press("p")
 	d.key("secret")
-	if d.m.input.value != "ann" || d.m.input.more[0].value != "secret" {
-		t.Fatalf("Tab should move to the password: name %q password %q", d.m.input.value, d.m.input.more[0].value)
-	}
-	if v := d.m.View(); strings.Contains(v, "secret") {
-		t.Errorf("the password should be drawn masked:\n%s", v)
+	d.press("enter")
+	if v := d.view(); strings.Contains(v, "secret") || !strings.Contains(v, "ann") {
+		t.Errorf("the name shown, the password masked:\n%s", v)
 	}
 	d.key("enter")
 	d.until("inside", d.loaded("Inside"))
-	if !strings.Contains(d.m.View(), "Welcome ann") {
-		t.Errorf("page not drawn:\n%s", d.m.View())
+	if !strings.Contains(d.view(), "Welcome ann") {
+		t.Errorf("page not drawn:\n%s", d.view())
 	}
 }
 
@@ -205,15 +204,15 @@ func TestFileUploadIsAsked(t *testing.T) {
 	d.act()
 	// The file is picked, not typed: the picker, as the Bookmarks
 	// import has it (user, 2026-09-23).
-	d.until("the picker", func() bool { return d.m.picker.isInteractive() })
-	if d.m.picker.dir != dir {
-		t.Errorf("the picker opens in Downloads: %q", d.m.picker.dir)
-	}
+	d.until("the picker", d.shows("UPLOAD"))
+	d.settle()
+	d.key("/")
 	d.key("notes")
 	d.key("enter")
+	d.key("enter")
 	d.until("file chosen", func() bool { return strings.Contains(dumpLayout(d.page().lay), "chose:notes.txt") })
-	if d.m.upload != nil || d.m.picker.isActive() {
-		t.Error("the chooser is answered and the picker gone")
+	if d.m.upload != nil {
+		t.Error("the chooser is answered")
 	}
 }
 
@@ -239,17 +238,18 @@ func TestUndoCloseAndQuitConfirm(t *testing.T) {
 	if len(d.m.tabs) != 0 || len(d.m.closed) != 1 || d.m.shownTab() != nil {
 		t.Fatalf("after C: %d tabs, %d closed", len(d.m.tabs), len(d.m.closed))
 	}
-	if !strings.Contains(d.m.View(), "no page") {
-		t.Errorf("[2] should be empty:\n%s", d.m.View())
+	if !strings.Contains(d.view(), "No page") {
+		t.Errorf("[2] should be empty:\n%s", d.view())
 	}
 	d.key("1")
 	d.key("U")
 	d.until("page B is back again", d.loaded("Page B"))
 
 	d.m.dls = []download{{guid: "g1", name: "big.iso"}}
-	d.key("q")
-	if !d.m.quitAsk.isActive() || d.m.quitAsk.action != confirmQuit {
-		t.Error("q with a download in flight should ask first")
+	d.m.sync()
+	d.press("q")
+	if !strings.Contains(d.view(), "still in progress") {
+		t.Errorf("q with a download in flight should ask first:\n%s", d.view())
 	}
 }
 
@@ -295,31 +295,30 @@ func TestSearchThenEnterClicks(t *testing.T) {
 	d.until("page A", d.loaded("Page A"))
 	// [/] is the finder now, not selection mode (user, 2026-09-23): the
 	// page under it is untouched, and the keyboard is on the query.
-	d.key("/")
-	d.until("the finder", func() bool { return d.m.finder.isInteractive() })
+	d.key("2")
+	d.press("/")
+	d.until("the finder", d.shows("SEARCH"))
 	if d.m.sel.on {
-		t.Fatal("/ does not enter selection mode")
+		t.Fatal("/ does not enter visual mode")
 	}
 	d.key("link to b")
-	if n := len(d.m.finder.hits); n == 0 {
-		t.Fatalf("no match found: %+v", d.m.finder.hits)
-	}
+	d.settle()
 	// Enter to the list, Enter on the hit: the cursor lands on the
 	// paragraph's link and NOTHING is pressed — a hit on a link's text
 	// must not leave the page.
 	d.key("enter")
 	d.key("enter")
-	d.until("finder gone", func() bool { return !d.m.finder.isActive() })
+	d.settle()
 	if n := d.page().current(); n == nil || n.Kind != ir.Link || n.Name != "a link to B" {
 		t.Fatalf("the cursor should be on the link: %+v", n)
 	}
-	if d.m.confirm.isActive() || d.page().loading {
+	if strings.Contains(d.view(), "OPEN LINK") || d.page().loading {
 		t.Error("the finder pressed the link")
 	}
 	// Enter on the page is the press, as ever: asks, then opens.
-	d.key("enter")
-	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
-	d.key("enter")
+	d.press("enter")
+	d.until("open link?", d.shows("OPEN LINK"))
+	d.press("enter")
 	d.until("page B", d.loaded("Page B"))
 }
 
@@ -353,13 +352,15 @@ func TestBookmarkOpensANewTab(t *testing.T) {
 	d.until("page A", d.loaded("Page A"))
 	d.m.bookmarks = []store.Bookmark{{Title: "B", URL: "file://" + abs2}}
 
+	d.m.refreshBookmarks()
 	d.key("B")
-	if d.m.screen != screenBookmarks {
-		t.Fatalf("screen %v", d.m.screen)
+	if d.m.a.Screen() != d.m.bmScreen {
+		t.Fatal("B is the bookmarks screen")
 	}
 	d.key("enter")
-	if d.m.screen != screenWeb || len(d.m.tabs) != 2 || d.m.shown != 1 {
-		t.Fatalf("after Enter: screen %v, %d tabs, shown %d", d.m.screen, len(d.m.tabs), d.m.shown)
+	d.settle()
+	if !d.m.onWeb() || len(d.m.tabs) != 2 || d.m.shown != 1 {
+		t.Fatalf("after Enter: on the web %v, %d tabs, shown %d", d.m.onWeb(), len(d.m.tabs), d.m.shown)
 	}
 	d.until("page B in the new tab", d.loaded("Page B"))
 	if d.m.tabs[0].title != "Page A" {
@@ -483,9 +484,9 @@ func TestAnIframeIsEnteredInPlace(t *testing.T) {
 	}
 	// A link in the frame moves the frame, and the panel stays inside.
 	d.cursorOn(ir.Link, "go deeper")
-	d.key("enter")
-	d.until("open link?", func() bool { return d.m.confirm.isInteractive() && d.m.confirm.action == confirmOpenLink })
-	d.key("enter")
+	d.press("enter")
+	d.until("open link?", d.shows("OPEN LINK"))
+	d.press("enter")
 	d.until("deeper", func() bool { return strings.Contains(dumpLayout(p.lay), "you went deeper") })
 	if !p.drilled() || !strings.HasSuffix(p.url, "/") {
 		t.Errorf("the frame moved, the page did not: drilled=%v url=%s", p.drilled(), p.url)
