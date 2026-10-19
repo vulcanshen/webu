@@ -91,10 +91,14 @@ func (m *AppModel) buildDevtools() {
 		{"No source", "Press [R] to read it again"},
 	}
 	cols := [4][]terminu.Column{
-		{{Title: "Method"}, {Title: "Status", Number: true}, {Title: "Type"}, {Title: "Size", Number: true}, {Title: "URL", Flex: true}},
-		{{Title: "Kind"}, {Title: "Name"}, {Title: "Value", Flex: true}},
-		{{Title: "Level"}, {Title: "Text", Flex: true}},
-		{{Title: "Line", Number: true}, {Title: "Source", Flex: true}},
+		// A URL or a line of text never fits whole, and the columns left are
+		// narrowed in proportion, a short one beside it down to "…": a short
+		// column there goes instead, [2] saying it in full (layout/panel;
+		// TODO(lib WB19)). Name and value are both long and share the room.
+		{{Title: "Method", Drop: 3}, {Title: "Status", Number: true, Drop: 4}, {Title: "Type", Drop: 1}, {Title: "Size", Number: true, Drop: 2}, {Title: "URL"}},
+		{{Title: "Kind", Drop: 1}, {Title: "Name"}, {Title: "Value"}},
+		{{Title: "Level", Drop: 1}, {Title: "Text"}},
+		{{Title: "Line", Number: true, Drop: 1}, {Title: "Source"}},
 	}
 	for i := range d.lists {
 		i := i
@@ -391,12 +395,11 @@ func (m *AppModel) devActions() []terminu.Action {
 	}
 	noPage := func() bool { return m.shownTab() == nil }
 	return []terminu.Action{
-		// No hint: [1] streams, and the lib keeps a streaming panel's hint
-		// lit off focus too, beside [2]'s own Enter (tdp M9; TODO(lib
-		// WB13)). The Space menu and ? still list it.
-		{Key: "Enter", Label: "Detail", Desc: "the row in full, in [2]", Scope: terminu.ItemScope,
+		// [1] streams, so its rows stay bright off focus; its hint dims as
+		// any panel's does, [2]'s Enter alone lit there (tdp T2, M9).
+		{Key: "Enter", Label: "Detail", Desc: "the row in full, in [2]", Scope: terminu.ItemScope, Hint: "detail",
 			ToDetails: func() bool { return true }},
-		{Key: "y", Label: "yank", Desc: "the URL, the value, the line", Scope: terminu.ItemScope,
+		{Key: "y", Label: "Yank", Desc: "the URL, the value, the line", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd {
 				r, ok := m.devList().Current()
 				if !ok {
@@ -420,7 +423,7 @@ func (m *AppModel) devActions() []terminu.Action {
 			}},
 		{Key: "x", Label: "Delete", Desc: "this cookie or storage item", Scope: terminu.ItemScope, Hidden: on(devStorage),
 			Do: m.do(m.deleteStorageRow)},
-		{Key: "i", Label: "input JavaScript", Desc: "a line, in the page; its answer comes into the console", Scope: terminu.PanelScope,
+		{Key: "i", Label: "Input JavaScript", Desc: "a line, in the page; its answer comes into the console", Scope: terminu.PanelScope,
 			Hint: "run", Hidden: on(devConsole), Disabled: noPage, Do: m.evalBox},
 		{Key: "R", Label: "Read again", Desc: "the storage, or the source, as it is now", Scope: terminu.PanelScope,
 			Hidden: on(devStorage, devSource), Disabled: noPage,

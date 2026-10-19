@@ -75,6 +75,9 @@ func TestDialogsAreAnswered(t *testing.T) {
 	if !strings.Contains(d.view(), "hello from the page") {
 		t.Errorf("alert text:\n%s", d.view())
 	}
+	// The question comes from the page, after the key: its title shows
+	// while it is still opening, and the lib takes no key until it has.
+	d.settle()
 	d.press("esc") // an alert has one answer; Esc gives it too
 	d.until("alert gone", func() bool { return d.m.dialog == nil && !strings.Contains(d.view(), "THE PAGE SAYS") })
 
@@ -84,6 +87,7 @@ func TestDialogsAreAnswered(t *testing.T) {
 	if !strings.Contains(d.view(), "anon") {
 		t.Errorf("the prompt's default is the answer at first:\n%s", d.view())
 	}
+	d.settle()
 	d.press("e")
 	d.until("the answer's box", d.shows("ANSWER"))
 	d.key("backspace") // drop the offer
@@ -95,6 +99,7 @@ func TestDialogsAreAnswered(t *testing.T) {
 	d.cursorOn(ir.Button, "Confirm")
 	d.act()
 	d.until("confirm shown", d.shows("THE PAGE ASKS"))
+	d.settle()
 	d.press("esc")
 	d.until("confirm declined", func() bool { return strings.Contains(dumpLayout(d.page().lay), "confirmed:false") })
 }

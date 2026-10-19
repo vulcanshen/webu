@@ -134,24 +134,64 @@ func (m *AppModel) enterAction(t *tab) *terminu.Action {
 			// show: it asks first, its text and its address — as the
 			// action's own question, so Esc from it opened in the Space
 			// menu goes back to the menu (tdp T1).
-			details := []string{oneLine(l.URL)}
-			if text := oneLine(l.Text()); text != "" {
-				details = append([]string{text}, details...)
-			}
 			act.Label, act.Desc, act.Hint = enterWords(t, l)
-			act.Ask = &terminu.Ask{Title: "Open link", Details: details, Question: "Open it in this tab?", Verb: "open"}
+			act.Ask = openLinkAsk(l)
 			act.Do = m.do(func() tea.Cmd { return m.click(t, l) })
+		} else if n.Kind == ir.ListItem && isThing(n) {
+			// A list item that holds more than its link is known to be one
+			// line only once it is gone into: the question, if any, is made
+			// as Enter runs (Action.AskFor), still the action's own.
+			var leaving *ir.Node
+			act.AskFor = func() *terminu.Ask {
+				leaving = m.oneLineLink(t, n)
+				if leaving == nil {
+					return nil
+				}
+				return openLinkAsk(leaving)
+			}
+			act.Do = m.do(func() tea.Cmd {
+				if leaving != nil {
+					return m.click(t, leaving)
+				}
+				return m.enterItem()
+			})
 		}
 	}
 	return act
 }
 
+// openLinkAsk is the question before following a link that leaves the
+// page: its text and its address, then where it opens.
+func openLinkAsk(l *ir.Node) *terminu.Ask {
+	details := []string{oneLine(l.URL)}
+	if text := oneLine(l.Text()); text != "" {
+		details = append([]string{text}, details...)
+	}
+	return &terminu.Ask{Title: "Open link", Details: details, Question: "Open it in this tab?", Verb: "open"}
+}
+
+// oneLineLink is the link Enter on a list item follows when the item is
+// nothing but its first line and that line's first item is a link that
+// leaves the page; nil otherwise. It goes into the item to see, and comes
+// back out.
+func (m *AppModel) oneLineLink(t *tab, n *ir.Node) *ir.Node {
+	w, vis := m.pageW(), m.pageVisible()
+	if !t.drillInto(n, w, vis) {
+		return nil
+	}
+	one := t.drillBody >= len(t.lay.rows)
+	t.leaveDrill(w, vis)
+	x := firstItemIn(n)
+	if !one || x == nil {
+		return nil
+	}
+	return leavingLink(t, x)
+}
+
 // leavingLink is the link Enter on n follows when it would leave the page:
 // n itself, the one link a table cell is and nothing else (enterCell), or
 // the one link a list item is and nothing else (enterItem). A one-line list
-// item that holds more than its link is known to be one line only once it
-// is gone into, and asks from there: from the Space menu the menu is gone
-// by then (tdp T1; TODO(lib WB15)).
+// item that holds more than its link is oneLineLink's.
 func leavingLink(t *tab, n *ir.Node) *ir.Node {
 	switch n.Kind {
 	case ir.Cell:
@@ -308,33 +348,37 @@ func (m *AppModel) panelActions(t *tab) []terminu.Action {
 		return terminu.Action{Key: key, Label: label, Desc: desc, Scope: terminu.PanelScope, Hint: hint, Disabled: off, Do: m.do(do)}
 	}
 	reading := func() bool { t := m.shownTab(); return t == nil || !t.read }
+	// What opens a popup to go somewhere else — another page, another tab,
+	// another place on this one — clears the menu as it opens: the item it
+	// was opened on is behind (tdp T1).
+	away := func(a terminu.Action) terminu.Action { a.Clear = true; return a }
 	acts := []terminu.Action{
 		panel("R", "Reload", "this page", "", func() bool { return noTab() || m.busy() }, func() tea.Cmd {
 			return m.shownTab().reload()
 		}),
 		// The same T as [1]'s: a new tab is wanted from the page as often as
 		// from the list.
-		panel("T", "Tab", "a new one, at a URL", "", nil, m.newTabBox),
+		away(panel("T", "Tab", "a new one, at a URL", "", nil, m.newTabBox)),
 		panel("P", "Previous", "back in this tab", "", func() bool { t := m.shownTab(); return t == nil || !t.canBack || m.busy() }, func() tea.Cmd {
 			return m.shownTab().navigate("back", page.Back)
 		}),
 		panel("N", "Next", "forward in this tab", "", func() bool { t := m.shownTab(); return t == nil || !t.canForward || m.busy() }, func() tea.Cmd {
 			return m.shownTab().navigate("forward", page.Forward)
 		}),
-		panel("/", "Search", "every part of the page; [Enter] goes there", "search",
-			func() bool { t := m.shownTab(); return t == nil || t.root == nil || t.popupNode() != nil }, m.openFinder),
-		panel("v", "visual mode", "walk the text by character, copy some", "", noPage, m.enterSelect),
-		panel("L", "Location", "a URL or a search; this page's own is offered", "", nil, m.locationBox),
+		away(panel("/", "Search", "every part of the page; [Enter] goes there", "search",
+			func() bool { t := m.shownTab(); return t == nil || t.root == nil || t.popupNode() != nil }, m.openFinder)),
+		panel("v", "Visual mode", "walk the text by character, copy some", "", noPage, m.enterSelect),
+		away(panel("L", "Location", "a URL or a search; this page's own is offered", "", nil, m.locationBox)),
 		panel("A", "Add bookmark", "this page", "", noTab, func() tea.Cmd {
 			t := m.shownTab()
 			return m.addBookmark(t.title, t.url)
 		}),
-		panel("go", "Go to line", "by its number in the gutter", "", func() bool {
+		away(panel("go", "Go to line", "by its number in the gutter", "", func() bool {
 			t := m.shownTab()
 			return t == nil || t.popupNode() != nil || t.lineCount() == 0
-		}, m.goLineBox),
-		panel("n", "next section", "the one after this, at the same depth", "", reading, func() tea.Cmd { return m.stepSection(1) }),
-		panel("p", "previous section", "the one before this, at the same depth", "", reading, func() tea.Cmd { return m.stepSection(-1) }),
+		}, m.goLineBox)),
+		panel("n", "Next section", "the one after this, at the same depth", "", reading, func() tea.Cmd { return m.stepSection(1) }),
+		panel("p", "Previous section", "the one before this, at the same depth", "", reading, func() tea.Cmd { return m.stepSection(-1) }),
 		m.sectionsAction(t),
 		panel("Z", "Zoom", "the page alone, or the grid back", "", nil, func() tea.Cmd {
 			m.zoom = !m.zoom
@@ -562,20 +606,15 @@ func (m *AppModel) enterCell(t *tab, n *ir.Node) tea.Cmd {
 	case len(ts) == 1 && oneLine(n.Text()) == oneLine(ts[0].node.Text()):
 		return m.enterOn(t, ts[0].node)
 	}
-	// The title says what the menu is for; the column's name, the page's
-	// own words, goes in the Content row, kept as it is: App.Menu has no
-	// Subject, and the lib upper-cases its title (TODO(lib WB9)).
-	desc := "the cell in full"
-	if col := columnHeader(t.root, n); col != "" {
-		desc = "the " + truncate(oneLine(col), 40) + " cell in full"
-	}
-	acts := []terminu.Action{m.item("Content", desc, func() tea.Cmd { return m.showCell(t, n) })}
+	acts := []terminu.Action{m.item("Content", "the cell in full", func() tea.Cmd { return m.showCell(t, n) })}
 	for i, x := range ts {
 		x := x
 		acts = append(acts, m.item(strings.Repeat("  ", x.depth)+truncate(targetLabel(x.node), 50), targetDesc(x.node, i),
 			func() tea.Cmd { return m.actOn(t, x.node, false) }))
 	}
-	return m.a.Menu("Cell", terminu.MenuSection{Actions: acts})
+	// The column's name is the page's own words, kept as it is after the
+	// title: CELL: Price (components/layout/popup).
+	return m.a.MenuAbout("Cell", truncate(oneLine(columnHeader(t.root, n)), 40), terminu.MenuSection{Actions: acts})
 }
 
 // showCell is a cell's content in full: the column's header as the

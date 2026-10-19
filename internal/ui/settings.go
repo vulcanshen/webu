@@ -137,7 +137,10 @@ func (m *AppModel) buildSettings() {
 // settingField is one setting's row.
 func (m *AppModel) settingField(i int) *terminu.Field {
 	s := settings[i]
-	f := &terminu.Field{Label: s.key}
+	// Desc opens ? with what each row is: a key name says little on its own
+	// (layout/panel). A switch's desc is its checkbox's words, lower case
+	// beside the box; as a sentence of its own it starts with a capital.
+	f := &terminu.Field{Label: s.key, Desc: strings.ToUpper(s.desc[:1]) + s.desc[1:]}
 	if s.flip != nil {
 		f.Options, f.Multi, f.Checked = []string{s.desc}, true, []bool{false}
 		f.OnChange = m.do(func() tea.Cmd {
@@ -207,11 +210,12 @@ func (m *AppModel) settingBox(i int) tea.Cmd {
 	}
 	prompt := s.key + ": " + s.desc + "; [Backspace] then [Enter] for the default"
 	if s.number[1] > 0 {
-		// TODO(lib S47): the unit's own row under the typing row, once
-		// NumberInput has one; until then the prompt says it.
+		// Empty is the default, so the number may be empty; its unit has a
+		// row of its own under the value (components/input/number).
 		prompt = s.key + ": " + s.desc + ", " + fmtNum(s.number[0]) + "-" + fmtNum(s.number[1]) + "; [Backspace] then [Enter] for the default"
 		return m.a.Number(terminu.NumberInput{Title: "Settings", Subject: s.key, Glyph: glyphSettings, Name: s.key,
-			Prompt: prompt, Verb: "save", Old: cur, Min: s.number[0], Max: s.number[1], Check: check, Done: done})
+			Prompt: prompt, Verb: "save", Old: cur, Min: s.number[0], Max: s.number[1], Unit: s.unit, Optional: true,
+			Check: check, Done: done})
 	}
 	return m.a.Text(terminu.TextInput{Title: "Settings", Subject: s.key, Glyph: glyphSettings, Name: s.key,
 		Prompt: prompt, Verb: "save", Old: cur, Check: check, Done: done})
@@ -226,7 +230,7 @@ func (m *AppModel) saveConfig(key string) tea.Cmd {
 	if err := store.SaveConfig(m.cfg); err != nil {
 		return m.saveFailed("config.yaml", err)
 	}
-	cmds := []tea.Cmd{m.toast(key + " saved to config.yaml")}
+	cmds := []tea.Cmd{m.toastOK(key + " saved to config.yaml")}
 	switch key {
 	case "download_dir":
 		cmds = append(cmds, m.pointDownloads())

@@ -117,17 +117,25 @@ type Move struct {
 	From, To string
 	// Err is why it could not be moved; it is used from From then.
 	Err error
+	// Both says To was there already: From is left as it was, for the user
+	// to merge (tdp E3), and To is the one used.
+	Both bool
 }
 
-// Relocate moves what from to to when to is not there and from is (tdp
-// E3: on the first start). It is one rename — a directory goes whole and
-// nothing is copied — so a move that fails leaves from as it was. It
-// reports whether there was anything to move.
+// Relocate moves the file what from to to on the first start (tdp E3):
+// when from is there and to is not, by one rename, so a move that fails
+// leaves from as it was. When both are there, a setting, a state or data
+// is never deleted: from stays, and the Move says so. It reports whether
+// there was anything to say.
 func Relocate(what, from, to string) (Move, bool) {
-	if from == "" || from == to || exists(to) || !exists(from) {
+	if from == "" || from == to || !exists(from) {
 		return Move{}, false
 	}
 	mv := Move{What: what, From: from, To: to}
+	if exists(to) {
+		mv.Both = true
+		return mv, true
+	}
 	if err := os.MkdirAll(filepath.Dir(to), 0o700); err != nil {
 		mv.Err = err
 		return mv, true
@@ -136,18 +144,59 @@ func Relocate(what, from, to string) (Move, bool) {
 	return mv, true
 }
 
+// RemoveIfEmpty takes away an old directory a move left empty (tdp E3);
+// one with anything in it stays.
+func RemoveIfEmpty(dir string) {
+	if dir != "" {
+		_ = os.Remove(dir)
+	}
+}
+
 // RelocateCache moves the Chromium an older webu fetched on macOS under
-// XDG_CACHE_HOME into the system's cache directory.
+// XDG_CACHE_HOME into the system's cache directory, item by item (tdp E3):
+// each revision not in the new place yet is moved there; one that is there
+// already is a cache, fetched again at will, so the old copy is deleted.
+// The old directory goes once it is empty. What could not be moved stays,
+// and is used from there (Cache).
 func RelocateCache() []Move {
 	old := OldCache()
 	dir, err := os.UserCacheDir()
-	if old == "" || err != nil {
+	if old == "" || err != nil || !exists(old) {
 		return nil
 	}
-	if mv, ok := Relocate("Chromium", old, filepath.Join(dir, "webu")); ok {
-		return []Move{mv}
+	cache := filepath.Join(dir, "webu")
+	entries, err := os.ReadDir(old)
+	if err != nil {
+		return []Move{{What: "Chromium", From: old, To: cache, Err: err}}
 	}
-	return nil
+	made := !exists(cache)
+	mv := Move{What: "Chromium", From: old, To: cache}
+	moved := false
+	for _, e := range entries {
+		from, to := filepath.Join(old, e.Name()), filepath.Join(cache, e.Name())
+		if exists(to) {
+			_ = os.RemoveAll(from)
+			continue
+		}
+		if err := os.MkdirAll(cache, 0o700); err != nil {
+			mv.Err = err
+			break
+		}
+		if err := os.Rename(from, to); err != nil {
+			mv.Err = err
+			continue
+		}
+		moved = true
+	}
+	RemoveIfEmpty(old)
+	if made && !moved {
+		// Nothing came: the new place made for it would hide the old one.
+		RemoveIfEmpty(cache)
+	}
+	if !moved && mv.Err == nil {
+		return nil
+	}
+	return []Move{mv}
 }
 
 // Short writes a path the way a person would: the home directory as ~.

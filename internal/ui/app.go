@@ -37,6 +37,10 @@ const sideW = 24
 // panel (layout/screen, narrow).
 const narrowW = 72
 
+// minW and minH are webu's least size (tdp L1); under it the lib draws
+// only the name and the size it needs.
+const minW, minH = 60, 20
+
 // AppModel is webu: the lib's app, and webu's own state behind it.
 type AppModel struct {
 	a *terminu.App
@@ -178,6 +182,10 @@ func (m *AppModel) build() {
 	a := terminu.New("webu")
 	m.a = a
 	a.QuitDesc = "leave webu; the tabs are kept for next time"
+	// webu's least size (tdp L1): 60 × 20, the narrowest its two panels
+	// were laid out for (one at a time under narrowW) and room for its
+	// forms; smaller, only the name is drawn.
+	a.MinWidth, a.MinHeight = minW, minH
 	a.Splash = splash()
 	a.Status = m.status
 	a.Progress = m.progress
@@ -195,26 +203,21 @@ func (m *AppModel) build() {
 // start is the first frame: the event listener and what the app opens
 // with.
 func (m *AppModel) start() tea.Cmd {
-	cmds := []tea.Cmd{waitEvent(m.events), m.firstFrame(), devTick()}
-	if len(m.loadErrs) > 0 || len(m.moves) > 0 {
-		cmds = append(cmds, func() tea.Msg { return startNewsMsg{} })
-	}
-	return tea.Batch(cmds...)
+	return tea.Batch(waitEvent(m.events), m.firstFrame(), devTick(), m.startNews())
 }
 
-// startNewsMsg says on the first screen what main found: the things it
-// moved (tdp E3), the ones it could not, the files it could not read. A
-// popup wraps its words to the screen, so this waits for the terminal's
-// size: opened before it, it was one word a line.
-type startNewsMsg struct{}
-
+// startNews says on the first screen what main found: the things it moved
+// (tdp E3), the ones it could not, the files it could not read. The lib
+// folds a popup opened before the terminal's size once the size is known.
 func (m *AppModel) startNews() tea.Cmd {
-	if w, _ := m.a.Size(); w == 0 {
-		return tea.Tick(20*time.Millisecond, func(time.Time) tea.Msg { return startNewsMsg{} })
-	}
 	var cmds []tea.Cmd
 	var moved, stuck []string
 	for _, mv := range m.moves {
+		if mv.Both {
+			stuck = append(stuck, mv.What+" is in both "+paths.Short(mv.From)+" and "+paths.Short(mv.To)+
+				". webu uses "+paths.Short(mv.To)+" and leaves the other as it is: merge them yourself.")
+			continue
+		}
 		if mv.Err == nil {
 			// A file is said by its directory, a directory by itself.
 			from, to := mv.From, mv.To
@@ -262,6 +265,9 @@ func (m *AppModel) do(f func() tea.Cmd) func() tea.Cmd {
 
 // toast says one short thing at the bottom (components/dialog/toast).
 func (m *AppModel) toast(text string) tea.Cmd { return m.a.Toast(terminu.Info, text) }
+
+// toastOK says an action is done: a Success toast (components/dialog/toast).
+func (m *AppModel) toastOK(text string) tea.Cmd { return m.a.Toast(terminu.Success, text) }
 
 // toastErr says something went wrong (tdp F5).
 func (m *AppModel) toastErr(text string) tea.Cmd {
@@ -365,10 +371,7 @@ func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 		if msg.err != nil {
 			return m.toastErr(clipboardFailure(msg.err))
 		}
-		return m.toast("Copied " + plural(msg.lines, "line"))
-
-	case startNewsMsg:
-		return m.startNews()
+		return m.toastOK("Copied " + plural(msg.lines, "line"))
 
 	case actionErrMsg:
 		// A closed tab's work comes back cancelled: the tab is gone, and

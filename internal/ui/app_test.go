@@ -586,6 +586,44 @@ func TestFrameFitsTheTerminal(t *testing.T) {
 	}
 }
 
+// Under webu's least size (tdp L1) only its name and what it needs are
+// drawn, each line the terminal's width, down to 1×1 (tdp E5); no key acts,
+// and the screen it was on comes back as the terminal grows.
+func TestUnderTheLeastSize(t *testing.T) {
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
+	m := New(nil, "")
+	d := newDriver(t, m)
+	need := "needs a terminal of at least " + itoa(minW) + "×" + itoa(minH)
+	for _, s := range [][2]int{{minW - 1, minH}, {minW, minH - 1}, {80, 5}, {40, 12}, {20, 2}, {4, 1}, {1, 1}} {
+		d.send(tea.WindowSizeMsg{Width: s[0], Height: s[1]})
+		lines := m.a.Frame()
+		if len(lines) != s[1] {
+			t.Errorf("%dx%d: %d lines", s[0], s[1], len(lines))
+		}
+		for i, l := range lines {
+			if w := terminu.Width(l); w != s[0] {
+				t.Errorf("%dx%d: line %d is %d wide", s[0], s[1], i, w)
+			}
+		}
+		v := d.view()
+		if !strings.Contains(v, "webu"[:min(4, s[0])]) {
+			t.Errorf("%dx%d: no name:\n%s", s[0], s[1], v)
+		}
+		if s[1] >= 2 && s[0] >= len(need) && !strings.Contains(v, need) {
+			t.Errorf("%dx%d: no %q:\n%s", s[0], s[1], need, v)
+		}
+	}
+	d.key("B")
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	if !d.m.onWeb() {
+		t.Error("a key under the least size acted: B switched screens")
+	}
+	if v := d.view(); !strings.Contains(v, "[W]EB") {
+		t.Errorf("the screen should come back as the terminal grows:\n%s", v)
+	}
+}
+
 // TestEveryPopupFits is tdp E5's popups: each kind opened once over the
 // page and the whole frame measured, webu's own popup measured alone too;
 // then, with it open, the screen made narrower than it, shorter, and both.
@@ -610,7 +648,7 @@ func TestEveryPopupFits(t *testing.T) {
 	done := func(string) tea.Cmd { return nil }
 	for _, widths := range [][2]int{{1, 1}, {2, 1}, {2, 2}} {
 		terminu.SetIconWidth(widths[0], widths[1])
-		for _, size := range [][2]int{{100, 30}, {40, 12}} {
+		for _, size := range [][2]int{{100, 30}, {minW, minH}} {
 			m := New(nil, "")
 			d := newDriver(t, m)
 			d.send(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
@@ -631,14 +669,10 @@ func TestEveryPopupFits(t *testing.T) {
 				}
 			}
 			// shrink measures the frame at the size and with the popup bigger
-			// than the screen: wider, taller, both (tdp E5).
+			// than the screen: wider, taller, both (tdp E5). Under webu's
+			// least size only the name is drawn; it fits all the same.
 			shrink := func(where string, alone func(sw, sh int)) {
 				for _, s := range [][2]int{size, {size[0] / 2, size[1]}, {size[0], size[1] / 2}, {size[0] / 2, size[1] / 2}} {
-					if where == "file-picker" && s[1] < 8 {
-						// TODO(lib WB12): the lib's finder panics drawing a
-						// file's facts in a box this short (filu's FL8).
-						continue
-					}
 					d.send(tea.WindowSizeMsg{Width: s[0], Height: s[1]})
 					fits(where, s[0], s[1])
 					if alone != nil {
@@ -690,11 +724,11 @@ func TestEveryPopupFits(t *testing.T) {
 				shrink(p.name, nil)
 				d.key("esc")
 			}
-			// webu's own: the page's question, each kind, its box measured
-			// alone at the size the lib would give it.
+			// webu's own: the page's prompt and sign-in, each box measured
+			// alone at the size the lib would give it (tdp E8: the lib
+			// measures its own popups).
 			for _, ask := range []*pageAsk{
-				{details: []string{long, "", long}, question: "Answer yes?", verb: "yes"},
-				{kind: askPrompt, details: []string{long}, answer: long, question: "Send this answer?", verb: "answer"},
+				{kind: askPrompt, details: []string{long, "", long}, answer: long, question: "Send this answer?", verb: "answer"},
 				{kind: askAuth, details: []string{"example.com asks you to sign in: " + long}, name: long, pass: "secret",
 					question: "Sign in?", verb: "sign in"},
 			} {
@@ -1092,6 +1126,41 @@ func TestTableCells(t *testing.T) {
 	d.cursorOn(ir.Cell, "none")
 	d.press("enter")
 	d.until("the other cell", d.shows("CELL — Site"))
+}
+
+// A one-line list item holding a link and more words is known to be one
+// line only once it is gone into; Enter on it still asks before leaving
+// the page, and the question is the action's own: from the Space menu,
+// Esc on it goes back to the menu (tdp T1; Action.AskFor).
+func TestOneLineItemAsksOverTheMenu(t *testing.T) {
+	b := launch(t)
+	d := newDriver(t, New(b, fixture("leave.html")))
+	defer d.m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the page", d.loaded("Leave"))
+	d.key("2")
+	d.cursorOn(ir.ListItem, "is the other page")
+	d.press(" ")
+	d.until("the Space menu", d.shows("Global operation"))
+	d.press("enter")
+	d.until("open link?", d.shows("OPEN LINK"))
+	if v := d.view(); !strings.Contains(v, "nav2.html") {
+		t.Errorf("the question should name where the link goes:\n%s", v)
+	}
+	d.press("esc")
+	d.until("back on the menu", d.shows("Global operation"))
+	if n := d.page().current(); n == nil || n.Kind != ir.ListItem {
+		t.Errorf("going in to look should leave the cursor on the item: %+v", n)
+	}
+	// Accepted, the link is followed and the menu goes with the question:
+	// it was the action's own, not a popup its Do opened over the menu.
+	d.press("enter")
+	d.until("asked again", d.shows("OPEN LINK"))
+	d.press("enter")
+	d.until("page B", d.loaded("Page B"))
+	if v := d.view(); strings.Contains(v, "Global operation") {
+		t.Errorf("the menu should be gone with the page it was on:\n%s", v)
+	}
 }
 
 // Google's search box is a textarea that calls itself a combobox, with no

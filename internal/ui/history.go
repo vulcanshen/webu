@@ -14,7 +14,9 @@ import (
 
 func (m *AppModel) buildHistory() {
 	m.histList = &terminu.List{
-		Columns:    []terminu.Column{{Title: "Title", Flex: true}, {Title: "URL", Flex: true}, {Title: "When"}},
+		// A title and a URL never fit whole: both stay and share the room,
+		// the time going first (layout/panel).
+		Columns:    []terminu.Column{{Title: "Title"}, {Title: "URL"}, {Title: "When", Drop: 1}},
 		Filterable: true,
 		EmptyFact:  "No history yet",
 		EmptyHint:  "Press [W] to browse, or [Space] to see what you can do here",
@@ -27,7 +29,7 @@ func (m *AppModel) buildHistory() {
 				}
 				return nil
 			})},
-		{Key: "y", Label: "yank", Desc: "its URL", Scope: terminu.ItemScope,
+		{Key: "y", Label: "Yank", Desc: "its URL", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd {
 				if v, ok := m.histCurrent(); ok {
 					return copyToClipboard(v.URL)

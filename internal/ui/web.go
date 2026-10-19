@@ -14,7 +14,7 @@ import (
 
 func (m *AppModel) buildWeb() {
 	m.tabsList = &terminu.List{
-		Columns:   []terminu.Column{{Title: "Tab", Flex: true}},
+		Columns:   []terminu.Column{{Title: "Tab"}},
 		EmptyFact: "No tabs",
 		EmptyHint: "Press [T] to open one, or [Space] to see what you can do here",
 		OnMove:    m.tabMoved,
@@ -91,32 +91,22 @@ func (m *AppModel) popupVisible() int {
 	return max(3, h-3-10)
 }
 
-// goWeb brings the web screen up, from a list that opened a page in it.
-//
-// TODO(lib WB6): terminu-go has no call that switches screens; the web
-// screen's own hotkey is sent as a key instead.
+// goWeb brings the web screen up, from a list that opened a page in it:
+// what the user pressed was for that page (tdp K3).
 func (m *AppModel) goWeb() tea.Cmd {
 	if m.onWeb() {
 		return nil
 	}
-	return pressKey("W")
+	return m.a.ShowScreen(m.web)
 }
 
-// focusPage takes the keyboard to panel [2], where a page that was just
-// opened is.
-//
-// TODO(lib WB6): terminu-go has no call that moves the focus; the panel's
-// digit is sent as a key instead.
+// focusPage takes the keyboard to panel [2], where a page the user just
+// opened, or went to, is (tdp K3: they expect it to move).
 func (m *AppModel) focusPage() tea.Cmd {
-	if m.pageFocused() || m.web.Focused() == nil {
+	if m.pageFocused() {
 		return nil
 	}
-	return pressKey("2")
-}
-
-// pressKey is a key as if the user had pressed it.
-func pressKey(k string) tea.Cmd {
-	return func() tea.Msg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)} }
+	return m.a.Focus(m.pagePanel)
 }
 
 // ------------------------------------------------------------- panel [1]
@@ -210,31 +200,32 @@ func (m *AppModel) tabActions() []terminu.Action {
 			ToDetails: func() bool { return true },
 			Do:        m.do(func() tea.Cmd { i, _ := m.cursorTab(); return m.showTab(i) })},
 		// c, the page panel's C in lower case.
-		{Key: "c", Label: "close", Desc: "this tab", Scope: terminu.ItemScope, Hint: "close",
+		{Key: "c", Label: "Close", Desc: "this tab", Scope: terminu.ItemScope, Hint: "close",
 			Do: m.do(func() tea.Cmd { i, _ := m.cursorTab(); return m.closeTab(i) })},
 		// o as on a download's row: this row's URL, in a new tab.
-		{Key: "o", Label: "open in new tab", Desc: "the same page again", Scope: terminu.ItemScope,
+		{Key: "o", Label: "Open in new tab", Desc: "the same page again", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
 				if _, t := m.cursorTab(); t != nil {
 					return m.openTab(t.url, true)
 				}
 				return nil
 			})},
-		{Key: "r", Label: "reload", Desc: "this tab", Scope: terminu.ItemScope,
+		{Key: "r", Label: "Reload", Desc: "this tab", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
 				if _, t := m.cursorTab(); t != nil {
 					return t.load(t.url)
 				}
 				return nil
 			})},
-		{Key: "y", Label: "yank url", Desc: "to the clipboard", Scope: terminu.ItemScope,
+		{Key: "y", Label: "Yank URL", Desc: "to the clipboard", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd {
 				if _, t := m.cursorTab(); t != nil {
 					return copyToClipboard(t.url)
 				}
 				return nil
 			}},
-		{Key: "T", Label: "Tab", Desc: "a new one, at a URL", Scope: terminu.PanelScope, Hint: "new tab", Do: m.newTabBox},
+		// A new tab is another page: its URL box clears the menu (tdp T1).
+		{Key: "T", Label: "Tab", Desc: "a new one, at a URL", Scope: terminu.PanelScope, Hint: "new tab", Clear: true, Do: m.newTabBox},
 		{Key: "X", Label: "Close others", Desc: "every tab but this one", Scope: terminu.PanelScope,
 			Disabled: func() bool { return len(m.tabs) < 2 }, Hidden: none,
 			Do: m.do(m.closeOthers)},

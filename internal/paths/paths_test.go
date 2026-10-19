@@ -92,6 +92,21 @@ func TestAnOldMacCacheIsMoved(t *testing.T) {
 	if moved := RelocateCache(); len(moved) != 0 {
 		t.Errorf("moved twice: %+v", moved)
 	}
+	// Item by item (tdp v0.8.1): a revision the new place has already is a
+	// cache, so the old copy goes; another one moves; the old directory
+	// goes once empty.
+	for _, rev := range []string{"chromium-1", "chromium-2"} {
+		if err := os.MkdirAll(filepath.Join(old, rev), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	moved = RelocateCache()
+	if len(moved) != 1 || moved[0].Err != nil {
+		t.Fatalf("moved %+v", moved)
+	}
+	if !exists(filepath.Join(cache, "chromium-2")) || exists(old) {
+		t.Errorf("chromium-2 moved %v, old directory gone %v", exists(filepath.Join(cache, "chromium-2")), !exists(old))
+	}
 }
 
 // A move that fails leaves the old place as it was and says why.

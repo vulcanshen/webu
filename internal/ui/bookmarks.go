@@ -124,7 +124,7 @@ func bmRowID(r bmRow) string {
 // open or shut.
 func (m *AppModel) buildBookmarks() {
 	m.bmList = &terminu.List{
-		Columns:    []terminu.Column{{Title: "Title", Flex: true}, {Title: "URL", Flex: true}},
+		Columns:    []terminu.Column{{Title: "Title"}, {Title: "URL"}},
 		Filterable: true,
 		EmptyFact:  "No bookmarks yet",
 		EmptyHint:  "Press [a] to add one, or [Space] to see what you can do here",
@@ -224,11 +224,13 @@ func (m *AppModel) bookmarkActions() []terminu.Action {
 				// screen was showing (revised 2026-09-21).
 				return m.openTabBehind(m.bookmarks[r.ref].URL)
 			})},
-		{Key: "m", Label: "move", Desc: "this bookmark to another folder", Scope: terminu.ItemScope, Hidden: onFolder,
+		// Moved, the bookmark is no longer where the menu was opened on it:
+		// the folder list clears the menu (tdp T1).
+		{Key: "m", Label: "Move", Desc: "this bookmark to another folder", Scope: terminu.ItemScope, Hidden: onFolder, Clear: true,
 			Do: m.do(func() tea.Cmd { r, _ := m.bmCurrent(); return m.moveSelect(r.ref) })},
-		{Key: "r", Label: "rename", Desc: "a bookmark's title, or a folder's name", Scope: terminu.ItemScope, Hint: "rename",
+		{Key: "r", Label: "Rename", Desc: "a bookmark's title, or a folder's name", Scope: terminu.ItemScope, Hint: "rename",
 			Do: m.do(func() tea.Cmd { r, _ := m.bmCurrent(); return m.startRename(r) })},
-		{Key: "y", Label: "yank", Desc: "its URL", Scope: terminu.ItemScope, Hidden: onFolder,
+		{Key: "y", Label: "Yank", Desc: "its URL", Scope: terminu.ItemScope, Hidden: onFolder,
 			Do: func() tea.Cmd { r, _ := m.bmCurrent(); return copyToClipboard(m.bookmarks[r.ref].URL) }},
 		{Key: "x", Label: "Delete", Desc: "this bookmark", Scope: terminu.ItemScope, Hidden: onFolder,
 			Ask: m.deleteAsk(),
@@ -246,7 +248,7 @@ func (m *AppModel) bookmarkActions() []terminu.Action {
 				}
 				return nil
 			})},
-		{Key: "a", Label: "add", Desc: "a bookmark, in the folder under the cursor", Scope: terminu.PanelScope, Hint: "add",
+		{Key: "a", Label: "Add", Desc: "a bookmark, in the folder under the cursor", Scope: terminu.PanelScope, Hint: "add",
 			Do: m.do(func() tea.Cmd {
 				folder := ""
 				if r, ok := m.bmCurrent(); ok {
@@ -390,7 +392,7 @@ func (m *AppModel) addFolder(full string) tea.Cmd {
 	}
 	m.refreshBookmarks()
 	m.bmList.Select(bmRowID(bmRow{folder: full, isFolder: true}))
-	return m.toast("Folder " + full)
+	return m.toastOK("Folder " + full)
 }
 
 // deleteFolderTree takes path and everything under it out, and writes the
@@ -421,7 +423,7 @@ func (m *AppModel) deleteFolderTree(path string) tea.Cmd {
 	if books > 0 {
 		msg += ", " + plural(books, "bookmark") + " with it"
 	}
-	return m.toast(msg)
+	return m.toastOK(msg)
 }
 
 // deleteBookmark takes one bookmark out and writes the file.
@@ -454,7 +456,7 @@ func (m *AppModel) addBookmark(title, url string) tea.Cmd {
 	m.refreshBookmarks()
 	// The cursor goes to what was just added (tdp K3).
 	m.bmList.Select(bmRowID(bmRow{ref: len(m.bookmarks) - 1}))
-	return m.toast("Added " + oneLine(nameOr(title, url)))
+	return m.toastOK("Added " + oneLine(nameOr(title, url)))
 }
 
 // ---------------------------------------------------------- adding one
@@ -506,7 +508,7 @@ func (m *AppModel) startAddBookmark(folder string) tea.Cmd {
 			}
 			m.refreshBookmarks()
 			m.bmList.Select(bmRowID(bmRow{ref: len(m.bookmarks) - 1}))
-			return m.toast("Added " + oneLine(b.Title)), nil
+			return m.toastOK("Added " + oneLine(b.Title)), nil
 		}})
 }
 
@@ -600,7 +602,7 @@ func (m *AppModel) importBookmarks(root string, imp store.Import) tea.Cmd {
 	}
 	m.refreshBookmarks()
 	m.bmList.Select(bmRowID(bmRow{folder: root, isFolder: true}))
-	return m.toast(fmt.Sprintf("Imported %s and %s under %s",
+	return m.toastOK(fmt.Sprintf("Imported %s and %s under %s",
 		plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"), root))
 }
 
@@ -666,7 +668,7 @@ func (m *AppModel) startRename(r bmRow) tea.Cmd {
 			}
 			m.refreshBookmarks()
 			m.bmList.Select(bmRowID(bmRow{ref: ref}))
-			return m.toast("Renamed to " + oneLine(v))
+			return m.toastOK("Renamed to " + oneLine(v))
 		})})
 }
 
@@ -700,5 +702,5 @@ func (m *AppModel) renameFolder(old, to string) tea.Cmd {
 	}
 	m.refreshBookmarks()
 	m.bmList.Select(bmRowID(bmRow{folder: to, isFolder: true}))
-	return m.toast("Folder " + old + " is now " + to)
+	return m.toastOK("Folder " + old + " is now " + to)
 }

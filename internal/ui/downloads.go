@@ -48,7 +48,7 @@ func (d download) describe() string {
 // downloads, newest first.
 func (m *AppModel) buildDownloads() {
 	m.dlList = &terminu.List{
-		Columns:    []terminu.Column{{Title: "File", Flex: true}, {Title: "State", Flex: true, Path: true}},
+		Columns:    []terminu.Column{{Title: "File"}, {Title: "State", Path: true}},
 		Filterable: true,
 		EmptyFact:  "No downloads this session",
 		EmptyHint:  "Press [W] to browse, or [Space] to see what you can do here",
@@ -57,14 +57,14 @@ func (m *AppModel) buildDownloads() {
 	m.dlPanel = &terminu.Panel{Label: "Downloads", Body: m.dlList, Actions: []terminu.Action{
 		{Key: "Enter", Label: "Open", Desc: "the file, in the desktop's app for it", Scope: terminu.ItemScope, Hint: "open",
 			Disabled: done, Do: m.do(m.openDownload)},
-		{Key: "o", Label: "open source", Desc: "the page it came from, in a new tab", Scope: terminu.ItemScope,
+		{Key: "o", Label: "Open source", Desc: "the page it came from, in a new tab", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
 				if d, ok := m.dlCurrent(); ok && d.url != "" {
 					return m.openTab(d.url, true)
 				}
 				return nil
 			})},
-		{Key: "y", Label: "yank path", Desc: "where it was saved, or its URL while it is on its way", Scope: terminu.ItemScope,
+		{Key: "y", Label: "Yank path", Desc: "where it was saved, or its URL while it is on its way", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd {
 				d, ok := m.dlCurrent()
 				switch {
@@ -141,7 +141,7 @@ func (m *AppModel) noteDownload(msg downloadMsg) tea.Cmd {
 		switch {
 		case msg.done:
 			d.state, d.path = dlDone, msg.path
-			cmd = m.toast("Saved " + msg.path)
+			cmd = m.toastOK("Saved " + msg.path)
 		case msg.failed:
 			d.state = dlCancelled
 			cmd = m.toastErr("Download cancelled: " + d.name)
@@ -203,7 +203,7 @@ func (m *AppModel) openDownload() tea.Cmd {
 	if err := openFile(d.path); err != nil {
 		return m.a.Error("Open failed", err.Error())
 	}
-	return m.toast("Opened " + d.name)
+	return m.toastOK("Opened " + d.name)
 }
 
 // removeDownload is x on a row: the row goes, and a download still running

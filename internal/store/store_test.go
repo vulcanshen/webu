@@ -84,8 +84,9 @@ func TestFilesGoWhereE3PutsThem(t *testing.T) {
 }
 
 // bookmarks.yaml and session.yaml where an older webu kept them move on the
-// first start (tdp E3); one already in its new place is left alone, and
-// the old copy stays.
+// first start, one by one (tdp E3), and an old directory left empty goes;
+// one already in its new place is not overwritten, the old copy stays and
+// the Move says both are there.
 func TestRelocateMovesTheOldFiles(t *testing.T) {
 	cfg, data := t.TempDir(), t.TempDir()
 	t.Setenv("WEBU__CONFIG", cfg)
@@ -127,8 +128,30 @@ func TestRelocateMovesTheOldFiles(t *testing.T) {
 		t.Errorf("moved twice: %+v", moved)
 	}
 	write(filepath.Join(cfg, "bookmarks.yaml"), "bookmarks: []\n")
-	if moved := Relocate(); len(moved) != 0 {
-		t.Errorf("a file already in its new place is not overwritten: %+v", moved)
+	moved = Relocate()
+	if len(moved) != 1 || !moved[0].Both || moved[0].Err != nil {
+		t.Errorf("a file in both places says so: %+v", moved)
+	}
+	if b, _, _ := LoadBookmarks(); len(b) != 1 {
+		t.Errorf("the one in the new place is used, not overwritten: %+v", b)
+	}
+	if _, err := os.Stat(filepath.Join(cfg, "bookmarks.yaml")); err != nil {
+		t.Error("the old copy should stay for the user to merge")
+	}
+
+	// A directory a move leaves empty goes.
+	old := filepath.Join(t.TempDir(), "old")
+	if err := os.MkdirAll(old, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("WEBU__CONFIG", old)
+	write(filepath.Join(old, "bookmarks.yaml"), "bookmarks: []\n")
+	if err := os.Remove(filepath.Join(data, "bookmarks.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	Relocate()
+	if _, err := os.Stat(old); !os.IsNotExist(err) {
+		t.Errorf("the emptied old directory is still there: %v", err)
 	}
 }
 

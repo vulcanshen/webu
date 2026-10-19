@@ -214,10 +214,13 @@ func places(name string) (string, string, error) {
 }
 
 // Relocate moves to where they go now the files an older webu kept
-// somewhere else (tdp E3, on the first start). One that cannot be moved
-// stays, and is read and written where it is.
+// somewhere else (tdp E3, on the first start), one by one. One that cannot
+// be moved stays, and is read and written where it is; one already in its
+// new place stays in the old one too, for the user to merge. An old
+// directory a move left empty goes.
 func Relocate() []paths.Move {
 	var moved []paths.Move
+	var left []string
 	for _, name := range []string{"bookmarks.yaml", "session.yaml"} {
 		p, old, err := places(name)
 		if err != nil {
@@ -225,7 +228,13 @@ func Relocate() []paths.Move {
 		}
 		if mv, ok := paths.Relocate(name, old, p); ok {
 			moved = append(moved, mv)
+			if mv.Err == nil && !mv.Both {
+				left = append(left, filepath.Dir(old))
+			}
 		}
+	}
+	for _, dir := range left {
+		paths.RemoveIfEmpty(dir)
 	}
 	return moved
 }

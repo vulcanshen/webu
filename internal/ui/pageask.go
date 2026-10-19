@@ -13,20 +13,23 @@ import (
 // The page's own questions (function.md §5): alert, confirm, beforeunload,
 // prompt, and an HTTP sign-in. The page is stalled until it has an answer,
 // and cancelling is an answer too — the page must be told "no", or it
-// waits for ever. The lib's confirm and input popups say nothing when Esc
-// closes them, so these are popups of webu's own (App.Popup) that look like
-// a confirm: what the page said, the answer it will get, the question
-// last; Enter answers, Esc cancels.
+// waits for ever. Alert, confirm and beforeunload are the lib's confirm,
+// whose OnCancel tells the page no.
 //
-// TODO(lib WB3): back to the lib's confirm and input popups once they say
-// when Esc closed them (dev-remarks, 偏離 tdp).
+// A prompt and a sign-in are popups of webu's own (App.Popup) that look
+// like a confirm: what the page said, the answer it will get, the question
+// last; Enter answers, Esc cancels (dev-remarks, 偏離 tdp).
+// TODO(lib WB17): a prompt answers with the lib's text input once Enter on
+// the value it opened with — an empty default answer — is an answer the
+// app hears; now nothing is called and the page would wait for ever.
+// TODO(lib WB18): a sign-in is the lib's form once a form says when Esc
+// closed it.
 
 type askKind uint8
 
 const (
-	askConfirm askKind = iota // alert, confirm, beforeunload: Enter or Esc
-	askPrompt                 // prompt: an answer to give, e edits it
-	askAuth                   // sign in: a name and a password
+	askPrompt askKind = iota // prompt: an answer to give, e edits it
+	askAuth                  // sign in: a name and a password
 )
 
 // pageAsk is one of the page's questions on screen.
@@ -194,21 +197,22 @@ func (m *AppModel) askDialog(msg dialogMsg) tea.Cmd {
 	if strings.TrimSpace(text) == "" {
 		text = "(no message)"
 	}
-	p := &pageAsk{m: m, details: []string{text}, question: "Answer the page?", verb: "ok"}
-	title := "The page says"
+	cancel := func() tea.Cmd { cmd := m.answerDialog(false, ""); m.sync(); return cmd }
+	if msg.kind == cdppage.DialogTypePrompt {
+		p := &pageAsk{m: m, kind: askPrompt, details: []string{text}, answer: msg.defaultPrompt,
+			question: "Send this answer?", verb: "answer", cancel: cancel}
+		p.accept = func() tea.Cmd { cmd := m.answerDialog(true, p.answer); m.sync(); return cmd }
+		return m.a.Popup(terminu.Popup{Title: "The page asks", Glyph: glyphInfo, Body: p})
+	}
+	ask := terminu.Ask{Title: "The page says", Details: []string{text}, Question: "Dismiss the page's message?", Verb: "dismiss",
+		OnCancel: cancel}
 	switch msg.kind {
 	case cdppage.DialogTypeConfirm:
-		title, p.question, p.verb = "The page asks", "Answer yes?", "yes"
+		ask.Title, ask.Question, ask.Verb = "The page asks", "Answer yes?", "yes"
 	case cdppage.DialogTypeBeforeunload:
-		title, p.details, p.question, p.verb = "Leave this page", []string{"The page says it has unsaved changes."}, "Leave it anyway?", "leave"
-	case cdppage.DialogTypePrompt:
-		title, p.kind, p.answer, p.question, p.verb = "The page asks", askPrompt, msg.defaultPrompt, "Send this answer?", "answer"
-	case cdppage.DialogTypeAlert:
-		p.question, p.verb = "Dismiss the page's message?", "dismiss"
+		ask.Title, ask.Details, ask.Question, ask.Verb = "Leave this page", []string{"The page says it has unsaved changes."}, "Leave it anyway?", "leave"
 	}
-	p.accept = func() tea.Cmd { cmd := m.answerDialog(true, p.answer); m.sync(); return cmd }
-	p.cancel = func() tea.Cmd { cmd := m.answerDialog(false, ""); m.sync(); return cmd }
-	return m.a.Popup(terminu.Popup{Title: title, Glyph: glyphInfo, Body: p})
+	return m.a.Confirm(ask, func() tea.Cmd { cmd := m.answerDialog(true, ""); m.sync(); return cmd })
 }
 
 // answerDialog sends the pending dialog its answer and forgets it. An
