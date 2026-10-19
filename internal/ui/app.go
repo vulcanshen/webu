@@ -76,6 +76,9 @@ type AppModel struct {
 	foldedFolders map[string]bool
 	// loadErrs are the files main could not read, said on the first frame.
 	loadErrs []string
+	// moves are what main moved to where tdp E3 puts it now, or could not:
+	// said on the first frame too.
+	moves []paths.Move
 	// logw is webu.log, where an error toast's whole text goes.
 	logw io.Writer
 
@@ -193,22 +196,49 @@ func (m *AppModel) build() {
 // with.
 func (m *AppModel) start() tea.Cmd {
 	cmds := []tea.Cmd{waitEvent(m.events), m.firstFrame(), devTick()}
-	if len(m.loadErrs) > 0 {
-		cmds = append(cmds, func() tea.Msg { return readErrMsg{} })
+	if len(m.loadErrs) > 0 || len(m.moves) > 0 {
+		cmds = append(cmds, func() tea.Msg { return startNewsMsg{} })
 	}
 	return tea.Batch(cmds...)
 }
 
-// readErrMsg opens the error popup for the files main could not read. The
-// popup wraps its words to the screen, so it waits for the terminal's size:
-// opened before it, it was one word a line.
-type readErrMsg struct{}
+// startNewsMsg says on the first screen what main found: the things it
+// moved (tdp E3), the ones it could not, the files it could not read. A
+// popup wraps its words to the screen, so this waits for the terminal's
+// size: opened before it, it was one word a line.
+type startNewsMsg struct{}
 
-func (m *AppModel) readErrors() tea.Cmd {
+func (m *AppModel) startNews() tea.Cmd {
 	if w, _ := m.a.Size(); w == 0 {
-		return tea.Tick(20*time.Millisecond, func(time.Time) tea.Msg { return readErrMsg{} })
+		return tea.Tick(20*time.Millisecond, func(time.Time) tea.Msg { return startNewsMsg{} })
 	}
-	return m.a.Error("Read failed", strings.Join(m.loadErrs, "\n")+"\nwebu runs without them.")
+	var cmds []tea.Cmd
+	var moved, stuck []string
+	for _, mv := range m.moves {
+		if mv.Err == nil {
+			// A file is said by its directory, a directory by itself.
+			from, to := mv.From, mv.To
+			if filepath.Base(from) == mv.What {
+				from, to = filepath.Dir(from), filepath.Dir(to)
+			}
+			moved = append(moved, mv.What+" from "+paths.Short(from)+" to "+paths.Short(to))
+			continue
+		}
+		stuck = append(stuck, mv.What+" could not be moved from "+paths.Short(mv.From)+" to "+paths.Short(mv.To)+": "+
+			mv.Err.Error()+". webu keeps using it where it is; move it yourself.")
+	}
+	if len(moved) > 0 {
+		text := "Moved " + strings.Join(moved, "; ")
+		m.log(text)
+		cmds = append(cmds, m.toast(text))
+	}
+	if len(stuck) > 0 {
+		cmds = append(cmds, m.a.Error("Move failed", strings.Join(stuck, "\n")))
+	}
+	if len(m.loadErrs) > 0 {
+		cmds = append(cmds, m.a.Error("Read failed", strings.Join(m.loadErrs, "\n")+"\nwebu runs without them."))
+	}
+	return tea.Batch(cmds...)
 }
 
 // sync puts webu's state where the lib reads it: panel [1]'s rows, panel
@@ -233,14 +263,19 @@ func (m *AppModel) do(f func() tea.Cmd) func() tea.Cmd {
 // toast says one short thing at the bottom (components/dialog/toast).
 func (m *AppModel) toast(text string) tea.Cmd { return m.a.Toast(terminu.Info, text) }
 
-// toastErr says something went wrong (Rules F5).
+// toastErr says something went wrong (tdp F5).
 func (m *AppModel) toastErr(text string) tea.Cmd {
 	// A toast cuts a long one short: the whole of it goes to webu.log too
 	// (components/dialog/toast).
+	m.log(text)
+	return m.a.Toast(terminu.Error, text)
+}
+
+// log writes a line to webu.log.
+func (m *AppModel) log(text string) {
 	if m.logw != nil {
 		fmt.Fprintf(m.logw, "%s webu: %s\n", time.Now().Format(time.RFC3339), text)
 	}
-	return m.a.Toast(terminu.Error, text)
 }
 
 // saveFailed is one of webu's files not written: an error popup, the whole
@@ -332,8 +367,8 @@ func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 		}
 		return m.toast("Copied " + plural(msg.lines, "line"))
 
-	case readErrMsg:
-		return m.readErrors()
+	case startNewsMsg:
+		return m.startNews()
 
 	case actionErrMsg:
 		// A closed tab's work comes back cancelled: the tab is gone, and
@@ -576,9 +611,17 @@ func (m *AppModel) recordVisit(t *tab) tea.Cmd {
 
 // WithLoadErrors are the files main could not read: said in an error popup
 // on the first frame, where they are seen, rather than on a terminal the
-// screen is about to cover (Rules F5).
+// screen is about to cover (tdp F5).
 func (m *AppModel) WithLoadErrors(errs []string) *AppModel {
 	m.loadErrs = errs
+	return m
+}
+
+// WithMoves are what main moved from where an older webu kept it (tdp E3):
+// an Info toast on the first frame says from where to where, and an error
+// popup names both places of one it could not move.
+func (m *AppModel) WithMoves(moves []paths.Move) *AppModel {
+	m.moves = moves
 	return m
 }
 

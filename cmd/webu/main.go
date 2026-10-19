@@ -16,6 +16,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/webu/internal/browser"
+	"github.com/vulcanshen/webu/internal/paths"
 	"github.com/vulcanshen/webu/internal/store"
 	"github.com/vulcanshen/webu/internal/ui"
 	"github.com/vulcanshen/webu/internal/version"
@@ -44,9 +45,20 @@ func main() {
 		fmt.Print(usage)
 		return
 	}
+	// What an older webu kept somewhere else moves to where tdp E3 puts it,
+	// before anything reads it there; one that cannot be moved is used where
+	// it is.
+	moves := append(store.Relocate(), paths.RelocateCache()...)
 	// `webu browser update` is the one door to a new revision (function.md
 	// §9): a rebuilt binary carries a new pin, and this fetches it.
 	if len(args) == 2 && args[0] == "browser" && args[1] == "update" {
+		for _, mv := range moves {
+			if mv.Err != nil {
+				fmt.Fprintf(os.Stderr, "webu: %s could not be moved from %s to %s: %v; it is used where it is.\n", mv.What, mv.From, mv.To, mv.Err)
+			} else {
+				fmt.Fprintf(os.Stderr, "webu: moved %s from %s to %s\n", mv.What, mv.From, mv.To)
+			}
+		}
 		if _, err := ensureChromium(true); err != nil {
 			fmt.Fprintln(os.Stderr, "webu:", err)
 			os.Exit(1)
@@ -117,7 +129,7 @@ func main() {
 		session = store.Session{}
 	}
 	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session).
-		WithLoadErrors(loadErrs).WithLog(logw)
+		WithLoadErrors(loadErrs).WithMoves(moves).WithLog(logw)
 
 	// Whatever door the program leaves through — q, an outside SIGINT or
 	// SIGTERM, the terminal closing — Chromium goes too (terminu family: leave

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,6 +14,7 @@ import (
 	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
+	"github.com/vulcanshen/webu/internal/paths"
 	"github.com/vulcanshen/webu/internal/store"
 )
 
@@ -911,6 +913,35 @@ func TestReadErrorsOnTheFirstScreen(t *testing.T) {
 	d.until("the popup", d.shows("READ FAILED"))
 	if v := d.view(); !strings.Contains(v, "config.yaml: yaml: line 3") {
 		t.Errorf("the error should read as a line:\n%s", v)
+	}
+}
+
+// What main moved is an Info toast saying from where to where; what it
+// could not move is an error popup naming both places (tdp E3).
+func TestMovesOnTheFirstScreen(t *testing.T) {
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
+	t.Setenv("HOME", "/h")
+	m := New(nil, "").WithMoves([]paths.Move{
+		{What: "bookmarks.yaml", From: "/h/.config/webu/bookmarks.yaml", To: "/h/.webu/datas/bookmarks.yaml"},
+	})
+	d := newDriver(t, m)
+	d.settle()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the toast", d.shows("Moved bookmarks.yaml from ~/.config/webu to ~/.webu/datas"))
+
+	m = New(nil, "").WithMoves([]paths.Move{
+		{What: "session.yaml", From: "/h/.webu/datas/session.yaml", To: "/h/.config/webu/session.yaml", Err: errors.New("permission denied")},
+	})
+	d = newDriver(t, m)
+	d.settle()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the popup", d.shows("MOVE FAILED"))
+	v := d.view()
+	for _, want := range []string{"~/.webu/datas/session.yaml", "~/.config/webu/session.yaml", "permission denied"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("the popup should name %q:\n%s", want, v)
+		}
 	}
 }
 

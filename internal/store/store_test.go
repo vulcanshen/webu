@@ -1,6 +1,8 @@
 package store
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -47,6 +49,86 @@ func TestRoundTrips(t *testing.T) {
 	}
 	if s2, _ := LoadSession(); len(s2.Tabs) != 2 || s2.Shown != 1 || s2.Tabs[0].Title != "A" {
 		t.Errorf("session: %+v", s2)
+	}
+}
+
+// Each file goes where tdp E3 puts it: the session (state) with the
+// settings, the bookmarks and the history (data) under the data dir.
+func TestFilesGoWhereE3PutsThem(t *testing.T) {
+	cfg, data := t.TempDir(), t.TempDir()
+	t.Setenv("WEBU__CONFIG", cfg)
+	t.Setenv("WEBU__DATA", data)
+	t.Setenv("WEBU__STATE", "")
+	if err := SaveBookmarks([]Bookmark{{Title: "Go", URL: "https://go.dev"}}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveSession(Session{Tabs: []SessionTab{{URL: "https://a"}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveConfig(Config{SearchEngine: "x"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{filepath.Join(data, "bookmarks.yaml"), filepath.Join(cfg, "session.yaml"), filepath.Join(cfg, "config.yaml")} {
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("%s: %v", p, err)
+		}
+	}
+	state := t.TempDir()
+	t.Setenv("WEBU__STATE", state)
+	if err := SaveSession(Session{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(state, "session.yaml")); err != nil {
+		t.Errorf("WEBU__STATE: %v", err)
+	}
+}
+
+// bookmarks.yaml and session.yaml where an older webu kept them move on the
+// first start (tdp E3); one already in its new place is left alone, and
+// the old copy stays.
+func TestRelocateMovesTheOldFiles(t *testing.T) {
+	cfg, data := t.TempDir(), t.TempDir()
+	t.Setenv("WEBU__CONFIG", cfg)
+	t.Setenv("WEBU__DATA", data)
+	t.Setenv("WEBU__STATE", "")
+	write := func(p, s string) {
+		if err := os.WriteFile(p, []byte(s), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(cfg, "bookmarks.yaml"), "bookmarks:\n  - title: Go\n    url: https://go.dev\n")
+	write(filepath.Join(data, "session.yaml"), "tabs:\n  - url: https://a\nshown: 0\n")
+	// Before the move each is read where it is.
+	if b, _, err := LoadBookmarks(); err != nil || len(b) != 1 {
+		t.Fatalf("old bookmarks.yaml not read: %+v %v", b, err)
+	}
+	moved := Relocate()
+	if len(moved) != 2 {
+		t.Fatalf("moved %+v", moved)
+	}
+	for _, mv := range moved {
+		if mv.Err != nil {
+			t.Errorf("%s: %v", mv.What, mv.Err)
+		}
+	}
+	if b, _, _ := LoadBookmarks(); len(b) != 1 {
+		t.Errorf("bookmarks after the move: %+v", b)
+	}
+	if s, _ := LoadSession(); len(s.Tabs) != 1 {
+		t.Errorf("session after the move: %+v", s)
+	}
+	if _, err := os.Stat(filepath.Join(data, "bookmarks.yaml")); err != nil {
+		t.Error("bookmarks.yaml is not under the data dir")
+	}
+	if _, err := os.Stat(filepath.Join(cfg, "session.yaml")); err != nil {
+		t.Error("session.yaml is not under the config dir")
+	}
+	if moved := Relocate(); len(moved) != 0 {
+		t.Errorf("moved twice: %+v", moved)
+	}
+	write(filepath.Join(cfg, "bookmarks.yaml"), "bookmarks: []\n")
+	if moved := Relocate(); len(moved) != 0 {
+		t.Errorf("a file already in its new place is not overwritten: %+v", moved)
 	}
 }
 

@@ -1,5 +1,6 @@
-// Package store owns webu's own files (ui.md §6): bookmarks and settings
-// under the config dir, the history and the session under the data dir.
+// Package store owns webu's own files (ui.md §6): the settings and the
+// session under the config dir, the bookmarks and the history under the
+// data dir.
 // Every one is small and hand-editable; every loader treats a missing file
 // as the empty state and a broken one as news, never as a reason not to
 // start.
@@ -168,19 +169,65 @@ type SessionTab struct {
 	Title string `yaml:"title,omitempty"`
 }
 
-// dataFiles are what webu writes as it runs; they live under paths.Data.
-// The rest — what the user writes — is under paths.Config (2026-09-21).
-var dataFiles = map[string]bool{"history.yaml": true, "session.yaml": true}
+// files say where each file goes (tdp E3, what deleting it would cost) and
+// where an older webu kept it, if somewhere else: config.yaml is a
+// setting; session.yaml is state, under paths.Data until 2026-10-19;
+// bookmarks.yaml and history.yaml are data, bookmarks.yaml under
+// paths.Config until 2026-10-19.
+var files = map[string]struct{ dir, old func() (string, error) }{
+	"config.yaml":    {dir: paths.Config},
+	"session.yaml":   {dir: paths.State, old: paths.Data},
+	"bookmarks.yaml": {dir: paths.Data, old: paths.Config},
+	"history.yaml":   {dir: paths.Data},
+}
 
+// path is where name is read and written: where it goes, or where an older
+// webu kept it while Relocate could not move it from there.
 func path(name string) (string, error) {
-	dir, err := paths.Config()
-	if dataFiles[name] {
-		dir, err = paths.Data()
-	}
+	p, old, err := places(name)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, name), nil
+	return paths.Either(p, old), nil
+}
+
+// places are where name goes and where an older webu kept it ("" when
+// that is the same place).
+func places(name string) (string, string, error) {
+	f := files[name]
+	dir, err := f.dir()
+	if err != nil {
+		return "", "", err
+	}
+	p := filepath.Join(dir, name)
+	if f.old == nil {
+		return p, "", nil
+	}
+	odir, err := f.old()
+	if err != nil {
+		return p, "", nil
+	}
+	if old := filepath.Join(odir, name); old != p {
+		return p, old, nil
+	}
+	return p, "", nil
+}
+
+// Relocate moves to where they go now the files an older webu kept
+// somewhere else (tdp E3, on the first start). One that cannot be moved
+// stays, and is read and written where it is.
+func Relocate() []paths.Move {
+	var moved []paths.Move
+	for _, name := range []string{"bookmarks.yaml", "session.yaml"} {
+		p, old, err := places(name)
+		if err != nil {
+			continue
+		}
+		if mv, ok := paths.Relocate(name, old, p); ok {
+			moved = append(moved, mv)
+		}
+	}
+	return moved
 }
 
 // ---------------------------------------------------------------- yaml

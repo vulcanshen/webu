@@ -20,6 +20,14 @@ func TestDirsHonourOverrides(t *testing.T) {
 	if d, _ := Downloads(); d != filepath.Join("/tmp/wd", "downloads") {
 		t.Errorf("Downloads %q", d)
 	}
+	if d, _ := State(); d != "/tmp/wc" {
+		t.Errorf("State is the settings directory (tdp E3): %q", d)
+	}
+	t.Setenv("WEBU__STATE", "/tmp/ws")
+	if d, _ := State(); d != "/tmp/ws" {
+		t.Errorf("State %q", d)
+	}
+	t.Setenv("WEBU__STATE", "")
 	t.Setenv("WEBU__DATA", "")
 	t.Setenv("HOME", "/tmp/h")
 	if d, _ := Data(); d != filepath.Join("/tmp/h", ".webu", "datas") {
@@ -52,8 +60,84 @@ func systemCache() string {
 	return filepath.Join(dir, "webu")
 }
 
+// A Chromium fetched under XDG_CACHE_HOME on macOS, before tdp E3, is
+// moved into the system's cache directory on the first start (tdp E3); one
+// that could not be moved is used where it is.
+func TestAnOldMacCacheIsMoved(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS only")
+	}
+	home, xdg := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("WEBU__CACHE", "")
+	t.Setenv("XDG_CACHE_HOME", xdg)
+	if moved := RelocateCache(); len(moved) != 0 {
+		t.Errorf("nothing to move, moved %+v", moved)
+	}
+	old := filepath.Join(xdg, "webu")
+	if err := os.MkdirAll(filepath.Join(old, "chromium-1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	moved := RelocateCache()
+	cache := filepath.Join(home, "Library", "Caches", "webu")
+	if len(moved) != 1 || moved[0].From != old || moved[0].To != cache || moved[0].Err != nil {
+		t.Fatalf("moved %+v", moved)
+	}
+	if !exists(filepath.Join(cache, "chromium-1")) || exists(old) {
+		t.Errorf("the whole directory goes: new %v, old %v", exists(cache), exists(old))
+	}
+	if d, _ := Cache(); d != cache {
+		t.Errorf("Cache after the move %q", d)
+	}
+	if moved := RelocateCache(); len(moved) != 0 {
+		t.Errorf("moved twice: %+v", moved)
+	}
+}
+
+// A move that fails leaves the old place as it was and says why.
+func TestRelocateThatFails(t *testing.T) {
+	dir := t.TempDir()
+	from := filepath.Join(dir, "old", "bookmarks.yaml")
+	if err := os.MkdirAll(filepath.Dir(from), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(from, []byte("bookmarks: []\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// The new place's directory is a file: nothing can go under it.
+	block := filepath.Join(dir, "new")
+	if err := os.WriteFile(block, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mv, ok := Relocate("bookmarks.yaml", from, filepath.Join(block, "bookmarks.yaml"))
+	if !ok || mv.Err == nil {
+		t.Fatalf("Relocate %+v %v", mv, ok)
+	}
+	if !exists(from) {
+		t.Error("the old file is gone")
+	}
+	if p := Either(filepath.Join(block, "bookmarks.yaml"), from); p != from {
+		t.Errorf("used from %q", p)
+	}
+}
+
+// Short writes the home directory as ~.
+func TestShort(t *testing.T) {
+	t.Setenv("HOME", "/tmp/h")
+	for in, want := range map[string]string{
+		"/tmp/h":              "~",
+		"/tmp/h/.webu/datas":  "~/.webu/datas",
+		"/tmp/hh/.webu/datas": "/tmp/hh/.webu/datas",
+		"/var/x":              "/var/x",
+	} {
+		if got := Short(in); got != want {
+			t.Errorf("Short(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 // A Chromium fetched under XDG_CACHE_HOME on macOS, before tdp E3, is used
-// until one is fetched into the system's cache directory (WB5).
+// while the system's cache directory has none: the move did not happen.
 func TestAnOldMacCacheIsStillRead(t *testing.T) {
 	if runtime.GOOS != "darwin" {
 		t.Skip("macOS only")
