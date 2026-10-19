@@ -257,8 +257,8 @@ The keys, brought in line with the [terminu design principle](https://github.com
 ### Changed
 
 - **The icon is redrawn**: the W is now a frame of its own, the E and
-  the B standing between its strokes, inside the navy U. The `V` splash
-  and the social preview draw the new mark.
+  the B standing between its strokes, inside the navy U. The social
+  preview draws the new mark.
 
 ## [0.3.0] — 2026-09-23
 
@@ -598,4 +598,3 @@ runs its JavaScript, it keeps its cookies.
 - **What a page asks for, answered in place**: alert / confirm / prompt,
   HTTP auth, file uploads, `target=_blank`, certificate errors, downloads.
 - **Session restore** on the next launch, tabs unloaded until switched to.
-- **The u-family easter egg** — the icon, revealed pixel by pixel, on `V`, the family's key.
