@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/chromedp/cdproto/cdp"
+	cdppage "github.com/chromedp/cdproto/page"
 	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
@@ -921,6 +922,29 @@ func TestReadErrorsOnTheFirstScreen(t *testing.T) {
 	d.until("the popup", d.shows("READ FAILED"))
 	if v := d.view(); !strings.Contains(v, "config.yaml: yaml: line 3") {
 		t.Errorf("the error should read as a line:\n%s", v)
+	}
+}
+
+// A page's prompt is the lib's text input with the page's whole message,
+// its line breaks too, folded on the prompt row (components/input/README).
+func TestALongPromptIsShownWhole(t *testing.T) {
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
+	m := New(nil, "")
+	d := newDriver(t, m)
+	d.send(tea.WindowSizeMsg{Width: 80, Height: 30})
+	tb := &tab{id: 1, url: "https://example.com/", title: "Asking", root: doc(hd(1, "Asking")), cursor: -1}
+	m.tabs, m.shown = []*tab{tb}, 0
+	m.sync()
+	msg := "Before we go on, the form needs a word from you about the order you placed last week.\n" +
+		"Second line: which colour would you like the parcel wrapped in?"
+	d.exec(m.askDialog(dialogMsg{tabID: 1, kind: cdppage.DialogTypePrompt, message: msg, defaultPrompt: "blue"}))
+	d.settle()
+	v := d.view()
+	for _, want := range []string{"THE PAGE ASKS", "Before we go on", "last week.", "Second line: which colour", "blue"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("the prompt should show %q:\n%s", want, v)
+		}
 	}
 }
 

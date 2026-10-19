@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.8.2），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.2.1）上，是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.8.3），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.2.2）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -178,7 +178,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 
 | 事件 | 落地 |
 |---|---|
-| JS dialog | `dialogMsg` → `pageask.go`：alert／confirm／beforeunload 是 lib 的 confirm，prompt 是 lib 的 TextInput（頁面給的答案當灰字提議，照原樣按 Enter 由 `Unchanged` 回答它）；取消一律經 `OnCancel` 回答「不」；`handleJavaScriptDialog` 回答；開著時 settle 暫停 |
+| JS dialog | `dialogMsg` → `pageask.go`：alert／confirm／beforeunload 是 lib 的 confirm，prompt 是 lib 的 TextInput（頁面整段訊息是說明列，連換行一起交給 lib 折行；頁面給的答案當灰字提議，照原樣按 Enter 由 `Unchanged` 回答它）；取消一律經 `OnCancel` 回答「不」；`handleJavaScriptDialog` 回答；開著時 settle 暫停 |
 | `target=_blank` | `Target.targetCreated`（`OpenerID` 有值）→ `NewContext(WithTargetID)` → `Prepare` → 加到尾端切換 |
 | 憑證 | `ERR_CERT_*` → confirm → `setIgnoreCertificateErrors(true)` 重載；每分頁問一次 |
 | 下載 | `setDownloadBehavior` + 事件 → toast / Downloads screen / header 進度條 |
@@ -253,7 +253,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - Linux ARM（Chromium 的 snapshot bucket 沒有）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
-webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0 與 v0.2.1（tdp v0.8.2）（2026-10-19）；有意不照做的地方列在下一節。等 lib 才改得完的都改完了，`docs/webu-terminu-fix.md` 照 tdp E7 刪掉。user 說 webu 之後要整個大改，WB4、WB7 兩個暫定留到那時再談。
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19）；有意不照做的地方列在下一節。等 lib 才改得完的都改完了，`docs/webu-terminu-fix.md` 照 tdp E7 刪掉。user 說 webu 之後要整個大改，WB4、WB7 兩個暫定留到那時再談。
 
 ## 偏離 tdp
 
