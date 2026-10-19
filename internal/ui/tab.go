@@ -155,8 +155,10 @@ type tab struct {
 	// the user has been asked about it once already for this page.
 	certErr, certAsked bool
 	// refreshErr is a look again at the page that failed, the page kept;
-	// the app toasts it once.
+	// the app toasts it once. reloading is R in flight with a page on
+	// screen to keep.
 	refreshErr string
+	reloading  bool
 	// print is treePrint of the capture on screen, and settlingUntil how
 	// long the next one that differs from it still counts as the page
 	// arriving rather than the page living.
@@ -471,6 +473,7 @@ func (t *tab) close() {
 func (t *tab) load(url string) tea.Cmd {
 	t.gen++
 	t.loading, t.navigating, t.pending, t.errText = true, true, false, ""
+	t.reloading = false
 	t.blankUntil = time.Now().Add(blankGrace)
 	t.settlingUntil = time.Now().Add(settleGrace)
 	t.popupUntil = time.Now().Add(popupGrace)
@@ -492,6 +495,15 @@ func (t *tab) load(url string) tea.Cmd {
 		}
 		return capture(ctx, id, gen, frames)
 	}
+}
+
+// reload is R: the page on screen loaded again. If that fails the page
+// stays and a toast says so (layout/panel, loading and errors); a page
+// that is not there to keep is the error in its place, as for any load.
+func (t *tab) reload() tea.Cmd {
+	cmd := t.load(t.url)
+	t.reloading = t.root != nil
+	return cmd
 }
 
 // navFailMsg is a history move that had nowhere to go, or failed: the tab
@@ -597,14 +609,19 @@ func (t *tab) run(fn func(context.Context) error, lock bool) tea.Cmd {
 			defer t.acting.Unlock()
 		}
 		if err := fn(ctx); err != nil {
-			return actionErrMsg{err: err}
+			return actionErrMsg{what: "Page action", err: err}
 		}
 		return nil
 	}
 	return tea.Sequence(do, t.settle(300*time.Millisecond))
 }
 
-type actionErrMsg struct{ err error }
+// actionErrMsg is something done that failed; what names it in the error
+// popup's title: "<what> failed" (components/dialog/note).
+type actionErrMsg struct {
+	what string
+	err  error
+}
 
 func capture(ctx context.Context, id, gen int, frames []cdp.FrameID) tea.Msg {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -625,12 +642,13 @@ func capture(ctx context.Context, id, gen int, frames []cdp.FrameID) tea.Msg {
 // the cursor kept on the node it was on (function.md §4) — by ID first, and
 // when the page rebuilt its DOM and the IDs are new, by the nearest item.
 func (t *tab) apply(msg pageMsg, width int) {
-	nav := t.navigating
-	t.loading, t.navigating = false, false
+	nav, again := t.navigating, t.reloading
+	t.loading, t.navigating, t.reloading = false, false, false
 	t.canBack, t.canForward = msg.back, msg.forward
-	if msg.err != nil && !nav && t.root != nil && !strings.Contains(msg.err.Error(), "ERR_CERT") {
-		// A look again at the page on screen failed: it stays, and the app
-		// says so (layout/panel: the old content stays, the error is a toast).
+	if msg.err != nil && (!nav || again) && t.root != nil && !strings.Contains(msg.err.Error(), "ERR_CERT") {
+		// A look again at the page on screen — or R — failed: it stays, and
+		// the app says so (layout/panel: the old content stays, the error is
+		// a toast).
 		t.refreshErr = msg.err.Error()
 		return
 	}

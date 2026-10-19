@@ -33,9 +33,8 @@ func (m *AppModel) buildWeb() {
 }
 
 // webLayout puts [1] at its fixed width and gives [2] the rest; zoomed,
-// [2] takes the whole width (ui.md §1.2). The zoom is the page's: with the
-// focus on [1] the grid is drawn, so the focused panel is on screen (tdp
-// L5).
+// the focused panel takes the whole width (ui.md §1.2), so it is always on
+// screen (tdp L5).
 func (m *AppModel) webLayout(w, h int) []terminu.Rect {
 	if m.zoom {
 		// Zoomed, the focused panel takes the whole width, the way a narrow
@@ -266,9 +265,9 @@ func (m *AppModel) closeOthers() tea.Cmd {
 			m.tabs = append(m.tabs[:i], m.tabs[i+1:]...)
 		}
 	}
-	m.leaveSelect()
+	left := m.leaveSelect()
 	m.shown = 0
-	return nil
+	return left
 }
 
 // newTabBox is [T]: a URL, or words to search for, in a new tab.

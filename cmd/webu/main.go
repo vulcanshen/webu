@@ -78,8 +78,9 @@ func main() {
 		os.Exit(1)
 	}
 	// chromedp's own log goes to a file next to the profile, never to the
-	// terminal the TUI is drawing on. Failing to open it is not fatal: the
-	// lines are dropped instead.
+	// terminal the TUI is drawing on, and so does the whole of an error a
+	// toast cuts short. Failing to open it is not fatal: the lines are
+	// dropped instead.
 	var logw io.Writer = io.Discard
 	if f, err := os.OpenFile(filepath.Join(filepath.Dir(profile), "webu.log"),
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil {
@@ -115,7 +116,8 @@ func main() {
 	if !cfg.Restore() {
 		session = store.Session{}
 	}
-	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session).WithLoadErrors(loadErrs)
+	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session).
+		WithLoadErrors(loadErrs).WithLog(logw)
 
 	// Whatever door the program leaves through — q, an outside SIGINT or
 	// SIGTERM, the terminal closing — Chromium goes too (terminu family: leave

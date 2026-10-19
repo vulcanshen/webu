@@ -409,9 +409,12 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 	s := &m.sel
 	styles := segStyles()
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
+	// Yellow is the mode's (components/color): its band under what is
+	// selected, its ink under a match — the one the search is on in bold.
+	// tdp has no colour of its own for a match in the text (TODO(tdp WB14)).
 	sel := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(selectColor)
 	hit := lipgloss.NewStyle().Foreground(selectColor).Underline(true)
-	hitCur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(selectColor).Underline(true)
+	hitCur := lipgloss.NewStyle().Foreground(selectColor).Underline(true).Bold(true)
 
 	out := make([]string, 0, innerH)
 	end := min(len(t.lay.rows), t.top+innerH)

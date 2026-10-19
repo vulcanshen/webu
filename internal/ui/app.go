@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -75,6 +76,8 @@ type AppModel struct {
 	foldedFolders map[string]bool
 	// loadErrs are the files main could not read, said on the first frame.
 	loadErrs []string
+	// logw is webu.log, where an error toast's whole text goes.
+	logw io.Writer
 
 	// The screens (web.go, bookmarks.go, history.go, downloads.go,
 	// settings.go, devtools.go).
@@ -191,9 +194,21 @@ func (m *AppModel) build() {
 func (m *AppModel) start() tea.Cmd {
 	cmds := []tea.Cmd{waitEvent(m.events), m.firstFrame(), devTick()}
 	if len(m.loadErrs) > 0 {
-		cmds = append(cmds, m.a.Error("Read failed", strings.Join(m.loadErrs, "\n")+"\nwebu runs without them."))
+		cmds = append(cmds, func() tea.Msg { return readErrMsg{} })
 	}
 	return tea.Batch(cmds...)
+}
+
+// readErrMsg opens the error popup for the files main could not read. The
+// popup wraps its words to the screen, so it waits for the terminal's size:
+// opened before it, it was one word a line.
+type readErrMsg struct{}
+
+func (m *AppModel) readErrors() tea.Cmd {
+	if w, _ := m.a.Size(); w == 0 {
+		return tea.Tick(20*time.Millisecond, func(time.Time) tea.Msg { return readErrMsg{} })
+	}
+	return m.a.Error("Read failed", strings.Join(m.loadErrs, "\n")+"\nwebu runs without them.")
 }
 
 // sync puts webu's state where the lib reads it: panel [1]'s rows, panel
@@ -219,7 +234,14 @@ func (m *AppModel) do(f func() tea.Cmd) func() tea.Cmd {
 func (m *AppModel) toast(text string) tea.Cmd { return m.a.Toast(terminu.Info, text) }
 
 // toastErr says something went wrong (Rules F5).
-func (m *AppModel) toastErr(text string) tea.Cmd { return m.a.Toast(terminu.Error, text) }
+func (m *AppModel) toastErr(text string) tea.Cmd {
+	// A toast cuts a long one short: the whole of it goes to webu.log too
+	// (components/dialog/toast).
+	if m.logw != nil {
+		fmt.Fprintf(m.logw, "%s webu: %s\n", time.Now().Format(time.RFC3339), text)
+	}
+	return m.a.Toast(terminu.Error, text)
+}
 
 // saveFailed is one of webu's files not written: an error popup, the whole
 // of the reason readable (components/dialog/note).
@@ -283,9 +305,9 @@ func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 		t := m.newTabFor(msg.id)
 		t.url = msg.url
 		m.tabs = append(m.tabs, t)
-		m.leaveSelect()
+		left := m.leaveSelect()
 		m.shown = len(m.tabs) - 1
-		return tea.Batch(waitEvent(m.events), t.adopt(), m.goWeb(), m.focusPage())
+		return tea.Batch(left, waitEvent(m.events), t.adopt(), m.goWeb(), m.focusPage())
 
 	case downloadMsg:
 		return tea.Batch(waitEvent(m.events), m.noteDownload(msg))
@@ -310,13 +332,16 @@ func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 		}
 		return m.toast("Copied " + plural(msg.lines, "line"))
 
+	case readErrMsg:
+		return m.readErrors()
+
 	case actionErrMsg:
 		// A closed tab's work comes back cancelled: the tab is gone, and
 		// so is anything to say about it.
 		if errors.Is(msg.err, context.Canceled) {
 			return nil
 		}
-		return m.a.Error("Action failed", msg.err.Error())
+		return m.a.Error(msg.what+" failed", msg.err.Error())
 
 	case navFailMsg:
 		_, t := m.tabByID(msg.tabID)
@@ -443,7 +468,7 @@ func (m *AppModel) trustCert(tabID int, url string) tea.Cmd {
 	ctx := t.ctx
 	ignore := func() tea.Msg {
 		if err := page.IgnoreCertErrors(ctx); err != nil {
-			return actionErrMsg{err: err}
+			return actionErrMsg{what: "Continue", err: err}
 		}
 		return nil
 	}
@@ -491,10 +516,10 @@ func (m *AppModel) pointDownloads() tea.Cmd {
 	return func() tea.Msg {
 		// Chromium does not create the directory it is pointed at.
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return actionErrMsg{err: fmt.Errorf("downloads: %w", err)}
+			return actionErrMsg{what: "Download folder", err: err}
 		}
 		if err := page.SetDownloads(ctx, dir); err != nil {
-			return actionErrMsg{err: fmt.Errorf("downloads: %w", err)}
+			return actionErrMsg{what: "Download folder", err: err}
 		}
 		return nil
 	}
@@ -557,6 +582,12 @@ func (m *AppModel) WithLoadErrors(errs []string) *AppModel {
 	return m
 }
 
+// WithLog is where the whole of an error a toast cuts short is written.
+func (m *AppModel) WithLog(w io.Writer) *AppModel {
+	m.logw = w
+	return m
+}
+
 // ------------------------------------------------------------------- tabs
 
 func (m *AppModel) shownTab() *tab {
@@ -581,9 +612,9 @@ func (m *AppModel) openTab(url string, show bool) tea.Cmd {
 	t := m.newTab()
 	m.tabs = append(m.tabs, t)
 	if show || m.shown < 0 {
-		m.leaveSelect()
+		left := m.leaveSelect()
 		m.shown = len(m.tabs) - 1
-		return tea.Batch(t.load(url), m.goWeb(), m.focusPage())
+		return tea.Batch(left, t.load(url), m.goWeb(), m.focusPage())
 	}
 	return t.load(url)
 }
@@ -594,9 +625,9 @@ func (m *AppModel) openTab(url string, show bool) tea.Cmd {
 func (m *AppModel) openTabBehind(url string) tea.Cmd {
 	t := m.newTab()
 	m.tabs = append(m.tabs, t)
-	m.leaveSelect()
+	left := m.leaveSelect()
 	m.shown = len(m.tabs) - 1
-	return tea.Batch(t.load(url), m.toast("Opened in a new tab; press [W] to see it"))
+	return tea.Batch(left, t.load(url), m.toast("Opened in a new tab; press [W] to see it"))
 }
 
 // remember keeps a closing tab's address for [U]ndo close.
@@ -616,24 +647,25 @@ func (m *AppModel) showTab(i int) tea.Cmd {
 	if i < 0 || i >= len(m.tabs) {
 		return nil
 	}
-	m.leaveSelect()
+	left := m.leaveSelect()
 	m.shown = i
 	t := m.tabs[i]
 	if t.pending {
-		return t.load(t.url)
+		return tea.Batch(left, t.load(t.url))
 	}
 	if t.layW != m.pageW() {
 		t.relayout(m.pageW())
 	}
-	return nil
+	return left
 }
 
 func (m *AppModel) closeTab(i int) tea.Cmd {
 	if i < 0 || i >= len(m.tabs) {
 		return nil
 	}
+	// The shown tab's held capture is for a tab going away: dropped.
 	if i == m.shown {
-		m.leaveSelect()
+		_ = m.leaveSelect()
 	}
 	m.remember(m.tabs[i])
 	m.tabs[i].close()

@@ -575,33 +575,143 @@ func TestFrameFitsTheTerminal(t *testing.T) {
 			tb.relayout(m.pageW())
 			m.sync()
 			check("the page's dialog")
-			tb.root, tb.popups = root, nil
+			m.Close()
+		}
+	}
+}
+
+// TestEveryPopupFits is tdp E5's popups: each kind opened once over the
+// page and the whole frame measured, webu's own popup measured alone too;
+// then, with it open, the screen made narrower than it, shorter, and both.
+func TestEveryPopupFits(t *testing.T) {
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
+	defer terminu.SetIconWidth(1, 1)
+	long := strings.Repeat("The page has a long thing to say, and says it. ", 12)
+	root := doc(hd(1, "Fitting"), para(text(long)), link("a link", "https://example.com/x", 7))
+	var lines, options []string
+	for i := range 60 {
+		lines = append(lines, itoa(i)+" "+long)
+		options = append(options, itoa(i)+" "+long[:70])
+	}
+	dirSetting := 0
+	for i, s := range settings {
+		if s.key == "download_dir" {
+			dirSetting = i
+		}
+	}
+	none := func() tea.Cmd { return nil }
+	done := func(string) tea.Cmd { return nil }
+	for _, widths := range [][2]int{{1, 1}, {2, 1}, {2, 2}} {
+		terminu.SetIconWidth(widths[0], widths[1])
+		for _, size := range [][2]int{{100, 30}, {40, 12}} {
+			m := New(nil, "")
+			d := newDriver(t, m)
+			d.send(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+			tb := &tab{id: 1, url: "https://example.com/fitting", title: "Fitting", root: root, cursor: -1}
+			m.tabs, m.shown = []*tab{tb}, 0
 			tb.relayout(m.pageW())
 			m.sync()
-			ask := &pageAsk{m: m, details: []string{long, "", long}, question: "Answer yes?", verb: "yes",
-				accept: func() tea.Cmd { return nil }, cancel: func() tea.Cmd { return nil }}
-			d.exec(m.a.Popup(terminu.Popup{Title: "The page asks", Glyph: glyphInfo, Body: ask}))
-			d.settle()
-			check("the page asks")
-			d.exec(m.a.ClosePopup(ask))
-			d.settle()
-			d.exec(m.a.Confirm(terminu.Ask{Title: "Delete", Subject: "Fitting", Question: "Delete it?", Verb: "delete",
-				Details: []string{long}}, func() tea.Cmd { return nil }))
-			d.settle()
-			check("a question")
-			d.press("esc")
-			var code []string
-			for i := range 60 {
-				code = append(code, itoa(i)+" "+long)
+			d.key("2")
+			fits := func(where string, sw, sh int) {
+				lines := m.a.Frame()
+				if len(lines) != sh {
+					t.Errorf("%v %dx%d %s: %d lines", widths, sw, sh, where, len(lines))
+				}
+				for i, l := range lines {
+					if w := terminu.Width(l); w != sw {
+						t.Errorf("%v %dx%d %s: line %d is %d wide: %q", widths, sw, sh, where, i, w, terminu.StripStyles(l))
+					}
+				}
 			}
-			d.exec(m.a.Viewer(&terminu.Viewer{Title: "CODE", Subject: "Fitting", Glyph: glyphCode, Lines: code}))
-			d.settle()
-			check("a viewer")
-			// The screen shrinks under an open popup: the popup shrinks with it.
-			d.send(tea.WindowSizeMsg{Width: size[0] / 2, Height: size[1] / 2})
-			d.settle()
-			fits("a viewer, the screen shrunk under it", size[0]/2, size[1]/2)
-			d.press("esc")
+			// shrink measures the frame at the size and with the popup bigger
+			// than the screen: wider, taller, both (tdp E5).
+			shrink := func(where string, alone func(sw, sh int)) {
+				for _, s := range [][2]int{size, {size[0] / 2, size[1]}, {size[0], size[1] / 2}, {size[0] / 2, size[1] / 2}} {
+					if where == "file-picker" && s[1] < 8 {
+						// TODO(lib WB12): the lib's finder panics drawing a
+						// file's facts in a box this short (filu's FL8).
+						continue
+					}
+					d.send(tea.WindowSizeMsg{Width: s[0], Height: s[1]})
+					fits(where, s[0], s[1])
+					if alone != nil {
+						alone(s[0], s[1])
+					}
+				}
+				d.send(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+			}
+			for _, p := range []struct {
+				name string
+				open func() tea.Cmd
+			}{
+				{"text input", func() tea.Cmd {
+					return m.a.Text(terminu.TextInput{Title: "Edit", Subject: "Fitting", Prompt: long, Verb: "save", Old: long, Done: done})
+				}},
+				{"password", func() tea.Cmd {
+					return m.a.Password(terminu.PasswordInput{Title: "Sign in", Prompt: long, Verb: "set", Set: true,
+						Done: func(string, bool) tea.Cmd { return nil }})
+				}},
+				{"number", func() tea.Cmd {
+					return m.a.Number(terminu.NumberInput{Title: "Go to", Subject: "Fitting", Name: "The line", Prompt: long,
+						Verb: "go", Old: "12", Min: 1, Max: 999, Done: done})
+				}},
+				{"select", func() tea.Cmd {
+					return m.a.Select(terminu.Select{Title: "Choose", Subject: "Fitting", Options: options, Selected: 3,
+						Done: func(int) tea.Cmd { return nil }})
+				}},
+				{"textarea", func() tea.Cmd {
+					return m.a.Textarea(terminu.Textarea{Title: "Edit", Subject: "Fitting", Old: strings.Join(lines, "\n"), Done: done})
+				}},
+				{"form", func() tea.Cmd { return m.addBookmark("Fitting "+long, "https://example.com/"+long) }},
+				{"file-picker", func() tea.Cmd { return m.settingBox(dirSetting) }},
+				{"finder", m.openFinder},
+				{"menu", func() tea.Cmd {
+					return m.a.Menu("Cell", terminu.MenuSection{Title: "Fitting",
+						Actions: []terminu.Action{m.item("Content", long, none), m.item(long, long, none)}})
+				}},
+				{"question", func() tea.Cmd {
+					return m.a.Confirm(terminu.Ask{Title: "Delete", Subject: "Fitting", Question: "Delete it?", Verb: "delete",
+						Details: []string{long}}, none)
+				}},
+				{"error", func() tea.Cmd { return m.a.Error("Save failed", long+long) }},
+				{"viewer", func() tea.Cmd {
+					return m.a.Viewer(&terminu.Viewer{Title: "CODE", Subject: "Fitting", Glyph: glyphCode, Lines: lines})
+				}},
+			} {
+				d.exec(p.open())
+				d.settle()
+				shrink(p.name, nil)
+				d.key("esc")
+			}
+			// webu's own: the page's question, each kind, its box measured
+			// alone at the size the lib would give it.
+			for _, ask := range []*pageAsk{
+				{details: []string{long, "", long}, question: "Answer yes?", verb: "yes"},
+				{kind: askPrompt, details: []string{long}, answer: long, question: "Send this answer?", verb: "answer"},
+				{kind: askAuth, details: []string{"example.com asks you to sign in: " + long}, name: long, pass: "secret",
+					question: "Sign in?", verb: "sign in"},
+			} {
+				ask.m, ask.accept, ask.cancel = m, none, none
+				d.exec(m.a.Popup(terminu.Popup{Title: "The page asks", Glyph: glyphInfo, Body: ask}))
+				d.settle()
+				shrink("the page asks", func(sw, sh int) {
+					w, h := ask.Size(sw, sh)
+					if w > sw || h > sh {
+						t.Errorf("%v %dx%d the page asks: %dx%d asked for", widths, sw, sh, w, h)
+					}
+					box := ask.Draw(w, h, terminu.Base)
+					if len(box) != h {
+						t.Errorf("%v %dx%d the page asks: %d rows drawn for %d", widths, sw, sh, len(box), h)
+					}
+					for i, l := range box {
+						if lw := terminu.Width(l); lw != w {
+							t.Errorf("%v %dx%d the page asks: row %d is %d wide for %d", widths, sw, sh, i, lw, w)
+						}
+					}
+				})
+				d.exec(m.a.ClosePopup(ask))
+			}
 			m.Close()
 		}
 	}
@@ -762,6 +872,45 @@ func TestDeleteFolderTree(t *testing.T) {
 	}
 	if list, folders, err := store.LoadBookmarks(); err != nil || len(list) != 1 || len(folders) != 0 {
 		t.Errorf("saved: %d bookmarks, %d folders, %v", len(list), len(folders), err)
+	}
+}
+
+// After a delete the cursor rests on the next bookmark, under the same row
+// ID: x's question names that one, not the one just gone.
+func TestDeleteAsksAboutTheRowUnderTheCursor(t *testing.T) {
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
+	m := New(nil, "").WithStore([]store.Bookmark{
+		{Title: "Alpha", URL: "https://a.example"},
+		{Title: "Beta", URL: "https://b.example"},
+	}, nil, store.Config{}, nil)
+	d := newDriver(t, m)
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.key("B")
+	d.bmSelect(bmRow{ref: 0})
+	d.press("x")
+	d.until("asked about Alpha", d.shows("DELETE: Alpha"))
+	d.press("enter")
+	d.until("Alpha gone", func() bool { return len(d.m.bookmarks) == 1 })
+	d.press("x")
+	d.until("asked about Beta", d.shows("DELETE: Beta"))
+	if v := d.view(); strings.Contains(v, "a.example") {
+		t.Errorf("the question still names the bookmark just deleted:\n%s", v)
+	}
+}
+
+// A file main could not read is an error popup on the first screen (tdp
+// F5), its words wrapped to the screen that arrives after the start.
+func TestReadErrorsOnTheFirstScreen(t *testing.T) {
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
+	m := New(nil, "").WithLoadErrors([]string{"config.yaml: yaml: line 3: did not find expected key"})
+	d := newDriver(t, m)
+	d.settle()
+	d.send(tea.WindowSizeMsg{Width: 80, Height: 24})
+	d.until("the popup", d.shows("READ FAILED"))
+	if v := d.view(); !strings.Contains(v, "config.yaml: yaml: line 3") {
+		t.Errorf("the error should read as a line:\n%s", v)
 	}
 }
 

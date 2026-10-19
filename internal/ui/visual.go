@@ -33,7 +33,7 @@ func (m *AppModel) visualMode() *terminu.Mode {
 		},
 		Exit:   "leave",
 		Pause:  true,
-		OnExit: func() tea.Cmd { m.leaveSelect(); m.sync(); return nil },
+		OnExit: func() tea.Cmd { cmd := m.leaveSelect(); m.sync(); return cmd },
 	}
 }
 
@@ -49,10 +49,12 @@ func (m *AppModel) enterSelect() tea.Cmd {
 }
 
 // leaveSelect ends the mode: the item cursor lands nearest the character
-// cursor, and a capture held back while it was on is applied now.
-func (m *AppModel) leaveSelect() {
+// cursor, and a capture held back while it was on comes back as the
+// message it was, for applyPage to take like any other — the visit written,
+// a failed write or look said.
+func (m *AppModel) leaveSelect() tea.Cmd {
 	if !m.sel.on {
-		return
+		return nil
 	}
 	m.sel.on = false
 	if m.pagePanel.InMode() != nil {
@@ -60,18 +62,18 @@ func (m *AppModel) leaveSelect() {
 	}
 	t := m.shownTab()
 	if t == nil {
-		return
+		return nil
 	}
 	if i := t.lay.nearestItem(m.sel.row); i >= 0 {
 		t.cursor = i
 	}
+	t.scrollToCursor(m.pageVisible())
 	if t.frozen != nil {
 		msg := *t.frozen
 		t.frozen = nil
-		t.apply(msg, m.pageW())
-		_ = m.recordVisit(t) // the mode is ending; a failed write shows on the next page
+		return func() tea.Msg { return msg }
 	}
-	t.scrollToCursor(m.pageVisible())
+	return nil
 }
 
 // visualKey is one of the mode's keys.
@@ -79,8 +81,7 @@ func (m *AppModel) visualKey(k string) tea.Cmd {
 	defer m.sync()
 	t := m.shownTab()
 	if t == nil {
-		m.leaveSelect()
-		return nil
+		return m.leaveSelect()
 	}
 	vis := m.pageVisible()
 	res, text := m.sel.key(k, vis)
@@ -93,19 +94,19 @@ func (m *AppModel) visualKey(k string) tea.Cmd {
 	}
 	switch res {
 	case selYank:
-		m.leaveSelect()
+		left := m.leaveSelect()
 		if text == "" {
-			return m.toast("Nothing to copy")
+			return tea.Batch(left, m.toast("Nothing to copy"))
 		}
-		return copyToClipboard(text)
+		return tea.Batch(left, copyToClipboard(text))
 	case selClick:
 		i := t.lay.itemAtCol(m.sel.row, m.sel.col)
 		if i < 0 {
 			return m.toast("Nothing to press here")
 		}
-		m.leaveSelect()
+		left := m.leaveSelect()
 		t.cursor = i
-		return m.enterItem()
+		return tea.Batch(left, m.enterItem())
 	}
 	return nil
 }

@@ -391,7 +391,10 @@ func (m *AppModel) devActions() []terminu.Action {
 	}
 	noPage := func() bool { return m.shownTab() == nil }
 	return []terminu.Action{
-		{Key: "Enter", Label: "Detail", Desc: "the row in full, in [2]", Scope: terminu.ItemScope, Hint: "detail",
+		// No hint: [1] streams, and the lib keeps a streaming panel's hint
+		// lit off focus too, beside [2]'s own Enter (tdp M9; TODO(lib
+		// WB13)). The Space menu and ? still list it.
+		{Key: "Enter", Label: "Detail", Desc: "the row in full, in [2]", Scope: terminu.ItemScope,
 			ToDetails: func() bool { return true }},
 		{Key: "y", Label: "yank", Desc: "the URL, the value, the line", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd {
@@ -438,7 +441,7 @@ func (m *AppModel) devActions() []terminu.Action {
 				if t == nil || origin == "" {
 					return nil
 				}
-				return m.storageThen(t, func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) })
+				return m.storageThen(t, "Clear site data", func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) })
 			})},
 	}
 }
@@ -449,23 +452,30 @@ func (m *AppModel) fetchStorage() tea.Cmd {
 	if t == nil {
 		return nil
 	}
-	return m.storageThen(t, nil)
+	return m.storageThen(t, "", nil)
 }
 
-// storageThen runs fn on the tab and then re-reads the storage, in ONE
-// command: a fetch sequenced after it would race the change it is meant
-// to show.
-func (m *AppModel) storageThen(t *tab, fn func(context.Context) error) tea.Cmd {
+// storageThen runs fn — what names it — on the tab and then re-reads the
+// storage, in ONE command: a fetch sequenced after it would race the
+// change it is meant to show. When fn fails the storage is still read
+// again, so that the list stops saying it is reading.
+func (m *AppModel) storageThen(t *tab, what string, fn func(context.Context) error) tea.Cmd {
 	m.dev.panel.Loading, m.dev.panel.LoadingText = true, "reading the storage…"
 	ctx, url, id := t.ctx, t.url, t.id
 	return func() tea.Msg {
+		var failed error
 		if fn != nil {
-			if err := fn(ctx); err != nil {
-				return actionErrMsg{err: err}
-			}
+			failed = fn(ctx)
 		}
 		d, err := page.StorageFor(ctx, url)
-		return storageMsg{tabID: id, data: d, err: err}
+		read := storageMsg{tabID: id, data: d, err: err}
+		if failed != nil {
+			return tea.BatchMsg{
+				func() tea.Msg { return read },
+				func() tea.Msg { return actionErrMsg{what: what, err: failed} },
+			}
+		}
+		return read
 	}
 }
 
@@ -495,10 +505,10 @@ func (m *AppModel) deleteStorageRow() tea.Cmd {
 		return nil
 	}
 	if cookie != nil {
-		return m.storageThen(t, func(ctx context.Context) error { return page.DeleteCookie(ctx, cookie) })
+		return m.storageThen(t, "Delete cookie", func(ctx context.Context) error { return page.DeleteCookie(ctx, cookie) })
 	}
 	origin := m.dev.storage.Origin
-	return m.storageThen(t, func(ctx context.Context) error { return page.RemoveStorageItem(ctx, origin, local, key) })
+	return m.storageThen(t, "Delete item", func(ctx context.Context) error { return page.RemoveStorageItem(ctx, origin, local, key) })
 }
 
 // devClear is C: the network or console log, or the site's data, which

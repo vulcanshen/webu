@@ -464,10 +464,8 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 		used += dispW(text)
 		switch {
 		case s.item >= 0 && s.item == t.cursor:
-			// On a heading the cursor wears that level's colour, the
-			// way the section list's does: being under the hand must
-			// not cost a row the one thing it was saying. Not on a
-			// tab: the strip's chosen segment already wears it.
+			// The cursor is the panel cursor on every item, a heading too
+			// (layout/panel).
 			b.WriteString(withAttr(st.cur, s.attr).Render(text))
 		case row.code:
 			style, ok := st.codeStyles[s.kind]
@@ -600,8 +598,8 @@ func codeStyles() map[segKind]lipgloss.Style {
 }
 
 // lineNumW is how wide the line-number column is for a page of n rows:
-// the digits, and one space to keep the number off the text. Every page
-// has one: [go] takes you to a line by it.
+// the digits, a space to keep the number off the frame and one to keep it
+// off the text. Every page has one: [go] takes you to a line by it.
 func lineNumW(n int) int {
 	if n <= 0 {
 		return 0

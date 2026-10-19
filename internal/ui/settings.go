@@ -93,8 +93,8 @@ var settings = []setting{
 				return nil
 			}
 			n, err := strconv.Atoi(v)
-			if err != nil {
-				return err
+			if err != nil || n < 1 || n > 16 {
+				return errors.New("input_tab_width is a number of spaces, 1-16")
 			}
 			c.InputTabWidth = n
 			return nil

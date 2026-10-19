@@ -200,6 +200,10 @@ func (m *AppModel) refreshBookmarks() {
 		}
 	}
 	m.bmList.SetRows(rows)
+	// A row's ID is its index: after a delete the cursor keeps an ID that
+	// now names the next bookmark, and OnMove does not run, so the delete
+	// question is made again here for whatever is under it.
+	m.bmPanel.Actions = m.bookmarkActions()
 }
 
 // bookmarkActions are the Bookmarks screen's (ux.md §A.1).

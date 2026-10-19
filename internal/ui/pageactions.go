@@ -128,17 +128,49 @@ func (m *AppModel) enterAction(t *tab) *terminu.Action {
 	}
 	act := &terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint,
 		Disabled: m.busy, Do: m.do(m.enterItem)}
-	if n := t.current(); n != nil && !t.listing() && n.Kind == ir.Link && !n.Disabled && sameFragment(t.url, n.URL) == "" {
-		// A link would leave the page for somewhere the screen does not
-		// show: it asks first, its text and its address.
-		details := []string{oneLine(n.URL)}
-		if text := oneLine(n.Text()); text != "" {
-			details = append([]string{text}, details...)
+	if n := t.current(); n != nil && !t.listing() {
+		if l := leavingLink(t, n); l != nil {
+			// A link would leave the page for somewhere the screen does not
+			// show: it asks first, its text and its address — as the
+			// action's own question, so Esc from it opened in the Space
+			// menu goes back to the menu (tdp T1).
+			details := []string{oneLine(l.URL)}
+			if text := oneLine(l.Text()); text != "" {
+				details = append([]string{text}, details...)
+			}
+			act.Label, act.Desc, act.Hint = enterWords(t, l)
+			act.Ask = &terminu.Ask{Title: "Open link", Details: details, Question: "Open it in this tab?", Verb: "open"}
+			act.Do = m.do(func() tea.Cmd { return m.click(t, l) })
 		}
-		act.Ask = &terminu.Ask{Title: "Open link", Details: details, Question: "Open it in this tab?", Verb: "open"}
-		act.Do = m.do(func() tea.Cmd { return m.click(t, n) })
 	}
 	return act
+}
+
+// leavingLink is the link Enter on n follows when it would leave the page:
+// n itself, the one link a table cell is and nothing else (enterCell), or
+// the one link a list item is and nothing else (enterItem). A one-line list
+// item that holds more than its link is known to be one line only once it
+// is gone into, and asks from there: from the Space menu the menu is gone
+// by then (tdp T1; TODO(lib WB15)).
+func leavingLink(t *tab, n *ir.Node) *ir.Node {
+	switch n.Kind {
+	case ir.Cell:
+		ts := entryTargets(n)
+		if len(ts) != 1 || oneLine(n.Text()) != oneLine(ts[0].node.Text()) {
+			return nil
+		}
+		n = ts[0].node
+	case ir.ListItem:
+		x := firstItemIn(n)
+		if !isThing(n) || x == nil || oneLine(n.Text()) != oneLine(x.Text()) {
+			return nil
+		}
+		n = x
+	}
+	if n.Kind != ir.Link || n.Disabled || sameFragment(t.url, n.URL) != "" {
+		return nil
+	}
+	return n
 }
 
 // enterWords names Enter on a node: the label, the line under it, the
@@ -278,8 +310,7 @@ func (m *AppModel) panelActions(t *tab) []terminu.Action {
 	reading := func() bool { t := m.shownTab(); return t == nil || !t.read }
 	acts := []terminu.Action{
 		panel("R", "Reload", "this page", "", func() bool { return noTab() || m.busy() }, func() tea.Cmd {
-			t := m.shownTab()
-			return t.load(t.url)
+			return m.shownTab().reload()
 		}),
 		// The same T as [1]'s: a new tab is wanted from the page as often as
 		// from the list.

@@ -35,11 +35,19 @@ code as the rest of the family's.
 - A number field opens a number input; a filled password field shows
   its dots and keeps its value when `Enter` is pressed on nothing.
 - The section list has a header and the same cursor as every list.
-- A page's message too long for its popup scrolls with `j|k`.
-- A page that cannot be fetched again keeps the copy you had, and says so.
+- A page's message too long for its popup scrolls with `j|k`; an alert
+  asks you to dismiss it.
+- A page that cannot be fetched again — `R` included — keeps the copy you
+  had, and says so.
 - A settings, bookmarks, history or session file that will not read is
   shown in an error popup on the first screen, not printed on the
-  terminal behind it.
+  terminal behind it. Something that failed — a save, an action on the
+  page, the download folder — is an error popup naming what failed; an
+  error toast cut short is written in full to `webu.log`.
+- Zoomed (`Z`), the panel with the focus takes the whole width, and `Tab`
+  shows the other one.
+- In visual mode the selection is Yellow, and so are the search's
+  matches, underlined, the one it is on in bold.
 - `Shift-Tab` no longer moves between panels; `PgUp` and `PgDn` scroll
   the page and visual mode like `u` and `d`.
 - The powerline symbols' width is measured too, and can be set with

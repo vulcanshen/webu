@@ -222,7 +222,7 @@ func (m *AppModel) removeDownload() tea.Cmd {
 	ctx, guid := m.browser.Ctx, d.guid
 	return func() tea.Msg {
 		if err := page.CancelDownload(ctx, guid); err != nil && ctx.Err() == nil {
-			return actionErrMsg{err: fmt.Errorf("cancel download: %w", err)}
+			return actionErrMsg{what: "Cancel download", err: err}
 		}
 		return nil
 	}

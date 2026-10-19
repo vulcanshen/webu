@@ -87,7 +87,7 @@ func (m *AppModel) deleteVisit() tea.Cmd {
 	err := store.DeleteVisit(v)
 	m.refreshHistory()
 	if err != nil {
-		return m.toastErr(err.Error())
+		return m.saveFailed("history.yaml", err)
 	}
 	return nil
 }
@@ -97,7 +97,7 @@ func (m *AppModel) clearHistory() tea.Cmd {
 	m.history = nil
 	m.refreshHistory()
 	if err := store.ClearHistory(); err != nil {
-		return m.toastErr(err.Error())
+		return m.saveFailed("history.yaml", err)
 	}
 	return nil
 }

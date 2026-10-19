@@ -78,7 +78,7 @@ tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
 | revision | `browser.Revision = 1701465`（Chromium 156 線）；Mac_Arm 175 MB、Mac 195 MB、Linux_x64 248 MB；Linux arm64 快照桶沒有 |
 | 目錄 | cache `WEBU__CACHE` > `XDG_CACHE_HOME/webu` > `os.UserCacheDir()/webu`；config `WEBU__CONFIG` > `XDG_CONFIG_HOME/webu` > `~/.config/webu`；data `WEBU__DATA` > `~/.webu/datas` |
 | UA（2026-09-23） | `Browser.getVersion` 拿自報字串，`HeadlessChrome/` → `Chrome/`，尾巴 ` webu/<ver>`；client hints brands `Chromium` + `webu`；每個分頁 `Prepare` 時 `Emulation.setUserAgentOverride`（`browser.identify` / `userAgent` / `uaMetadata`；`TestWebuSignsItsUserAgent`） |
-| log | chromedp 的 log 全部進 `<data>/webu.log`，**絕不到 stderr**；`unhandled … event` 丟掉 |
+| log | chromedp 的 log 全部進 `<data>/webu.log`，**絕不到 stderr**；`unhandled … event` 丟掉。錯誤 toast 的全文也寫一行進去（toast 放不下時看得到全文，components/dialog/toast） |
 
 #### Capture：一次抓什麼（`function.md` §3）
 
@@ -206,10 +206,11 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - **[2] 是 [1] 的明細**（2026-10-18，WB7 暫定）：[1] 的游標移到哪個分頁，[2] 就顯示哪個（還沒載入的分頁換到才載）；[1] 的 `Enter` 用 lib 的 ToDetails 把 focus 送到 [2]（tdp K3 唯一可以用 Enter 換 panel 的地方）。
 - **DevTools 是一個畫面**（2026-10-18，WB4 暫定）：`I`，[1] 是 Network／Storage／Console／Source 四個 panel tab（各是 lib 的 List，含 panel filter），[2] 是游標那一筆的明細（request 的標頭與 body、console 的全文）；看的是 Web 畫面正在顯示的分頁。
 - **visual mode 是 [2] 的 mode**（tdp K11）：lib 畫模式名與模式色、`Esc` 離開、`Space` 不作用、`Tab` 與數字鍵暫停（`Pause`）、`?` 列模式的鍵；模式裡的鍵（`h|j|k|l`、`w|b|e`、`0|$`、`u|d`、`gg|G`、`v|V`、`y`、`/`、`n|N`、`Enter`）是 `ModeKey`，做的事是 `selectMode` 的。`V` 登記在模式的鍵裡，lib 就不把它當 splash（`takesV`）。`/` 開 lib 的 TextInput 問要找什麼，`n|N` 在結果間走。
+- **visual mode 的顏色都是模式色 Yellow**（2026-10-19，WB14 暫定）：選取範圍是 Yellow 底、Base 字；搜尋命中是 Yellow 字加底線，目前那一筆再加粗。tdp 沒有「文字裡的命中」的顏色，用模式色就不另外占一個顏色的意義（components/color）。
 - **visual mode 是小寫 `v`**：`V` 保留給 splash（tdp S1）。讀一節時的 `n`／`p` 是小寫的 panel operation：大寫的 `N`／`P` 已經是上一頁／下一頁。`[go] Go to line` 用 `g` 開頭（tdp K12 允許 `g` 開頭的兩鍵組合當熱鍵），開 lib 的 NumberInput 問行號。
 - **[1] 與 [2] 的熱鍵各自歸各自的 panel**（tdp P3、M4）：`P`／`N`、`L`、`/`、`v` 作用在頁面上，只在 [2] 按得到；`T`（新分頁）兩邊都有。全域動作只有切畫面（`W`／`B`／`H`／`D`／`S`／`I`）與離開。
 - **離開只在有下載進行中時先問**（tdp K9 的離開流程由 app 決定）：`syncQuit` 依下載數設 `App.Quit`。
-- **Settings 是一列一個值的 panel**（lib 的 `Values`）：文字設定開 TextInput（目前生效的值當灰字提議，`Backspace` 再 `Enter` 是預設）、`input_tab_width` 開 NumberInput、開關是原地翻的 checkbox，設好就存（layout/panel 的一列一個值）。家族共用的 `hide_secrets_in_preview`、`input_tab_width`（tdp E3）也在這裡，交給 lib 的 `App.HideSecretsInPreview`、`App.InputTabWidth`。
+- **Settings 是一列一個值的 panel**（lib 的 `Values`）：文字設定開 TextInput（目前生效的值當灰字提議，`Backspace` 再 `Enter` 是預設）、`input_tab_width` 開 NumberInput、`download_dir` 開 file-picker 選目錄（從最近一層存在的目錄開始）、開關是原地翻的 checkbox，設好就存（layout/panel 的一列一個值）。家族共用的 `hide_secrets_in_preview`、`input_tab_width`（tdp E3）也在這裡，交給 lib 的 `App.HideSecretsInPreview`、`App.InputTabWidth`。
 
 ## 已否決，不要重提
 
@@ -246,12 +247,12 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 
 - lib 還沒有的：從程式切換畫面、移動 focus（WB6，暫時送合成的按鍵）；confirm、input 被 Esc 關掉時通知 app（WB3，頁面的問題暫時是 webu 自己的 popup）。
 
-webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18）；有意不照做的地方列在下一節，還沒符合的列在 `docs/webu-terminu-fix.md`（有的話）。
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18）；有意不照做的地方列在下一節，還沒符合的列在 `docs/webu-terminu-fix.md`。
 
 ## 偏離 tdp
 
-- **頁面自己的彈窗是 [2] 的內容，不是 webu 的 popup（tdp F1、K4、F3）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在 [2] 內容上的框（`ui.md` §2.4、`pagebody.go` 的 `pagePopupFloats`），它是頁面的一部分：頁面放它上來要一個回答，webu 只是把頁面畫出來。所以它不是 lib 的 popup、不在 F1 的七類裡（tdp F1 點名 webu 的頁面彈窗是 app 的偏離），上面的鍵照 panel [2] 走：
-  - `Esc` 不關它（偏離 K4、F3）：關掉等於把頁面要的決定擱著；`Esc` 在它上面只 toast 說明（`pageEsc`）。
+- **頁面自己的彈窗是 [2] 的內容，不是 webu 的 popup（tdp F1、K4、F3）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在 [2] 內容上的框（`ui.md` §2.4、`pagebody.go` 的 `pagePopupFloats`），它是頁面的一部分：頁面放它上來要一個回答，webu 只是把頁面畫出來。所以它不是 lib 的 popup、不在 tdp F1 的七類裡（tdp F1 點名 webu 的頁面彈窗是 app 的偏離），上面的鍵照 panel [2] 走：
+  - `Esc` 不關它（偏離 tdp K4、F3）：關掉等於把頁面要的決定擱著；`Esc` 在它上面只 toast 說明（`pageEsc`）。
   - `Space` 是 [2] 的 Space menu，`?` 是 [2] 的 key reference：它的按鈕、連結是 [2] 的 item。
   - 它的寬度、疊層錯開（`popupWidth`、往右下錯開 3 欄 1 列）、底下的頁面淡化，都是頁面內容的畫法；webu 的 popup（lib 的）開在它上面時，它跟整個畫面一起被 lib 淡化。
 - **頁面的 alert／confirm／prompt／beforeunload 與 HTTP 登入是 webu 自己的 popup（tdp F1、components/dialog/confirm）。** `pageask.go`，用 lib 的 `App.Popup`：框、標題、層色、開關動畫、淡化、`?`、`q` 是 lib 的，裡面的字與按鍵是 webu 的，長相照 confirm（要先看的內容在上、問句最後、`Enter` 接受、`Esc` 取消）。原因：頁面必須收到「取消」這個回答才會繼續，而 lib 的 confirm、TextInput 被 `Esc` 關掉時不通知 app（WB3，回報為 lib 要補）。lib 補上之後換回 lib 的 confirm 與 input。

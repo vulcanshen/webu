@@ -64,7 +64,7 @@ func (m *AppModel) sectionRows(t *tab, innerW, innerH int) []string {
 		gap := max(0, w-dispW(ord)-dispW(stem)-dispW(name)-dispW(tail))
 		if i == t.sec {
 			out = append(out, cur.Render(row(ord, stem, name, tail, gap))+
-				lipgloss.NewStyle().Foreground(handColor).Render("\U0000E0B0")+spaces(arrow-1))
+				lipgloss.NewStyle().Foreground(handColor).Render("\U0000E0B0"))
 			continue
 		}
 		// The name wears its depth's ink: the page's own outline.
