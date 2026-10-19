@@ -25,9 +25,10 @@ builds:
     goarch:
       - amd64
       - arm64
-    # TODO(tdp WB1): not in the template. The Chromium snapshot bucket has no
-    # Linux ARM build and webu runs only the pinned snapshot, so a
-    # linux/arm64 binary could never fetch its engine; it is not shipped.
+    # app: the os/arch pairs this app cannot build, each as
+    #   - goos: linux
+    #     goarch: arm64
+    # or none.
     ignore:
       - goos: linux
         goarch: arm64
@@ -60,10 +61,10 @@ brews:
       # to the tap repository.
       token: "{{ .Env.GITHUB_TOKEN }}"
     homepage: "https://github.com/vulcanshen/webu"
-    # app: one line, what the app is, ending in (u-family).
-    description: "webu: a terminal browser, headless Chromium's accessibility tree drawn as a TUI (u-family)"
+    # app: one line, what the app is, ending in (terminu family).
+    description: "webu: a terminal browser, headless Chromium's accessibility tree drawn as a TUI (terminu family)"
     # app: what to run first, where the settings and data live, the Nerd
-    # Font requirement, the platforms.
+    # Font and truecolor requirements, the platforms.
     caveats: |
       Run `webu` to start.
 
@@ -72,11 +73,12 @@ brews:
       ~/Library/Caches/webu, Linux: ~/.cache/webu). After an upgrade that
       pins a new revision, `webu browser update` fetches it.
 
-      Settings and bookmarks live in ~/.config/webu; history, session,
-      downloads and the browser profile in ~/.webu/datas.
+      Settings and the last session's tabs live in ~/.config/webu;
+      bookmarks, history, downloads and the browser profile in
+      ~/.webu/datas.
 
-      A Nerd Font terminal profile and a truecolor terminal are required.
-      macOS and Linux x86-64 (WSL too).
+      A Nerd Font terminal profile and a truecolor (24-bit) terminal are
+      required. macOS and Linux x86-64 (WSL too).
     # app: dependencies, when the app calls other programs.
     test: |
       system "#{bin}/webu", "version"
@@ -88,4 +90,4 @@ brews:
 #       token: "{{ .Env.GITHUB_TOKEN }}"
 #     homepage: "https://github.com/vulcanshen/webu"
 #     # app: the same line as the brews description above.
-#     description: "webu: a terminal browser, headless Chromium's accessibility tree drawn as a TUI (u-family)"
+#     description: "webu: a terminal browser, headless Chromium's accessibility tree drawn as a TUI (terminu family)"

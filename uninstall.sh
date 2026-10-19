@@ -57,10 +57,13 @@ env_of() {
   eval "printf '%s' \"\${$1:-}\""
 }
 
-# Where tdp E3 puts the settings, the data and the cache; each is asked about
-# only when it is there.
+# Where tdp E3 puts the settings, the state, the data and the cache; each is
+# asked about only when it is there. The state lives in the settings directory
+# unless <APP>__STATE moved it elsewhere, so it is asked about on its own only
+# then.
 CONFIG_DIR=$(env_of "${APP_UPPER}__CONFIG")
 [ -n "$CONFIG_DIR" ] || CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/$APP"
+STATE_DIR=$(env_of "${APP_UPPER}__STATE")
 DATA_DIR=$(env_of "${APP_UPPER}__DATA")
 [ -n "$DATA_DIR" ] || DATA_DIR="$HOME/.$APP"
 CACHE_DIR=$(env_of "${APP_UPPER}__CACHE")
@@ -71,6 +74,9 @@ if [ -z "$CACHE_DIR" ]; then
   esac
 fi
 ask "$CONFIG_DIR" "$APP settings"
+if [ -n "$STATE_DIR" ] && [ "$STATE_DIR" != "$CONFIG_DIR" ]; then
+  ask "$STATE_DIR" "$APP state"
+fi
 ask "$DATA_DIR" "$APP data"
 ask "$CACHE_DIR" "$APP cache"
 
@@ -78,4 +84,10 @@ echo ""
 echo "$APP uninstalled."
 
 # --- app's own: anything left for the user to do (none by default) ---
+# An older webu kept Chromium under XDG_CACHE_HOME on macOS too (before tdp
+# E3); webu moves it to ~/Library/Caches on the first start, so it is left
+# there only when that move failed.
+if [ "$(uname -s)" = "Darwin" ] && [ -n "${XDG_CACHE_HOME:-}" ] && [ "$XDG_CACHE_HOME/$APP" != "$CACHE_DIR" ]; then
+  ask "$XDG_CACHE_HOME/$APP" "an older $APP cache"
+fi
 # --- end of the app's own ---
