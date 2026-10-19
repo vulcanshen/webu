@@ -39,6 +39,8 @@ func (m *AppModel) askDialog(msg dialogMsg) tea.Cmd {
 	if msg.kind == cdppage.DialogTypePrompt {
 		// The answer the page offers is offered in grey: Enter on it as it
 		// is answers with it (Unchanged), an emptied one answers empty.
+		// TODO(tdp WB20): the page's message is the prompt row, one line; a
+		// longer one is cut.
 		return m.a.Text(terminu.TextInput{Title: "The page asks", Glyph: glyphInfo, Name: "The answer",
 			Prompt: oneLine(text), Verb: "answer", Old: msg.defaultPrompt,
 			Done:      func(v string) tea.Cmd { return answer(true, v) },
