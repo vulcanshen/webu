@@ -6,8 +6,17 @@ Each release names the version of terminu design (tdp) it follows.
 
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
-v0.7.4: the frames, the menus, the popups and the keys are now the same
+v0.8.0: the frames, the menus, the popups and the keys are now the same
 code as the rest of the family's.
+
+**Two files move, and webu moves them for you**: `bookmarks.yaml` goes
+from `~/.config/webu` to `~/.webu/datas`, with the history (it is data:
+deleted, it is gone), and `session.yaml`, the tabs open when webu last
+quit, from `~/.webu/datas` to `~/.config/webu` (a new `WEBU__STATE` can put
+it elsewhere). The first start moves each one that is in its old place
+and not yet in the new one, and says from where to where. One that
+cannot be moved stays and is still used where it is, and webu names both
+places so you can move it yourself.
 
 - **The page's parts are the page panel's tabs.** Its frame reads
   `[2] PAGE HEADER BODY OTHERS FOOTER` (the parts this page has); `h|l`
@@ -25,7 +34,8 @@ code as the rest of the family's.
 - Settings has the family's `hide_secrets_in_preview` and
   `input_tab_width`, and a switch flips in place. `download_dir` is
   picked in the file picker, and a value in `config.yaml` that a setting
-  will not take shows the setting's name in red.
+  will not take shows the setting's name in red. A number reads with its
+  unit: `4 spaces`, `96 cells`.
 - `Enter` on a bookmark or a visit opens it in a new tab and stays on the
   list, saying where it went.
 - A question opened from the Space menu goes back to the menu on `Esc`.
@@ -46,23 +56,27 @@ code as the rest of the family's.
   error toast cut short is written in full to `webu.log`.
 - Zoomed (`Z`), the panel with the focus takes the whole width, and `Tab`
   shows the other one.
-- In visual mode the selection is Yellow, and so are the search's
-  matches, underlined, the one it is on in bold.
+- In visual mode only the selection is Yellow: the search underlines
+  every match in its own colour, and the one it is on is the cursor's
+  block.
 - `Shift-Tab` no longer moves between panels; `PgUp` and `PgDn` scroll
   the page and visual mode like `u` and `d`.
 - The powerline symbols' width is measured too, and can be set with
   `WEBU__POWERLINE_WIDTH` or the family's `TERMINU__POWERLINE_WIDTH`.
 - On macOS the downloaded Chromium goes to `~/Library/Caches/webu` even
   when `XDG_CACHE_HOME` is set; one already fetched under
-  `XDG_CACHE_HOME` is used until then.
+  `XDG_CACHE_HOME` is moved there on the first start, the same way as
+  the two files above.
 - The certificate question's Continue loads the address that failed, not
   the error page Chromium drew in its place.
 - The repository takes the terminu family's shape (tdp project): the
   Makefile includes the shared `family.mk`, and the release workflow,
   the goreleaser config, `install.sh`, `uninstall.sh` and `.gitignore`
   are the family's templates. `uninstall.sh` now finds the settings,
-  data and cache through `WEBU__CONFIG`, `WEBU__DATA` and `WEBU__CACHE`
-  too.
+  state, data and cache through `WEBU__CONFIG`, `WEBU__STATE`,
+  `WEBU__DATA` and `WEBU__CACHE` too, and on macOS asks about a
+  Chromium an older webu left under `XDG_CACHE_HOME`. `install.sh` and
+  the Homebrew caveats say a truecolor terminal is needed.
 
 ## [0.5.0] — 2026-10-06
 

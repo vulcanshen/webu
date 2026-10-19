@@ -8,7 +8,7 @@
 > 都是 lib 的，長相照 tdp components；本文件以下講 webu 自己的部分 —— [2] 裡面的頁面。跟下面舊段落不同的地方：
 > 頁面的四個 part 是 [2] 的 panel tab（`[2] PAGE HEADER BODY OTHERS FOOTER`，第一個 tab 是整頁），網址列下的 pagetab 拿掉；
 > [2] 跟著 [1] 的游標換分頁；DevTools 是第六個畫面 `[I] DEVTOOLS`；Settings 是 lib 的一列一個值；書籤、歷史、下載是 lib 的清單；
-> popup 的寬度、高度、層色、動畫照 tdp F2、F7、F8，由 lib 決定。
+> popup 的寬度、高度、層色、動畫照 tdp F2、tdp F7、tdp F8，由 lib 決定。
 
 ---
 
@@ -169,12 +169,12 @@ dev-remarks「偏離 tdp」）。以下是 2026-10-18 以前 webu 自己的 popu
 editor 以打開時的行數定高（至少 6 行）；file picker 以打開時那個目錄的項目數定高（至少 8 列），過濾、換目錄只換內容；Network
 detail 一打開就用最大高度（body 還在路上，幾乎都比 headers 長），body 到了在框裡捲動；Console detail 以打開時的內容定高。
 
-**loading icon**（2026-09-28，tdp F7、D3）：popup 的內容還在路上時，標題後面轉 `[2]` URL 列同一個 loading icon（`spinnerFrame`，
+**loading icon**（2026-09-28，tdp F7、tdp D3）：popup 的內容還在路上時，標題後面轉 `[2]` URL 列同一個 loading icon（`spinnerFrame`，
 circle slice 八格、90 ms、由時鐘決定），用標題的層色；到了就換回同寬的空白，標題與後面的分頁鏈不位移。有三處：Network detail 等 body、
 DevTools 的 Storage 分頁（含刪除、清網站資料之後重讀）、Source 分頁。Network / Console 分頁一直流進來的 log 是項目層級的資料流，不放。
 
 **只有最上層是亮的**（2026-09-28，tdp F8）：有 popup 開著時，最上層那個（握著鍵盤的，`owns()`）以外全部畫暗 —— 底下的 popup、
-頁面自己的彈窗、整個 base 畫面，header 的下載進度與警示色也一樣（tdp T2 的例外）。**怎麼暗**（2026-09-28，tdp F8、D2
+頁面自己的彈窗、整個 base 畫面，header 的下載進度與警示色也一樣（tdp T2 的例外）。**怎麼暗**（2026-09-28，tdp F8、tdp D2
 v0.1.11–v0.1.12）：每個顏色——前景與背景——往底色淡化，`c × 0.45 + base × 0.55`（base `#1e1e2e`），而且絕不比原色亮；沒設色的字給
 `dim(Text)` = `#6d7187`。所以膠囊、cursor bar、選取、code block 與表格的底色都還在，只是變暗；下層 popup 的邊框自然是自己層色的暗版，
 看得出是哪一層；bold、reverse 不動。（2026-09-28 較早的做法是把前景全換成 dim 色、背景拿掉，拆掉了膠囊與游標列，已改。）還在關閉動畫的 popup 已經不是最上層，畫暗。toast 不是一層：不讓別人變暗，自己也不變暗。畫的順序、`Esc`
@@ -185,9 +185,9 @@ options、message、finder、confirm、picker、input、editor、help、quitAsk�
 | Popup | 類型 | 用途 |
 |---|---|---|
 | Space menu | menu | item / panel 兩 region；捲動、環繞、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23） |
-| choices | menu | select 的選項、slider 的數字（10 列一窗）：自己一個 popup，疊在叫它的 item menu 或 Space menu 上，`Esc` 回到那裡、選了關整疊（2026-09-28，tdp F1 多步驟、F4） |
+| choices | menu | select 的選項、slider 的數字（10 列一窗）：自己一個 popup，疊在叫它的 item menu 或 Space menu 上，`Esc` 回到那裡、選了關整疊（2026-09-28，tdp F1 多步驟、tdp F4） |
 | global operation | menu | Space menu 最後一列打開：全域動作，可執行 |
-| `?` key reference | viewport | 最前端 surface 的按鍵，唯讀：面板上是面板的鍵 + core key，浮層上是這個浮層的鍵。menu 裡變暗的鍵，這裡也列出、變暗（tdp M6）。兩欄：鍵 Blue、說明 Text；鍵不加括號、不加冒號，幾個鍵做同一件事用 `/`（`j/k`、`q/Ctrl-C`），範圍用 `–`（`0–9`）（2026-09-29，tdp M5、D2 v0.1.15） |
+| `?` key reference | viewport | 最前端 surface 的按鍵，唯讀：面板上是面板的鍵 + core key，浮層上是這個浮層的鍵。menu 裡變暗的鍵，這裡也列出、變暗（tdp M6）。兩欄：鍵 Blue、說明 Text；鍵不加括號、不加冒號，幾個鍵做同一件事用 `/`（`j/k`、`q/Ctrl-C`），範圍用 `–`（`0–9`）（2026-09-29，tdp M5、tdp D2 v0.1.15） |
 | Location | input | `L`：目前 URL 當提議（`Tab` 接受、Backspace 拒絕）；非 URL 當搜尋 |
 | input | input | 一行的欄位：**邊框寫型別**（`email`、`number`、`date · YYYY-MM-DD`、`password`、`email · invalid`），**框裡一行是欄位名**（2026-09-23 user 定：邊框是 chrome 說這是哪種框，框內那行說是哪一個欄位）；JS `prompt`；設定值。**input group**：一個框幾個欄位（加書籤 URL + 標題、HTTP auth 帳號 + 密碼遮罩），聚焦那一欄的名字亮起、只有它有游標，送出不成立時那一欄的名字變 Red、原因寫在最下面的錯誤列 —— 每個框打開時就留著這一列，框的高度不變（2026-09-28，tdp F7；2026-10-06 起每個框都會被拒：值裡有換行或 Tab 時，之前只有會失敗的框留） |
 | editor | 大框 | textarea / contenteditable：多行、**寫 / 移兩態**（Esc 出到框層 h/j/k/l 走、`i`/`a`/`A`/`o` 回寫、Enter 設值、再 Esc 取消） |
@@ -199,7 +199,7 @@ options、message、finder、confirm、picker、input、editor、help、quitAsk�
 | message | viewport | 表格格內容、code block 全文、Inspect |
 | page popup | 浮窗 | 頁面自己的彈窗（§2.4） |
 | DevTools | 帶 tab bar 的 viewport | Network / Storage / Console / Source；`h`/`l` 切分頁 |
-| toast | message | 下載、yank、拒絕的操作（disabled、popup 裡的 `/`）…；除了 `Esc` 不收鍵，其他鍵照樣到底下，toast 留著（tdp F1、F8 v0.1.14） |
+| toast | message | 下載、yank、拒絕的操作（disabled、popup 裡的 `/`）…；除了 `Esc` 不收鍵，其他鍵照樣到底下，toast 留著（tdp F1、tdp F8 v0.1.14） |
 
 DevTools 的四個分頁與 2026-09-21 相同：Network（清單 + detail：headers / body）、Storage（cookie /
 local / session：刪、yank、清站資料）、Console（每筆完整折行、物件列 own property、`i` REPL）、
@@ -230,7 +230,7 @@ Source（HTML + `/` grep）。
 | popup layer scale | 浮層層級，依 tdp D2 的插值 | — |
 | 語法色 | key Mauve、string Pink、number Flamingo、常數 Sky、註解 dim 斜體、標點 Overlay2 | — |
 
-focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。visual mode 邊框 Yellow、線型照 focus 的雙線，上框右側嵌一個標籤 `╡Visual╞`：接頭是框的線型與顏色，名字 Yellow 加粗、一個詞（`?` 的標題仍是 `Visual mode`）；放不下時先截膠囊的標題，名字一律留著，框線不歪（2026-09-29，tdp K11、L5、D3 v0.1.20）。
+focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。visual mode 邊框 Yellow、線型照 focus 的雙線，上框右側嵌一個標籤 `╡Visual╞`：接頭是框的線型與顏色，名字 Yellow 加粗、一個詞（`?` 的標題仍是 `Visual mode`）；放不下時先截膠囊的標題，名字一律留著，框線不歪（2026-09-29，tdp K11、tdp L5、tdp D3 v0.1.20）。
 
 ---
 
@@ -242,7 +242,7 @@ focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `
 | Panel tab bar | 面板都沒有；tab bar 只出現在 DevTools popup |
 | Border hint | `[2]` 下框：在哪（`2/26 · 節名 · 40%`、part 名）、loading。這些是狀態、不是鍵：用說明的 Overlay0 畫，不寫成 `鍵:說明`；手在 pagetab 上時後面接 `Enter:stay`（2026-09-29，tdp M5）。`[2]` 失焦時整條變灰：鍵 Overlay0、冒號與說明與狀態字 Surface2 —— Blue 只給拿鍵的地方（2026-09-29，tdp D2 v0.1.18） |
 
-footer：`Space:menu ?:help Tab/1–2:panels q:quit`；list screen 上 `Space:menu ?:help Esc:web q:quit`。footer 與每個下框 hint 都寫 `鍵:說明`：鍵 Blue、冒號與說明 Overlay0，項目之間一個空格，寬度不夠從尾端整組捨棄（2026-09-29，tdp M5、D1、D2 v0.1.15）。popup 與 DevTools 的下框 hint 也一樣，不截在項目中間；`[2]` 的下框先捨棄後面的鍵，最後才捨棄狀態字（2026-09-29，tdp D3 v0.1.18；`fitLegend` / `fitStatus`）。
+footer：`Space:menu ?:help Tab/1–2:panels q:quit`；list screen 上 `Space:menu ?:help Esc:web q:quit`。footer 與每個下框 hint 都寫 `鍵:說明`：鍵 Blue、冒號與說明 Overlay0，項目之間一個空格，寬度不夠從尾端整組捨棄（2026-09-29，tdp M5、tdp D1、tdp D2 v0.1.15）。popup 與 DevTools 的下框 hint 也一樣，不截在項目中間；`[2]` 的下框先捨棄後面的鍵，最後才捨棄狀態字（2026-09-29，tdp D3 v0.1.18；`fitLegend` / `fitStatus`）。
 
 `docs/icon.svg` 是 terminu family mark 的 webu 版；`V` 觸發 splash 彩蛋（家族同鍵，visual mode 因此是小寫 `v`）。
 **Nerd Font 是設計、必裝**：role glyph、part glyph、spinner、powerline 鏈都靠它，排版量它的寬。
@@ -253,12 +253,12 @@ footer：`Space:menu ?:help Tab/1–2:panels q:quit`；list screen 上 `Space:me
 
 | 資料 | 形式 | 位置 |
 |---|---|---|
-| 設定 | `config.yaml`：`search_engine`（預設 DuckDuckGo html）、`download_dir`、`measure`（`full` 或數字）、`restore_session` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`、`$WEBU__CONFIG`） |
-| 書籤 | flat yaml：`bookmarks:`（各帶 `folder`）+ `folders:` | 同上 |
-| 歷史 | YAML sequence，一次 append 一筆；無限保留 | `~/.webu/datas`（`$WEBU__DATA`） |
-| session | 離開時寫下所有分頁 | 同上 |
+| 設定 | `config.yaml`：`search_engine`（預設 DuckDuckGo html）、`download_dir`、`measure`（`full` 或數字）、`restore_session`、`hide_secrets_in_preview`、`input_tab_width` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`、`$WEBU__CONFIG`） |
+| session（狀態） | 離開時寫下所有分頁 | 同上（`$WEBU__STATE`） |
+| 書籤 | flat yaml：`bookmarks:`（各帶 `folder`）+ `folders:` | `~/.webu/datas`（`$WEBU__DATA`） |
+| 歷史 | YAML sequence，一次 append 一筆；無限保留 | 同上 |
 | 下載檔案 | `download_dir`，預設 `~/.webu/datas/downloads` | 同上 |
 | profile / log | Chromium user-data-dir；chromedp 的 log（絕不進終端機） | 同上 |
 | Chromium | 釘死 revision，可重新下載 | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$WEBU__CACHE`） |
 
-分法：**使用者寫的**在 config、**webu 產生的**在 data、**可重抓的**在 cache。每次寫檔原子。
+分法照 tdp E3「刪掉會怎樣」（2026-10-19；原本是使用者寫的在 config、webu 產生的在 data）：**設定**與**狀態**（刪了只是回到預設）在 config、**資料**（刪了找不回來）在 data、**可重抓的**在 cache。舊版放在別處的，第一次啟動搬過去。每次寫檔原子。

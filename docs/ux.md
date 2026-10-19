@@ -19,7 +19,7 @@
 
 ## §A. tdp in webu
 
-### §A.0 揭露對照（tdp M1、P2）
+### §A.0 揭露對照（tdp M1、tdp P2）
 
 | Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
 |---|---|---|---|
@@ -34,11 +34,11 @@
 
 | Core-key | 一般模式 | visual mode |
 |---|---|---|
-| `Tab` | `[1]` ↔ `[2]`；`1/2` 直達 | 不作用，toast 說先 `Esc` 離開模式（2026-09-27，tdp K2、K4） |
+| `Tab` | `[1]` ↔ `[2]`；`1/2` 直達 | 不作用，toast 說先 `Esc` 離開模式（2026-09-27，tdp K2、tdp K4） |
 | `Enter` | **滑鼠左鍵在 terminal 的對應**（定案 2026-09-21；0.3.0 起先 hover 再按）；左鍵沒有對應的才自定義——**進去**：目錄開一節、清單裡的一件事走進去、frame 走進去；heading / landmark 開合；pagetab 上 = 確認回頁面。細表在 §A.0.K.1 | 對字元所屬的節點做同一件事，並離開模式 |
-| `Esc` | **往上一層，一次一步**（2026-09-23）：關最上層浮層 → 走出一件事 / frame → 回目錄 → 上 pagetab → 再 Esc 回頁面。頁面自己的彈窗**不關**（toast：它要一個回答）。上一頁是 `P`，Esc 不兼職 | 打字中取消；回應 `Tab` 的 toast 還在時先收 toast（2026-09-29，tdp K11、K4）；否則離開模式 |
-| `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-27，tdp K5、F6） | **不作用**：模式沒有 Space menu、沒有可執行的按鍵清單（2026-09-28，tdp K11 v0.1.10） |
-| `?` | **最前端 surface 的 key reference**，唯讀、可捲動：面板上是這個面板的鍵（由它的 Space menu 產生）+ core key；浮層上是這個浮層的鍵；再按關閉（2026-09-27，tdp K6、M4） | **模式的 key reference**，唯讀：模式的鍵直接按，列在這裡與 footer（tdp K11） |
+| `Esc` | **往上一層，一次一步**（2026-09-23）：關最上層浮層 → 走出一件事 / frame → 回目錄 → 上 pagetab → 再 Esc 回頁面。頁面自己的彈窗**不關**（toast：它要一個回答）。上一頁是 `P`，Esc 不兼職 | 打字中取消；回應 `Tab` 的 toast 還在時先收 toast（2026-09-29，tdp K11、tdp K4）；否則離開模式 |
+| `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-27，tdp K5、tdp F6） | **不作用**：模式沒有 Space menu、沒有可執行的按鍵清單（2026-09-28，tdp K11 v0.1.10） |
+| `?` | **最前端 surface 的 key reference**，唯讀、可捲動：面板上是這個面板的鍵（由它的 Space menu 產生）+ core key；浮層上是這個浮層的鍵；再按關閉（2026-09-27，tdp K6、tdp M4） | **模式的 key reference**，唯讀：模式的鍵直接按，列在這裡與 footer（tdp K11） |
 
 #### §A.0.K.1 Enter 對每種東西
 
@@ -68,7 +68,7 @@
 **修訂史**：2026-09-20 實機試用後 Enter 曾改成「開該 item 的選單」；09-21 定案改回左鍵；
 0.3.0 加上「進去」這一類（目錄 / 一件事 / frame）與 hover。
 
-### §A.1 Contextual track — Space menu（tdp K5、M2）
+### §A.1 Contextual track — Space menu（tdp K5、tdp M2）
 
 region 固定叫 `item operation` / `panel operation`，一律有標題，即使只剩其中一區（2026-09-27）。每個 Space menu 最後
 是分隔線與固定一列 `Global operation`，**不加區塊標題**（2026-09-28，tdp M2 v0.1.7：`global operation` 標題底下只有一列
@@ -122,14 +122,14 @@ disabled）、`[n] Next section` / `[p] Previous section`（讀一節時）、`[
 
 delete 用 `x` 不用 `d`：`d` 是半頁。
 
-### §A.2 Non-contextual track — `?` key reference 與 global operation（tdp K6、M4）
+### §A.2 Non-contextual track — `?` key reference 與 global operation（tdp K6、tdp M4）
 
 **`?` 只讀**（2026-09-27，tdp v0.1.2）：打開最前端 surface 的 key reference —— 唯讀、可捲動、沒有游標、不能執行。
 面板上是這個面板的鍵：從它此刻的 Space menu 產生（有鍵可按的列：字母、寫在 label 裡的 `Enter` / `Esc` / `/` / `go`；
 menu-only 的列不列），照 menu 的區塊標題分組，最後接 core key；面板自己寫了 `Enter` 做什麼時，core key 不再重複
-通用的 `Enter`。Space menu 裡變暗的列，這裡也列出、變暗，說明照原句（2026-09-29，tdp M6 v0.1.14）。浮層上是那個浮層自己的鍵，現在按不了的同樣變暗：DevTools 別的分頁的鍵（它們在 `h/l` 過去的分頁上，列出、不拿掉）、清單空著時的 `Enter` 與 `x/y`、放得下的 message 的 `j/k`（2026-09-29）。`Esc` 或再按 `?` 關掉。框的寬度跟所有 popup 一樣（tdp F7、D4），說明太長就截尾。
+通用的 `Enter`。Space menu 裡變暗的列，這裡也列出、變暗，說明照原句（2026-09-29，tdp M6 v0.1.14）。浮層上是那個浮層自己的鍵，現在按不了的同樣變暗：DevTools 別的分頁的鍵（它們在 `h/l` 過去的分頁上，列出、不拿掉）、清單空著時的 `Enter` 與 `x/y`、放得下的 message 的 `j/k`（2026-09-29）。`Esc` 或再按 `?` 關掉。框的寬度跟所有 popup 一樣（tdp F7、tdp D4），說明太長就截尾。
 
-**全域動作在 global operation popup**（2026-09-27，tdp M4、F4、T1）：每個 Space menu 最後一列 `Global operation` 打開它，
+**全域動作在 global operation popup**（2026-09-27，tdp M4、tdp F4、tdp T1）：每個 Space menu 最後一列 `Global operation` 打開它，
 **疊在 Space menu 上**；`Esc` 回到 Space menu，執行一列就關掉整疊（開出新框的列除外，那個框疊上去）。目前所在畫面的
 那一列照 tdp M6 變暗、不作用，不拿掉。列出下表的動作，一列一個，`j`/`k`、`Enter`、熱鍵照 Space menu 執行。
 
@@ -138,7 +138,7 @@ menu-only 的列不列），照 menu 的區塊標題分組，最後接 core key�
 | screen | `W` `B` `H` `D` `S` |
 | 離開 | `q/Ctrl-C`：輸入框以外到處都通，浮層上、visual mode 裡也是；有下載進行中先 confirm，confirm 上再按 `Ctrl-C` 立刻離開（2026-09-27，tdp K9） |
 
-**只有作用在 app 上的才是全域動作**（2026-09-27，tdp M3、P3）：`P/N`、`L`、`/`、`v` 作用在頁面上，是 `[2]` 的
+**只有作用在 app 上的才是全域動作**（2026-09-27，tdp M3、tdp P3）：`P/N`、`L`、`/`、`v` 作用在頁面上，是 `[2]` 的
 panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的兩個面板上都通（`[1]` 上也作用在顯示中的那一頁）。
 切面板的 `Tab`、`1/2` 是 core key。splash 彩蛋 `V` 不揭露（tdp S2）。
 
@@ -183,7 +183,7 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 （段落、清單裡的一件事、表格的格、連結、按鈕、欄位、標題…），散文字面比對優先、名字模糊比對
 （≤ 64 字）；清單列前面是 part 的 glyph。打字時 Enter 進清單（第一個命中已在游標下，所以連按兩次 Enter 就是去第一個）、清單上 `j`/`k`/`u`/`d`/`g`/`G` 走、`Tab` 回到輸入（清單上的字母是清單的鍵，打字不會回到輸入）；清單上的 **Enter = 去那裡**：
 切到那個 part、開那一節、沿路走進清單裡的一件事、游標落定——**不按**。`Tab` 在輸入與清單之間切換（打字時
-`Enter` 也進清單）；`Esc` 不論在哪一區都關掉 finder —— 階段不是一層（2026-09-28，tdp F1 v0.1.9）。只有拿鍵的那一邊是亮的（2026-09-29，tdp F1、D3 v0.1.18）：打字時篩選列亮、游標列是 Subtext1 的淡反白；`Tab` 到清單後篩選列整列 Overlay0（不是 tdp F8 的淡化、沒有游標），游標列換成 popup 層色底、深色粗體字。`go` 只有一個階段，不在此列。finder 開著時頁面還在 settle，命中只記 id 與路徑、落地時從當下的樹重算。彈窗裡沒有 `/`。
+`Enter` 也進清單）；`Esc` 不論在哪一區都關掉 finder —— 階段不是一層（2026-09-28，tdp F1 v0.1.9）。只有拿鍵的那一邊是亮的（2026-09-29，tdp F1、tdp D3 v0.1.18）：打字時篩選列亮、游標列是 Subtext1 的淡反白；`Tab` 到清單後篩選列整列 Overlay0（不是 tdp F8 的淡化、沒有游標），游標列換成 popup 層色底、深色粗體字。`go` 只有一個階段，不在此列。finder 開著時頁面還在 settle，命中只記 id 與路徑、落地時從當下的樹重算。彈窗裡沒有 `/`。
 
 **`go`**（`g` 然後 `o`）只管**行號**：popup 列出目前畫面的每一行（目錄上就是節的序號），打數字當
 前綴篩、Enter 跳。彈窗裡沒有 `go`。
@@ -221,7 +221,7 @@ panel operation，不在 global operation popup 裡；它們的熱鍵在 web 的
 
 **input group**（2026-09-27，tdp K3）：幾個欄位一起才有意義的，放進同一個 input popup —— 加書籤是 URL + 標題，HTTP 驗證是
 帳號 + 密碼（遮罩）。`Tab` / `Shift-Tab` 在欄位之間移動，`Enter` 一律送出整組；送出不成立時框留著、焦點回到那一欄、
-原因寫在框的錯誤列（加書籤的 URL 不可空），group 裡那一欄的名字變 Red。**錯誤列**（2026-09-28，tdp F7、K3）：每個框打開時
+原因寫在框的錯誤列（加書籤的 URL 不可空），group 裡那一欄的名字變 Red。**錯誤列**（2026-09-28，tdp F7、tdp K3）：每個框打開時
 就有一列空白的錯誤列，拒絕時原因寫在那裡，框的高度不變、打的字留著。之前只有送出可能失敗的框（加書籤、日期時間顏色、設定、新增目錄、
 匯入名稱、改名）留；2026-10-06 起值裡有換行或 Tab 時每個框都會被拒，Location、欄位、登入、JS prompt、console 也留。原因不再丟到 toast。新增目錄也先檢查重名、再關框。group 裡 `Tab` 只換欄，空欄位上的提議用 `→` 接受；單欄框沒有別欄可換，`Tab` 接受提議（`→` 也可以）
 （2026-09-27，tdp K2 v0.1.6）。`Backspace` 在空欄位上拒絕提議。下框一個動作只露一個鍵：單欄 `Tab:accept`、group `→:accept`，
@@ -237,7 +237,7 @@ Enter：像 URL（有 scheme 或 `host.tld`）→ 補 `https://`；不像 → �
 
 ### §2.3 editor popup（textarea）
 
-大框、多行。**寫**的狀態：打字、Enter 換行、`Tab` 縮排（插四個空白；多行文字的寫入狀態裡 `Tab` 是字元，tdp K8、K2）、Backspace 跨行合併；
+大框、多行。**寫**的狀態：打字、Enter 換行、`Tab` 縮排（插四個空白；多行文字的寫入狀態裡 `Tab` 是字元，tdp K8、tdp K2）、Backspace 跨行合併；
 貼上的跟打的一樣：換行斷行（`\r\n` 算一個）、Tab 插四個空白、其他控制字元丟掉（2026-10-06；之前整段插在游標處，換行原樣留在同一行）；`Esc` 出到**移**的狀態：`h/j/k/l`、`u`/`d`、
 `g`/`G`/`0`/`$` 走，`i`/`a`/`A`/`o` 回到寫，`Enter` 設值寫回，再 `Esc` 取消。`Space` 永不關框。
 `$EDITOR` 鏈未做。
@@ -294,10 +294,10 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 **頁面自己的彈窗**是例外（`ui.md` §2.4）：它不是 webu 的浮層，是頁面的；`Esc` 不關、`Space` 是它的
 選單、要回答它才會走（按裡面的按鈕、或頁面自己收掉）。
 
-**離開的 confirm 疊在最上面**（2026-09-27，tdp D3、K4）：有下載進行中時 `q/Ctrl-C` 問的那一題是自己的浮層，疊在整疊
+**離開的 confirm 疊在最上面**（2026-09-27，tdp D3、tdp K4）：有下載進行中時 `q/Ctrl-C` 問的那一題是自己的浮層，疊在整疊
 之上，不取代底下正在回答的 confirm；`Esc` 回到那一題。它的 `?` 也是自己的 help，順序 quit help > quit confirm > help > 其他。
 
-**source 留在底下**（2026-09-27，tdp F4、T1、D3）：從 Space menu、global operation popup或 options 開出的框（confirm、
+**source 留在底下**（2026-09-27，tdp F4、tdp T1、tdp D3）：從 Space menu、global operation popup或 options 開出的框（confirm、
 input、finder、DevTools……）疊在 menu 上，menu 留在底下；`Esc` 回到 menu，完成動作才整疊清掉。
 
 **Context shift 清 source**：Space menu 裡點了會換頁的動作，menu 這個 source 清掉。

@@ -51,7 +51,7 @@ go install github.com/vulcanshen/webu/cmd/webu@latest
 
 從原始碼建置見 [docs/dev-remarks.md](docs/dev-remarks.md)。
 
-有三件事要知道：
+有四件事要知道：
 
 - **Chromium 在第一次啟動時下載**，只下載一次，放在 cache 目錄（約 175–250 MB），有進度列。升級後若需要新版 Chromium，執行 `webu browser update`。
 - **終端機必須用 [Nerd Font](https://www.nerdfonts.com/)** —— 連結、欄位、面板與頁面的各部分都用它的 glyph 畫。
@@ -80,7 +80,9 @@ webu help                         # 完整的命令列說明
 - 在任何頁 —— `/`、打一個字、`Enter`、`Enter`：你就到了。`h|l` 一次看頁面的一個部分（header、正文、側欄、footer），第一個 tab 是整頁。
 - `L` 輸入網址、`P|N` 上一頁 / 下一頁、`q` 離開。
 
-## 五個鍵
+## 使用方式
+
+### 五個鍵
 
 | 鍵 | 做什麼 |
 |---|---|
@@ -90,7 +92,7 @@ webu help                         # 完整的命令列說明
 | **`Tab`** | 下一個面板：分頁清單、頁面（`1`、`2` 直接到） |
 | **`?`** | *這裡能按哪些鍵？* —— 最前面那一層的按鍵，只能看：面板自己的鍵加上 core key，在 popup 上則是這個 popup 的鍵。能做的事在 `Space` 裡；每個 Space menu 最後一列是 `Global operation`，列著到處都能做的事 |
 
-## 畫面
+### 畫面
 
 ```
  [W]EB  [B]OOKMARKS  [H]ISTORY  [D]OWNLOADS  [S]ETTINGS  [I] DEVTOOLS
@@ -105,11 +107,11 @@ webu help                         # 完整的命令列說明
 - **`S` Settings** —— `config.yaml`，一列一個值，設好就存。
 - **`I` DevTools** —— Web 畫面上那一頁抓了什麼、存了什麼、印了什麼、原始碼是什麼。
 
-## 按鍵
+### 按鍵
 
 下面每個字母同時也是該處 `Space` 選單裡的一列，括號印的就是要按的鍵：`[A]dd folder` 是 `Shift-A`，`[a]dd` 是單按 `a`。
 
-### 到處都通
+#### 到處都通
 
 ```
  screen    W|B|H|D|S|I
@@ -118,11 +120,11 @@ webu help                         # 完整的命令列說明
  全域      Space 選單    ? 按鍵    q|Ctrl-C 離開
 ```
 
-### 分頁
+#### 分頁
 
 頁面跟著游標換。`Enter` 到頁面 · `c` 關閉 · `o` 在新分頁再開一次 · `r` 重新載入 · `y` 複製網址 · `T` 新分頁 · `X` 關閉其他 · `U` 重開剛關的
 
-### 頁面
+#### 頁面
 
 `j|k` 照閱讀順序一個一個走 —— 先同一列、再往下 —— 到頭尾繞回。`h|l` 看整頁或其中一個部分。`Enter` 在連結上先問再開；在按鈕上按下；在輸入框上開框打字；在 select 上列出選項；在標題上收合；在一節、長的清單項目或 frame 上走進去。`Esc` 走出來。
 
@@ -130,22 +132,22 @@ webu help                         # 完整的命令列說明
 
 `L` 開網址框時會用灰字提議目前的網址：`Tab` 接過來改、`Backspace` 不要它、直接打字就從頭打。頁面自己的問題 —— `alert`、`confirm`、要你輸入的 prompt、登入 —— 等你按 `Enter`；`Esc` 就是回答「不」。
 
-### 書籤、歷史、下載、設定
+#### 書籤、歷史、下載、設定
 
 - **Bookmarks** —— `Enter` 開新分頁或收合目錄 · `a` 新增 · `A` 新增目錄（`a/b/c` 每層都建）· `m` 搬移 · `r` 改名 · `x` 刪除 · `y` 複製網址 · `I` 匯入 · `/` 過濾
 - **History** —— `Enter` 開新分頁 · `x` 刪除 · `y` 複製網址 · `C` 清空 · `/` 過濾
 - **Downloads** —— `Enter` 開檔 · `o` 開來源頁 · `x` 移除 · `y` 複製路徑 · `C` 清掉已完成的 · `/` 過濾
 - **Settings** —— `Enter` 改值或切換開關
 
-### DevTools（`I`）
+#### DevTools（`I`）
 
 看的是 Web 畫面上那一頁。`h|l` 切換 **Network**（各個 request；游標那一個的 header 與 body 完整顯示在旁邊的面板）、**Storage**（cookie、local 與 session storage —— `x` 刪除、`y` 複製、`C` 清除站台資料、`R` 重新讀取）、**Console**（`i` 在頁面裡執行一行 JavaScript）與 **Source**（頁面 HTML）。每個清單都能用 `/` 過濾。
 
-### Visual mode（`v`）
+#### Visual mode（`v`）
 
-選字、複製。`h|j|k|l`、`w|e|b`、`0|$`、`gg|G` 移動；`v|V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 問你要找什麼、`n|N` 在找到的之間走；`Enter` 按下游標所在的東西；`Esc` 離開。進入後頁面的框變黃，右上角寫著 *Visual*。
+選字、複製。`h|j|k|l`、`w|e|b`、`0|$`、`gg|G` 移動；`v|V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 問你要找什麼、找到的都加底線，`n|N` 在找到的之間走；`Enter` 按下游標所在的東西；`Esc` 離開。進入後頁面的框變黃，右上角寫著 *Visual*。
 
-## 設定
+## 設定與資料
 
 `~/.config/webu/config.yaml` —— 也可以在 `S` 畫面裡改：
 
@@ -171,18 +173,19 @@ input_tab_width: 4
 
 | | 內容 | 位置 |
 |---|---|---|
-| 設定 | `config.yaml`、`bookmarks.yaml` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`，或 `$WEBU__CONFIG`） |
-| 資料 | 歷史、session、下載、瀏覽器 profile（cookie、登入）、log | `~/.webu/datas`（`$WEBU__DATA`） |
+| 設定 | `config.yaml` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`，或 `$WEBU__CONFIG`） |
+| 狀態 | `session.yaml`，上次離開時開著的分頁 | 跟設定放一起（或 `$WEBU__STATE`） |
+| 資料 | `bookmarks.yaml`、歷史、下載、瀏覽器 profile（cookie、登入）、log | `~/.webu/datas`（`$WEBU__DATA`） |
 | cache | 下載的 Chromium | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$XDG_CACHE_HOME/webu`；或 `$WEBU__CACHE`） |
 
-設定與書籤都是可以手改的 YAML。
+`config.yaml` 與 `bookmarks.yaml` 都是可以手改的 YAML。新版的 webu 把東西換到新位置時，第一次啟動會搬過去，並說從哪裡搬到哪裡；搬不動時 webu 會說，並照舊用原本的位置。
 
 ## 限制
 
 - **圖片、影片、音訊**只是佔位 —— 複製網址到別處開。
 - **CAPTCHA、passkey / WebAuthn、WebRTC** 不支援；webu 會明講，網址一個 yank 就拿到。
 - **像 app 的頁面**（看板、dashboard）能用，但很密 —— 用 `/` 找，比捲動快。整站都是沒標語意的 `div` 的話，webu 只拿得到文字和能點的東西。
-- 還不支援滑鼠。
+- 不支援滑鼠：webu 跟 terminu 家族其他成員一樣，只用鍵盤。
 
 ## 更多
 
@@ -191,7 +194,7 @@ input_tab_width: 4
 
 ## terminu family
 
-webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.7.4），建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、menu 與框 —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的狀態列）。
+webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.8.0），建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、menu 與框 —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的狀態列）。
 
 ## 授權
 

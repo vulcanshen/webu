@@ -51,7 +51,7 @@ go install github.com/vulcanshen/webu/cmd/webu@latest
 
 Building from source is in [docs/dev-remarks.md](docs/dev-remarks.md).
 
-Three things to know:
+Four things to know:
 
 - **Chromium is downloaded on the first launch**, once, into a cache directory (about 175–250 MB), with a progress line. After an upgrade that needs a newer Chromium, run `webu browser update`.
 - **A [Nerd Font](https://www.nerdfonts.com/) is required** in your terminal — links, fields, panels and parts are drawn with its glyphs.
@@ -80,7 +80,9 @@ Then:
 - On any page — `/`, type a word, `Enter`, `Enter`: you are there. `h|l` show the page's header, body, sidebars and footer one at a time; the first tab is the whole page.
 - `L` to go to an address, `P|N` for back and forward, `q` to quit.
 
-## Five keys
+## Usage
+
+### Five keys
 
 | Key | What it does |
 |---|---|
@@ -90,7 +92,7 @@ Then:
 | **`Tab`** | The next panel: the tab list, then the page (`1` and `2` go straight there) |
 | **`?`** | *Which keys work here?* — the keys of what is in front, to read: a panel's own keys and the core keys, or on a popup that popup's. What can be done is under `Space`; every Space menu ends in `Global operation`, the list of what works from anywhere |
 
-## The screens
+### The screens
 
 ```
  [W]EB  [B]OOKMARKS  [H]ISTORY  [D]OWNLOADS  [S]ETTINGS  [I] DEVTOOLS
@@ -105,11 +107,11 @@ Switch with a capital letter, or from `Space` › `Global operation`:
 - **`S` Settings** — `config.yaml`, a value a row, saved the moment it is set.
 - **`I` DevTools** — what the page on the web screen fetched, keeps, logged and is made of.
 
-## Key bindings
+### Key bindings
 
 Every letter below is also a row in that place's `Space` menu, printed exactly as you press it: `[A]dd folder` is `Shift-A`, `[a]dd` a bare `a`.
 
-### Everywhere
+#### Everywhere
 
 ```
  screens   W|B|H|D|S|I
@@ -118,11 +120,11 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
  global    Space menu    ? keys    q|Ctrl-C quit
 ```
 
-### Tabs
+#### Tabs
 
 The page follows the cursor. `Enter` go to the page · `c` close · `o` open again in a new tab · `r` reload · `y` yank url · `T` new tab · `X` close the others · `U` reopen the last closed
 
-### Page
+#### Page
 
 `j|k` walk the items in reading order — along a row, then down — and come round at the ends. `h|l` show the whole page, or one of its parts. `Enter` on a link asks, then opens; on a button presses; on a box opens it to type; on a select lists its options; on a heading folds it; on a section, a long list item or a frame goes in. `Esc` comes back out.
 
@@ -130,22 +132,22 @@ The page follows the cursor. `Enter` go to the page · `c` close · `o` open aga
 
 `L` opens the address box with the current URL on offer, in grey: `Tab` takes it to edit, `Backspace` drops it, typing starts afresh. The page's own questions — `alert`, `confirm`, a prompt, a sign-in — wait for `Enter`; `Esc` answers no.
 
-### Bookmarks, History, Downloads, Settings
+#### Bookmarks, History, Downloads, Settings
 
 - **Bookmarks** — `Enter` open in a new tab or fold a folder · `a` add · `A` add folder (`a/b/c` makes every level) · `m` move · `r` rename · `x` delete · `y` yank url · `I` import · `/` filter
 - **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `C` clear · `/` filter
 - **Downloads** — `Enter` open the file · `o` open its source · `x` remove · `y` yank path · `C` clear finished · `/` filter
 - **Settings** — `Enter` edit a value or flip a switch
 
-### DevTools (`I`)
+#### DevTools (`I`)
 
 Of the page the web screen shows. `h|l` switch between **Network** (the requests; the one under the cursor in full, headers and body, in the panel beside it), **Storage** (cookies, local and session storage — `x` delete, `y` yank, `C` clear site data, `R` read again), **Console** (`i` runs a line of JavaScript in the page) and **Source** (the page's HTML). `/` filters each list.
 
-### Visual mode (`v`)
+#### Visual mode (`v`)
 
-Select text and copy it. `h|j|k|l`, `w|e|b`, `0|$`, `gg|G` move; `v|V` start a selection by character or line; `y` copies to the system clipboard; `/` asks what to find, `n|N` step through it; `Enter` presses what the cursor is on; `Esc` leaves. While it is on, the page's frame turns yellow and says *Visual* at its top right.
+Select text and copy it. `h|j|k|l`, `w|e|b`, `0|$`, `gg|G` move; `v|V` start a selection by character or line; `y` copies to the system clipboard; `/` asks what to find and underlines every match, `n|N` step through them; `Enter` presses what the cursor is on; `Esc` leaves. While it is on, the page's frame turns yellow and says *Visual* at its top right.
 
-## Configuration
+## Settings and data
 
 `~/.config/webu/config.yaml` — or edit it on the `S` screen:
 
@@ -172,18 +174,19 @@ Where things are kept:
 
 | | What | Where |
 |---|---|---|
-| settings | `config.yaml`, `bookmarks.yaml` | `~/.config/webu` (`$XDG_CONFIG_HOME/webu`, or `$WEBU__CONFIG`) |
-| data | history, session, downloads, the browser profile (cookies, logins), the log | `~/.webu/datas` (`$WEBU__DATA`) |
+| settings | `config.yaml` | `~/.config/webu` (`$XDG_CONFIG_HOME/webu`, or `$WEBU__CONFIG`) |
+| state | `session.yaml`, the tabs open when webu last quit | with the settings (or `$WEBU__STATE`) |
+| data | `bookmarks.yaml`, the history, downloads, the browser profile (cookies, logins), the log | `~/.webu/datas` (`$WEBU__DATA`) |
 | cache | the downloaded Chromium | macOS `~/Library/Caches/webu`, Linux `~/.cache/webu` (`$XDG_CACHE_HOME/webu`; or `$WEBU__CACHE`) |
 
-Settings and bookmarks are plain YAML you can edit by hand.
+`config.yaml` and `bookmarks.yaml` are plain YAML you can edit by hand. When a new version of webu keeps something in a new place, the first start moves it there and says from where to where; if it cannot, webu says so and goes on using the old place.
 
 ## Limitations
 
 - **Images, video and audio** are placeholders — yank the URL and open it elsewhere.
 - **CAPTCHAs, passkeys / WebAuthn and WebRTC** are not supported; webu says so and puts the URL a yank away.
 - **App-like pages** (boards, dashboards) work, but they are dense — use `/` to get around rather than scrolling. A site built entirely from unlabelled `div`s gives webu only its text and its clickable things.
-- No mouse support yet.
+- No mouse: webu, like the rest of the terminu family, is keyboard only.
 
 ## More
 
@@ -192,7 +195,7 @@ Settings and bookmarks are plain YAML you can edit by hand.
 
 ## terminu family
 
-webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.7.4) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
+webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.8.0) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
 
 ## License
 
