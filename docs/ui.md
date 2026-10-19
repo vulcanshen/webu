@@ -158,8 +158,9 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 淡化、loading icon、`Esc` 一次一層都照 tdp，webu 不再自己畫。webu 用到的：confirm（開連結、搜尋送出、憑證、刪除、清除）、
 text／password／number input（Location、新分頁、欄位、設定、目錄名、go 的行號）、textarea（頁面的多行欄位）、select（頁面的
 select、slider 的數字、書籤搬移）、file-picker（上傳、匯入）、finder（`/`）、form（新增書籤）、viewer（表格的格、code block、
-Inspect）、toast、error popup。頁面自己的 alert／confirm／prompt／登入是 webu 自己的 popup（`pageask.go`，lib 的 `App.Popup`；
-dev-remarks「偏離 tdp」）。以下是 2026-10-18 以前 webu 自己的 popup，留作紀錄：
+Inspect）、toast、error popup。頁面自己的 alert／confirm／beforeunload 是 lib 的 confirm（2026-10-19，`OnCancel` 告訴頁面「不」）；
+prompt 與登入是 webu 自己的 popup（`pageask.go`，lib 的 `App.Popup`；dev-remarks「偏離 tdp」）。以下是 2026-10-18 以前 webu
+自己的 popup，留作紀錄：
 
 **一個寬度**（2026-09-28，tdp F7）：每個 popup 的外框都是 `min(terminal 寬 − 2, 120)`，水平置中（`popup.go` `popupW`）；不依內容
 算寬。說明、值太長就在框裡截尾或捲動，不加寬框。toast 同一個寬度，固定在畫面底部。finder `/` 的清單與預覽合起來是一個 popup，

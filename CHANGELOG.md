@@ -6,7 +6,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
-v0.8.0: the frames, the menus, the popups and the keys are now the same
+v0.8.1: the frames, the menus, the popups and the keys are now the same
 code as the rest of the family's.
 
 **Two files move, and webu moves them for you**: `bookmarks.yaml` goes
@@ -14,9 +14,15 @@ from `~/.config/webu` to `~/.webu/datas`, with the history (it is data:
 deleted, it is gone), and `session.yaml`, the tabs open when webu last
 quit, from `~/.webu/datas` to `~/.config/webu` (a new `WEBU__STATE` can put
 it elsewhere). The first start moves each one that is in its old place
-and not yet in the new one, and says from where to where. One that
-cannot be moved stays and is still used where it is, and webu names both
-places so you can move it yourself.
+and not yet in the new one, says from where to where, and takes away an
+old folder the move left empty. One that cannot be moved stays and is
+still used where it is, and webu names both places so you can move it
+yourself; one already in both places is left as it is in the old one,
+webu using the new one and naming both for you to merge.
+
+**webu needs a terminal of at least 60×20.** In a smaller window it shows
+only its name and the size it needs, no key acting but `Ctrl-C` twice,
+and everything comes back as the window grows.
 
 - **The page's parts are the page panel's tabs.** Its frame reads
   `[2] PAGE HEADER BODY OTHERS FOOTER` (the parts this page has); `h|l`
@@ -38,8 +44,23 @@ places so you can move it yourself.
   unit: `4 spaces`, `96 cells`.
 - `Enter` on a bookmark or a visit opens it in a new tab and stays on the
   list, saying where it went.
-- A question opened from the Space menu goes back to the menu on `Esc`.
-  Deleting a bookmark folder is asked every time, empty or not.
+- What a Space menu row opens — a question, a box to type in, a viewer —
+  keeps the menu under it, and `Esc` goes back to the menu. A row that
+  goes somewhere else (a new tab, the search, Location, Go to line,
+  moving a bookmark) puts the menu away as it opens. Deleting a bookmark
+  folder is asked every time, empty or not.
+- A table cell's menu names its column: `CELL: Price`.
+- The page's alert, confirm and "leave this page?" are the family's
+  confirm; `Esc` still answers no.
+- Something done — copied, saved, added, imported, renamed — says so in
+  a green Success toast; a toast is as long as its message needs.
+- A list too narrow for its columns puts away the ones a row reads well
+  without (a visit's time; DevTools' Type, Size, Method and Status, said
+  in full beside it), and narrows the rest only then.
+- Settings' `?` starts with what each setting is, and `input_tab_width`'s
+  box writes its unit under the number.
+- DevTools' list keeps its rows bright while the focus is on the detail,
+  as a stream does; its hint dims, as any panel's.
 - Every viewer — Inspect, a table cell, a code block, DevTools' detail —
   can select and copy (`v`).
 - A number field opens a number input; a filled password field shows

@@ -51,11 +51,12 @@ go install github.com/vulcanshen/webu/cmd/webu@latest
 
 Building from source is in [docs/dev-remarks.md](docs/dev-remarks.md).
 
-Four things to know:
+Five things to know:
 
 - **Chromium is downloaded on the first launch**, once, into a cache directory (about 175–250 MB), with a progress line. After an upgrade that needs a newer Chromium, run `webu browser update`.
 - **A [Nerd Font](https://www.nerdfonts.com/) is required** in your terminal — links, fields, panels and parts are drawn with its glyphs.
 - **A truecolor terminal is required** — the colours, and how the layers under a popup fade, are drawn in 24-bit colour.
+- **The terminal needs at least 60×20** — in a smaller window webu shows only its name and the size it needs, and everything comes back as the window grows.
 - **Icon width**: some terminal and font pairs move the cursor two cells for a Nerd Font icon instead of one, and some do the same for the powerline symbols (the ends of the capsules on the frames, the arrow at the end of the cursor). webu measures both when it starts; if the frames still come out crooked, set them yourself: `WEBU__ICON_WIDTH=2` (or `1`) and `WEBU__POWERLINE_WIDTH` for webu alone, or `TERMINU__ICON_WIDTH` and `TERMINU__POWERLINE_WIDTH`, which every terminu family app reads — set them once and they all follow (the `WEBU__` ones come first). Inside another family app's terminal (kbu, filu, sshu), that app sets the `TERMINU__` ones for webu.
 
 To uninstall (it asks before removing your settings, data and the downloaded Chromium):
@@ -195,7 +196,7 @@ Where things are kept:
 
 ## terminu family
 
-webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.8.0) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
+webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.8.1) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
 
 ## License
 
