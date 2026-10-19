@@ -88,13 +88,18 @@ func TestDialogsAreAnswered(t *testing.T) {
 		t.Errorf("the prompt's default is the answer at first:\n%s", d.view())
 	}
 	d.settle()
-	d.press("e")
-	d.until("the answer's box", d.shows("ANSWER"))
 	d.key("backspace") // drop the offer
 	d.key("bob")
 	d.press("enter")
-	d.press("enter")
 	d.until("prompt answered", func() bool { return strings.Contains(dumpLayout(d.page().lay), "answer:bob") })
+
+	// Enter on the offered answer as it is answers with it (Unchanged).
+	d.cursorOn(ir.Button, "Prompt")
+	d.act()
+	d.until("prompt shown again", d.shows("THE PAGE ASKS"))
+	d.settle()
+	d.press("enter")
+	d.until("prompt answered with its default", func() bool { return strings.Contains(dumpLayout(d.page().lay), "answer:anon") })
 
 	d.cursorOn(ir.Button, "Confirm")
 	d.act()
@@ -173,19 +178,43 @@ func TestHTTPAuthIsAsked(t *testing.T) {
 	if !strings.Contains(d.view(), "the vault") {
 		t.Errorf("the question names the realm:\n%s", d.view())
 	}
-	d.press("n")
+	// The lib's form: Enter on a field opens its input, Tab goes to the
+	// button.
+	d.press("enter")
 	d.key("ann")
 	d.press("enter")
-	d.press("p")
+	d.key("j")
+	d.press("enter")
 	d.key("secret")
 	d.press("enter")
 	if v := d.view(); strings.Contains(v, "secret") || !strings.Contains(v, "ann") {
 		t.Errorf("the name shown, the password masked:\n%s", v)
 	}
-	d.key("enter")
+	d.key("tab")
+	d.press("enter")
 	d.until("inside", d.loaded("Inside"))
 	if !strings.Contains(d.view(), "Welcome ann") {
 		t.Errorf("page not drawn:\n%s", d.view())
+	}
+}
+
+// A sign-in closed without signing in is an answer too: the page gets its
+// 401 (Form.OnCancel; tdp F6).
+func TestHTTPAuthCancelled(t *testing.T) {
+	b := hookBrowser(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("WWW-Authenticate", `Basic realm="the vault"`)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("<title>Denied</title>denied"))
+	}))
+	defer srv.Close()
+	d := startAt(t, b, srv.URL, store.Config{})
+	d.until("sign in asked", d.shows("SIGN IN"))
+	d.settle()
+	d.press("esc")
+	d.until("the 401 page", d.loaded("Denied"))
+	if d.m.auth != nil {
+		t.Error("the challenge should be answered")
 	}
 }
 

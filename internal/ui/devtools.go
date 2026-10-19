@@ -91,14 +91,14 @@ func (m *AppModel) buildDevtools() {
 		{"No source", "Press [R] to read it again"},
 	}
 	cols := [4][]terminu.Column{
-		// A URL or a line of text never fits whole, and the columns left are
-		// narrowed in proportion, a short one beside it down to "…": a short
-		// column there goes instead, [2] saying it in full (layout/panel;
-		// TODO(lib WB19)). Name and value are both long and share the room.
-		{{Title: "Method", Drop: 3}, {Title: "Status", Number: true, Drop: 4}, {Title: "Type", Drop: 1}, {Title: "Size", Number: true, Drop: 2}, {Title: "URL"}},
-		{{Title: "Kind", Drop: 1}, {Title: "Name"}, {Title: "Value"}},
-		{{Title: "Level", Drop: 1}, {Title: "Text"}},
-		{{Title: "Line", Number: true, Drop: 1}, {Title: "Source"}},
+		// Long values (a URL, a name, a value, a line of text) share the room
+		// the short ones leave and are cut; the short ones keep their width.
+		// Only when the long ones are at their least does a column go, the
+		// one a row reads best without first (layout/panel).
+		{{Title: "Method", Drop: 3}, {Title: "Status", Number: true}, {Title: "Type", Drop: 1}, {Title: "Size", Number: true, Drop: 2}, {Title: "URL", Shrink: true}},
+		{{Title: "Kind", Drop: 1}, {Title: "Name", Shrink: true}, {Title: "Value", Shrink: true}},
+		{{Title: "Level", Drop: 1}, {Title: "Text", Shrink: true}},
+		{{Title: "Line", Number: true, Drop: 1}, {Title: "Source", Shrink: true}},
 	}
 	for i := range d.lists {
 		i := i

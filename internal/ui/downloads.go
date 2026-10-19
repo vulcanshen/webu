@@ -48,7 +48,7 @@ func (d download) describe() string {
 // downloads, newest first.
 func (m *AppModel) buildDownloads() {
 	m.dlList = &terminu.List{
-		Columns:    []terminu.Column{{Title: "File"}, {Title: "State", Path: true}},
+		Columns:    []terminu.Column{{Title: "File", Shrink: true}, {Title: "State", Path: true, Shrink: true}},
 		Filterable: true,
 		EmptyFact:  "No downloads this session",
 		EmptyHint:  "Press [W] to browse, or [Space] to see what you can do here",

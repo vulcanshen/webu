@@ -14,9 +14,9 @@ import (
 
 func (m *AppModel) buildHistory() {
 	m.histList = &terminu.List{
-		// A title and a URL never fit whole: both stay and share the room,
-		// the time going first (layout/panel).
-		Columns:    []terminu.Column{{Title: "Title"}, {Title: "URL"}, {Title: "When", Drop: 1}},
+		// The title and the URL share the room the time leaves; only when
+		// they are at their least does the time go (layout/panel).
+		Columns:    []terminu.Column{{Title: "Title", Shrink: true}, {Title: "URL", Shrink: true}, {Title: "When", Drop: 1}},
 		Filterable: true,
 		EmptyFact:  "No history yet",
 		EmptyHint:  "Press [W] to browse, or [Space] to see what you can do here",

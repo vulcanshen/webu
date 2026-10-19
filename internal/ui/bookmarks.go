@@ -124,7 +124,7 @@ func bmRowID(r bmRow) string {
 // open or shut.
 func (m *AppModel) buildBookmarks() {
 	m.bmList = &terminu.List{
-		Columns:    []terminu.Column{{Title: "Title"}, {Title: "URL"}},
+		Columns:    []terminu.Column{{Title: "Title", Shrink: true}, {Title: "URL", Shrink: true}},
 		Filterable: true,
 		EmptyFact:  "No bookmarks yet",
 		EmptyHint:  "Press [a] to add one, or [Space] to see what you can do here",

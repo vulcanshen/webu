@@ -14,7 +14,7 @@ import (
 
 func (m *AppModel) buildWeb() {
 	m.tabsList = &terminu.List{
-		Columns:   []terminu.Column{{Title: "Tab"}},
+		Columns:   []terminu.Column{{Title: "Tab", Shrink: true}},
 		EmptyFact: "No tabs",
 		EmptyHint: "Press [T] to open one, or [Space] to see what you can do here",
 		OnMove:    m.tabMoved,

@@ -624,9 +624,10 @@ func TestUnderTheLeastSize(t *testing.T) {
 	}
 }
 
-// TestEveryPopupFits is tdp E5's popups: each kind opened once over the
-// page and the whole frame measured, webu's own popup measured alone too;
-// then, with it open, the screen made narrower than it, shorter, and both.
+// TestEveryPopupFits is tdp E5's popups: each kind webu opens, once over
+// the page, the whole frame measured; then, with it open, the screen made
+// narrower than it, shorter, and both. A popup's box alone is the lib's to
+// measure (tdp E8).
 func TestEveryPopupFits(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
@@ -671,13 +672,10 @@ func TestEveryPopupFits(t *testing.T) {
 			// shrink measures the frame at the size and with the popup bigger
 			// than the screen: wider, taller, both (tdp E5). Under webu's
 			// least size only the name is drawn; it fits all the same.
-			shrink := func(where string, alone func(sw, sh int)) {
+			shrink := func(where string) {
 				for _, s := range [][2]int{size, {size[0] / 2, size[1]}, {size[0], size[1] / 2}, {size[0] / 2, size[1] / 2}} {
 					d.send(tea.WindowSizeMsg{Width: s[0], Height: s[1]})
 					fits(where, s[0], s[1])
-					if alone != nil {
-						alone(s[0], s[1])
-					}
 				}
 				d.send(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 			}
@@ -721,36 +719,8 @@ func TestEveryPopupFits(t *testing.T) {
 			} {
 				d.exec(p.open())
 				d.settle()
-				shrink(p.name, nil)
+				shrink(p.name)
 				d.key("esc")
-			}
-			// webu's own: the page's prompt and sign-in, each box measured
-			// alone at the size the lib would give it (tdp E8: the lib
-			// measures its own popups).
-			for _, ask := range []*pageAsk{
-				{kind: askPrompt, details: []string{long, "", long}, answer: long, question: "Send this answer?", verb: "answer"},
-				{kind: askAuth, details: []string{"example.com asks you to sign in: " + long}, name: long, pass: "secret",
-					question: "Sign in?", verb: "sign in"},
-			} {
-				ask.m, ask.accept, ask.cancel = m, none, none
-				d.exec(m.a.Popup(terminu.Popup{Title: "The page asks", Glyph: glyphInfo, Body: ask}))
-				d.settle()
-				shrink("the page asks", func(sw, sh int) {
-					w, h := ask.Size(sw, sh)
-					if w > sw || h > sh {
-						t.Errorf("%v %dx%d the page asks: %dx%d asked for", widths, sw, sh, w, h)
-					}
-					box := ask.Draw(w, h, terminu.Base)
-					if len(box) != h {
-						t.Errorf("%v %dx%d the page asks: %d rows drawn for %d", widths, sw, sh, len(box), h)
-					}
-					for i, l := range box {
-						if lw := terminu.Width(l); lw != w {
-							t.Errorf("%v %dx%d the page asks: row %d is %d wide for %d", widths, sw, sh, i, lw, w)
-						}
-					}
-				})
-				d.exec(m.a.ClosePopup(ask))
 			}
 			m.Close()
 		}
