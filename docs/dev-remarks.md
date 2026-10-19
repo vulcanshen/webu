@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.8.1），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.2.0）上，是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.8.2），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.2.1）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -178,11 +178,11 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 
 | 事件 | 落地 |
 |---|---|
-| JS dialog | `dialogMsg` → `pageask.go` 的 popup（Enter 答、Esc 取消；prompt 的 `e` 改答案）；`handleJavaScriptDialog` 回答；開著時 settle 暫停 |
+| JS dialog | `dialogMsg` → `pageask.go`：alert／confirm／beforeunload 是 lib 的 confirm，prompt 是 lib 的 TextInput（頁面給的答案當灰字提議，照原樣按 Enter 由 `Unchanged` 回答它）；取消一律經 `OnCancel` 回答「不」；`handleJavaScriptDialog` 回答；開著時 settle 暫停 |
 | `target=_blank` | `Target.targetCreated`（`OpenerID` 有值）→ `NewContext(WithTargetID)` → `Prepare` → 加到尾端切換 |
 | 憑證 | `ERR_CERT_*` → confirm → `setIgnoreCertificateErrors(true)` 重載；每分頁問一次 |
 | 下載 | `setDownloadBehavior` + 事件 → toast / Downloads screen / header 進度條 |
-| HTTP auth | `Fetch.enable(handleAuthRequests)`（每個 request pause 一次、goroutine 裡 continue）→ `pageask.go` 的登入 popup（`n` 名字、`p` 密碼、Enter 送出、Esc 取消）→ `continueWithAuth` |
+| HTTP auth | `Fetch.enable(handleAuthRequests)`（每個 request pause 一次、goroutine 裡 continue）→ `pageask.go` 的登入：lib 的 Form（Name、Password、Sign in；`Form.OnCancel` 送 401）→ `continueWithAuth` |
 | 檔案上傳 | `fileChooserOpened` → lib 的 file-picker（`importDir()` 起）→ `SetFiles` |
 
 ## 設計決定
@@ -208,7 +208,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - **把使用者帶到新分頁**（tdp K3，S19）：`T`、網頁開出的新視窗、finder 的落點，使用者按下去就預期看到那一頁或那個位置，所以換到 Web 畫面、focus 到 [2]（lib 的 `App.ShowScreen`、`App.Focus`）；載入完成這種背景的事不搶 focus。書籤與歷史的 `Enter` 在背後開新分頁、留在清單上，toast 說開在哪裡。
 - **從 menu 執行之後**（tdp T1）：打開東西來看、選一個值寫回、新增的，menu 留在底下；要去別的地方的 —— `T` 新分頁、`/` finder、`L` 網址、`go` 跳行、書籤的 `m` 搬到別的目錄 —— 設 `Action.Clear`，開的時候清掉 menu。頁面的 `Enter` 遇到要離開這一頁的連結時先問（`Action.Ask`）；一行的清單項目裡是連結加別的字時，按下去才知道要不要問（`Action.AskFor`，`oneLineLink` 進去看一眼再出來），`Esc` 都回到 menu。
 - **最低尺寸 60×20**（tdp L1，app 可以調低）：80×40 是家族的預設；webu 的兩個 panel 在 72 欄以下就一次畫一個（窄寬），60×20 實機看過照樣好用，也放得下加書籤、登入這些表單，常見的 80×24 與分割視窗都能用。再小，頁面只剩幾行、表單要捲，lib 只畫名稱與 `needs a terminal of at least 60×20`。
-- **清單的欄放不下時**（layout/panel）：先整欄收、再照比例縮。網址、一行文字這種欄永遠放不下，能收的欄一定會被收，所以只有少了也讀得懂的欄設 `Column.Drop`：歷史的 When；DevTools Network 的 Type、Size、Method、Status（`[2]` 照樣寫全），Storage 的 Kind，Console 的 Level，Source 的行號。書籤與歷史的標題與 URL、下載的檔名與狀態、Storage 的名稱與值都不收，一起照比例縮。比例縮會把長欄旁邊的短欄縮成 `…`，短欄因此寧可收掉（回報 WB19）。
+- **清單的欄**（layout/panel，tdp v0.8.2；WB19 的定案）：長的值（分頁、書籤、歷史的標題與 URL，下載的檔名與狀態，DevTools 的 URL、名稱、值、console 的一行、原始碼）標 `Column.Shrink`，分短欄剩下的寬度、照自己的截法截；短欄（Method、Status、Type、Size、Level、行號、When）照最寬的值，不縮。長欄縮到最少（12 格）還放不下，才照 `Column.Drop` 整欄收：歷史的 When；Network 的 Type、Size、Method（Status 與 URL 不收）；Storage 的 Kind；Console 的 Level；Source 的行號。
 - **成功做完的用 Success toast**（components/dialog/toast）：Copied、Saved、Opened、Added、Imported、Renamed、搬了目錄、`… saved to config.yaml`；中性的告知（`Downloading`、開在新分頁、搬家）是 Info，失敗是 Error。
 - **visual mode 是 [2] 的 mode**（tdp K11）：lib 畫模式名與模式色、`Esc` 離開、`Space` 不作用、`Tab` 與數字鍵暫停（`Pause`）、`?` 列模式的鍵；模式裡的鍵（`h|j|k|l`、`w|b|e`、`0|$`、`u|d`、`gg|G`、`v|V`、`y`、`/`、`n|N`、`Enter`）是 `ModeKey`，做的事是 `selectMode` 的。`V` 登記在模式的鍵裡，lib 就不把它當 splash（`takesV`）。`/` 開 lib 的 TextInput 問要找什麼，`n|N` 在結果間走。
 - **visual mode 的搜尋不加顏色**（2026-10-19，WB14；user 定案，S25，components/color）：命中的字加底線、保留原本的顏色；目前那一筆是 panel 的 cursor 色塊（Subtext1 底、Base 粗體）；模式色 Yellow 只給選取範圍。
@@ -253,9 +253,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - Linux ARM（Chromium 的 snapshot bucket 沒有）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
-- lib 還沒有的：TextInput 照原值按 `Enter` 時讓 app 聽到這個回答（WB17）、Form 被 `Esc` 關掉時通知 app（WB18）：頁面的 prompt 與 HTTP 登入因此還是 webu 自己的 popup，見 `docs/webu-terminu-fix.md`。
-
-webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0（tdp v0.8.1）（2026-10-19）；有意不照做的地方列在下一節，還沒符合的列在 `docs/webu-terminu-fix.md`。user 說 webu 之後要整個大改，WB4、WB7 兩個暫定留到那時再談。
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0 與 v0.2.1（tdp v0.8.2）（2026-10-19）；有意不照做的地方列在下一節。等 lib 才改得完的都改完了，`docs/webu-terminu-fix.md` 照 tdp E7 刪掉。user 說 webu 之後要整個大改，WB4、WB7 兩個暫定留到那時再談。
 
 ## 偏離 tdp
 
@@ -263,7 +261,6 @@ webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 td
   - `Esc` 不關它（偏離 tdp K4、tdp F3）：關掉等於把頁面要的決定擱著；`Esc` 在它上面只 toast 說明（`pageEsc`）。
   - `Space` 是 [2] 的 Space menu，`?` 是 [2] 的 key reference：它的按鈕、連結是 [2] 的 item。
   - 它的寬度、疊層錯開（`popupWidth`、往右下錯開 3 欄 1 列）、底下的頁面淡化，都是頁面內容的畫法；webu 的 popup（lib 的）開在它上面時，它跟整個畫面一起被 lib 淡化。
-- **頁面的 prompt 與 HTTP 登入是 webu 自己的 popup（tdp F1、components/dialog/confirm、components/dialog/form）。** `pageask.go`，用 lib 的 `App.Popup`：框、標題、層色、開關動畫、淡化、`?`、`q` 是 lib 的，裡面的字與按鍵是 webu 的，長相照 confirm（要先看的內容在上、問句最後、`Enter` 接受、`Esc` 取消；prompt 的 `e` 改答案，登入的 `n`、`p` 填名字與密碼）。原因：頁面必須收到回答才會繼續，「取消」也是回答。lib 的 TextInput 在值跟打開時一樣（prompt 的預設答案是空的）時按 `Enter` 什麼都不呼叫（WB17），lib 的 Form 被 `Esc` 關掉時不通知 app（WB18），都回報為 lib 要補。alert、confirm、beforeunload 已經是 lib 的 confirm（`Ask.OnCancel` 告訴頁面「不」，WB3）。
 
 ## 設計文件導讀
 

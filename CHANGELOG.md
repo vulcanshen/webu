@@ -6,7 +6,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
-v0.8.1: the frames, the menus, the popups and the keys are now the same
+v0.8.2: the frames, the menus, the popups and the keys are now the same
 code as the rest of the family's.
 
 **Two files move, and webu moves them for you**: `bookmarks.yaml` goes
@@ -50,13 +50,18 @@ and everything comes back as the window grows.
   moving a bookmark) puts the menu away as it opens. Deleting a bookmark
   folder is asked every time, empty or not.
 - A table cell's menu names its column: `CELL: Price`.
-- The page's alert, confirm and "leave this page?" are the family's
-  confirm; `Esc` still answers no.
+- The page's questions are the family's popups, and `Esc` on any of them
+  still answers no: its alert, confirm and "leave this page?" are a
+  confirm; its prompt is a text box with the page's answer offered in
+  grey (`Enter` sends it as it is); an HTTP sign-in is a form with Name,
+  Password and Sign in.
 - Something done — copied, saved, added, imported, renamed — says so in
   a green Success toast; a toast is as long as its message needs.
-- A list too narrow for its columns puts away the ones a row reads well
-  without (a visit's time; DevTools' Type, Size, Method and Status, said
-  in full beside it), and narrows the rest only then.
+- A list's long values — titles, URLs, a line of text — share the room
+  the short ones leave and are cut; short values — a status, a size, a
+  time — stay whole. Only when the long ones are at their least does a
+  column go, the one a row reads best without first (a visit's time;
+  DevTools' Type, Size and Method).
 - Settings' `?` starts with what each setting is, and `input_tab_width`'s
   box writes its unit under the number.
 - DevTools' list keeps its rows bright while the focus is on the detail,

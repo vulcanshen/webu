@@ -196,7 +196,7 @@ Where things are kept:
 
 ## terminu family
 
-webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.8.1) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
+webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.8.2) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
 
 ## License
 

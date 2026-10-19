@@ -12,7 +12,8 @@
 > - DevTools 是畫面 `I`（全域熱鍵），不再是 [2] 的 `[I]nspect`。
 > - `P`／`N`、`L`、`/`、`v` 只在 [2] 按得到；全域動作只有切畫面（`W` `B` `H` `D` `S` `I`）與離開。
 > - `go` 開 number input 問行號；visual mode 的 `/` 開 text input 問要找什麼，`Esc` 離開模式由 lib 處理。
-> - 加書籤是 form（URL、標題、Add）；頁面的 prompt 與 HTTP 登入是 webu 自己的 popup（`e` 改答案；`n`、`p` 改名字與密碼）。
+> - 加書籤是 form（URL、標題、Add）；頁面的 prompt 是 text input（頁面給的答案當灰字提議），HTTP 登入是 form（Name、Password、Sign in）；
+>   alert、confirm、beforeunload 是 confirm。取消都回答頁面「不」（2026-10-19）。
 > - 清單畫面（書籤、歷史、下載）上 `Esc` 只清篩選，不回 Web；回 Web 用 `W`。
 
 ---
