@@ -208,7 +208,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - **把使用者帶到新分頁**（tdp K3，S19）：書籤與歷史的 `Enter`、`T`、網頁開出的新視窗，使用者按下去就預期看到那一頁，所以換到 Web 畫面、focus 到 [2]；載入完成這種背景的事不搶 focus。lib 還沒有換畫面、移 focus 的接口，暫時送合成的按鍵（`TODO(lib WB6)`）。
 - **visual mode 是 [2] 的 mode**（tdp K11）：lib 畫模式名與模式色、`Esc` 離開、`Space` 不作用、`Tab` 與數字鍵暫停（`Pause`）、`?` 列模式的鍵；模式裡的鍵（`h|j|k|l`、`w|b|e`、`0|$`、`u|d`、`gg|G`、`v|V`、`y`、`/`、`n|N`、`Enter`）是 `ModeKey`，做的事是 `selectMode` 的。`V` 登記在模式的鍵裡，lib 就不把它當 splash（`takesV`）。`/` 開 lib 的 TextInput 問要找什麼，`n|N` 在結果間走。
 - **visual mode 的搜尋不加顏色**（2026-10-19，WB14；user 定案，S25，components/color）：命中的字加底線、保留原本的顏色；目前那一筆是 panel 的 cursor 色塊（Subtext1 底、Base 粗體）；模式色 Yellow 只給選取範圍。
-- **書籤是資料，上次的分頁是狀態**（2026-10-19，tdp E3，S2）：`bookmarks.yaml` 原本跟設定一起放 `~/.config/webu`，好讓人手改、同步（2026-09-21）；tdp v0.8.0 的 E3 用「刪掉會怎樣」分，書籤刪了找不回來，是資料，搬到 `~/.webu/datas`。`session.yaml` 刪了只是回到空的開始畫面，是狀態，從 `~/.webu/datas` 搬到設定目錄，`WEBU__STATE` 可以另外指定。兩個都還是可以手改的 YAML。
+- **書籤是資料，上次的分頁是狀態**（2026-10-19，tdp E3，S2；書籤的位置 user 定案，WB16 選 A）：`bookmarks.yaml` 原本跟設定一起放 `~/.config/webu`，好讓人手改、同步（2026-09-21）；tdp v0.8.0 的 E3 用「刪掉會怎樣」分，書籤刪了找不回來，是資料，搬到 `~/.webu/datas`。WB10 的回報曾把書籤寫成已經在資料目錄，那是錯的（當時在設定目錄）；更正後 user 照樣定書籤放資料目錄，沒有比照「手寫的連線清單算設定」開例外。`session.yaml` 刪了只是回到空的開始畫面，是狀態，從 `~/.webu/datas` 搬到設定目錄，`WEBU__STATE` 可以另外指定。兩個都還是可以手改的 YAML。
 - **visual mode 是小寫 `v`**：`V` 保留給 splash（tdp S1）。讀一節時的 `n`／`p` 是小寫的 panel operation：大寫的 `N`／`P` 已經是上一頁／下一頁。`[go] Go to line` 用 `g` 開頭（tdp K12 允許 `g` 開頭的兩鍵組合當熱鍵），開 lib 的 NumberInput 問行號。
 - **[1] 與 [2] 的熱鍵各自歸各自的 panel**（tdp P3、tdp M4）：`P`／`N`、`L`、`/`、`v` 作用在頁面上，只在 [2] 按得到；`T`（新分頁）兩邊都有。全域動作只有切畫面（`W`／`B`／`H`／`D`／`S`／`I`）與離開。
 - **離開只在有下載進行中時先問**（tdp K9 的離開流程由 app 決定）：`syncQuit` 依下載數設 `App.Quit`。
