@@ -61,7 +61,7 @@ func (m *AppModel) partTab(i int) tea.Cmd {
 	return nil
 }
 
-// pageEsc is Esc on panel [2], one level up (Rules K4): out of a thing,
+// pageEsc is Esc on panel [2], one level up (tdp K4): out of a thing,
 // back to the section list; at the top it does nothing. A popup the page
 // put up is not closed by it: it wants an answer (dev-remarks, 偏離 tdp).
 func (m *AppModel) pageEsc() tea.Cmd {

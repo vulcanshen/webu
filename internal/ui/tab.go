@@ -1140,7 +1140,7 @@ func (t *tab) curFolded() bool {
 	return t.cursor >= 0 && t.cursor < len(t.lay.items) && t.lay.items[t.cursor].folded
 }
 
-// moveItem walks the cursor by navigation key (Rules K12): j and k step
+// moveItem walks the cursor by navigation key (tdp K12): j and k step
 // to the next and the previous item in reading order — along a row, then
 // on to the next row — and wrap at either end, the way every list of the
 // family does; u and d go half a page and stop at the ends; gg and G go to

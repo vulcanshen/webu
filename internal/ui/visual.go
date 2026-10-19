@@ -5,7 +5,7 @@ import (
 	terminu "github.com/vulcanshen/terminu-go"
 )
 
-// Visual mode (ux.md §1) is a mode of panel [2] (Rules K11): the lib
+// Visual mode (ux.md §1) is a mode of panel [2] (tdp K11): the lib
 // draws its name on the frame and the frame in the mode's colour, takes
 // Esc out of it, lists its keys in ? and the footer, and keeps every other
 // key of the panel and the app away while it is on. What the mode does —

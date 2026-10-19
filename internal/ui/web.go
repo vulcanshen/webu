@@ -10,7 +10,7 @@ import (
 
 // The web screen (ui.md §1): [1] the tabs, [2] the page. [2] is [1]'s
 // details (components/layout/panel): it shows the tab under [1]'s cursor,
-// and Enter on [1] takes the keyboard there (Rules K3).
+// and Enter on [1] takes the keyboard there (tdp K3).
 
 func (m *AppModel) buildWeb() {
 	m.tabsList = &terminu.List{

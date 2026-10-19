@@ -102,7 +102,7 @@ func (d *driver) key(k string) {
 }
 
 // press is a key and then the time a popup takes to open: the lib takes
-// no keys until it has (Rules F2).
+// no keys until it has (tdp F2).
 func (d *driver) press(k string) {
 	d.key(k)
 	d.settle()
@@ -453,6 +453,10 @@ func TestScreensAndSession(t *testing.T) {
 	if d.m.a.Screen() != d.m.setScreen || !strings.Contains(d.view(), "SEARCH_ENGINE") {
 		t.Fatalf("the settings screen:\n%s", d.view())
 	}
+	// A number carries its unit, written whole (components/input/number).
+	if !strings.Contains(d.view(), "default: 4 spaces") {
+		t.Errorf("input_tab_width should read in spaces:\n%s", d.view())
+	}
 	// download_dir is picked: a path typed lists that directory, and Enter
 	// on its "." chooses it.
 	dl := filepath.Join(t.TempDir(), "dl")
@@ -519,10 +523,10 @@ func TestResolveURL(t *testing.T) {
 	}
 }
 
-// TestFrameFitsTheTerminal is tdp L4 across sizes (E6): every line of
+// TestFrameFitsTheTerminal is tdp L4 across sizes (tdp E6): every line of
 // every screen, with a page on the web screen and with popups over it, is
 // exactly as wide as the terminal — with icons one cell and two, and the
-// powerline symbols one and two (E5).
+// powerline symbols one and two (tdp E5).
 func TestFrameFitsTheTerminal(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())

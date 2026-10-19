@@ -160,7 +160,7 @@ func (m *AppModel) headRow(t *tab, w int, before ...string) string {
 	return dim.Render(lead) + m.rowLine(t, t.drillHead, max(1, w-dispW(lead)), m.rowStyles(t))
 }
 
-// Key moves the cursor (Rules K12); the panel's actions take the rest.
+// Key moves the cursor (tdp K12); the panel's actions take the rest.
 func (b *pageBody) Key(key string, _ tea.KeyMsg) (bool, tea.Cmd) {
 	m := b.m
 	t := m.shownTab()
@@ -188,7 +188,7 @@ func (b *pageBody) Key(key string, _ tea.KeyMsg) (bool, tea.Cmd) {
 }
 
 // moveName is a key as the movement code knows it: the arrows are j and k
-// (Rules K12).
+// (tdp K12).
 func moveName(key string) string {
 	switch key {
 	case "↓":
@@ -248,7 +248,7 @@ func (b *pageBody) Scroll() string {
 	return itoa(from) + "-" + itoa(min(total, from+vis-1)) + " of " + itoa(total)
 }
 
-// MoveKeys are the page's movement keys (Rules K6, K12).
+// MoveKeys are the page's movement keys (tdp K6, tdp K12).
 func (b *pageBody) MoveKeys() []terminu.KeyRow {
 	if t := b.m.shownTab(); t != nil && t.listing() {
 		return []terminu.KeyRow{
@@ -370,7 +370,7 @@ func fitURL(u string, w int) string {
 
 // pageRows colours the visible window of the layout. The cursor's item is
 // lit across every row it spans; with the focus elsewhere the lib dims the
-// whole panel, cursor and all (Principle P6).
+// whole panel, cursor and all (tdp P6).
 func (m *AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	if innerH <= 0 {
 		return nil

@@ -450,7 +450,8 @@ func (m *AppModel) applyPage(msg pageMsg) tea.Cmd {
 		if n := nodeByID(t.root, id); n != nil && len(n.Children) > 0 {
 			t.drillInto(n, m.pageW(), m.pageVisible())
 		} else {
-			return m.toast("The frame could not be entered; its address is a [Space] › Yank away")
+			// A failure, so an Error toast (components/dialog/toast).
+			return m.toastErr("The frame could not be entered; its address is a [Space] › Yank away")
 		}
 	}
 	if t.stillComing() {

@@ -34,8 +34,19 @@ type setting struct {
 	// setting takes the range of number. on and flip make a switch.
 	set    func(*store.Config, string) error
 	number [2]float64
-	on     func(store.Config) bool
-	flip   func(*store.Config)
+	// unit is what a number counts, written whole after it (components/
+	// input/number: "4 spaces").
+	unit string
+	on   func(store.Config) bool
+	flip func(*store.Config)
+}
+
+// withUnit is a value as its row shows it: a number with its unit after it.
+func withUnit(v, unit string) string {
+	if _, err := strconv.Atoi(v); err != nil || unit == "" {
+		return v
+	}
+	return v + " " + unit
 }
 
 // settings is in config.yaml's order.
@@ -69,7 +80,8 @@ var settings = []setting{
 			c.Measure = n
 			return nil
 		},
-		def: func(*AppModel) string { return store.MeasureFull.String() }},
+		unit: "cells",
+		def:  func(*AppModel) string { return store.MeasureFull.String() }},
 	{key: "restore_session", desc: "reopen the tabs that were open when webu last quit",
 		on: func(c store.Config) bool { return c.Restore() },
 		flip: func(c *store.Config) {
@@ -99,7 +111,8 @@ var settings = []setting{
 			c.InputTabWidth = n
 			return nil
 		},
-		def: func(*AppModel) string { return "4" }},
+		unit: "spaces",
+		def:  func(*AppModel) string { return "4" }},
 }
 
 // buildSettings registers the Settings screen.
@@ -135,8 +148,8 @@ func (m *AppModel) settingField(i int) *terminu.Field {
 		})
 		return f
 	}
-	f.Value = func() string { return s.get(m.cfg) }
-	f.Empty = "default: " + s.def(m)
+	f.Value = func() string { return withUnit(s.get(m.cfg), s.unit) }
+	f.Empty = "default: " + withUnit(s.def(m), s.unit)
 	f.Path = s.key == "download_dir"
 	// A value config.yaml holds that the setting refuses (written by hand):
 	// its label is Red.
@@ -159,7 +172,7 @@ func (m *AppModel) refreshSettings() {
 		if s.flip != nil {
 			f.Checked = []bool{s.on(m.cfg)}
 		} else {
-			f.Empty = "default: " + s.def(m)
+			f.Empty = "default: " + withUnit(s.def(m), s.unit)
 		}
 	}
 }
@@ -194,6 +207,8 @@ func (m *AppModel) settingBox(i int) tea.Cmd {
 	}
 	prompt := s.key + ": " + s.desc + "; [Backspace] then [Enter] for the default"
 	if s.number[1] > 0 {
+		// TODO(lib S47): the unit's own row under the typing row, once
+		// NumberInput has one; until then the prompt says it.
 		prompt = s.key + ": " + s.desc + ", " + fmtNum(s.number[0]) + "-" + fmtNum(s.number[1]) + "; [Backspace] then [Enter] for the default"
 		return m.a.Number(terminu.NumberInput{Title: "Settings", Subject: s.key, Glyph: glyphSettings, Name: s.key,
 			Prompt: prompt, Verb: "save", Old: cur, Min: s.number[0], Max: s.number[1], Check: check, Done: done})

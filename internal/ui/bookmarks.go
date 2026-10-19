@@ -452,6 +452,8 @@ func (m *AppModel) addBookmark(title, url string) tea.Cmd {
 		return m.saveFailed("bookmarks.yaml", err)
 	}
 	m.refreshBookmarks()
+	// The cursor goes to what was just added (tdp K3).
+	m.bmList.Select(bmRowID(bmRow{ref: len(m.bookmarks) - 1}))
 	return m.toast("Added " + oneLine(nameOr(title, url)))
 }
 

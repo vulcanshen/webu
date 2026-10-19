@@ -409,12 +409,12 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 	s := &m.sel
 	styles := segStyles()
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
-	// Yellow is the mode's (components/color): its band under what is
-	// selected, its ink under a match — the one the search is on in bold.
-	// tdp has no colour of its own for a match in the text (TODO(tdp WB14)).
+	// Yellow is the mode's, and only what is selected takes it. A search
+	// adds no colour (components/color): every match is underlined in its
+	// own colour, and the one the search is on is the panel's cursor block,
+	// Subtext1 under Base in bold — "you are here".
 	sel := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(selectColor)
-	hit := lipgloss.NewStyle().Foreground(selectColor).Underline(true)
-	hitCur := lipgloss.NewStyle().Foreground(selectColor).Underline(true).Bold(true)
+	hitCur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor).Bold(true)
 
 	out := make([]string, 0, innerH)
 	end := min(len(t.lay.rows), t.top+innerH)
@@ -434,7 +434,7 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 				}
 				style := styles[sg.kind]
 				if in, isCur := s.matchAt(r, col); in {
-					style = hit
+					style = style.Underline(true)
 					if isCur {
 						style = hitCur
 					}

@@ -480,7 +480,7 @@ func (t *tab) drillTitle() string {
 
 // moveSection walks the section list: j and k wrap at either end, the
 // way every list of the family does; u and d go half a page and stop
-// (Rules K12). h and l are panel [2]'s tabs: Enter is what opens a
+// (tdp K12). h and l are panel [2]'s tabs: Enter is what opens a
 // section.
 func (t *tab) moveSection(k string, visible int) {
 	if len(t.secs) == 0 {
