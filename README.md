@@ -118,7 +118,7 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
  screens   W|B|H|D|S|I
  panels    Tab, 1–2
  cursor    j|k    u|d (half page)      gg|G      h|l the panel's tabs
- global    Space menu    ? keys    q|Ctrl-C quit
+ global    Space menu    ? keys    ! App Log    q|Ctrl-C quit
 ```
 
 #### Tabs
@@ -177,10 +177,10 @@ Where things are kept:
 |---|---|---|
 | settings | `config.yaml` | `~/.config/webu` (`$XDG_CONFIG_HOME/webu`, or `$WEBU__CONFIG`) |
 | state | `session.yaml`, the tabs open when webu last quit | with the settings (or `$WEBU__STATE`) |
-| data | `bookmarks.yaml`, the history, downloads, the browser profile (cookies, logins), the log | `~/.webu/datas` (`$WEBU__DATA`) |
+| data | `bookmarks.yaml`, the history, downloads, the browser profile (cookies, logins), Chromium's log (`webu.log`) | `~/.webu/datas` (`$WEBU__DATA`) |
 | cache | the downloaded Chromium | macOS `~/Library/Caches/webu`, Linux `~/.cache/webu` (`$XDG_CACHE_HOME/webu`; or `$WEBU__CACHE`) |
 
-`config.yaml` and `bookmarks.yaml` are plain YAML you can edit by hand. When a new version of webu keeps something in a new place, the first start moves it there and says from where to where; if it cannot, webu says so and goes on using the old place.
+`config.yaml` and `bookmarks.yaml` are plain YAML you can edit by hand. When a new version of webu keeps something in a new place, the first start moves it there and says from where to where; if it cannot, webu says so and goes on using the old place. A file of webu's own that will not read (a broken `config.yaml`, say) is offered to be moved aside to `.bak` at the start, webu beginning that file new; or webu quits and says why. `!` opens the App Log: what webu did and what went wrong this time, toasts included.
 
 ## Limitations
 
@@ -196,7 +196,7 @@ Where things are kept:
 
 ## terminu family
 
-webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.8.3) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
+webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.9.0) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
 
 ## License
 

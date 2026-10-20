@@ -80,7 +80,7 @@ func indexPage(t *tab) []hit {
 				if c.IsBlock() || c.Kind == ir.Option {
 					continue
 				}
-				if text := oneLine(c.Text()); text != "" {
+				if text := strings.TrimSpace(c.Text()); text != "" {
 					add(c, text, append(trail, i))
 				}
 			}
@@ -116,25 +116,25 @@ func hitText(n *ir.Node) string {
 	case ir.Option:
 		// A listbox's option is a row of its own (a combobox's never
 		// reach here).
-		return oneLine(n.Name)
+		return strings.TrimSpace(n.Name)
 	case ir.Heading:
-		if s := oneLine(n.Name); s != "" {
+		if s := strings.TrimSpace(n.Name); s != "" {
 			return s
 		}
 	case ir.Landmark:
 		if n.Role == "main" || n.Skip {
 			return ""
 		}
-		return oneLine(n.Name)
+		return strings.TrimSpace(n.Name)
 	case ir.Link, ir.Button, ir.Media, ir.Textbox, ir.Check, ir.Combobox:
 		// Inline things: their block carries them. On their own — a bare
 		// link the page laid out as a block — they are their own hit.
 		if !n.Block {
 			return ""
 		}
-		return oneLine(n.Text())
+		return strings.TrimSpace(n.Text())
 	case ir.Code:
-		return oneLine(n.Text())
+		return strings.TrimSpace(n.Text())
 	}
 	// The inline run, as the page spaced it: a text node carries its own
 	// spaces, and a space put between a link and the comma after it was
@@ -148,7 +148,7 @@ func hitText(n *ir.Node) string {
 			b.WriteString(c.Text())
 		}
 	}
-	return oneLine(b.String())
+	return strings.TrimSpace(b.String())
 }
 
 // previewOf draws one node the way the page draws it, at width, as

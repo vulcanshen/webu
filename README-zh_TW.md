@@ -118,7 +118,7 @@ webu help                         # 完整的命令列說明
  screen    W|B|H|D|S|I
  面板      Tab、1–2
  游標      j|k    u|d（半頁）          gg|G      h|l 面板的 tab
- 全域      Space 選單    ? 按鍵    q|Ctrl-C 離開
+ 全域      Space 選單    ? 按鍵    ! App Log    q|Ctrl-C 離開
 ```
 
 #### 分頁
@@ -176,10 +176,10 @@ input_tab_width: 4
 |---|---|---|
 | 設定 | `config.yaml` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`，或 `$WEBU__CONFIG`） |
 | 狀態 | `session.yaml`，上次離開時開著的分頁 | 跟設定放一起（或 `$WEBU__STATE`） |
-| 資料 | `bookmarks.yaml`、歷史、下載、瀏覽器 profile（cookie、登入）、log | `~/.webu/datas`（`$WEBU__DATA`） |
+| 資料 | `bookmarks.yaml`、歷史、下載、瀏覽器 profile（cookie、登入）、Chromium 的 log（`webu.log`） | `~/.webu/datas`（`$WEBU__DATA`） |
 | cache | 下載的 Chromium | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$XDG_CACHE_HOME/webu`；或 `$WEBU__CACHE`） |
 
-`config.yaml` 與 `bookmarks.yaml` 都是可以手改的 YAML。新版的 webu 把東西換到新位置時，第一次啟動會搬過去，並說從哪裡搬到哪裡；搬不動時 webu 會說，並照舊用原本的位置。
+`config.yaml` 與 `bookmarks.yaml` 都是可以手改的 YAML。新版的 webu 把東西換到新位置時，第一次啟動會搬過去，並說從哪裡搬到哪裡；搬不動時 webu 會說，並照舊用原本的位置。webu 自己的檔讀不了時（例：壞掉的 `config.yaml`），啟動時會問要不要把它搬到 `.bak`、從新的開始；不要的話 webu 離開並說原因。`!` 打開 App Log：這次開 webu 以來做了什麼、出了什麼錯，toast 也在裡面。
 
 ## 限制
 
@@ -195,7 +195,7 @@ input_tab_width: 4
 
 ## terminu family
 
-webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.8.3），建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、menu 與框 —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的狀態列）。
+webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.9.0），建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、menu 與框 —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的狀態列）。
 
 ## 授權
 

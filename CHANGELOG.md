@@ -6,7 +6,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
-v0.8.3: the frames, the menus, the popups and the keys are now the same
+v0.9.0: the frames, the menus, the popups and the keys are now the same
 code as the rest of the family's.
 
 **Two files move, and webu moves them for you**: `bookmarks.yaml` goes
@@ -24,6 +24,21 @@ webu using the new one and naming both for you to merge.
 only its name and the size it needs, no key acting but `Ctrl-C` twice,
 and everything comes back as the window grows.
 
+**A file of webu's own that will not read is no longer gone on with.**
+At the start webu names it and why, and offers to move it aside to
+`.bak` (`.bak.1` and on, never over another) and begin that file new;
+`Esc` quits instead, the reason on the terminal.
+
+- **`!` opens the App Log**: what webu did and what went wrong since it
+  started — every toast, a page that failed to load and why, the tabs
+  reopened from the last session. The footer says `!:log`, or how many
+  errors you have not seen yet. A toast's whole text is no longer written
+  to `webu.log`, which keeps Chromium's own log.
+- **Control characters from outside are never sent to the terminal**:
+  in a page's text, a tab's title, a bookmark, a DevTools row or a toast
+  each one shows as its name in red (`\t`, `\n`, `\x1b`), nothing dropped
+  — a title or link text is no longer cut at a line break. A Tab in a
+  code block is `input_tab_width` spaces.
 - **The page's parts are the page panel's tabs.** Its frame reads
   `[2] PAGE HEADER BODY OTHERS FOOTER` (the parts this page has); `h|l`
   switch between them, and the first tab is the whole page. The strip

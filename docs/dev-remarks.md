@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.8.3），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.2.2）上，是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.9.0），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.0，還沒打 tag 前用 `go.work` 接本機的；`go.mod` 暫時是 v0.2.2）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -14,6 +14,8 @@ README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分�
 - **一份登記、lib 產生其餘** —— webu 把每個畫面、panel、動作（鍵、名稱、說明、範圍、要不要先問、做什麼）登記給 terminu-go；Space menu、global operation popup、`?` 的 key reference、panel 下框的 hint、footer、confirm、淡化、`Esc` 一次一層都由 lib 從這一份登記產生，所以不在選單裡的熱鍵不可能存在。[2] 的動作跟著游標下的東西換，每次換頁、換游標都重新登記（`pageactions.go` 的 `syncPage`）。
 - **畫面穩定** —— 任何尺寸、任何內容，每一列都恰好是終端機的寬；`TestFrameFitsTheTerminal` 在 icon 一格／兩格、powerline 符號一格／兩格下，跨尺寸、每個畫面、疊 popup 檢查，`TestEveryPopupFits` 把每一種 popup 開在畫面上再縮小畫面，`TestUnderTheLeastSize` 從最低尺寸以下一路縮到 1×1（tdp L4、tdp E5、tdp E6；單獨量 lib 的 popup 框是 lib 的測試，tdp E8）。
 - **`[S]ettings` 與 `config.yaml` 同步** —— 檔案裡有的 key，Settings 一定有一列，有測試守著。
+- **讀不了時**（tdp E3）—— `config.yaml`、`bookmarks.yaml`、`history.yaml`、`session.yaml` 讀不了，main 交給 UI（`ui.Unread`），第一個 frame 一個接一個開 lib 的 `MoveAside`：`Enter` 改名成 `.bak` 再從新的開始（`fresh`），`Esc` 離開、main 把路徑與原因印到 stderr。`session.yaml` 讀不了、又沒搬開時，離開時不寫回它（`SessionWritable`）。快取（Chromium）壞掉時 Launch 失敗、印出錯誤，要使用者跑 `webu browser update`（不自動重抓兩百多 MB，回報 WB22）。
+- **頁面上的控制字元**（components 的「控制字元」）—— [2] 的頁面是 webu 自己畫的：`rowLine` 與 visual mode 的 `selectRows` 把控制字元畫成紅色的名字（`writeNamed`、`controlName` 用 lib 的 `Escape` 的寫法），整列照舊截到 panel 寬；code block 的 Tab 畫成 `input_tab_width` 格。交給 lib 的名字與短字（清單的格子、menu、標題、toast）照原樣交，由 lib 畫；webu 自己的顏色用 `Row.Styled` 與 `App.Status` 的 `Span`。finder 的項目也不再在換行處截斷。
 - **存檔** —— 書籤每筆帶 `folder` 路徑，另有 `folders:` 清單讓空目錄留得住；歷史是一次 append 一筆的 YAML sequence；每次寫檔都是原子的。分法照 tdp E3「刪掉會怎樣」：設定（`config.yaml`）與狀態（`session.yaml`，上次開著的分頁）在 config、刪了找不回來的資料（書籤、歷史、下載、瀏覽器 profile、log）在 data、可重抓的 Chromium 在 cache。舊版放在別處的，第一次啟動逐項搬過去（tdp E3；`store.Relocate` 一個檔一個檔、`paths.RelocateCache` 一個 Chromium 版本一個版本，各一次 rename），Info toast 說從哪搬到哪，搬完把空了的舊目錄拿掉。新位置已經有的那一項：Chromium 是快取，刪掉舊的；書籤、session 不刪，留在舊位置，error popup 寫出兩個路徑請使用者自己合併。搬不動就照舊用舊位置（`paths.Either`：新位置沒有、舊位置有），error popup 寫出兩個路徑。
 - **unix-first、靜態執行檔** —— macOS + Linux，`CGO_ENABLED=0`。chromedp 的 log 進檔案，永遠不進 TUI 正在畫的終端機。
 - **Chromium 不在 release 裡** —— release 只有 Go 執行檔；第一次啟動下載到 cache。Chromium snapshot bucket 沒有 Linux ARM 版，所以沒有 Linux ARM build。
@@ -78,7 +80,7 @@ tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
 | revision | `browser.Revision = 1701465`（Chromium 156 線）；Mac_Arm 175 MB、Mac 195 MB、Linux_x64 248 MB；Linux arm64 快照桶沒有 |
 | 目錄 | cache `WEBU__CACHE` > `os.UserCacheDir()/webu`（macOS 舊版用的 `XDG_CACHE_HOME/webu` 第一次啟動搬過來）；config `WEBU__CONFIG` > `XDG_CONFIG_HOME/webu` > `~/.config/webu`；state `WEBU__STATE` > config；data `WEBU__DATA` > `~/.webu/datas` |
 | UA（2026-09-23） | `Browser.getVersion` 拿自報字串，`HeadlessChrome/` → `Chrome/`，尾巴 ` webu/<ver>`；client hints brands `Chromium` + `webu`；每個分頁 `Prepare` 時 `Emulation.setUserAgentOverride`（`browser.identify` / `userAgent` / `uaMetadata`；`TestWebuSignsItsUserAgent`） |
-| log | chromedp 的 log 全部進 `<data>/webu.log`，**絕不到 stderr**；`unhandled … event` 丟掉。錯誤 toast 的全文也寫一行進去（toast 放不下時看得到全文，components/dialog/toast） |
+| log | chromedp 的 log 全部進 `<data>/webu.log`，**絕不到 stderr**；`unhandled … event` 丟掉。webu 自己的事進 App Log（`!`，只在記憶體，components/dialog/note）：lib 自動記每個 toast 與 error popup，webu 另外記背景的事（`applyPage` 的載入失敗、`firstFrame` 還原了幾個分頁）。2026-10-20 以前 toast 的全文也寫進 webu.log，App Log 取代了它 |
 
 #### Capture：一次抓什麼（`function.md` §3）
 
@@ -253,7 +255,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - Linux ARM（Chromium 的 snapshot bucket 沒有）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
-webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19）；有意不照做的地方列在下一節。等 lib 才改得完的都改完了，`docs/webu-terminu-fix.md` 照 tdp E7 刪掉。user 說 webu 之後要整個大改，WB4、WB7 兩個暫定留到那時再談。
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、terminu-go v0.4.0（2026-10-20）；有意不照做的地方列在下一節。等 lib 才改得完的都改完了，`docs/webu-terminu-fix.md` 照 tdp E7 刪掉。user 說 webu 之後要整個大改，WB4、WB7 兩個暫定留到那時再談。
 
 ## 偏離 tdp
 
@@ -261,6 +263,7 @@ webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 td
   - `Esc` 不關它（偏離 tdp K4、tdp F3）：關掉等於把頁面要的決定擱著；`Esc` 在它上面只 toast 說明（`pageEsc`）。
   - `Space` 是 [2] 的 Space menu，`?` 是 [2] 的 key reference：它的按鈕、連結是 [2] 的 item。
   - 它的寬度、疊層錯開（`popupWidth`、往右下錯開 3 欄 1 列）、底下的頁面淡化，都是頁面內容的畫法；webu 的 popup（lib 的）開在它上面時，它跟整個畫面一起被 lib 淡化。
+- **快取裡的 Chromium 啟動不了時不自動重抓（tdp E3「讀不了時」的快取，暫定，WB22）。** 規範說快取讀不了就丟掉重建；webu 的快取是兩百多 MB 的 Chromium，`browser.Launch` 失敗的原因也可能不是它壞了（Linux 少了系統函式庫、sandbox 的權限），重抓一次也沒用。所以 webu 印出錯誤並說 `webu browser update` 會重抓（`cmd/webu/main.go`），由使用者決定。第一次啟動時沒有 Chromium（`Installed` 為 false）照舊直接下載。
 
 ## 設計文件導讀
 
@@ -310,6 +313,7 @@ make snapshot           goreleaser 本機打包到 dist/
 
 - **fixture 與 golden**：`internal/ir/testdata/<group>.html` → `make fixtures`（只認釘死的 Chromium）→ `<group>.json` → `.golden`（`ir.Dump`）+ `.md`（`ir.Markdown`）；`internal/ui/testdata/<group>.render` 是同一批在 60 欄的排版。`-update` 重生 golden，改渲染時看 diff 決定。
 - **`go test ./...`**：ir 三份 golden、ui 的排版 golden、store、paths、browser（UA）、page（sessions）。
+- **tdptest**（`internal/ui/tdp_test.go`，terminu-go 的 `tdptest`）：`TestTDP` 照第一次啟動在各種尺寸、icon 寬度走過每個畫面與 panel 的 Space menu、global operation popup、App Log、`?`，再縮到最低尺寸以下（tdp L1、L4、E5；webu 用 `New(nil)`，不開 Chromium）；`TestTrickyTextFromOutside` 把 `tdptest.Tricky` 放進分頁標題、頁面文字與書籤，每個 frame 都驗沒有控制字元送到終端機。webu 自己的計時器用 `App.Tick`（DevTools 的重畫、分頁的 settle），tdptest 才推得動時間。
 - **瀏覽器測試**（需要釘死的 Chromium，沒有就 skip）：`hooks_test`（dialog、新視窗、憑證、下載、auth、上傳 picker、PDF、hover、iframe 同站）、`frame_test`（跨站 + 巢狀）、`popup_test`、`loading_test`、`lines_test`、`finder_test`、`editor_test`、`listbox_test`、`tree_test`、`tabs_test`、`slider_test`、`gauges_test`、`tooltip_test`、`section_test`、`parts_test`、`app_test`（back 回原位、combobox 沒 option）。
 - **測試 driver**（`app_test.go`）：把訊息一個一個交給 lib 的 `App.Update`、在 goroutine 裡跑 command；`d.view()` 是去掉樣式的 `App.Frame()`，popup 開沒開看它的標題（例：`OPEN LINK`）；`d.press` 是按鍵後等開關動畫跑完（lib 在 popup 開完之前不收鍵）；`d.action(label)` 直接跑 focus 的 panel 的某個動作。`toast` 還在時第一個 `Esc` 先收 toast（tdp K4），測試要算進去。
 - **重現 TUI bug** 用 Go driver；要手動跑 `./webu` 重現時，把 `WEBU__CONFIG`、`WEBU__DATA` 指到暫存目錄，不碰自己的設定、書籤與登入。

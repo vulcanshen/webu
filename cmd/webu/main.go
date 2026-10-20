@@ -100,7 +100,11 @@ func main() {
 	}
 	b, err := browser.Launch(exe, profile, logw)
 	if err != nil {
+		// The Chromium in the cache may be broken, or something else may
+		// keep it from starting; fetching 200 MB again on a guess is not
+		// done unasked (dev-remarks, 偏離 tdp E3).
 		fmt.Fprintln(os.Stderr, "webu:", err)
+		fmt.Fprintln(os.Stderr, "webu: if the downloaded Chromium is broken, `webu browser update` fetches it again")
 		os.Exit(1)
 	}
 
