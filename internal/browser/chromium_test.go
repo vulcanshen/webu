@@ -175,6 +175,43 @@ func TestDownloadFailsCleanly(t *testing.T) {
 	}
 }
 
+// A Chromium cut short or with its mode lost is a cache that cannot be
+// read (tdp E3): Installed says no, and webu fetches it again as on the
+// first start.
+func TestABrokenChromiumIsNotInstalled(t *testing.T) {
+	if _, err := hostPlatform(); err != nil {
+		t.Skip(err)
+	}
+	t.Setenv("WEBU__CACHE", t.TempDir())
+	exe, err := Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(exe), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		what string
+		body []byte
+		mode os.FileMode
+		ok   bool
+	}{
+		{"empty", nil, 0o755, false},
+		{"not executable", []byte("#!/bin/sh\n"), 0o644, false},
+		{"whole", []byte("#!/bin/sh\n"), 0o755, true},
+	} {
+		if err := os.WriteFile(exe, c.body, c.mode); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(exe, c.mode); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := Installed(); ok != c.ok {
+			t.Errorf("%s: Installed %v, want %v", c.what, ok, c.ok)
+		}
+	}
+}
+
 func TestProfileDirUnderData(t *testing.T) {
 	t.Setenv("WEBU__DATA", "/tmp/wd")
 	if d, _ := ProfileDir(); d != filepath.Join("/tmp/wd", "profile") {

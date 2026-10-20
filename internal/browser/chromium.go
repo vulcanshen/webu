@@ -94,14 +94,17 @@ func Executable() (string, error) {
 	return filepath.Join(dir, filepath.FromSlash(p.exe)), nil
 }
 
-// Installed reports the binary's path and whether it is there to run.
+// Installed reports the binary's path and whether it is there to run: a
+// file, not empty, executable. One that is not — gone, cut short, its mode
+// lost — is a cache that cannot be read, fetched again as on the first
+// start, its size said first (tdp E3).
 func Installed() (string, bool) {
 	exe, err := Executable()
 	if err != nil {
 		return "", false
 	}
 	st, err := os.Stat(exe)
-	return exe, err == nil && !st.IsDir()
+	return exe, err == nil && st.Mode().IsRegular() && st.Size() > 0 && st.Mode()&0o111 != 0
 }
 
 // Progress is one download report: bytes so far, and the total if the server
