@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.9.0），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.0，還沒打 tag 前用 `go.work` 接本機的；`go.mod` 暫時是 v0.2.2）上，是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.9.0），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.0）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
