@@ -6,7 +6,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
-v0.9.0: the frames, the menus, the popups and the keys are now the same
+v0.9.1: the frames, the menus, the popups and the keys are now the same
 code as the rest of the family's.
 
 **Two files move, and webu moves them for you**: `bookmarks.yaml` goes
@@ -38,7 +38,8 @@ At the start webu names it and why, and offers to move it aside to
   in a page's text, a tab's title, a bookmark, a DevTools row or a toast
   each one shows as its name in red (`\t`, `\n`, `\x1b`), nothing dropped
   — a title or link text is no longer cut at a line break. A Tab in a
-  code block is `input_tab_width` spaces.
+  code block, a DevTools console message or a line of source is
+  `input_tab_width` spaces.
 - **The page's parts are the page panel's tabs.** Its frame reads
   `[2] PAGE HEADER BODY OTHERS FOOTER` (the parts this page has); `h|l`
   switch between them, and the first tab is the whole page. The strip

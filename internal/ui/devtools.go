@@ -98,8 +98,10 @@ func (m *AppModel) buildDevtools() {
 		// one a row reads best without first (layout/panel).
 		{{Title: "Method", Drop: 3}, {Title: "Status", Number: true}, {Title: "Type", Drop: 1}, {Title: "Size", Number: true, Drop: 2}, {Title: "URL", Shrink: true}},
 		{{Title: "Kind", Drop: 1}, {Title: "Name", Shrink: true}, {Title: "Value", Shrink: true}},
-		{{Title: "Level", Drop: 1}, {Title: "Text", Shrink: true}},
-		{{Title: "Line", Number: true, Drop: 1}, {Title: "Source", Shrink: true}},
+		// A console message and a line of source are lines of text: their
+		// Tabs are spaces (components-29).
+		{{Title: "Level", Drop: 1}, {Title: "Text", Shrink: true, Line: true}},
+		{{Title: "Line", Number: true, Drop: 1}, {Title: "Source", Shrink: true, Line: true}},
 	}
 	for i := range d.lists {
 		i := i
@@ -283,9 +285,6 @@ func (m *AppModel) refreshDev() {
 	d.lists[devConsole].SetRows(rows)
 
 	rows = nil
-	// TODO(lib WB21): the Source column is a line of text (tdp v0.9.1,
-	// components-29): its Tabs input_tab_width spaces, once terminu-go's
-	// Column can say so; until then they are red \t, as in any cell.
 	for i, l := range d.source {
 		rows = append(rows, terminu.Row{ID: strconv.Itoa(i), Cells: []string{strconv.Itoa(i + 1), l}})
 	}
