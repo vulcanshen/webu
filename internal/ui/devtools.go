@@ -283,6 +283,9 @@ func (m *AppModel) refreshDev() {
 	d.lists[devConsole].SetRows(rows)
 
 	rows = nil
+	// TODO(lib WB21): the Source column is a line of text (tdp v0.9.1,
+	// components-29): its Tabs input_tab_width spaces, once terminu-go's
+	// Column can say so; until then they are red \t, as in any cell.
 	for i, l := range d.source {
 		rows = append(rows, terminu.Row{ID: strconv.Itoa(i), Cells: []string{strconv.Itoa(i + 1), l}})
 	}
