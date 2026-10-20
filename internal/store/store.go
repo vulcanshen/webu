@@ -191,6 +191,13 @@ func path(name string) (string, error) {
 	return paths.Either(p, old), nil
 }
 
+// Path is where one of webu's files is read and written ("" when the
+// directories cannot be told), for saying which file could not be read.
+func Path(name string) string {
+	p, _ := path(name)
+	return p
+}
+
 // places are where name goes and where an older webu kept it ("" when
 // that is the same place).
 func places(name string) (string, string, error) {

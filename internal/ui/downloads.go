@@ -101,13 +101,14 @@ func (m *AppModel) refreshDownloads() {
 	for i := len(m.dls) - 1; i >= 0; i-- {
 		d := m.dls[i]
 		state := d.describe()
+		row := terminu.Row{ID: d.guid, Cells: []string{d.name, state}}
 		switch d.state {
 		case dlRunning:
-			state = terminu.Fg(terminu.Green).Render(state) // in progress (components/color)
+			row.Styled = [][]terminu.Span{nil, {{Text: state, Style: terminu.Fg(terminu.Green)}}} // in progress (components/color)
 		case dlCancelled:
-			state = terminu.Fg(terminu.Overlay0).Render(state)
+			row.Styled = [][]terminu.Span{nil, {{Text: state, Style: terminu.Fg(terminu.Overlay0)}}}
 		}
-		rows = append(rows, terminu.Row{ID: d.guid, Cells: []string{oneLine(d.name), state}})
+		rows = append(rows, row)
 	}
 	m.dlList.SetRows(rows)
 }

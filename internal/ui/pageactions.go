@@ -104,7 +104,7 @@ func (m *AppModel) pageActions(t *tab) []terminu.Action {
 // item is an item operation with no hotkey: the page's items are
 // menu-only, the letters being the panel's (ux.md §A.0).
 func (m *AppModel) item(label, desc string, do func() tea.Cmd) terminu.Action {
-	return terminu.Action{Label: label, Desc: oneLine(desc), Scope: terminu.ItemScope, Do: m.do(do)}
+	return terminu.Action{Label: label, Desc: strings.TrimSpace(desc), Scope: terminu.ItemScope, Do: m.do(do)}
 }
 
 // enterAction is what Enter does to the item under the cursor (ux.md
@@ -163,8 +163,8 @@ func (m *AppModel) enterAction(t *tab) *terminu.Action {
 // openLinkAsk is the question before following a link that leaves the
 // page: its text and its address, then where it opens.
 func openLinkAsk(l *ir.Node) *terminu.Ask {
-	details := []string{oneLine(l.URL)}
-	if text := oneLine(l.Text()); text != "" {
+	details := []string{strings.TrimSpace(l.URL)}
+	if text := strings.TrimSpace(l.Text()); text != "" {
 		details = append([]string{text}, details...)
 	}
 	return &terminu.Ask{Title: "Open link", Details: details, Question: "Open it in this tab?", Verb: "open"}
@@ -236,7 +236,7 @@ func enterWords(t *tab, n *ir.Node) (string, string, string) {
 		}
 		return "Collapse", "one line, out of the way", "collapse"
 	case ir.Link:
-		return "Open", oneLine(n.URL), "open"
+		return "Open", strings.TrimSpace(n.URL), "open"
 	case ir.Textbox:
 		return "Edit", "type a value", "edit"
 	case ir.Combobox:
@@ -302,16 +302,16 @@ func (m *AppModel) itemActions(t *tab, n *ir.Node) []terminu.Action {
 	return append(out,
 		m.item("Yank text", "what it says", func() tea.Cmd { return copyToClipboard(n.Text()) }),
 		m.item("Inspect", "role, name, state, node id", func() tea.Cmd {
-			return m.a.Viewer(&terminu.Viewer{Title: "Inspect", Subject: oneLine(nameOr(n.Name, n.Role)), Glyph: glyphInfo, Lines: inspectLines(n),
+			return m.a.Viewer(&terminu.Viewer{Title: "Inspect", Subject: strings.TrimSpace(nameOr(n.Name, n.Role)), Glyph: glyphInfo, Lines: inspectLines(n),
 				Select: selection()})
 		}))
 }
 
 // targetLabel is a target's name in a cell's list.
 func targetLabel(n *ir.Node) string {
-	label := oneLine(n.Name)
+	label := strings.TrimSpace(n.Name)
 	if label == "" {
-		label = oneLine(nameOr(n.Text(), n.URL))
+		label = strings.TrimSpace(nameOr(n.Text(), n.URL))
 	}
 	return label
 }
@@ -319,7 +319,7 @@ func targetLabel(n *ir.Node) string {
 // targetDesc says what a target in a cell is — and "here" first when it
 // is where the user is (aria-current).
 func targetDesc(n *ir.Node, _ int) string {
-	desc := oneLine(n.URL)
+	desc := strings.TrimSpace(n.URL)
 	switch n.Kind {
 	case ir.Button:
 		desc = "button"
@@ -576,7 +576,7 @@ func (m *AppModel) enterOn(t *tab, n *ir.Node) tea.Cmd {
 	if n.Disabled {
 		// A click on a disabled control does nothing in the browser either,
 		// but a terminal's grey is easy to miss: say why nothing happened.
-		return m.toast(oneLine(nameOr(n.Name, "This")) + " is disabled on the page")
+		return m.toast(strings.TrimSpace(nameOr(n.Name, "This")) + " is disabled on the page")
 	}
 	switch n.Kind {
 	case ir.Textbox:
@@ -614,7 +614,7 @@ func (m *AppModel) enterCell(t *tab, n *ir.Node) tea.Cmd {
 	}
 	// The column's name is the page's own words, kept as it is after the
 	// title: CELL: Price (components/layout/popup).
-	return m.a.MenuAbout("Cell", truncate(oneLine(columnHeader(t.root, n)), 40), terminu.MenuSection{Actions: acts})
+	return m.a.MenuAbout("Cell", truncate(strings.TrimSpace(columnHeader(t.root, n)), 40), terminu.MenuSection{Actions: acts})
 }
 
 // showCell is a cell's content in full: the column's header as the
@@ -624,7 +624,7 @@ func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
 	if text == "" {
 		text = "(empty)"
 	}
-	return m.a.Viewer(&terminu.Viewer{Title: "Cell", Subject: oneLine(nameOr(columnHeader(t.root, n), "")),
+	return m.a.Viewer(&terminu.Viewer{Title: "Cell", Subject: strings.TrimSpace(nameOr(columnHeader(t.root, n), "")),
 		Glyph: glyphTable, Lines: strings.Split(text, "\n"), Select: selection()})
 }
 
@@ -682,8 +682,8 @@ func sameFragment(pageURL, url string) string {
 // askOpenLink puts a link's text and URL up before following it: a click
 // would leave the page, and nothing on the screen says where to.
 func (m *AppModel) askOpenLink(t *tab, n *ir.Node) tea.Cmd {
-	details := []string{oneLine(n.URL)}
-	if text := oneLine(n.Text()); text != "" {
+	details := []string{strings.TrimSpace(n.URL)}
+	if text := strings.TrimSpace(n.Text()); text != "" {
 		details = append([]string{text}, details...)
 	}
 	return m.a.Confirm(terminu.Ask{Title: "Open link", Details: details,
@@ -702,12 +702,12 @@ func (m *AppModel) chooseOptionsFor(t *tab, n *ir.Node) tea.Cmd {
 	opts := make([]string, len(n.Children))
 	sel := -1
 	for i, o := range n.Children {
-		opts[i] = oneLine(nameOr(o.Name, "(empty)"))
+		opts[i] = strings.TrimSpace(nameOr(o.Name, "(empty)"))
 		if o.Selected {
 			sel = i
 		}
 	}
-	return m.a.Select(terminu.Select{Title: "Choose", Subject: oneLine(n.Name), Glyph: glyphSelect,
+	return m.a.Select(terminu.Select{Title: "Choose", Subject: strings.TrimSpace(n.Name), Glyph: glyphSelect,
 		Options: opts, Selected: sel,
 		Done: func(i int) tea.Cmd {
 			if i < 0 || i >= len(n.Children) {
@@ -743,7 +743,7 @@ func inSearch(t *tab, n *ir.Node) bool {
 // is written into a search box is then offered to the page's Enter.
 func (m *AppModel) editFieldAs(t *tab, n *ir.Node, search bool) tea.Cmd {
 	id := n.ID
-	name := oneLine(nameOr(n.Name, "the field"))
+	name := strings.TrimSpace(nameOr(n.Name, "the field"))
 	takes := fieldTakes(n)
 	typeIn := func(v string) tea.Cmd {
 		return t.press(func(ctx context.Context) error { return page.Type(ctx, id, v) })
@@ -819,7 +819,7 @@ func hostOf(u string) string {
 func (m *AppModel) slideMenu(t *tab, n *ir.Node) tea.Cmd {
 	values, at := sliderValues(n)
 	id := n.ID
-	return m.a.Select(terminu.Select{Title: "Slide", Subject: oneLine(nameOr(n.Name, "slider")) + " · " + sliderRange(n),
+	return m.a.Select(terminu.Select{Title: "Slide", Subject: strings.TrimSpace(nameOr(n.Name, "slider")) + " · " + sliderRange(n),
 		Glyph: glyphPencil, Options: values, Selected: at,
 		Done: func(i int) tea.Cmd {
 			if i < 0 || i >= len(values) {

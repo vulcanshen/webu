@@ -454,6 +454,50 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 		used++
 	}
 	for _, s := range row.segs {
+		var style lipgloss.Style
+		cursor := s.item >= 0 && s.item == t.cursor
+		switch {
+		case cursor:
+			// The cursor is the panel cursor on every item, a heading too
+			// (layout/panel).
+			style = st.cur
+		case row.code:
+			var ok bool
+			if style, ok = st.codeStyles[s.kind]; !ok {
+				style = st.codeStyles[segCode]
+			}
+		case s.kind == segTabOn || s.kind == segTabOff || s.kind == segTabCap:
+			// A tablist's strip, in the colour of the section it sits in,
+			// the chosen tab filled with it. Dimmed with the page.
+			ink := levelColor(max(1, row.heading))
+			if t.loading {
+				ink = dimColor
+			}
+			style = lipgloss.NewStyle().Foreground(ink)
+			if s.kind == segTabOn {
+				style = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(ink).Bold(true)
+			}
+		case row.heading > 0 && !t.loading:
+			// The page's own outline, drawn on the ink: one bright hue
+			// per depth, cycling (theme.levelColor).
+			style = st.styles[s.kind].Foreground(levelColor(row.heading))
+		case row.table:
+			bg := pageTableBg
+			if row.header {
+				bg = pageTableHeadBg
+			}
+			style = st.styles[s.kind].Background(bg)
+		default:
+			style = st.styles[s.kind]
+		}
+		style = withAttr(style, s.attr)
+		if strings.ContainsFunc(s.text, isControl) {
+			// What the page wrote never reaches the terminal as it is: a
+			// control character is its name, in Red (components, control
+			// characters). The row is still cut to the panel.
+			used += writeNamed(&b, style, controlStyle(cursor), s.text, innerW-used)
+			continue
+		}
 		text := s.text
 		if used+dispW(text) > innerW {
 			text = truncate(text, innerW-used)
@@ -462,43 +506,7 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 			continue
 		}
 		used += dispW(text)
-		switch {
-		case s.item >= 0 && s.item == t.cursor:
-			// The cursor is the panel cursor on every item, a heading too
-			// (layout/panel).
-			b.WriteString(withAttr(st.cur, s.attr).Render(text))
-		case row.code:
-			style, ok := st.codeStyles[s.kind]
-			if !ok {
-				style = st.codeStyles[segCode]
-			}
-			b.WriteString(withAttr(style, s.attr).Render(text))
-		case s.kind == segTabOn || s.kind == segTabOff || s.kind == segTabCap:
-			// A tablist's strip, in the colour of the section it sits in,
-			// the chosen tab filled with it. Dimmed with the page.
-			ink := levelColor(max(1, row.heading))
-			if t.loading {
-				ink = dimColor
-			}
-			switch s.kind {
-			case segTabOn:
-				b.WriteString(withAttr(lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(ink).Bold(true), s.attr).Render(text))
-			default:
-				b.WriteString(withAttr(lipgloss.NewStyle().Foreground(ink), s.attr).Render(text))
-			}
-		case row.heading > 0 && !t.loading:
-			// The page's own outline, drawn on the ink: one bright hue
-			// per depth, cycling (theme.levelColor).
-			b.WriteString(withAttr(st.styles[s.kind].Foreground(levelColor(row.heading)), s.attr).Render(text))
-		case row.table:
-			bg := pageTableBg
-			if row.header {
-				bg = pageTableHeadBg
-			}
-			b.WriteString(withAttr(st.styles[s.kind].Background(bg), s.attr).Render(text))
-		default:
-			b.WriteString(withAttr(st.styles[s.kind], s.attr).Render(text))
-		}
+		b.WriteString(style.Render(text))
 	}
 	switch {
 	case row.code:
@@ -513,6 +521,55 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 		b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
 	}
 	return b.String()
+}
+
+// isControl is a control character (C0, DEL, C1): never sent to the
+// terminal as it is (components, control characters).
+func isControl(r rune) bool { return r < 0x20 || r >= 0x7f && r <= 0x9f }
+
+// controlName is how a control character is shown: its name, \t, \n,
+// \x1b, as the lib writes it (terminu.Escape, its colour left out).
+func controlName(r rune) string { return terminu.StripStyles(terminu.Escape(string(r))) }
+
+// controlStyle is a control character's name: Red, or Red under Base on
+// the cursor (components/color, the error colour).
+func controlStyle(onCursor bool) lipgloss.Style {
+	if onCursor {
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(warnColor)
+	}
+	return lipgloss.NewStyle().Foreground(warnColor)
+}
+
+// writeNamed writes text in style, each control character in it by its
+// name in name, no wider than room; it returns the cells it used.
+func writeNamed(b *strings.Builder, style, name lipgloss.Style, text string, room int) int {
+	used := 0
+	var run strings.Builder
+	flush := func() {
+		if run.Len() > 0 {
+			b.WriteString(style.Render(run.String()))
+			run.Reset()
+		}
+	}
+	for _, r := range text {
+		piece := string(r)
+		if isControl(r) {
+			piece = controlName(r)
+		}
+		w := dispW(piece)
+		if used+w > room {
+			break
+		}
+		used += w
+		if isControl(r) {
+			flush()
+			b.WriteString(name.Render(piece))
+			continue
+		}
+		run.WriteString(piece)
+	}
+	flush()
+	return used
 }
 
 // boxRule is a framed block's top or bottom edge, the name of the block

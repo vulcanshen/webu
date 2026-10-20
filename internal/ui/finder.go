@@ -188,7 +188,7 @@ func (m *AppModel) openFinder() tea.Cmd {
 	for i, h := range hits {
 		items[i] = terminu.FinderItem{ID: strconv.Itoa(i), Text: h.text, Icon: h.part.glyph(), IconColor: terminu.Overlay0}
 	}
-	return m.a.Find(&terminu.Finder{Title: "Search", Subject: oneLine(t.title), Glyph: glyphSearch, Verb: "go",
+	return m.a.Find(&terminu.Finder{Title: "Search", Subject: strings.TrimSpace(t.title), Glyph: glyphSearch, Verb: "go",
 		Items: items,
 		Preview: func(it terminu.FinderItem) (string, []string) {
 			i, err := strconv.Atoi(it.ID)

@@ -35,8 +35,9 @@ const (
 // console keep arriving.
 type devTickMsg struct{}
 
-func devTick() tea.Cmd {
-	return tea.Tick(500*time.Millisecond, func(time.Time) tea.Msg { return devTickMsg{} })
+// devTick is on the app's clock (App.Tick), so a test can move it.
+func (m *AppModel) devTick() tea.Cmd {
+	return m.a.Tick(500*time.Millisecond, func(time.Time) tea.Msg { return devTickMsg{} })
 }
 
 // storageMsg, bodyMsg, devSourceMsg and evalMsg are Chromium's answers to
@@ -163,7 +164,7 @@ func (m *AppModel) devMsg(msg tea.Msg) tea.Cmd {
 		if m.devOn() {
 			m.refreshDev()
 		}
-		return devTick()
+		return m.devTick()
 	case storageMsg:
 		if t != nil && msg.tabID == t.id {
 			d.panel.Loading = false
@@ -196,7 +197,10 @@ func (m *AppModel) devMsg(msg tea.Msg) tea.Cmd {
 			default:
 				e, _ := m.netEntry(msg.id)
 				if text, ok := textBody(msg.body, e.Mime); ok {
-					lines = append(lines, strings.Split(strings.ReplaceAll(text, "\t", "    "), "\n")...)
+					// Reading content: the lib draws a Tab as input_tab_width
+					// spaces, a \n in a line as a line break (components,
+					// control characters).
+					lines = append(lines, text)
 				} else {
 					lines = append(lines, terminu.Fg(terminu.Overlay0).Render(humanBytes(float64(len(msg.body)))+" of "+nameOr(e.Mime, "binary")))
 				}
@@ -232,48 +236,55 @@ func (m *AppModel) refreshDev() {
 	d.console = t.dev.Console()
 	var rows []terminu.Row
 	for _, e := range d.net {
-		status := ""
+		// The values as they are, the lib drawing any control character by
+		// its name; a colour of webu's own is a span (components, control
+		// characters).
+		status, ink := "", terminu.Style{}
 		switch {
 		case e.Error != "":
-			status = terminu.Fg(terminu.Red).Render("failed")
+			status, ink = "failed", terminu.Fg(terminu.Red)
 		case e.Status > 0:
 			status = strconv.FormatInt(e.Status, 10)
 		default:
-			status = terminu.Fg(terminu.Overlay0).Render("…")
+			status, ink = "…", terminu.Fg(terminu.Overlay0)
 		}
-		rows = append(rows, terminu.Row{ID: string(e.ID), Cells: []string{e.Method, status, e.Type, humanBytes(e.Size), oneLine(e.URL)},
-			Sort: []string{e.Method, strconv.FormatInt(e.Status, 10), e.Type, strconv.FormatFloat(e.Size, 'f', 0, 64), e.URL}})
+		row := terminu.Row{ID: string(e.ID), Cells: []string{e.Method, status, e.Type, humanBytes(e.Size), e.URL},
+			Sort: []string{e.Method, strconv.FormatInt(e.Status, 10), e.Type, strconv.FormatFloat(e.Size, 'f', 0, 64), e.URL}}
+		if ink != (terminu.Style{}) {
+			row.Styled = [][]terminu.Span{nil, {{Text: status, Style: ink}}}
+		}
+		rows = append(rows, row)
 	}
 	d.lists[devNetwork].SetRows(rows)
 
 	rows = nil
 	for i, c := range d.storage.Cookies {
-		rows = append(rows, terminu.Row{ID: "c" + strconv.Itoa(i), Cells: []string{"cookie", oneLine(c.Name), oneLine(c.Value)}})
+		rows = append(rows, terminu.Row{ID: "c" + strconv.Itoa(i), Cells: []string{"cookie", c.Name, c.Value}})
 	}
 	for i, kv := range d.storage.Local {
-		rows = append(rows, terminu.Row{ID: "l" + strconv.Itoa(i), Cells: []string{"local", oneLine(kv[0]), oneLine(kv[1])}})
+		rows = append(rows, terminu.Row{ID: "l" + strconv.Itoa(i), Cells: []string{"local", kv[0], kv[1]}})
 	}
 	for i, kv := range d.storage.Session {
-		rows = append(rows, terminu.Row{ID: "s" + strconv.Itoa(i), Cells: []string{"session", oneLine(kv[0]), oneLine(kv[1])}})
+		rows = append(rows, terminu.Row{ID: "s" + strconv.Itoa(i), Cells: []string{"session", kv[0], kv[1]}})
 	}
 	d.lists[devStorage].SetRows(rows)
 
 	rows = nil
 	for i, c := range d.console {
-		level := c.Level
+		row := terminu.Row{ID: strconv.Itoa(i), Cells: []string{c.Level, c.Text}}
 		switch c.Level {
 		case "error":
-			level = terminu.Fg(terminu.Red).Render(level)
+			row.Styled = [][]terminu.Span{{{Text: c.Level, Style: terminu.Fg(terminu.Red)}}}
 		case "warning":
-			level = terminu.Fg(terminu.Peach).Render(level)
+			row.Styled = [][]terminu.Span{{{Text: c.Level, Style: terminu.Fg(terminu.Peach)}}}
 		}
-		rows = append(rows, terminu.Row{ID: strconv.Itoa(i), Cells: []string{level, oneLine(c.Text)}})
+		rows = append(rows, row)
 	}
 	d.lists[devConsole].SetRows(rows)
 
 	rows = nil
 	for i, l := range d.source {
-		rows = append(rows, terminu.Row{ID: strconv.Itoa(i), Cells: []string{strconv.Itoa(i + 1), strings.ReplaceAll(l, "\t", "    ")}})
+		rows = append(rows, terminu.Row{ID: strconv.Itoa(i), Cells: []string{strconv.Itoa(i + 1), l}})
 	}
 	d.lists[devSource].SetRows(rows)
 }

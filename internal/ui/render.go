@@ -237,9 +237,13 @@ type renderOpts struct {
 	// fold overrides the default folding of landmarks: true folds, false
 	// opens. Absent means the default (renderer.folded).
 	fold map[cdp.BackendNodeID]bool
+	// tabW is how many spaces a Tab in a code block is (input_tab_width,
+	// tdp E3); 0 is 4.
+	tabW int
 }
 
 type renderer struct {
+	tabW  int // the spaces a Tab in a code block is
 	width int
 	textW int // where flow wraps: width, or the measure when narrower
 	rows  []row
@@ -305,7 +309,10 @@ func render(root *ir.Node, width int) layout {
 
 func renderWith(root *ir.Node, o renderOpts) layout {
 	r := &renderer{width: max(1, o.width), textW: max(1, o.width), fold: o.fold,
-		drill: o.drill, root: root, marks: map[*ir.Node]int{}, cellItem: -1}
+		drill: o.drill, root: root, marks: map[*ir.Node]int{}, cellItem: -1, tabW: o.tabW}
+	if r.tabW <= 0 {
+		r.tabW = 4
+	}
 	if o.measure > 0 && o.measure < r.width {
 		r.textW = o.measure
 	}
@@ -1688,7 +1695,7 @@ func (r *renderer) codeBlock(n *ir.Node, id int) {
 	// width — the text measure, which is also where its ground stops —
 	// rather than being cut: a cut line of code or JSON is a line lost.
 	width := max(1, r.textW-dispW(r.indent))
-	text := strings.ReplaceAll(n.Text(), "\t", "    ")
+	text := strings.ReplaceAll(n.Text(), "\t", strings.Repeat(" ", r.tabW))
 	lines := highlightLines(n.Lang, text)
 	if lines == nil {
 		for _, line := range strings.Split(text, "\n") {

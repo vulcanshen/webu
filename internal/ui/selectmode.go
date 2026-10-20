@@ -428,11 +428,16 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 		b.WriteString(lineNum(r+1, gut, false))
 		for _, sg := range t.lay.rows[r].segs {
 			for _, ch := range sg.text {
-				w := dispW(string(ch))
+				// A control character is its name, in Red (components,
+				// control characters), still one column of the text.
+				piece, style := string(ch), styles[sg.kind]
+				if isControl(ch) {
+					piece, style = controlName(ch), controlStyle(false)
+				}
+				w := dispW(piece)
 				if used+w > innerW {
 					break
 				}
-				style := styles[sg.kind]
 				if in, isCur := s.matchAt(r, col); in {
 					style = style.Underline(true)
 					if isCur {
@@ -445,7 +450,7 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 				if r == s.row && col == s.col {
 					style = cur
 				}
-				b.WriteString(style.Render(string(ch)))
+				b.WriteString(style.Render(piece))
 				used += w
 				col++
 			}

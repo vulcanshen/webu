@@ -2,6 +2,7 @@ package ui
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -55,7 +56,7 @@ func (m *AppModel) refreshHistory() {
 	}
 	rows := make([]terminu.Row, len(m.history))
 	for i, v := range m.history {
-		rows[i] = terminu.Row{ID: strconv.Itoa(i), Cells: []string{oneLine(nameOr(v.Title, v.URL)), oneLine(v.URL), ago(v.At)},
+		rows[i] = terminu.Row{ID: strconv.Itoa(i), Cells: []string{strings.TrimSpace(nameOr(v.Title, v.URL)), strings.TrimSpace(v.URL), ago(v.At)},
 			Sort: []string{v.Title, v.URL, strconv.FormatInt(-v.At.Unix(), 10)}}
 	}
 	m.histList.SetRows(rows)

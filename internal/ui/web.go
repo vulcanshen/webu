@@ -177,14 +177,17 @@ func (m *AppModel) syncTabs() {
 			// nothing looks the same as one that has finished.
 			mark = glyphLive
 		}
-		cell := mark + " " + oneLine(title)
+		// The page's title as it is: the lib draws a control character in it
+		// by its name (components, control characters).
+		cell := mark + " " + title
+		row := terminu.Row{ID: strconv.Itoa(t.id), Cells: []string{cell}}
 		switch {
 		case i == m.shown:
-			cell = terminu.Fg(terminu.Green).Render(cell)
+			row.Styled = [][]terminu.Span{{{Text: cell, Style: terminu.Fg(terminu.Green)}}}
 		case t.pending:
-			cell = terminu.Fg(terminu.Overlay0).Render(cell)
+			row.Styled = [][]terminu.Span{{{Text: cell, Style: terminu.Fg(terminu.Overlay0)}}}
 		}
-		rows = append(rows, terminu.Row{ID: strconv.Itoa(t.id), Cells: []string{cell}})
+		rows = append(rows, row)
 	}
 	m.tabsList.SetRows(rows)
 	if t := m.shownTab(); t != nil {

@@ -234,7 +234,7 @@ func (m *AppModel) saveConfig(key string) tea.Cmd {
 	switch key {
 	case "download_dir":
 		cmds = append(cmds, m.pointDownloads())
-	case "measure":
+	case "measure", "input_tab_width":
 		m.applyMeasure()
 	}
 	return tea.Batch(cmds...)
@@ -246,11 +246,11 @@ func (m *AppModel) applyConfig() {
 	m.a.InputTabWidth = m.cfg.TabWidth()
 }
 
-// applyMeasure gives every tab the measure now in force and lays it out
-// again, cursor kept in view.
+// applyMeasure gives every tab the measure and the tab width now in force
+// and lays it out again, cursor kept in view.
 func (m *AppModel) applyMeasure() {
 	for _, t := range m.tabs {
-		t.measure = m.cfg.TextWidth()
+		t.measure, t.tabW = m.cfg.TextWidth(), m.cfg.TabWidth()
 		if t.root != nil {
 			t.relayout(m.pageW())
 			t.scrollToCursor(m.pageVisible())

@@ -167,8 +167,8 @@ func (m *AppModel) refreshBookmarks() {
 	var rows []terminu.Row
 	book := func(i, depth int) {
 		b := m.bookmarks[i]
-		title := strings.Repeat("  ", depth) + oneLine(nameOr(b.Title, b.URL))
-		rows = append(rows, terminu.Row{ID: bmRowID(bmRow{ref: i}), Cells: []string{title, oneLine(b.URL)}})
+		title := strings.Repeat("  ", depth) + nameOr(b.Title, b.URL)
+		rows = append(rows, terminu.Row{ID: bmRowID(bmRow{ref: i}), Cells: []string{title, b.URL}})
 	}
 	for i, b := range m.bookmarks {
 		if b.Folder == "" {
@@ -188,8 +188,10 @@ func (m *AppModel) refreshBookmarks() {
 					n++
 				}
 			}
+			shut := "(" + itoa(n) + " shut)"
 			rows = append(rows, terminu.Row{ID: bmRowID(bmRow{folder: f, isFolder: true}),
-				Cells: []string{name + " " + terminu.Fg(terminu.Overlay0).Render("("+itoa(n)+" shut)"), ""}})
+				Cells:  []string{name + " " + shut, ""},
+				Styled: [][]terminu.Span{{{Text: name + " "}, {Text: shut, Style: terminu.Fg(terminu.Overlay0)}}, nil}})
 			continue
 		}
 		rows = append(rows, terminu.Row{ID: bmRowID(bmRow{folder: f, isFolder: true}), Cells: []string{name, ""}})
@@ -296,7 +298,7 @@ func (m *AppModel) deleteAsk() *terminu.Ask {
 		return ask
 	}
 	b := m.bookmarks[r.ref]
-	return &terminu.Ask{Title: "Delete", Subject: oneLine(nameOr(b.Title, b.URL)), Details: []string{b.URL},
+	return &terminu.Ask{Title: "Delete", Subject: strings.TrimSpace(nameOr(b.Title, b.URL)), Details: []string{b.URL},
 		Question: "Delete this bookmark?", Verb: "delete"}
 }
 
@@ -326,7 +328,7 @@ func (m *AppModel) moveSelect(ref int) tea.Cmd {
 		}
 		opts = append(opts, strings.Repeat("  ", folderDepth(f)-1)+folderBase(f))
 	}
-	return m.a.Select(terminu.Select{Title: "Move to", Subject: oneLine(nameOr(m.bookmarks[ref].Title, m.bookmarks[ref].URL)),
+	return m.a.Select(terminu.Select{Title: "Move to", Subject: strings.TrimSpace(nameOr(m.bookmarks[ref].Title, m.bookmarks[ref].URL)),
 		Glyph: glyphFolder, Options: opts, Selected: sel,
 		Done: func(i int) tea.Cmd {
 			cmd := m.moveBookmark(ref, i)
@@ -456,7 +458,7 @@ func (m *AppModel) addBookmark(title, url string) tea.Cmd {
 	m.refreshBookmarks()
 	// The cursor goes to what was just added (tdp K3).
 	m.bmList.Select(bmRowID(bmRow{ref: len(m.bookmarks) - 1}))
-	return m.toastOK("Added " + oneLine(nameOr(title, url)))
+	return m.toastOK("Added " + strings.TrimSpace(nameOr(title, url)))
 }
 
 // ---------------------------------------------------------- adding one
@@ -508,7 +510,7 @@ func (m *AppModel) startAddBookmark(folder string) tea.Cmd {
 			}
 			m.refreshBookmarks()
 			m.bmList.Select(bmRowID(bmRow{ref: len(m.bookmarks) - 1}))
-			return m.toastOK("Added " + oneLine(b.Title)), nil
+			return m.toastOK("Added " + strings.TrimSpace(b.Title)), nil
 		}})
 }
 
@@ -653,8 +655,8 @@ func (m *AppModel) startRename(r bmRow) tea.Cmd {
 		return nil
 	}
 	ref := r.ref
-	return m.a.Text(terminu.TextInput{Title: "Rename bookmark", Subject: oneLine(m.bookmarks[ref].Title), Glyph: glyphBookmark,
-		Name: "The title", Prompt: "New title for " + oneLine(nameOr(m.bookmarks[ref].Title, m.bookmarks[ref].URL)), Verb: "rename", Old: m.bookmarks[ref].Title,
+	return m.a.Text(terminu.TextInput{Title: "Rename bookmark", Subject: strings.TrimSpace(m.bookmarks[ref].Title), Glyph: glyphBookmark,
+		Name: "The title", Prompt: "New title for " + strings.TrimSpace(nameOr(m.bookmarks[ref].Title, m.bookmarks[ref].URL)), Verb: "rename", Old: m.bookmarks[ref].Title,
 		Check: func(v string) error {
 			if strings.TrimSpace(v) == "" {
 				return errors.New("The title can't be empty")
@@ -668,7 +670,7 @@ func (m *AppModel) startRename(r bmRow) tea.Cmd {
 			}
 			m.refreshBookmarks()
 			m.bmList.Select(bmRowID(bmRow{ref: ref}))
-			return m.toastOK("Renamed to " + oneLine(v))
+			return m.toastOK("Renamed to " + strings.TrimSpace(v))
 		})})
 }
 

@@ -191,6 +191,12 @@ type tab struct {
 	// id, which survives a recapture; measure is the text width cap.
 	fold    map[cdp.BackendNodeID]bool
 	measure int
+	// tabW is how many spaces a Tab in a code block is: input_tab_width
+	// (tdp E3, reading content).
+	tabW int
+	// tick is the app's clock (App.Tick), for the settle timer a test can
+	// move; tea.Tick when unset.
+	tick func(time.Duration, func(time.Time) tea.Msg) tea.Cmd
 }
 
 // blankGrace is how long a page that keeps arriving empty is still shown
@@ -354,7 +360,7 @@ func (m *AppModel) newTabWith(ctx context.Context, cancel context.CancelFunc) *t
 	// action finds the session its node belongs to. They die with it.
 	ctx = page.WithSessions(ctx, page.NewSessions(ctx))
 	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1, dev: &page.DevLog{},
-		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth(),
+		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth(), tabW: m.cfg.TabWidth(), tick: m.a.Tick,
 		ua: m.browser.UserAgent, uaMeta: m.browser.UAMeta, acting: &sync.Mutex{}}
 	m.nextTabID++
 	page.Observe(ctx, t.dev)
@@ -548,7 +554,11 @@ func (t *tab) refresh() tea.Cmd {
 func (t *tab) settle(after time.Duration) tea.Cmd {
 	t.gen++
 	gen, id := t.gen, t.id
-	return tea.Tick(after, func(time.Time) tea.Msg { return settleMsg{tabID: id, gen: gen} })
+	tick := t.tick
+	if tick == nil {
+		tick = tea.Tick
+	}
+	return tick(after, func(time.Time) tea.Msg { return settleMsg{tabID: id, gen: gen} })
 }
 
 // act runs one CDP action on the tab and then settles.
@@ -888,7 +898,7 @@ func (t *tab) relayout(width int) {
 		// A page Chromium has pruned to the dialog alone keeps the
 		// backdrop it had when the popup appeared.
 		if len(sansPopup(t.root, t.popups).Children) > 0 {
-			t.back = renderWith(base, renderOpts{width: max(1, width), measure: t.measure, fold: t.fold})
+			t.back = renderWith(base, renderOpts{width: max(1, width), measure: t.measure, tabW: t.tabW, fold: t.fold})
 			t.backParts = t.parts
 		}
 		base = &ir.Node{Kind: ir.Document, Children: []*ir.Node{p}}
@@ -908,7 +918,7 @@ func (t *tab) relayout(width int) {
 	// needed, and again when that turns out to be the wrong number of
 	// digits. Twice at most, and only ever at a power of ten.
 	draw := func(g int) layout {
-		return renderWith(root, renderOpts{width: max(1, width-g), measure: t.measure,
+		return renderWith(root, renderOpts{width: max(1, width-g), measure: t.measure, tabW: t.tabW,
 			fold: t.fold, drill: inside.ID})
 	}
 	g := t.gutter

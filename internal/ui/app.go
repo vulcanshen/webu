@@ -3,8 +3,6 @@ package ui
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -78,13 +76,14 @@ type AppModel struct {
 	dls []download
 	// foldedFolders are the bookmark folder rows shut with Enter.
 	foldedFolders map[string]bool
-	// loadErrs are the files main could not read, said on the first frame.
-	loadErrs []string
+	// unread are webu's own files main could not read: each asked about at
+	// the start, moved aside or webu left (tdp E3). sessionUnread holds
+	// session.yaml back from being written while it is one of them.
+	unread        []Unread
+	sessionUnread bool
 	// moves are what main moved to where tdp E3 puts it now, or could not:
-	// said on the first frame too.
+	// said on the first frame.
 	moves []paths.Move
-	// logw is webu.log, where an error toast's whole text goes.
-	logw io.Writer
 
 	// The screens (web.go, bookmarks.go, history.go, downloads.go,
 	// settings.go, devtools.go).
@@ -203,7 +202,7 @@ func (m *AppModel) build() {
 // start is the first frame: the event listener and what the app opens
 // with.
 func (m *AppModel) start() tea.Cmd {
-	return tea.Batch(waitEvent(m.events), m.firstFrame(), devTick(), m.startNews())
+	return tea.Batch(waitEvent(m.events), m.firstFrame(), m.devTick(), m.startNews())
 }
 
 // startNews says on the first screen what main found: the things it moved
@@ -231,18 +230,63 @@ func (m *AppModel) startNews() tea.Cmd {
 			mv.Err.Error()+". webu keeps using it where it is; move it yourself.")
 	}
 	if len(moved) > 0 {
-		text := "Moved " + strings.Join(moved, "; ")
-		m.log(text)
-		cmds = append(cmds, m.toast(text))
+		// The toast goes into the App Log by itself (components/dialog/note).
+		cmds = append(cmds, m.toast("Moved "+strings.Join(moved, "; ")))
 	}
 	if len(stuck) > 0 {
 		cmds = append(cmds, m.a.Error("Move failed", strings.Join(stuck, "\n")))
 	}
-	if len(m.loadErrs) > 0 {
-		cmds = append(cmds, m.a.Error("Read failed", strings.Join(m.loadErrs, "\n")+"\nwebu runs without them."))
+	if len(m.unread) > 0 {
+		cmds = append(cmds, m.moveAside(0))
 	}
 	return tea.Batch(cmds...)
 }
+
+// Unread is one of webu's own files that could not be read (tdp E3, when
+// it cannot be read): its name, where it is, why.
+type Unread struct {
+	Name, Path string
+	Err        error
+}
+
+// moveAside asks about the unread file i, then the next (tdp E3): Enter
+// moves it to .bak and starts that file new, Esc leaves webu, the lib
+// handing main the path and the reason for stderr.
+func (m *AppModel) moveAside(i int) tea.Cmd {
+	u := m.unread[i]
+	return m.a.MoveAside(u.Path, u.Err, func() tea.Cmd {
+		m.fresh(u.Name)
+		m.sync()
+		if i+1 < len(m.unread) {
+			return m.moveAside(i + 1)
+		}
+		return nil
+	})
+}
+
+// fresh starts one of webu's files new, after the unreadable one was moved
+// aside: settings at their defaults, the rest empty.
+func (m *AppModel) fresh(name string) {
+	switch name {
+	case "config.yaml":
+		m.cfg = store.Config{}
+		m.applyConfig()
+		m.refreshSettings()
+	case "bookmarks.yaml":
+		m.bookmarks, m.folders = nil, nil
+		m.refreshBookmarks()
+	case "history.yaml":
+		m.history = nil
+		m.refreshHistory()
+	case "session.yaml":
+		m.sessionUnread = false
+	}
+}
+
+// SessionWritable says whether session.yaml may be written on the way out:
+// not while it could not be read and was not moved aside, so that leaving
+// from its question writes nothing over it.
+func (m *AppModel) SessionWritable() bool { return !m.sessionUnread }
 
 // sync puts webu's state where the lib reads it: panel [1]'s rows, panel
 // [2]'s name, tabs, loading icon and actions, the quit flow's question.
@@ -269,20 +313,9 @@ func (m *AppModel) toast(text string) tea.Cmd { return m.a.Toast(terminu.Info, t
 // toastOK says an action is done: a Success toast (components/dialog/toast).
 func (m *AppModel) toastOK(text string) tea.Cmd { return m.a.Toast(terminu.Success, text) }
 
-// toastErr says something went wrong (tdp F5).
-func (m *AppModel) toastErr(text string) tea.Cmd {
-	// A toast cuts a long one short: the whole of it goes to webu.log too
-	// (components/dialog/toast).
-	m.log(text)
-	return m.a.Toast(terminu.Error, text)
-}
-
-// log writes a line to webu.log.
-func (m *AppModel) log(text string) {
-	if m.logw != nil {
-		fmt.Fprintf(m.logw, "%s webu: %s\n", time.Now().Format(time.RFC3339), text)
-	}
-}
+// toastErr says something went wrong (tdp F5); the App Log keeps it after
+// the toast goes.
+func (m *AppModel) toastErr(text string) tea.Cmd { return m.a.Toast(terminu.Error, text) }
 
 // saveFailed is one of webu's files not written: an error popup, the whole
 // of the reason readable (components/dialog/note).
@@ -292,14 +325,14 @@ func (m *AppModel) saveFailed(file string, err error) tea.Cmd {
 
 // status is the chip row's right end (layout/screen, statusbar): the
 // downloads still running, in Green.
-func (m *AppModel) status(w int) string {
+func (m *AppModel) status(w int) []terminu.Span {
 	// A field of its own width, whatever the count (tdp L2).
 	const field = 22
 	n := m.downloading()
 	if n == 0 {
-		return spaces(min(field, w))
+		return []terminu.Span{{Text: spaces(min(field, w))}}
 	}
-	return terminu.Fg(terminu.Green).Render(padLeft(plural(n, "download")+" in flight", min(field, w)))
+	return []terminu.Span{{Text: padLeft(plural(n, "download")+" in flight", min(field, w)), Style: terminu.Fg(terminu.Green)}}
 }
 
 // progress is the downloads' progress for the line under the chips.
@@ -442,6 +475,11 @@ func (m *AppModel) applyPage(msg pageMsg) tea.Cmd {
 		return nil
 	}
 	fresh := msg.url != "" && msg.url != t.lastVisit
+	if msg.err != nil && !errors.Is(msg.err, context.Canceled) {
+		// The page panel says it failed; the App Log keeps what and why
+		// (tdp E3: what is outside webu, a panel error with details logged).
+		m.a.Log(terminu.Error, "loading "+nameOr(msg.url, t.url)+": "+msg.err.Error())
+	}
 	t.apply(msg, m.pageW())
 	if !fresh {
 		t.scrollToCursor(m.pageVisible())
@@ -530,6 +568,8 @@ func (m *AppModel) firstFrame() tea.Cmd {
 	}
 	if len(m.tabs) > 0 {
 		m.shown = clamp(m.session.Shown, 0, len(m.tabs)-1)
+		// Done in the background as webu starts: the App Log says so.
+		m.a.Log(terminu.Info, "reopened "+plural(len(m.tabs), "tab")+" from the last session")
 	}
 	if len(m.startURLs) > 0 {
 		for i, u := range m.startURLs {
@@ -613,11 +653,16 @@ func (m *AppModel) recordVisit(t *tab) tea.Cmd {
 	return nil
 }
 
-// WithLoadErrors are the files main could not read: said in an error popup
-// on the first frame, where they are seen, rather than on a terminal the
-// screen is about to cover (tdp F5).
-func (m *AppModel) WithLoadErrors(errs []string) *AppModel {
-	m.loadErrs = errs
+// WithUnread are webu's own files main could not read (tdp E3): each is
+// asked about on the first frame, MOVE ASIDE, rather than webu going on
+// with it and a later save writing over it.
+func (m *AppModel) WithUnread(files []Unread) *AppModel {
+	m.unread = files
+	for _, u := range files {
+		if u.Name == "session.yaml" {
+			m.sessionUnread = true
+		}
+	}
 	return m
 }
 
@@ -626,12 +671,6 @@ func (m *AppModel) WithLoadErrors(errs []string) *AppModel {
 // popup names both places of one it could not move.
 func (m *AppModel) WithMoves(moves []paths.Move) *AppModel {
 	m.moves = moves
-	return m
-}
-
-// WithLog is where the whole of an error a toast cuts short is written.
-func (m *AppModel) WithLog(w io.Writer) *AppModel {
-	m.logw = w
 	return m
 }
 
@@ -762,10 +801,10 @@ func resolveURLWith(s, search string) string {
 func inspectLines(n *ir.Node) []string {
 	lines := []string{
 		"role     " + n.Role + " (" + n.Kind.String() + ")",
-		"name     " + oneLine(n.Name),
+		"name     " + strings.TrimSpace(n.Name),
 	}
 	if n.Value != "" {
-		lines = append(lines, "value    "+oneLine(n.Value))
+		lines = append(lines, "value    "+strings.TrimSpace(n.Value))
 	}
 	if n.URL != "" {
 		lines = append(lines, "url      "+n.URL)

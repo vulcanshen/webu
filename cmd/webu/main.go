@@ -90,9 +90,8 @@ func main() {
 		os.Exit(1)
 	}
 	// chromedp's own log goes to a file next to the profile, never to the
-	// terminal the TUI is drawing on, and so does the whole of an error a
-	// toast cuts short. Failing to open it is not fatal: the lines are
-	// dropped instead.
+	// terminal the TUI is drawing on (webu's own goes to the App Log, `!`).
+	// Failing to open it is not fatal: the lines are dropped instead.
 	var logw io.Writer = io.Discard
 	if f, err := os.OpenFile(filepath.Join(filepath.Dir(profile), "webu.log"),
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil {
@@ -105,21 +104,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	// webu's own files. None of them is fatal: a file that will not parse
-	// is news for an error popup on the first frame, not a reason to
-	// withhold the browser — and not a line on a terminal the screen is
+	// webu's own files. One that will not read is asked about on the first
+	// frame (tdp E3: MOVE ASIDE, or leave), not gone on with — a later save
+	// would write over it — and not a line on a terminal the screen is
 	// about to cover.
 	bookmarks, folders, bmErr := store.LoadBookmarks()
 	cfg, cfgErr := store.LoadConfig()
 	history, histErr := store.LoadHistory()
 	session, sessErr := store.LoadSession()
-	var loadErrs []string
+	var unread []ui.Unread
 	for _, e := range []struct {
 		name string
 		err  error
-	}{{"bookmarks.yaml", bmErr}, {"config.yaml", cfgErr}, {"history.yaml", histErr}, {"session.yaml", sessErr}} {
+	}{{"config.yaml", cfgErr}, {"bookmarks.yaml", bmErr}, {"history.yaml", histErr}, {"session.yaml", sessErr}} {
 		if e.err != nil {
-			loadErrs = append(loadErrs, e.name+": "+e.err.Error())
+			unread = append(unread, ui.Unread{Name: e.name, Path: store.Path(e.name), Err: e.err})
 		}
 	}
 	// restore_session: false starts empty, or on the command line's URLs.
@@ -129,7 +128,7 @@ func main() {
 		session = store.Session{}
 	}
 	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session).
-		WithLoadErrors(loadErrs).WithMoves(moves).WithLog(logw)
+		WithUnread(unread).WithMoves(moves)
 
 	// Whatever door the program leaves through — q, an outside SIGINT or
 	// SIGTERM, the terminal closing — Chromium goes too (terminu family: leave
@@ -147,9 +146,12 @@ func main() {
 	// screen (tdp E5); version, help and browser update never ask.
 	runErr := app.Run()
 	// The session is written on every way out, q or a signal, so the tabs
-	// come back next time (ux.md §6).
-	if err := store.SaveSession(app.Session()); err != nil {
-		fmt.Fprintln(os.Stderr, "webu: session.yaml:", err)
+	// come back next time (ux.md §6) — but not over a session.yaml that
+	// could not be read and was not moved aside.
+	if app.SessionWritable() {
+		if err := store.SaveSession(app.Session()); err != nil {
+			fmt.Fprintln(os.Stderr, "webu: session.yaml:", err)
+		}
 	}
 	app.Close()
 	b.Close()

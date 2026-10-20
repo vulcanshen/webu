@@ -910,18 +910,51 @@ func TestDeleteAsksAboutTheRowUnderTheCursor(t *testing.T) {
 	}
 }
 
-// A file main could not read is an error popup on the first screen (tdp
-// F5), its words wrapped to the screen that arrives after the start.
-func TestReadErrorsOnTheFirstScreen(t *testing.T) {
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	m := New(nil, "").WithLoadErrors([]string{"config.yaml: yaml: line 3: did not find expected key"})
+// webu's own files that will not read are asked about at the start, one
+// after the other (tdp E3, when it cannot be read): Enter moves each to
+// .bak and starts it new; session.yaml is not written while it is one of
+// them.
+func TestUnreadableFilesAreMovedAside(t *testing.T) {
+	cfg, data := t.TempDir(), t.TempDir()
+	t.Setenv("WEBU__CONFIG", cfg)
+	t.Setenv("WEBU__DATA", data)
+	t.Setenv("WEBU__STATE", "")
+	write := func(p string) {
+		if err := os.WriteFile(p, []byte("key: [\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(cfg, "config.yaml"))
+	write(filepath.Join(cfg, "session.yaml"))
+	_, cfgErr := store.LoadConfig()
+	_, sessErr := store.LoadSession()
+	if cfgErr == nil || sessErr == nil {
+		t.Fatal("the files should not read")
+	}
+	m := New(nil, "").WithUnread([]Unread{
+		{Name: "config.yaml", Path: store.Path("config.yaml"), Err: cfgErr},
+		{Name: "session.yaml", Path: store.Path("session.yaml"), Err: sessErr},
+	})
+	if m.SessionWritable() {
+		t.Error("an unread session.yaml should not be written")
+	}
 	d := newDriver(t, m)
-	d.settle()
-	d.send(tea.WindowSizeMsg{Width: 80, Height: 24})
-	d.until("the popup", d.shows("READ FAILED"))
-	if v := d.view(); !strings.Contains(v, "config.yaml: yaml: line 3") {
-		t.Errorf("the error should read as a line:\n%s", v)
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the first question", d.shows("MOVE ASIDE"))
+	if v := d.view(); !strings.Contains(v, "config.yaml can't be read") || !strings.Contains(v, "config.yaml.bak") {
+		t.Errorf("the question names the file and where it goes:\n%s", v)
+	}
+	d.press("enter")
+	d.until("the second question", d.shows("session.yaml can't be read"))
+	d.press("enter")
+	d.until("both moved", func() bool { return !strings.Contains(d.view(), "MOVE ASIDE") })
+	for _, p := range []string{filepath.Join(cfg, "config.yaml.bak"), filepath.Join(cfg, "session.yaml.bak")} {
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("%s: %v", p, err)
+		}
+	}
+	if !m.SessionWritable() {
+		t.Error("a session moved aside starts new, to be written")
 	}
 }
 
