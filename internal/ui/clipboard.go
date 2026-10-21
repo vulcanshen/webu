@@ -70,9 +70,9 @@ func copyToClipboard(text string) tea.Cmd {
 func clipboardFailure(err error) string {
 	if errors.Is(err, errNoClipboard) {
 		if runtime.GOOS == "darwin" {
-			return "copy failed: pbcopy not found"
+			return "Copy failed: pbcopy not found"
 		}
-		return "copy failed: install wl-clipboard, xclip or xsel"
+		return "Copy failed: install wl-clipboard, xclip or xsel"
 	}
-	return "copy failed: " + err.Error()
+	return "Copy failed: " + err.Error()
 }

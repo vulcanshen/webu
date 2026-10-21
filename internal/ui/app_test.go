@@ -958,6 +958,44 @@ func TestUnreadableFilesAreMovedAside(t *testing.T) {
 	}
 }
 
+// Nothing opens while one of webu's files is still asked about (tdp E3):
+// no page loads, so no visit lands in a history.yaml that could not be
+// read, one Esc would leave as it was. Enter starts webu as on its first
+// start: the page loads, and its visit starts a new history.yaml.
+func TestNothingOpensWhileAFileIsAskedAbout(t *testing.T) {
+	b := launch(t)
+	t.Setenv("WEBU__STATE", "")
+	hist := store.Path("history.yaml")
+	if err := os.MkdirAll(filepath.Dir(hist), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(hist, []byte("key: [\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := store.LoadHistory()
+	if err == nil {
+		t.Fatal("history.yaml should not read")
+	}
+	m := New(b, fixture("nav.html")).WithStore(nil, nil, store.Config{}, nil).
+		WithUnread([]Unread{{Name: "history.yaml", Path: hist, Err: err}})
+	d := newDriver(t, m)
+	defer m.Close()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.until("the question", d.shows("MOVE ASIDE"))
+	if len(m.tabs) != 0 {
+		t.Errorf("%d tabs open while the question is up", len(m.tabs))
+	}
+	d.press("enter")
+	d.until("page A", d.loaded("Page A"))
+	d.until("its visit in a new history.yaml", func() bool {
+		h, err := store.LoadHistory()
+		return err == nil && len(h) == 1
+	})
+	if _, err := os.Stat(hist + ".bak"); err != nil {
+		t.Error(err)
+	}
+}
+
 // A page's prompt is the lib's text input with the page's whole message,
 // its line breaks too, folded on the prompt row (components/input/README).
 func TestALongPromptIsShownWhole(t *testing.T) {

@@ -230,7 +230,7 @@ func (m *AppModel) saveConfig(key string) tea.Cmd {
 	if err := store.SaveConfig(m.cfg); err != nil {
 		return m.saveFailed("config.yaml", err)
 	}
-	cmds := []tea.Cmd{m.toastOK(key + " saved to config.yaml")}
+	cmds := []tea.Cmd{m.toastOK("Saved " + key + " to config.yaml")}
 	switch key {
 	case "download_dir":
 		cmds = append(cmds, m.pointDownloads())

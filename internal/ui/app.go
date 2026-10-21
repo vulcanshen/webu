@@ -200,9 +200,14 @@ func (m *AppModel) build() {
 }
 
 // start is the first frame: the event listener and what the app opens
-// with.
+// with — not while a file of webu's is still asked about (tdp E3): the
+// last Enter opens it, as on the first start.
 func (m *AppModel) start() tea.Cmd {
-	return tea.Batch(waitEvent(m.events), m.firstFrame(), m.devTick(), m.startNews())
+	cmds := []tea.Cmd{waitEvent(m.events)}
+	if len(m.unread) == 0 {
+		cmds = append(cmds, m.firstFrame())
+	}
+	return tea.Batch(append(cmds, m.devTick(), m.startNews())...)
 }
 
 // startNews says on the first screen what main found: the things it moved
@@ -251,7 +256,8 @@ type Unread struct {
 
 // moveAside asks about the unread file i, then the next (tdp E3): Enter
 // moves it to .bak and starts that file new, Esc leaves webu, the lib
-// handing main the path and the reason for stderr.
+// handing main the path and the reason for stderr. Past the last one,
+// webu opens what it starts with.
 func (m *AppModel) moveAside(i int) tea.Cmd {
 	u := m.unread[i]
 	return m.a.MoveAside(u.Path, u.Err, func() tea.Cmd {
@@ -260,7 +266,7 @@ func (m *AppModel) moveAside(i int) tea.Cmd {
 		if i+1 < len(m.unread) {
 			return m.moveAside(i + 1)
 		}
-		return nil
+		return m.firstFrame()
 	})
 }
 
@@ -478,7 +484,7 @@ func (m *AppModel) applyPage(msg pageMsg) tea.Cmd {
 	if msg.err != nil && !errors.Is(msg.err, context.Canceled) {
 		// The page panel says it failed; the App Log keeps what and why
 		// (tdp E3: what is outside webu, a panel error with details logged).
-		m.a.Log(terminu.Error, "loading "+nameOr(msg.url, t.url)+": "+msg.err.Error())
+		m.a.Log(terminu.Error, "Loading "+nameOr(msg.url, t.url)+": "+msg.err.Error())
 	}
 	t.apply(msg, m.pageW())
 	if !fresh {
@@ -569,7 +575,7 @@ func (m *AppModel) firstFrame() tea.Cmd {
 	if len(m.tabs) > 0 {
 		m.shown = clamp(m.session.Shown, 0, len(m.tabs)-1)
 		// Done in the background as webu starts: the App Log says so.
-		m.a.Log(terminu.Info, "reopened "+plural(len(m.tabs), "tab")+" from the last session")
+		m.a.Log(terminu.Info, "Reopened "+plural(len(m.tabs), "tab")+" from the last session")
 	}
 	if len(m.startURLs) > 0 {
 		for i, u := range m.startURLs {
@@ -646,7 +652,7 @@ func (m *AppModel) recordVisit(t *tab) tea.Cmd {
 	t.lastVisit = t.url
 	v := store.Visit{At: time.Now(), URL: t.url, Title: t.title}
 	if err := store.AppendVisit(v); err != nil {
-		return m.toastErr("history.yaml: " + err.Error())
+		return m.toastErr("Save failed: history.yaml: " + err.Error())
 	}
 	m.history = append([]store.Visit{v}, m.history...)
 	m.refreshHistory()

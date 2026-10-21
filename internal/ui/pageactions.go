@@ -576,7 +576,9 @@ func (m *AppModel) enterOn(t *tab, n *ir.Node) tea.Cmd {
 	if n.Disabled {
 		// A click on a disabled control does nothing in the browser either,
 		// but a terminal's grey is easy to miss: say why nothing happened.
-		return m.toast(strings.TrimSpace(nameOr(n.Name, "This")) + " is disabled on the page")
+		// The page's name for it goes after a word of webu's, as the page
+		// wrote it: the toast still starts with a capital.
+		return m.toast("On the page, " + strings.TrimSpace(nameOr(n.Name, "this")) + " is disabled")
 	}
 	switch n.Kind {
 	case ir.Textbox:

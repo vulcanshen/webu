@@ -6,7 +6,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
-v0.9.1: the frames, the menus, the popups and the keys are now the same
+v0.9.2: the frames, the menus, the popups and the keys are now the same
 code as the rest of the family's.
 
 **Two files move, and webu moves them for you**: `bookmarks.yaml` goes
@@ -26,8 +26,9 @@ and everything comes back as the window grows.
 
 **A file of webu's own that will not read is no longer gone on with.**
 At the start webu names it and why, and offers to move it aside to
-`.bak` (`.bak.1` and on, never over another) and begin that file new;
-`Esc` quits instead, the reason on the terminal.
+`.bak` (`.bak.1` and on, never over another) and start as on the first
+start; nothing opens before you answer, so nothing is written to it
+meanwhile. `Esc` quits instead, the reason on the terminal.
 
 - **`!` opens the App Log**: what webu did and what went wrong since it
   started — every toast, a page that failed to load and why, the tabs

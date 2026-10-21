@@ -229,3 +229,31 @@ func TestMeasure(t *testing.T) {
 		t.Error("TextWidth should be 0 for full and the number otherwise")
 	}
 }
+
+// A file that cannot be read gives nothing of itself, not the part read
+// before the error (tdp E3-18): moved aside, webu starts as on its first
+// start, and until then nothing half-read has been acted on — a
+// restore_session: false above a bad line must not drop the last session.
+func TestAnUnreadableFileGivesNothing(t *testing.T) {
+	cfgDir, data := t.TempDir(), t.TempDir()
+	t.Setenv("WEBU__CONFIG", cfgDir)
+	t.Setenv("WEBU__DATA", data)
+	t.Setenv("WEBU__STATE", "")
+	write := func(dir, name, body string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(cfgDir, "config.yaml", "restore_session: false\ndownload_dir: /x\ninput_tab_width: wide\n")
+	if c, err := LoadConfig(); err == nil || c.RestoreSession != nil || c.DownloadDir != "" {
+		t.Errorf("config.yaml: %+v, %v", c, err)
+	}
+	write(data, "bookmarks.yaml", "bookmarks:\n  - title: A\n    url: https://a\nfolders: wide\n")
+	if b, f, err := LoadBookmarks(); err == nil || len(b) != 0 || len(f) != 0 {
+		t.Errorf("bookmarks.yaml: %+v %v, %v", b, f, err)
+	}
+	write(cfgDir, "session.yaml", "tabs:\n  - url: https://a\nshown: wide\n")
+	if s, err := LoadSession(); err == nil || len(s.Tabs) != 0 {
+		t.Errorf("session.yaml: %+v, %v", s, err)
+	}
+}

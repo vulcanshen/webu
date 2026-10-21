@@ -248,6 +248,10 @@ func Relocate() []paths.Move {
 
 // ---------------------------------------------------------------- yaml
 
+// loadYAML reads one of webu's files. A Load that gets an error from it
+// returns nothing of the file: yaml fills in what it read before the
+// error, and half a file acted on while MOVE ASIDE is still being asked
+// is not the first start that Enter promises (tdp E3).
 func loadYAML(name string, into any) error {
 	p, err := path(name)
 	if err != nil {
@@ -295,8 +299,10 @@ type bookmarksFile struct {
 // LoadBookmarks returns the bookmarks and the folders declared on their own.
 func LoadBookmarks() ([]Bookmark, []string, error) {
 	var f bookmarksFile
-	err := loadYAML("bookmarks.yaml", &f)
-	return f.Bookmarks, f.Folders, err
+	if err := loadYAML("bookmarks.yaml", &f); err != nil {
+		return nil, nil, err
+	}
+	return f.Bookmarks, f.Folders, nil
 }
 
 func SaveBookmarks(list []Bookmark, folders []string) error {
@@ -305,16 +311,20 @@ func SaveBookmarks(list []Bookmark, folders []string) error {
 
 func LoadConfig() (Config, error) {
 	var c Config
-	err := loadYAML("config.yaml", &c)
-	return c, err
+	if err := loadYAML("config.yaml", &c); err != nil {
+		return Config{}, err
+	}
+	return c, nil
 }
 
 func SaveConfig(c Config) error { return saveYAML("config.yaml", c) }
 
 func LoadSession() (Session, error) {
 	var s Session
-	err := loadYAML("session.yaml", &s)
-	return s, err
+	if err := loadYAML("session.yaml", &s); err != nil {
+		return Session{}, err
+	}
+	return s, nil
 }
 
 func SaveSession(s Session) error { return saveYAML("session.yaml", s) }

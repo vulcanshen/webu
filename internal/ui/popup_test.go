@@ -258,7 +258,7 @@ func TestPopupsArePanelsUntilAnswered(t *testing.T) {
 	d.cursorOn(ir.Button, "Nope")
 	d.key("enter")
 	d.settle()
-	if !strings.Contains(d.view(), "disabled on the page") {
+	if !strings.Contains(d.view(), "On the page, Nope is disabled") {
 		t.Errorf("Enter on a disabled button says so:\n%s", d.view())
 	}
 	d.key("esc")
