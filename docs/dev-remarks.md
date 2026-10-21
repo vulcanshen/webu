@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.9.2），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.3）上，是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.9.3），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.4）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -15,6 +15,7 @@ README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分�
 - **畫面穩定** —— 任何尺寸、任何內容，每一列都恰好是終端機的寬；`TestFrameFitsTheTerminal` 在 icon 一格／兩格、powerline 符號一格／兩格下，跨尺寸、每個畫面、疊 popup 檢查，`TestEveryPopupFits` 把每一種 popup 開在畫面上再縮小畫面，`TestUnderTheLeastSize` 從最低尺寸以下一路縮到 1×1（tdp L4、tdp E5、tdp E6；單獨量 lib 的 popup 框是 lib 的測試，tdp E8）。
 - **`[S]ettings` 與 `config.yaml` 同步** —— 檔案裡有的 key，Settings 一定有一列，有測試守著。
 - **讀不了時**（tdp E3）—— `config.yaml`、`bookmarks.yaml`、`history.yaml`、`session.yaml` 讀不了，main 交給 UI（`ui.Unread`），第一個 frame 一個接一個開 lib 的 `MoveAside`：`Enter` 改名成 `.bak` 再從新的開始（`fresh`），`Esc` 離開、main 把路徑與原因印到 stderr。問的時候什麼都不開：`firstFrame` 等最後一個 `Enter` 才跑，跟第一次啟動一樣（E3-18），壞掉的 `history.yaml` 也不會在回答前被附加一筆造訪。`store` 的 Load 讀到一半出錯時什麼都不給 —— yaml 會先填好出錯前讀到的部分，壞掉的 `config.yaml` 前面一行 `restore_session: false` 就會在回答前丟掉上次的分頁。`session.yaml` 讀不了、又沒搬開時，離開時不寫回它（`SessionWritable`）。快取（Chromium）讀不了 —— 執行檔不見、是空的、沒有執行權限 —— `browser.Installed` 說沒有，跟第一次啟動一樣先印出大小再重新下載，不問（`Download` 先清掉舊的目錄）。檔案完整、只是啟動失敗（少系統函式庫、sandbox 權限）不是快取讀不了，是 webu 外面的事：印出錯誤，再加一行 `webu browser update` 會重抓的提示（WB22 的定案，2026-10-20）。
+- **不再用的檔**（tdp E3-23）—— 沒有，所以不叫 lib 的 `App.NoLongerUsed`：v0.1.0 起每個發布版都是 `config.yaml`、`bookmarks.yaml`、`history.yaml`、`session.yaml` 與 Chromium 的 `webu.log`，搬了位置的照 E3 搬。v0.1.0 之前開發中用過的 `history`（設定目錄下 tab 分隔的純文字，2026-09-20～21）沒進過發布版，不算。之後哪一版不再用某個檔，就把路徑交給 `NoLongerUsed`，CHANGELOG 寫一句。
 - **頁面上的控制字元**（components 的「控制字元」）—— [2] 的頁面是 webu 自己畫的：`rowLine` 與 visual mode 的 `selectRows` 把控制字元畫成紅色的名字（`writeNamed`、`controlName` 用 lib 的 `Escape` 的寫法），整列照舊截到 panel 寬；code block 的 Tab 畫成 `input_tab_width` 格。交給 lib 的名字與短字（清單的格子、menu、標題、toast）照原樣交，由 lib 畫；webu 自己的顏色用 `Row.Styled` 與 `App.Status` 的 `Span`。finder 的項目也不再在換行處截斷。
 - **存檔** —— 書籤每筆帶 `folder` 路徑，另有 `folders:` 清單讓空目錄留得住；歷史是一次 append 一筆的 YAML sequence；每次寫檔都是原子的。分法照 tdp E3「刪掉會怎樣」：設定（`config.yaml`）與狀態（`session.yaml`，上次開著的分頁）在 config、刪了找不回來的資料（書籤、歷史、下載、瀏覽器 profile、log）在 data、可重抓的 Chromium 在 cache。舊版放在別處的，第一次啟動逐項搬過去（tdp E3；`store.Relocate` 一個檔一個檔、`paths.RelocateCache` 一個 Chromium 版本一個版本，各一次 rename），Info toast 說從哪搬到哪，搬完把空了的舊目錄拿掉。新位置已經有的那一項：Chromium 是快取，刪掉舊的；書籤、session 不刪，留在舊位置，error popup 寫出兩個路徑請使用者自己合併。搬不動就照舊用舊位置（`paths.Either`：新位置沒有、舊位置有），error popup 寫出兩個路徑。
 - **unix-first、靜態執行檔** —— macOS + Linux，`CGO_ENABLED=0`。chromedp 的 log 進檔案，永遠不進 TUI 正在畫的終端機。
@@ -255,7 +256,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - Linux ARM（Chromium 的 snapshot bucket 沒有）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
-webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、升到 terminu-go v0.4.3（2026-10-21）；有意不照做的地方列在下一節。等 lib 才改得完的都改完了，`docs/webu-terminu-fix.md` 照 tdp E7 刪掉。user 說 webu 之後要整個大改，WB4、WB7 兩個暫定留到那時再談。
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21）；有意不照做的地方列在下一節。等 lib 才改得完的都改完了，`docs/webu-terminu-fix.md` 照 tdp E7 刪掉。user 說 webu 之後要整個大改，WB4、WB7 兩個暫定留到那時再談。
 
 ## 偏離 tdp
 
