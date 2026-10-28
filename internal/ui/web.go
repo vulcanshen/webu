@@ -173,22 +173,30 @@ func (m *AppModel) syncTabs() {
 		if n := seq[t]; n > 0 {
 			title = "(" + itoa(n) + ") " + title
 		}
-		mark := " "
+		// The site's mark in its icon's colour (siteicon.go); the spinner
+		// while the tab is still filling in.
+		mark, ink := m.siteMark(t.url)
 		if t.working() {
 			// Still filling in counts: a tab in the background that says
 			// nothing looks the same as one that has finished.
-			mark = glyphLive
+			mark, ink = glyphLive, ""
 		}
 		// The page's title as it is: the lib draws a control character in it
 		// by its name (tdp components.5).
 		cell := mark + " " + title
 		row := terminu.Row{ID: strconv.Itoa(t.id), Cells: []string{cell}}
+		var words terminu.Style
 		switch {
 		case i == m.shown:
-			row.Styled = [][]terminu.Span{{{Text: cell, Style: terminu.Fg(terminu.Green)}}}
+			words = terminu.Fg(terminu.Green)
 		case t.pending:
-			row.Styled = [][]terminu.Span{{{Text: cell, Style: terminu.Fg(terminu.Overlay0)}}}
+			words = terminu.Fg(terminu.Overlay0)
 		}
+		markStyle := words
+		if ink != "" {
+			markStyle = terminu.Fg(terminu.Hex(string(ink)))
+		}
+		row.Styled = [][]terminu.Span{{{Text: mark, Style: markStyle}, {Text: " " + title, Style: words}}}
 		rows = append(rows, row)
 	}
 	m.tabsList.SetRows(rows)

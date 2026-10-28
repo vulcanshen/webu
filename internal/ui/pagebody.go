@@ -473,13 +473,8 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 			// The cursor is the panel cursor on every item, a heading too
 			// (tdp panel.5).
 			style = st.cur
-		case row.capsule != "" && s.kind == segCapsule:
-			style = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(row.capsule)
-		case row.capsule != "" && s.kind == segCapEnd:
-			style = lipgloss.NewStyle().Foreground(row.capsule)
-			if row.ground != "" {
-				style = style.Background(row.ground)
-			}
+		case row.chip != "" && s.kind == segChip:
+			style = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(row.chip)
 		case row.code:
 			var ok bool
 			if style, ok = st.codeStyles[s.kind]; !ok {

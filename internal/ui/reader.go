@@ -196,6 +196,7 @@ func (m *AppModel) applyReader(msg readerMsg) tea.Cmd {
 	if d.Status >= 400 {
 		cmds = append(cmds, m.toastErr(d.StatusText+": "+url))
 	}
+	cmds = append(cmds, m.fetchFavicon(d))
 	return tea.Batch(append(cmds, m.recordVisit(t))...)
 }
 

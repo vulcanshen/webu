@@ -10,6 +10,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
@@ -65,6 +66,10 @@ type AppModel struct {
 	chromiumPages bool
 	rdCancel      map[string]context.CancelFunc
 	rdSeq         int
+	// favColor is each site's icon colour by host, for its tabs' mark;
+	// favTried the sites already asked, this session (siteicon.go).
+	favColor map[string]lipgloss.Color
+	favTried map[string]bool
 
 	// webu's own files, loaded by main and written back as they change.
 	bookmarks []store.Bookmark
@@ -138,6 +143,8 @@ func New(b *browser.Browser, start ...string) *AppModel {
 		rc:            reader.NewClient(reader.EmptyJar(""), readerUA),
 		chromiumPages: chromiumPagesDefault,
 		rdCancel:      map[string]context.CancelFunc{},
+		favColor:      map[string]lipgloss.Color{},
+		favTried:      map[string]bool{},
 	}
 	if b != nil && b.UserAgent != "" {
 		m.rc.UA = b.UserAgent
@@ -501,6 +508,10 @@ func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 
 	case readerMsg:
 		return m.applyReader(msg)
+
+	case faviconMsg:
+		m.favColor[msg.host] = msg.color
+		return nil
 	}
 	return nil
 }

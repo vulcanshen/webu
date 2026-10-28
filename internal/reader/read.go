@@ -31,6 +31,9 @@ type Doc struct {
 	// or "text" (a document that is text, not HTML).
 	Picked string
 	Forms  []*Form
+	// Icon is where the page says its icon is (<link rel=icon>), "" when
+	// it does not.
+	Icon string
 
 	fields  map[*ir.Node]*Field
 	anchors map[*ir.Node]map[string]*ir.Node
@@ -71,6 +74,7 @@ func Read(r *Response) (*Doc, error) {
 	}
 	absolutize(doc, r.URL)
 	d.Title = strings.TrimSpace(textOf(find(doc, "title")))
+	d.Icon = iconOf(doc)
 	clean(doc)
 	shared := &trees{fields: map[*html.Node]*Field{}, forms: map[*html.Node]*Form{}}
 	bodyNode := find(doc, "body")
@@ -99,6 +103,24 @@ func Read(r *Response) (*Doc, error) {
 		d.Content.Children = append([]*ir.Node{h}, d.Content.Children...)
 	}
 	return d, nil
+}
+
+// iconOf is the address of the page's icon, by its <link rel=icon>,
+// read before clean takes the <link>s out.
+func iconOf(n *html.Node) string {
+	if n.Type == html.ElementNode && n.Data == "link" {
+		for _, w := range strings.Fields(strings.ToLower(attr(n, "rel"))) {
+			if w == "icon" && attr(n, "href") != "" {
+				return attr(n, "href")
+			}
+		}
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if s := iconOf(c); s != "" {
+			return s
+		}
+	}
+	return ""
 }
 
 // trees is what both trees of a page share: a field is one field however

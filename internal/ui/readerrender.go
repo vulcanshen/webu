@@ -162,26 +162,27 @@ func (r *rrender) flow(cs []rcell, c *rctx, ground, ink lipgloss.Color) {
 	r.flowIn(cs, c, ground, ink, "")
 }
 
-// flowIn is flow, each row's words in a capsule of that colour when there
-// is one: a heading's (docs/reader.md).
-func (r *rrender) flowIn(cs []rcell, c *rctx, ground, ink, capsule lipgloss.Color) {
+// flowIn is flow, each row's words on a chip of that colour when there is
+// one: a heading's (docs/reader.md).
+func (r *rrender) flowIn(cs []rcell, c *rctx, ground, ink, chip lipgloss.Color) {
 	room := r.width
-	if capsule != "" {
-		room -= 2 // the two ends, the words right against them
+	if chip != "" {
+		room -= 2 // a space either side
 	}
 	put := func(cur []rcell, start int) {
 		cur = trimCells2(cur)
-		if capsule != "" {
+		if chip != "" {
 			words := append([]rcell{}, cur[start:]...)
-			// No space inside the ends: the colour is the edge (user,
-			// 2026-10-28).
-			cur = append(append([]rcell{}, cur[:start]...), cells("\ue0b6", segCapEnd, 0, -1)...)
+			// A space either side on the colour, no round ends: those are
+			// tdp's capsule, which says what kind of screen this is (P4;
+			// user, 2026-10-28).
+			cur = append(append([]rcell{}, cur[:start]...), cells(" ", segChip, 0, -1)...)
 			cur = append(cur, words...)
-			cur = append(cur, cells("\ue0b4", segCapEnd, 0, -1)...)
+			cur = append(cur, cells(" ", segChip, 0, -1)...)
 		}
 		r.row(cur, ground, ink, false)
-		if capsule != "" {
-			r.lay.rows[len(r.lay.rows)-1].capsule = capsule
+		if chip != "" {
+			r.lay.rows[len(r.lay.rows)-1].chip = chip
 		}
 	}
 	for len(cs) > 0 && cs[0].r == ' ' {
@@ -270,10 +271,10 @@ func (r *rrender) block(n *ir.Node, c *rctx) {
 		for _, k := range n.Children {
 			run = r.inline(run, k, attrBold, -1)
 		}
-		// One capsule: a link or code in the heading is drawn as the heading
+		// One chip: a link or code in the heading is drawn as the heading
 		// is, the link still an item.
 		for i := range run {
-			run[i].kind = segCapsule
+			run[i].kind = segChip
 		}
 		r.flowIn(run, c, c.ground, "", levelColor(n.Level))
 	case ir.Paragraph:

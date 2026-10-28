@@ -1,6 +1,10 @@
 package ui
 
 import (
+	"bytes"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +14,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/reader"
 	"github.com/vulcanshen/webu/internal/store"
@@ -55,6 +60,10 @@ func site(t *testing.T) *httptest.Server {
 			io.WriteString(w, `<html><head><title>Search</title></head><body><form action="/find"><input name="q" placeholder="Find words"></form></body></html>`)
 		case "/find":
 			io.WriteString(w, `<html><head><title>Found</title></head><body><p>Results for `+r.URL.Query().Get("q")+`</p></body></html>`)
+		case "/favicon.ico":
+			// A red icon, the colour the site's tabs are marked in.
+			w.Header().Set("Content-Type", "image/x-icon")
+			w.Write(redPNG())
 		case "/f.zip":
 			w.Header().Set("Content-Type", "application/zip")
 			io.WriteString(w, "PK zip bytes")
@@ -64,6 +73,35 @@ func site(t *testing.T) *httptest.Server {
 	}))
 	t.Cleanup(srv.Close)
 	return srv
+}
+
+func redPNG() []byte {
+	img := image.NewNRGBA(image.Rect(0, 0, 2, 2))
+	for i := range 4 {
+		img.SetNRGBA(i%2, i/2, color.NRGBA{R: 200, G: 30, B: 30, A: 255})
+	}
+	var b bytes.Buffer
+	png.Encode(&b, img)
+	return b.Bytes()
+}
+
+// A tab's mark is its site's own icon, else a globe, in the colour of the
+// site's favicon once it has come, Blue before (user, 2026-10-28).
+func TestSiteMarks(t *testing.T) {
+	for host, want := range map[string]string{"en.wikipedia.org": "\uf266", "github.com": "\uf09b", "go.dev": "\ue627", "example.com": glyphGlobe} {
+		if got := siteGlyph(host); got != want {
+			t.Errorf("%s: %q, want %q", host, got, want)
+		}
+	}
+	srv := site(t)
+	d, m := readerAt(t, srv.URL+"/", t.TempDir())
+	if _, c := m.siteMark(srv.URL + "/"); c != lipgloss.Color(blueHex) {
+		t.Errorf("before the favicon the mark is Blue, not %s", c)
+	}
+	d.until("the favicon's colour", func() bool { _, c := m.siteMark(srv.URL + "/"); return c == "#c81e1e" })
+	if !strings.Contains(d.view(), glyphGlobe+" First") {
+		t.Errorf("the tab should start with the globe:\n%s", d.view())
+	}
 }
 
 // readerAt is webu with a reader tab at url, its files in scratch
@@ -142,7 +180,7 @@ func TestReaderReadsAndFollows(t *testing.T) {
 	d.press("enter")
 	d.until("the second page", d.shows("The second page."))
 	v := d.view()
-	for _, want := range []string{"\ue0b6Second\ue0b4", "H:back", "│ Key │ Function │", "├─────┼──────────┤", "│ j   │ down     │", "- One", "  - Two", "1. A", "2. B", "a. C", "i. D", "go", "x := 1", "▎ Quoted words"} {
+	for _, want := range []string{" Second ", "H:back", "│ Key │ Function │", "├─────┼──────────┤", "│ j   │ down     │", "- One", "  - Two", "1. A", "2. B", "a. C", "i. D", "go", "x := 1", "▎ Quoted words"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("the second page should show %q:\n%s", want, v)
 		}

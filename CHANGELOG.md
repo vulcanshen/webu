@@ -7,13 +7,16 @@ Each release names the version of terminu design (tdp) it follows.
 **webu is becoming a reader** ([`docs/reader.md`](docs/reader.md)).
 A page is fetched as it is, over plain HTTP, and its JavaScript is not
 run; what the page itself presents is shown, and the site around it is
-left out: navigation, sidebars, footers, cookie notices. A heading is a
-row on its level's colour; a list item has its icon (a circle, a square,
-a diamond by depth) or its number (1., a., i. by depth); code and quotes
+left out: navigation, sidebars, footers, cookie notices. A heading's
+words are on its level's colour, a space either side; a list item has a
+dash or its number (1., a., i. by depth); code and quotes
 are on their own ground, code coloured by its language; a link and an
 image have an icon before their words, their address on the frame when
 in Focus. A table the page laid itself out with reads as lines, a table
-of data as a grid.
+of data as a grid. In the tab list a tab is its page's title, after its
+site's mark: the site's own icon where Nerd Fonts has one (GitHub,
+Wikipedia, Go…), else a globe, in the colour of the site's favicon, and
+blue until that is known.
 
 - The page's keys are a reader's: `j|k|u|d|gg|G` scroll; `/` finds text,
   every hit underlined, `n|N` step through them, `Esc` puts it away; `f`
