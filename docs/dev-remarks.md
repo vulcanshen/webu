@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.9.3），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v0.4.4）上，是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.1.0），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.0）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -14,9 +14,9 @@ README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分�
 - **一份登記、lib 產生其餘** —— webu 把每個畫面、panel、動作（鍵、名稱、說明、範圍、要不要先問、做什麼）登記給 terminu-go；Space menu、global operation popup、`?` 的 key reference、panel 下框的 hint、footer、confirm、淡化、`Esc` 一次一層都由 lib 從這一份登記產生，所以不在選單裡的熱鍵不可能存在。[2] 的動作跟著游標下的東西換，每次換頁、換游標都重新登記（`pageactions.go` 的 `syncPage`）。
 - **畫面穩定** —— 任何尺寸、任何內容，每一列都恰好是終端機的寬；`TestFrameFitsTheTerminal` 在 icon 一格／兩格、powerline 符號一格／兩格下，跨尺寸、每個畫面、疊 popup 檢查，`TestEveryPopupFits` 把每一種 popup 開在畫面上再縮小畫面，`TestUnderTheLeastSize` 從最低尺寸以下一路縮到 1×1（tdp L4、tdp E5、tdp E6；單獨量 lib 的 popup 框是 lib 的測試，tdp E8）。
 - **`[S]ettings` 與 `config.yaml` 同步** —— 檔案裡有的 key，Settings 一定有一列，有測試守著。
-- **讀不了時**（tdp E3）—— `config.yaml`、`bookmarks.yaml`、`history.yaml`、`session.yaml` 讀不了，main 交給 UI（`ui.Unread`），第一個 frame 一個接一個開 lib 的 `MoveAside`：`Enter` 改名成 `.bak` 再從新的開始（`fresh`），`Esc` 離開、main 把路徑與原因印到 stderr。問的時候什麼都不開：`firstFrame` 等最後一個 `Enter` 才跑，跟第一次啟動一樣（E3-18），壞掉的 `history.yaml` 也不會在回答前被附加一筆造訪。`store` 的 Load 讀到一半出錯時什麼都不給 —— yaml 會先填好出錯前讀到的部分，壞掉的 `config.yaml` 前面一行 `restore_session: false` 就會在回答前丟掉上次的分頁。`session.yaml` 讀不了、又沒搬開時，離開時不寫回它（`SessionWritable`）。快取（Chromium）讀不了 —— 執行檔不見、是空的、沒有執行權限 —— `browser.Installed` 說沒有，跟第一次啟動一樣先印出大小再重新下載，不問（`Download` 先清掉舊的目錄）。檔案完整、只是啟動失敗（少系統函式庫、sandbox 權限）不是快取讀不了，是 webu 外面的事：印出錯誤，再加一行 `webu browser update` 會重抓的提示（WB22 的定案，2026-10-20）。
+- **讀不了時**（tdp E3）—— `config.yaml`、`bookmarks.yaml`、`history.yaml`、`session.yaml` 讀不了，main 交給 UI（`ui.Unread`），第一個 frame 一個接一個開 lib 的 `MoveAside`：`Enter` 改名成 `.bak` 再從新的開始（`fresh`），`Esc` 離開、main 把路徑與原因印到 stderr。問的時候什麼都不開：`firstFrame` 等最後一個 `Enter` 才跑，跟第一次啟動一樣（E3-18），壞掉的 `history.yaml` 也不會在回答前被附加一筆造訪。`store` 的 Load 讀到一半出錯時什麼都不給 —— yaml 會先填好出錯前讀到的部分，壞掉的 `config.yaml` 前面一行 `restore_session: false` 就會在回答前丟掉上次的分頁。`session.yaml` 讀不了、又沒搬開時，離開時不寫回它（`SessionWritable`）。快取（Chromium）讀不了 —— 執行檔不見、是空的、沒有執行權限 —— `browser.Installed` 說沒有，跟第一次啟動一樣先印出大小再重新下載，不問（`Download` 先清掉舊的目錄）。檔案完整、只是啟動失敗（少系統函式庫、sandbox 權限）不是快取讀不了，是 webu 外面的事：印出錯誤，再加一行 `webu browser update` 會重抓的提示（2026-10-20 定）。
 - **不再用的檔**（tdp E3-23）—— 沒有，所以不叫 lib 的 `App.NoLongerUsed`：v0.1.0 起每個發布版都是 `config.yaml`、`bookmarks.yaml`、`history.yaml`、`session.yaml` 與 Chromium 的 `webu.log`，搬了位置的照 E3 搬。v0.1.0 之前開發中用過的 `history`（設定目錄下 tab 分隔的純文字，2026-09-20～21）沒進過發布版，不算。之後哪一版不再用某個檔，就把路徑交給 `NoLongerUsed`，CHANGELOG 寫一句。
-- **頁面上的控制字元**（components 的「控制字元」）—— [2] 的頁面是 webu 自己畫的：`rowLine` 與 visual mode 的 `selectRows` 把控制字元畫成紅色的名字（`writeNamed`、`controlName` 用 lib 的 `Escape` 的寫法），整列照舊截到 panel 寬；code block 的 Tab 畫成 `input_tab_width` 格。交給 lib 的名字與短字（清單的格子、menu、標題、toast）照原樣交，由 lib 畫；webu 自己的顏色用 `Row.Styled` 與 `App.Status` 的 `Span`。finder 的項目也不再在換行處截斷。
+- **頁面上的控制字元**（tdp components.5）—— [2] 的頁面是 webu 自己畫的：`rowLine` 與 visual mode 的 `selectRows` 把控制字元畫成紅色的名字（`writeNamed`、`controlName` 用 lib 的 `Escape` 的寫法），整列照舊截到 panel 寬；code block 的 Tab 畫成 `input_tab_width` 格。交給 lib 的名字與短字（清單的格子、menu、標題、toast）照原樣交，由 lib 畫；webu 自己的顏色用 `Row.Styled` 與 `App.Status` 的 `Span`。finder 的項目也不再在換行處截斷。
 - **存檔** —— 書籤每筆帶 `folder` 路徑，另有 `folders:` 清單讓空目錄留得住；歷史是一次 append 一筆的 YAML sequence；每次寫檔都是原子的。分法照 tdp E3「刪掉會怎樣」：設定（`config.yaml`）與狀態（`session.yaml`，上次開著的分頁）在 config、刪了找不回來的資料（書籤、歷史、下載、瀏覽器 profile、log）在 data、可重抓的 Chromium 在 cache。舊版放在別處的，第一次啟動逐項搬過去（tdp E3；`store.Relocate` 一個檔一個檔、`paths.RelocateCache` 一個 Chromium 版本一個版本，各一次 rename），Info toast 說從哪搬到哪，搬完把空了的舊目錄拿掉。新位置已經有的那一項：Chromium 是快取，刪掉舊的；書籤、session 不刪，留在舊位置，error popup 寫出兩個路徑請使用者自己合併。搬不動就照舊用舊位置（`paths.Either`：新位置沒有、舊位置有），error popup 寫出兩個路徑。
 - **unix-first、靜態執行檔** —— macOS + Linux，`CGO_ENABLED=0`。chromedp 的 log 進檔案，永遠不進 TUI 正在畫的終端機。
 - **Chromium 不在 release 裡** —— release 只有 Go 執行檔；第一次啟動下載到 cache。Chromium snapshot bucket 沒有 Linux ARM 版，所以沒有 Linux ARM build。
@@ -81,7 +81,7 @@ tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
 | revision | `browser.Revision = 1701465`（Chromium 156 線）；Mac_Arm 175 MB、Mac 195 MB、Linux_x64 248 MB；Linux arm64 快照桶沒有 |
 | 目錄 | cache `WEBU__CACHE` > `os.UserCacheDir()/webu`（macOS 舊版用的 `XDG_CACHE_HOME/webu` 第一次啟動搬過來）；config `WEBU__CONFIG` > `XDG_CONFIG_HOME/webu` > `~/.config/webu`；state `WEBU__STATE` > config；data `WEBU__DATA` > `~/.webu/datas` |
 | UA（2026-09-23） | `Browser.getVersion` 拿自報字串，`HeadlessChrome/` → `Chrome/`，尾巴 ` webu/<ver>`；client hints brands `Chromium` + `webu`；每個分頁 `Prepare` 時 `Emulation.setUserAgentOverride`（`browser.identify` / `userAgent` / `uaMetadata`；`TestWebuSignsItsUserAgent`） |
-| log | chromedp 的 log 全部進 `<data>/webu.log`，**絕不到 stderr**；`unhandled … event` 丟掉。webu 自己的事進 App Log（`!`，只在記憶體，components/dialog/note）：lib 自動記每個 toast 與 error popup，webu 另外記背景的事（`applyPage` 的載入失敗、`firstFrame` 還原了幾個分頁）。2026-10-20 以前 toast 的全文也寫進 webu.log，App Log 取代了它 |
+| log | chromedp 的 log 全部進 `<data>/webu.log`，**絕不到 stderr**；`unhandled … event` 丟掉。webu 自己的事進 App Log（`!`，只在記憶體，tdp note.7）：lib 自動記每個 toast 與 error popup，webu 另外記背景的事（`applyPage` 的載入失敗、`firstFrame` 還原了幾個分頁）。2026-10-20 以前 toast 的全文也寫進 webu.log，App Log 取代了它 |
 
 #### Capture：一次抓什麼（`function.md` §3）
 
@@ -151,7 +151,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 
 - **drill**：`drillInto(n)` / `leaveDrill`；`chainTo` / `chainOf` 算祖先路徑；`enterItem` 對一行的 ListItem 直接 `firstItemIn` → `enterOn`；`Media` 有 `Frame` 就 `openFrame`；Code → `showCode`。
 - **places**（`tab.go`）：`entry`（`Page.getNavigationHistory` 的 current entry id）、`places[entry] = place{at, flat, read, sec, top, cursor}`；`apply` 的 `fresh` = entry 不同（URL 判斷會被 settle 重設）。
-- **finder**（`finder.go`）：`indexPage` 走四個 part、`partOf` 記 part、Combobox 的子節點跳過、Option 可命中；`hit{node, part, trail, under, text, line}`；清單、打字列、比對、預覽的框是 lib 的 `Finder`（比對照 components/input/finder），預覽是 `previewOf`；`goToHit` 用 `chainOf` 沿路 drill、`rowOf` 找列。`go`：lib 的 `NumberInput`（1 到行數）→ `goToLine`。
+- **finder**（`finder.go`）：`indexPage` 走四個 part、`partOf` 記 part、Combobox 的子節點跳過、Option 可命中；`hit{node, part, trail, under, text, line}`；清單、打字列、比對、預覽的框是 lib 的 `Finder`（比對照 tdp finder），預覽是 `previewOf`；`goToHit` 用 `chainOf` 沿路 drill、`rowOf` 找列。`go`：lib 的 `NumberInput`（1 到行數）→ `goToLine`。
 - **Esc 鏈**（`pageactions.go` `pageEsc`，lib 的 `Panel.OnEsc`）：drill → 彈窗（拒絕，toast）→ read（回目錄）→ 到頂什麼都不做。popup 的 `Esc` 是 lib 的。
 
 #### 頁面的彈窗（`pagepopup.go`，2026-09-23）
@@ -160,7 +160,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 
 #### 兩套配色（`theme.go`）
 
-外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（components/color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只剩頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列與行號用 Blue（`urlColor`、`focusColor`），頁面上的 cursor 用 Subtext1 底，跟 lib 的 panel cursor 一樣。頁面內容照舊用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
+外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（tdp color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只剩頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列與行號用 Blue（`urlColor`、`focusColor`），頁面上的 cursor 用 Subtext1 底，跟 lib 的 panel cursor 一樣。頁面內容照舊用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
 
 #### 動作（`page/actions.go`、`sessions.go`）
 
@@ -205,21 +205,22 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - **預設搜尋是 DuckDuckGo 的 HTML 端點**，因為 Google 對每一次 headless 搜尋都回 reCAPTCHA。
 - **沒有交棒給視窗** —— CAPTCHA、passkey、WebRTC 是牆，webu 明講；webu 必須能在沒有 display 的機器上跑，所以沒有視窗可以交棒。
 - **畫面建在 terminu-go 上**（2026-10-18，tdp E8）：框、膠囊、Space menu、global operation popup、key reference、hint、footer、confirm、toast、每一種 input、viewer、finder、splash、淡化、icon 與 powerline 符號的寬度（探測、`WEBU__ICON_WIDTH`／`WEBU__POWERLINE_WIDTH`、`TERMINU__` 的兩個）全部是 lib 的；webu 原本自己做的那一份（popup、spacemenu、dim、width、iconwidth、splash、chrome、listpanel……）刪掉。webu 只畫 [2] 裡面的頁面。`go.mod` 寫 terminu-go 的 tag，開發時用不進版控的 `go.work` 接 `../terminu-go`。
-- **頁面的四個 part 是 [2] 的 panel tab**（2026-10-18，WB2；user 2026-10-19 定案，tdp v0.8.0 的 K12 寫進規範）：第一個 tab 是整頁 `PAGE`，後面是這一頁有的 part；`h|l` 換 tab（tdp K12：二維內容放在有 tab 的 panel 裡，`h|l` 給 tab）。原本網址列下那條 pagetab、`Esc` 上 pagetab、`h|l` 在同一列的 item 之間走都拿掉；`j|k` 照閱讀順序一個 item 一個 item 走（先同一列、再下一列），到頭尾繞回（tdp K12），`u|d` 半頁。
-- **[2] 是 [1] 的明細**（2026-10-18，WB7 暫定；user 2026-10-19：留到 webu 大改時一起談）：[1] 的游標移到哪個分頁，[2] 就顯示哪個（還沒載入的分頁換到才載）；[1] 的 `Enter` 用 lib 的 ToDetails 把 focus 送到 [2]（tdp K3 的明細）。
-- **DevTools 是一個畫面**（2026-10-18，WB4 暫定；user 2026-10-19：留到 webu 大改時一起談）：`I`，[1] 是 Network／Storage／Console／Source 四個 panel tab（各是 lib 的 List，含 panel filter），[2] 是游標那一筆的明細（request 的標頭與 body、console 的全文）；看的是 Web 畫面正在顯示的分頁。
-- **把使用者帶到新分頁**（tdp K3，S19）：`T`、網頁開出的新視窗、finder 的落點，使用者按下去就預期看到那一頁或那個位置，所以換到 Web 畫面、focus 到 [2]（lib 的 `App.ShowScreen`、`App.Focus`）；載入完成這種背景的事不搶 focus。書籤與歷史的 `Enter` 在背後開新分頁、留在清單上，toast 說開在哪裡。
+- **頁面的四個 part 是 [2] 的 panel tab**（2026-10-18；user 2026-10-19 定，寫進 tdp K12）：第一個 tab 是整頁 `PAGE`，後面是這一頁有的 part；`h|l` 換 tab（tdp K12：二維內容放在有 tab 的 panel 裡，`h|l` 給 tab）。原本網址列下那條 pagetab、`Esc` 上 pagetab、`h|l` 在同一列的 item 之間走都拿掉；`j|k` 照閱讀順序一個 item 一個 item 走（先同一列、再下一列），到頭尾繞回（tdp K12），`u|d` 半頁。
+- **[2] 是 [1] 的明細**（2026-10-18 暫定；user 2026-10-19：留到 webu 重新設計時一起談）：[1] 的游標移到哪個分頁，[2] 就顯示哪個（還沒載入的分頁換到才載）；[1] 的 `Enter` 用 lib 的 ToDetails 把 focus 送到 [2]（tdp K3 的明細）。
+- **DevTools 是一個畫面**（2026-10-18 暫定；user 2026-10-19：留到 webu 重新設計時一起談）：`I`，[1] 是 Network／Storage／Console／Source 四個 panel tab（各是 lib 的 List，含 panel filter），[2] 是游標那一筆的明細（request 的標頭與 body、console 的全文）；看的是 Web 畫面正在顯示的分頁。
+- **把使用者帶到新分頁**（tdp K3：focus 只在使用者預期會換的時候換）：`T`、網頁開出的新視窗、finder 的落點，使用者按下去就預期看到那一頁或那個位置，所以換到 Web 畫面、focus 到 [2]（lib 的 `App.ShowScreen`、`App.Focus`）；載入完成這種背景的事不搶 focus。書籤與歷史的 `Enter` 在背後開新分頁、留在清單上，toast 說開在哪裡。
 - **從 menu 執行之後**（tdp T1）：打開東西來看、選一個值寫回、新增的，menu 留在底下；要去別的地方的 —— `T` 新分頁、`/` finder、`L` 網址、`go` 跳行、書籤的 `m` 搬到別的目錄 —— 設 `Action.Clear`，開的時候清掉 menu。頁面的 `Enter` 遇到要離開這一頁的連結時先問（`Action.Ask`）；一行的清單項目裡是連結加別的字時，按下去才知道要不要問（`Action.AskFor`，`oneLineLink` 進去看一眼再出來），`Esc` 都回到 menu。
-- **最低尺寸 60×20**（tdp L1，app 可以調低）：80×40 是家族的預設；webu 的兩個 panel 在 72 欄以下就一次畫一個（窄寬），60×20 實機看過照樣好用，也放得下加書籤、登入這些表單，常見的 80×24 與分割視窗都能用。再小，頁面只剩幾行、表單要捲，lib 只畫名稱與 `needs a terminal of at least 60×20`。
-- **清單的欄**（layout/panel，tdp v0.8.2；WB19 的定案）：長的值（分頁、書籤、歷史的標題與 URL，下載的檔名與狀態，DevTools 的 URL、名稱、值、console 的一行、原始碼）標 `Column.Shrink`，分短欄剩下的寬度、照自己的截法截；短欄（Method、Status、Type、Size、Level、行號、When）照最寬的值，不縮。長欄縮到最少（12 格）還放不下，才照 `Column.Drop` 整欄收：歷史的 When；Network 的 Type、Size、Method（Status 與 URL 不收）；Storage 的 Kind；Console 的 Level；Source 的行號。
-- **成功做完的用 Success toast**（components/dialog/toast）：Copied、Saved、Opened、Added、Imported、Renamed、搬了目錄、`… saved to config.yaml`；中性的告知（`Downloading`、開在新分頁、搬家）是 Info，失敗是 Error。
-- **visual mode 是 [2] 的 mode**（tdp K11）：lib 畫模式名與模式色、`Esc` 離開、`Space` 不作用、`Tab` 與數字鍵暫停（`Pause`）、`?` 列模式的鍵；模式裡的鍵（`h|j|k|l`、`w|b|e`、`0|$`、`u|d`、`gg|G`、`v|V`、`y`、`/`、`n|N`、`Enter`）是 `ModeKey`，做的事是 `selectMode` 的。`V` 登記在模式的鍵裡，lib 就不把它當 splash（`takesV`）。`/` 開 lib 的 TextInput 問要找什麼，`n|N` 在結果間走。
-- **visual mode 的搜尋不加顏色**（2026-10-19，WB14；user 定案，S25，components/color）：命中的字加底線、保留原本的顏色；目前那一筆是 panel 的 cursor 色塊（Subtext1 底、Base 粗體）；模式色 Yellow 只給選取範圍。
-- **書籤是資料，上次的分頁是狀態**（2026-10-19，tdp E3，S2；書籤的位置 user 定案，WB16 選 A）：`bookmarks.yaml` 原本跟設定一起放 `~/.config/webu`，好讓人手改、同步（2026-09-21）；tdp v0.8.0 的 E3 用「刪掉會怎樣」分，書籤刪了找不回來，是資料，搬到 `~/.webu/datas`。WB10 的回報曾把書籤寫成已經在資料目錄，那是錯的（當時在設定目錄）；更正後 user 照樣定書籤放資料目錄，沒有比照「手寫的連線清單算設定」開例外。`session.yaml` 刪了只是回到空的開始畫面，是狀態，從 `~/.webu/datas` 搬到設定目錄，`WEBU__STATE` 可以另外指定。兩個都還是可以手改的 YAML。
+- **最低尺寸 60×20**（tdp L1，app 可以調低）：家族的標準是 60×32，最低尺寸不能比它大；webu 在 60 欄兩個 panel 並排（窄寬的門檻 `narrowW` 照 tdp screen.5 不超過 60，所以 webu 畫得出來的寬度都是並排），60×20 實機看過照樣好用，也放得下加書籤、登入這些表單，常見的 80×24 與分割視窗都能用。再小，頁面只剩幾行、表單要捲，lib 只畫名稱、`needs a terminal of at least 60×20` 與 `Press [Ctrl-C] twice to quit`（tdp screen.7）。
+- **清單的欄**（tdp panel.5，tdp v0.8.2 起）：長的值（分頁、書籤、歷史的標題與 URL，下載的檔名與狀態，DevTools 的 URL、名稱、值、console 的一行、原始碼）標 `Column.Shrink`，分短欄剩下的寬度、照自己的截法截；短欄（Method、Status、Type、Size、Level、行號、When）照最寬的值，不縮。長欄縮到最少（12 格）還放不下，才照 `Column.Drop` 整欄收：歷史的 When；Network 的 Type、Size、Method（Status 與 URL 不收）；Storage 的 Kind；Console 的 Level；Source 的行號。
+- **App Log 記使用者做的事**（tdp note.7）：每個從 menu、熱鍵或 `Enter` 跑的操作，只是打開來看的也算，用 `did` 記一句過去式（`Reloaded …`、`Followed the link to …`、`Shut the folder …`）；跳了 toast 的不另外記，toast 自己就進去了；切換畫面由 lib 記 `Switched to …`。不記的：移動 cursor 與 focus、Space menu、`?`、`!`、清單的 `/` 篩選、進明細（[1] 的 `Enter`）、在 confirm 或輸入框按 `Esc` 取消的（`Done` 不會跑）、進入 visual mode；打進欄位的值也不記（可能是密碼），只記 `Typed into <欄位>`。頁面自己問的（alert、confirm、prompt、登入、選檔案）算觸發它的那個操作裡面的事，只記那個操作（`Clicked …`）。
+- **成功做完的用 Success toast**（tdp toast.2）：Copied、Saved、Opened、Added、Imported、Renamed、搬了目錄、`… saved to config.yaml`；中性的告知（`Downloading`、開在新分頁、搬家）是 Info，失敗是 Error。
+- **visual mode 是 [2] 的 mode**（tdp K11）：lib 畫模式名與模式色、`Space` 開模式的 Space menu（`v|V`、`y`、`Enter` 標 `Item`，放在 ITEM OPERATION）、`Tab` 與數字鍵暫停（`Pause`）、`?` 列模式的鍵；選取中模式名是 `Visual>select`、`Esc` 是 `unselect`，退一層回到 `Visual`（lib 的 panel mode 按 `Esc` 一定離開，`OnExit` 在選取中把 mode 放回去，名字由 `visualLayer` 跟著換），不在選取中 `Esc` 才離開；模式裡的鍵（`h|j|k|l`、`w|b|e`、`0|$`、`u|d`、`gg|G`、`v|V`、`y`、`/`、`n|N`、`Enter`）是 `ModeKey`，做的事是 `selectMode` 的。`V` 登記在模式的鍵裡，lib 就不把它當 splash（`takesV`）。`/` 開 lib 的 TextInput 問要找什麼，`n|N` 在結果間走。
+- **visual mode 的搜尋不加顏色**（2026-10-19 user 定，寫進 tdp color 的 cursor 與 tdp note 的搜尋）：命中的字加底線、保留原本的顏色；目前那一筆是 panel 的 cursor 色塊（Subtext1 底、Base 粗體）；模式色 Yellow 只給選取範圍。
+- **書籤是資料，上次的分頁是狀態**（2026-10-19，tdp E3「刪掉會怎樣」；書籤的位置 user 定）：`bookmarks.yaml` 原本跟設定一起放 `~/.config/webu`，好讓人手改、同步（2026-09-21）；tdp v0.8.0 的 E3 用「刪掉會怎樣」分，書籤刪了找不回來，是資料，搬到 `~/.webu/datas`。回報時曾把書籤寫成已經在資料目錄，那是錯的（當時在設定目錄）；更正後 user 照樣定書籤放資料目錄，沒有比照「手寫的連線清單算設定」開例外。`session.yaml` 刪了只是回到空的開始畫面，是狀態，從 `~/.webu/datas` 搬到設定目錄，`WEBU__STATE` 可以另外指定。兩個都還是可以手改的 YAML。
 - **visual mode 是小寫 `v`**：`V` 保留給 splash（tdp S1）。讀一節時的 `n`／`p` 是小寫的 panel operation：大寫的 `N`／`P` 已經是上一頁／下一頁。`[go] Go to line` 用 `g` 開頭（tdp K12 允許 `g` 開頭的兩鍵組合當熱鍵），開 lib 的 NumberInput 問行號。
 - **[1] 與 [2] 的熱鍵各自歸各自的 panel**（tdp P3、tdp M4）：`P`／`N`、`L`、`/`、`v` 作用在頁面上，只在 [2] 按得到；`T`（新分頁）兩邊都有。全域動作只有切畫面（`W`／`B`／`H`／`D`／`S`／`I`）與離開。
 - **離開只在有下載進行中時先問**（tdp K9 的離開流程由 app 決定）：`syncQuit` 依下載數設 `App.Quit`。
-- **Settings 是一列一個值的 panel**（lib 的 `Values`）：文字設定開 TextInput（目前生效的值當灰字提議，`Backspace` 再 `Enter` 是預設）、`input_tab_width` 開 NumberInput、`download_dir` 開 file-picker 選目錄（從最近一層存在的目錄開始）、開關是原地翻的 checkbox，設好就存（layout/panel 的一列一個值）。數字帶單位、寫完整的字（`4 spaces`、`96 cells`，components/input/number）；`input_tab_width` 的輸入框打字列下面有單位列（`NumberInput.Unit`），清空就是預設（`Optional`）。設定名稱只是一兩個字，`?` 最前面有「每一列」一節寫每個 key 管什麼（`Field.Desc`，layout/panel）。家族共用的 `hide_secrets_in_preview`、`input_tab_width`（tdp E3）也在這裡，交給 lib 的 `App.HideSecretsInPreview`、`App.InputTabWidth`。
+- **Settings 是一列一個值的 panel**（lib 的 `Values`）：文字設定開 TextInput（目前生效的值當灰字提議，`Backspace` 再 `Enter` 是預設）、`input_tab_width` 開 NumberInput、`download_dir` 開 file-picker 選目錄（從最近一層存在的目錄開始）、開關是原地翻的 checkbox，設好就存（tdp panel.12）。數字帶單位、寫完整的字（`4 spaces`、`96 cells`，tdp number.2）；`input_tab_width` 的輸入框打字列下面有單位列（`NumberInput.Unit`），清空就是預設（`Optional`）。設定名稱只是一兩個字，`?` 最前面有「每一列」一節寫每個 key 管什麼（`Field.Desc`，tdp panel.12）。家族共用的 `hide_secrets_in_preview`、`input_tab_width`（tdp E3）也在這裡，交給 lib 的 `App.HideSecretsInPreview`、`App.InputTabWidth`。
 
 ## 已否決，不要重提
 
@@ -256,12 +257,12 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - Linux ARM（Chromium 的 snapshot bucket 沒有）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
-webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21）；有意不照做的地方列在下一節。等 lib 才改得完的都改完了，`docs/webu-terminu-fix.md` 照 tdp E7 刪掉。user 說 webu 之後要整個大改，WB4、WB7 兩個暫定留到那時再談。
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21），再對齊 tdp v1.1.0、升到 terminu-go v1.1.0（2026-10-28）。tdp 交給 webu 自己決定、webu 定得跟別的成員不一樣的地方列在下一節。user 說 webu 之後要重新設計，「[2] 是 [1] 的明細」與「DevTools 是一個畫面」兩個暫定留到那時再談。
 
-## 偏離 tdp
+## tdp 交給 webu 決定的地方
 
-- **頁面自己的彈窗是 [2] 的內容，不是 webu 的 popup（tdp F1、tdp K4、tdp F3）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在 [2] 內容上的框（`ui.md` §2.4、`pagebody.go` 的 `pagePopupFloats`），它是頁面的一部分：頁面放它上來要一個回答，webu 只是把頁面畫出來。所以它不是 lib 的 popup、不在 tdp F1 的七類裡（tdp F1 點名 webu 的頁面彈窗是 app 的偏離），上面的鍵照 panel [2] 走：
-  - `Esc` 不關它（偏離 tdp K4、tdp F3）：關掉等於把頁面要的決定擱著；`Esc` 在它上面只 toast 說明（`pageEsc`）。
+- **頁面自己的彈窗是 [2] 的內容，不是 webu 的 popup（tdp F1：panel 內容自己畫的框是內容）。** 頁面跳出的 modal / alertdialog / menu / cookie 橫幅，webu 畫成浮在 [2] 內容上的框（`ui.md` §2.4、`pagebody.go` 的 `pagePopupFloats`），它是頁面的一部分：頁面放它上來要一個回答，webu 只是把頁面畫出來。所以它不是 lib 的 popup、不在 tdp F1 的八類裡，不算一層；怎麼畫由 webu 決定，上面的鍵照 panel [2] 走：
+  - `Esc` 照 panel 上的 tdp K4，往上一層是什麼由 webu 決定：不關它，關掉等於把頁面要的決定擱著；`Esc` 在它上面只 toast 說明（`pageEsc`）。
   - `Space` 是 [2] 的 Space menu，`?` 是 [2] 的 key reference：它的按鈕、連結是 [2] 的 item。
   - 它的寬度、疊層錯開（`popupWidth`、往右下錯開 3 欄 1 列）、底下的頁面淡化，都是頁面內容的畫法；webu 的 popup（lib 的）開在它上面時，它跟整個畫面一起被 lib 淡化。
 

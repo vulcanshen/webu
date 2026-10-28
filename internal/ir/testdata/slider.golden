@@ -1,4 +1,4 @@
-document "Slider" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/slider.html focusable #2
+document "Slider" url=file:///testdata/slider.html focusable #2
   heading "Mix" level=1 #8
     text "Mix" #16
   landmark:form #1

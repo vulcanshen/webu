@@ -1,4 +1,4 @@
-document "combobox" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/combobox.html focusable #2
+document "combobox" url=file:///testdata/combobox.html focusable #2
   group:generic #6
     text "Pick one " #82
     combobox "Pick one" value="Beta" focusable #12

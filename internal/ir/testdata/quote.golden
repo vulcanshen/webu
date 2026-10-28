@@ -1,4 +1,4 @@
-document "quote" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/quote.html focusable #1
+document "quote" url=file:///testdata/quote.html focusable #1
   quote #7
     paragraph #8
       text "Quoted paragraph." #12

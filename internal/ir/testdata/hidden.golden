@@ -1,4 +1,4 @@
-document "Hidden" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/hidden.html focusable #2
+document "Hidden" url=file:///testdata/hidden.html focusable #2
   paragraph #8
     text "The sentence you can see." #18
   paragraph #10

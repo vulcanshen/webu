@@ -1,4 +1,4 @@
-document "code" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/code.html focusable #1
+document "code" url=file:///testdata/code.html focusable #1
   paragraph #7
     text "Inline " #12
     code #8

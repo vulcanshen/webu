@@ -454,7 +454,7 @@ func TestScreensAndSession(t *testing.T) {
 	if d.m.a.Screen() != d.m.setScreen || !strings.Contains(d.view(), "SEARCH_ENGINE") {
 		t.Fatalf("the settings screen:\n%s", d.view())
 	}
-	// A number carries its unit, written whole (components/input/number).
+	// A number carries its unit, written whole (tdp number.2).
 	if !strings.Contains(d.view(), "default: 4 spaces") {
 		t.Errorf("input_tab_width should read in spaces:\n%s", d.view())
 	}
@@ -997,7 +997,7 @@ func TestNothingOpensWhileAFileIsAskedAbout(t *testing.T) {
 }
 
 // A page's prompt is the lib's text input with the page's whole message,
-// its line breaks too, folded on the prompt row (components/input/README).
+// its line breaks too, folded on the prompt row (tdp input.2).
 func TestALongPromptIsShownWhole(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())

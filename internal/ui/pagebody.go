@@ -53,7 +53,7 @@ func (b *pageBody) Draw(w, h int, focused bool) []string {
 		out = append(out, m.selectRows(t, w, rest)...)
 	case t.errText != "":
 		// What went wrong, in Red, and the key that tries again
-		// (layout/panel, loading and errors).
+		// (tdp panel.15).
 		out = append(out, stateRows(w, rest, terminu.Fg(terminu.Red).Render(t.errText),
 			terminu.Fg(terminu.Overlay0).Render("Press [R] to retry"))...)
 	case t.root == nil && t.working():
@@ -83,7 +83,7 @@ func (b *pageBody) Draw(w, h int, focused bool) []string {
 }
 
 // stateRows is a fact and a hint, centred: an empty panel's two sentences
-// (layout/screen, empty states), already coloured.
+// (tdp screen.8), already coloured.
 func stateRows(w, h int, fact, hint string) []string {
 	out := make([]string, max(h, 0))
 	for i := range out {
@@ -204,7 +204,7 @@ func moveName(key string) string {
 }
 
 // Empty reports a page that has not come yet: the lib draws the loading
-// icon and the panel's LoadingText in its middle (layout/panel).
+// icon and the panel's LoadingText in its middle (tdp panel.15).
 func (b *pageBody) Empty() bool {
 	t := b.m.shownTab()
 	return t != nil && t.root == nil && t.working()
@@ -223,7 +223,7 @@ func (b *pageBody) HasItem() bool {
 	return t.current() != nil
 }
 
-// Scroll is where the panel is (layout/panel): the section under the
+// Scroll is where the panel is (tdp panel.1): the section under the
 // cursor on the list, the rows in sight on the page.
 func (b *pageBody) Scroll() string {
 	m := b.m
@@ -283,7 +283,7 @@ type popupFloat struct {
 // pagePopupFloats is the page's popups as floats over the page, bottom to
 // top: the one on top with the cursor and a hint, the ones under it
 // dimmed, drawn as they were when they were on top (pagepopup.go). They
-// are the page's content, not webu's popups (dev-remarks, 偏離 tdp).
+// are the page's content, not webu's popups (tdp F1).
 func (m *AppModel) pagePopupFloats(t *tab, panelW int) []popupFloat {
 	if len(t.popups) == 0 || t.root == nil {
 		return nil
@@ -459,7 +459,7 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 		switch {
 		case cursor:
 			// The cursor is the panel cursor on every item, a heading too
-			// (layout/panel).
+			// (tdp panel.5).
 			style = st.cur
 		case row.code:
 			var ok bool
@@ -493,8 +493,8 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 		style = withAttr(style, s.attr)
 		if strings.ContainsFunc(s.text, isControl) {
 			// What the page wrote never reaches the terminal as it is: a
-			// control character is its name, in Red (components, control
-			// characters). The row is still cut to the panel.
+			// control character is its name, in Red (tdp
+			// components.5). The row is still cut to the panel.
 			used += writeNamed(&b, style, controlStyle(cursor), s.text, innerW-used)
 			continue
 		}
@@ -524,7 +524,7 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 }
 
 // isControl is a control character (C0, DEL, C1): never sent to the
-// terminal as it is (components, control characters).
+// terminal as it is (tdp components.5).
 func isControl(r rune) bool { return r < 0x20 || r >= 0x7f && r <= 0x9f }
 
 // controlName is how a control character is shown: its name, \t, \n,
@@ -532,7 +532,7 @@ func isControl(r rune) bool { return r < 0x20 || r >= 0x7f && r <= 0x9f }
 func controlName(r rune) string { return terminu.StripStyles(terminu.Escape(string(r))) }
 
 // controlStyle is a control character's name: Red, or Red under Base on
-// the cursor (components/color, the error colour).
+// the cursor (tdp color.1, the error colour).
 func controlStyle(onCursor bool) lipgloss.Style {
 	if onCursor {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(warnColor)

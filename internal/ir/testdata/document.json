@@ -57,7 +57,7 @@
      "name": "url",
      "value": {
       "type": "string",
-      "value": "file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/document.html"
+      "value": "file:///testdata/document.html"
      }
     }
    ],

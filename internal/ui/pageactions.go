@@ -63,7 +63,8 @@ func (m *AppModel) partTab(i int) tea.Cmd {
 
 // pageEsc is Esc on panel [2], one level up (tdp K4): out of a thing,
 // back to the section list; at the top it does nothing. A popup the page
-// put up is not closed by it: it wants an answer (dev-remarks, 偏離 tdp).
+// put up is not closed by it: it wants an answer, and as the page's own
+// content it is no popup (tdp F1).
 func (m *AppModel) pageEsc() tea.Cmd {
 	t := m.shownTab()
 	switch {
@@ -270,6 +271,7 @@ func (m *AppModel) itemActions(t *tab, n *ir.Node) []terminu.Action {
 				if n.URL == "" {
 					return nil
 				}
+				m.did("Opened " + n.URL + " in a new tab")
 				return m.openTab(n.URL, true)
 			}),
 			// "link url", not "url": with the cursor on a link, a bare "Yank
@@ -289,6 +291,7 @@ func (m *AppModel) itemActions(t *tab, n *ir.Node) []terminu.Action {
 			}
 			out = append(out,
 				busy(m.item("Clear", "empty the field", func() tea.Cmd {
+					m.did("Cleared " + nodeName(n))
 					id := n.ID
 					return t.press(func(ctx context.Context) error { return page.Type(ctx, id, "") })
 				})),
@@ -302,6 +305,7 @@ func (m *AppModel) itemActions(t *tab, n *ir.Node) []terminu.Action {
 	return append(out,
 		m.item("Yank text", "what it says", func() tea.Cmd { return copyToClipboard(n.Text()) }),
 		m.item("Inspect", "role, name, state, node id", func() tea.Cmd {
+			m.did("Inspected " + nodeName(n))
 			return m.a.Viewer(&terminu.Viewer{Title: "Inspect", Subject: strings.TrimSpace(nameOr(n.Name, n.Role)), Glyph: glyphInfo, Lines: inspectLines(n),
 				Select: selection()})
 		}))
@@ -354,15 +358,19 @@ func (m *AppModel) panelActions(t *tab) []terminu.Action {
 	away := func(a terminu.Action) terminu.Action { a.Clear = true; return a }
 	acts := []terminu.Action{
 		panel("R", "Reload", "this page", "", func() bool { return noTab() || m.busy() }, func() tea.Cmd {
-			return m.shownTab().reload()
+			t := m.shownTab()
+			m.did("Reloaded " + tabName(t))
+			return t.reload()
 		}),
 		// The same T as [1]'s: a new tab is wanted from the page as often as
 		// from the list.
 		away(panel("T", "Tab", "a new one, at a URL", "", nil, m.newTabBox)),
 		panel("P", "Previous", "back in this tab", "", func() bool { t := m.shownTab(); return t == nil || !t.canBack || m.busy() }, func() tea.Cmd {
+			m.did("Went back in " + tabName(m.shownTab()))
 			return m.shownTab().navigate("back", page.Back)
 		}),
 		panel("N", "Next", "forward in this tab", "", func() bool { t := m.shownTab(); return t == nil || !t.canForward || m.busy() }, func() tea.Cmd {
+			m.did("Went forward in " + tabName(m.shownTab()))
 			return m.shownTab().navigate("forward", page.Forward)
 		}),
 		away(panel("/", "Search", "every part of the page; [Enter] goes there", "search",
@@ -383,13 +391,21 @@ func (m *AppModel) panelActions(t *tab) []terminu.Action {
 		panel("Z", "Zoom", "the page alone, or the grid back", "", nil, func() tea.Cmd {
 			m.zoom = !m.zoom
 			m.relayoutTabs()
+			if m.zoom {
+				m.did("Zoomed in on the page")
+			} else {
+				m.did("Zoomed out to the tabs and the page")
+			}
 			return nil
 		}),
 		panel("Y", "Yank page url", "to the clipboard", "", noTab, func() tea.Cmd { return copyToClipboard(m.shownTab().url) }),
 		panel("", "Yank markdown", "the page itself, as markdown", "", noPage, func() tea.Cmd {
 			return copyToClipboard(ir.Markdown(m.shownTab().root))
 		}),
-		panel("C", "Close", "this tab", "", noTab, func() tea.Cmd { return m.closeTab(m.shown) }),
+		panel("C", "Close", "this tab", "", noTab, func() tea.Cmd {
+			m.did("Closed the tab " + tabName(m.shownTab()))
+			return m.closeTab(m.shown)
+		}),
 	}
 	return acts
 }
@@ -407,9 +423,11 @@ func (m *AppModel) sectionsAction(t *tab) terminu.Action {
 			t := m.shownTab()
 			t.flat, t.read = !t.flat, false
 			if t.flat {
+				m.did("Read " + tabName(t) + " in one run")
 				t.scrollToCursor(m.pageVisible())
 				return nil
 			}
+			m.did("Read " + tabName(t) + " a section at a time")
 			t.sec = sectionAt(t.secs, t.top)
 			t.clampSecTop(m.pageVisible())
 			return nil
@@ -426,6 +444,7 @@ func (m *AppModel) stepSection(step int) tea.Cmd {
 	if !t.stepSection(step, m.pageVisible()) {
 		return m.toast("No section that way")
 	}
+	m.did("Read the section " + t.secName())
 	return nil
 }
 
@@ -443,11 +462,13 @@ func (m *AppModel) locationBox() tea.Cmd {
 			if v == "" {
 				return nil
 			}
-			t := m.shownTab()
+			t, url := m.shownTab(), m.resolveURL(v)
 			if t == nil {
-				return m.openTab(m.resolveURL(v), true)
+				m.did("Opened " + url + " in a new tab")
+				return m.openTab(url, true)
 			}
-			return t.load(m.resolveURL(v))
+			m.did("Went to " + url)
+			return t.load(url)
 		})})
 }
 
@@ -460,8 +481,8 @@ func (m *AppModel) goLineBox() tea.Cmd {
 		Prompt: "A line from 1 to " + itoa(n), Verb: "go", Min: 1, Max: float64(n),
 		Done: m.cmdDone(func(v string) tea.Cmd {
 			i, err := strconv.Atoi(v)
-			if err == nil {
-				t.goToLine(i, m.pageVisible())
+			if err == nil && t.goToLine(i, m.pageVisible()) {
+				m.did("Went to line " + v)
 			}
 			return nil
 		})})
@@ -477,6 +498,7 @@ func (m *AppModel) enterItem() tea.Cmd {
 	}
 	if t.listing() {
 		t.openSection(m.pageVisible())
+		m.did("Read the section " + t.secName())
 		return nil
 	}
 	n := t.current()
@@ -489,7 +511,11 @@ func (m *AppModel) enterItem() tea.Cmd {
 		// is nothing but its first line has no inside to go to — Enter is
 		// Enter on what that line holds.
 		w, vis := m.pageW(), m.pageVisible()
-		if t.drillInto(n, w, vis) && t.drillBody >= len(t.lay.rows) {
+		if t.drillInto(n, w, vis) {
+			if t.drillBody < len(t.lay.rows) {
+				m.did("Went into " + nodeName(n))
+				return nil
+			}
 			t.leaveDrill(w, vis)
 			if x := firstItemIn(n); x != nil {
 				return m.enterOn(t, x)
@@ -502,6 +528,7 @@ func (m *AppModel) enterItem() tea.Cmd {
 		if n.Frame != "" {
 			// An iframe is one thing until you go in: its document, when it
 			// has come; asked for, when not.
+			m.did("Went into the frame " + nodeName(n))
 			if len(n.Children) > 0 {
 				t.drillInto(n, m.pageW(), m.pageVisible())
 				return nil
@@ -534,8 +561,16 @@ func (m *AppModel) enterItem() tea.Cmd {
 
 // fold opens or shuts the landmark or heading under the cursor.
 func (m *AppModel) fold(t *tab) {
+	n := t.current()
 	t.toggleFold(m.pageW())
 	t.scrollToCursor(m.pageVisible())
+	if n != nil && t.cursor >= 0 && t.cursor < len(t.lay.items) {
+		if t.lay.items[t.cursor].folded {
+			m.did("Shut " + nodeName(n))
+		} else {
+			m.did("Opened " + nodeName(n))
+		}
+	}
 }
 
 // firstItemIn is the first thing the cursor could stop on inside n, or
@@ -556,12 +591,18 @@ func (m *AppModel) click(t *tab, n *ir.Node) tea.Cmd {
 	if m.busy() {
 		return nil
 	}
+	if n.Kind == ir.Link {
+		m.did("Followed the link to " + n.URL)
+	} else {
+		m.did("Clicked " + nodeName(n))
+	}
 	id := n.ID
 	return t.press(func(ctx context.Context) error { return page.Click(ctx, id) })
 }
 
 // submit presses Enter in a field: the page's implicit submission.
 func (m *AppModel) submit(t *tab, n *ir.Node) tea.Cmd {
+	m.did("Submitted " + nodeName(n))
 	id := n.ID
 	return t.press(func(ctx context.Context) error { return page.Submit(ctx, id) })
 }
@@ -589,6 +630,7 @@ func (m *AppModel) enterOn(t *tab, n *ir.Node) tea.Cmd {
 		// A link into the page lands the cursor, no confirm: nothing is
 		// left.
 		if frag := sameFragment(t.url, n.URL); frag != "" && t.jumpToAnchor(frag, m.pageVisible()) {
+			m.did("Went to #" + frag)
 			return nil
 		}
 		return m.askOpenLink(t, n)
@@ -615,7 +657,7 @@ func (m *AppModel) enterCell(t *tab, n *ir.Node) tea.Cmd {
 			func() tea.Cmd { return m.actOn(t, x.node, false) }))
 	}
 	// The column's name is the page's own words, kept as it is after the
-	// title: CELL: Price (components/layout/popup).
+	// title: CELL: Price (tdp popup.1).
 	return m.a.MenuAbout("Cell", truncate(strings.TrimSpace(columnHeader(t.root, n)), 40), terminu.MenuSection{Actions: acts})
 }
 
@@ -626,6 +668,7 @@ func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
 	if text == "" {
 		text = "(empty)"
 	}
+	m.did("Read the cell " + truncate(oneLine(text), 60))
 	return m.a.Viewer(&terminu.Viewer{Title: "Cell", Subject: strings.TrimSpace(nameOr(columnHeader(t.root, n), "")),
 		Glyph: glyphTable, Lines: strings.Split(text, "\n"), Select: selection()})
 }
@@ -634,12 +677,13 @@ func (m *AppModel) showCell(t *tab, n *ir.Node) tea.Cmd {
 // coloured by its language when the page named one.
 func (m *AppModel) showCode(n *ir.Node) tea.Cmd {
 	text := strings.TrimRight(n.Text(), "\n")
+	m.did("Read the code " + truncate(oneLine(text), 60))
 	return m.a.Viewer(&terminu.Viewer{Title: "Code", Subject: n.Lang, Glyph: glyphCode,
 		Lines: strings.Split(text, "\n"), Lang: n.Lang, Select: selection()})
 }
 
 // selection is a viewer's selection mode: v brings the cursor out, v
-// again starts selecting, y copies (components/dialog/note).
+// again starts selecting, y copies (tdp note.4).
 func selection() *terminu.Selection {
 	return &terminu.Selection{Key: "v", Name: "Visual", Copy: copyToClipboard}
 }
@@ -658,6 +702,7 @@ func (m *AppModel) actOn(t *tab, x *ir.Node, search bool) tea.Cmd {
 		return m.chooseOptionsFor(t, x)
 	case ir.Link:
 		if frag := sameFragment(t.url, x.URL); frag != "" && t.jumpToAnchor(frag, m.pageVisible()) {
+			m.did("Went to #" + frag)
 			return nil
 		}
 	}
@@ -715,6 +760,7 @@ func (m *AppModel) chooseOptionsFor(t *tab, n *ir.Node) tea.Cmd {
 			if i < 0 || i >= len(n.Children) {
 				return nil
 			}
+			m.did("Chose " + opts[i] + " in " + nodeName(n))
 			opt := n.Children[i].ID
 			cmd := t.press(func(ctx context.Context) error { return page.Choose(ctx, opt) })
 			m.sync()
@@ -747,7 +793,9 @@ func (m *AppModel) editFieldAs(t *tab, n *ir.Node, search bool) tea.Cmd {
 	id := n.ID
 	name := strings.TrimSpace(nameOr(n.Name, "the field"))
 	takes := fieldTakes(n)
+	// What was typed stays out of the App Log: it may be a secret.
 	typeIn := func(v string) tea.Cmd {
+		m.did("Typed into " + name)
 		return t.press(func(ctx context.Context) error { return page.Type(ctx, id, v) })
 	}
 	switch {
@@ -785,6 +833,7 @@ func (m *AppModel) editFieldAs(t *tab, n *ir.Node, search bool) tea.Cmd {
 			return nil
 		}
 		in.Done = m.cmdDone(func(v string) tea.Cmd {
+			m.did("Typed into " + name)
 			return t.press(func(ctx context.Context) error { return page.Fill(ctx, id, v) })
 		})
 		return m.a.Text(in)

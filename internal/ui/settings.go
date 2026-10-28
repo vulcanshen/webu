@@ -12,7 +12,7 @@ import (
 	"github.com/vulcanshen/webu/internal/store"
 )
 
-// The Settings screen (ui.md §6): one value per row (layout/panel), a key
+// The Settings screen (ui.md §6): one value per row (tdp panel.12), a key
 // of config.yaml each. A value takes effect, and is saved, the moment it
 // is set: a text setting in its input popup — the value in force on
 // offer, Backspace then Enter for the default — a switch in place.
@@ -34,8 +34,8 @@ type setting struct {
 	// setting takes the range of number. on and flip make a switch.
 	set    func(*store.Config, string) error
 	number [2]float64
-	// unit is what a number counts, written whole after it (components/
-	// input/number: "4 spaces").
+	// unit is what a number counts, written whole after it (tdp
+	// number.2: "4 spaces").
 	unit string
 	on   func(store.Config) bool
 	flip func(*store.Config)
@@ -138,7 +138,7 @@ func (m *AppModel) buildSettings() {
 func (m *AppModel) settingField(i int) *terminu.Field {
 	s := settings[i]
 	// Desc opens ? with what each row is: a key name says little on its own
-	// (layout/panel). A switch's desc is its checkbox's words, lower case
+	// (tdp panel.12). A switch's desc is its checkbox's words, lower case
 	// beside the box; as a sentence of its own it starts with a capital.
 	f := &terminu.Field{Label: s.key, Desc: strings.ToUpper(s.desc[:1]) + s.desc[1:]}
 	if s.flip != nil {
@@ -198,7 +198,7 @@ func (m *AppModel) settingBox(i int) tea.Cmd {
 		return s.set(&c, strings.TrimSpace(v))
 	}
 	if s.key == "download_dir" {
-		// A directory is picked, not typed (components/input/file-picker),
+		// A directory is picked, not typed (tdp file-picker.7),
 		// from the nearest one there is: the default is not made until
 		// something lands in it.
 		root := cur
@@ -211,7 +211,7 @@ func (m *AppModel) settingBox(i int) tea.Cmd {
 	prompt := s.key + ": " + s.desc + "; [Backspace] then [Enter] for the default"
 	if s.number[1] > 0 {
 		// Empty is the default, so the number may be empty; its unit has a
-		// row of its own under the value (components/input/number).
+		// row of its own under the value (tdp number.2).
 		prompt = s.key + ": " + s.desc + ", " + fmtNum(s.number[0]) + "-" + fmtNum(s.number[1]) + "; [Backspace] then [Enter] for the default"
 		return m.a.Number(terminu.NumberInput{Title: "Settings", Subject: s.key, Glyph: glyphSettings, Name: s.key,
 			Prompt: prompt, Verb: "save", Old: cur, Min: s.number[0], Max: s.number[1], Unit: s.unit, Optional: true,

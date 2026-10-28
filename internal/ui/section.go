@@ -523,6 +523,15 @@ func (t *tab) openSection(visible int) {
 	t.scrollToCursor(visible)
 }
 
+// secName is how the App Log names the section being read: its heading,
+// or where the run before the first heading is.
+func (t *tab) secName() string {
+	if t.sec < 0 || t.sec >= len(t.secs) || t.secs[t.sec].node == nil {
+		return "before the first heading"
+	}
+	return nodeName(t.secs[t.sec].node)
+}
+
 // closeSection goes back to the list, its cursor on the section just read.
 func (t *tab) closeSection() {
 	t.read = false

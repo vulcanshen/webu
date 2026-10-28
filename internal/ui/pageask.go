@@ -40,7 +40,7 @@ func (m *AppModel) askDialog(msg dialogMsg) tea.Cmd {
 		// The answer the page offers is offered in grey: Enter on it as it
 		// is answers with it (Unchanged), an emptied one answers empty. The
 		// page's whole message is the prompt, its line breaks too: the lib
-		// folds it, the popup growing with it (components/input/README).
+		// folds it, the popup growing with it (tdp input.2).
 		return m.a.Text(terminu.TextInput{Title: "The page asks", Glyph: glyphInfo, Name: "The answer",
 			Prompt: text, Verb: "answer", Old: msg.defaultPrompt,
 			Done:      func(v string) tea.Cmd { return answer(true, v) },
@@ -95,7 +95,7 @@ func (m *AppModel) askAuth(msg authMsg) tea.Cmd {
 				Done: func(v string) tea.Cmd { name = v; return nil }}
 		}}
 	passField := &terminu.FormField{Label: "Password", Empty: "not set",
-		// Set, eight dots, whatever its length (components/input/README).
+		// Set, eight dots, whatever its length (tdp input.5).
 		Value: func() string {
 			if pass == "" {
 				return ""

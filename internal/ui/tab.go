@@ -504,7 +504,7 @@ func (t *tab) load(url string) tea.Cmd {
 }
 
 // reload is R: the page on screen loaded again. If that fails the page
-// stays and a toast says so (layout/panel, loading and errors); a page
+// stays and a toast says so (tdp panel.15); a page
 // that is not there to keep is the error in its place, as for any load.
 func (t *tab) reload() tea.Cmd {
 	cmd := t.load(t.url)
@@ -627,7 +627,7 @@ func (t *tab) run(fn func(context.Context) error, lock bool) tea.Cmd {
 }
 
 // actionErrMsg is something done that failed; what names it in the error
-// popup's title: "<what> failed" (components/dialog/note).
+// popup's title: "<what> failed" (tdp note.6).
 type actionErrMsg struct {
 	what string
 	err  error
@@ -657,7 +657,7 @@ func (t *tab) apply(msg pageMsg, width int) {
 	t.canBack, t.canForward = msg.back, msg.forward
 	if msg.err != nil && (!nav || again) && t.root != nil && !strings.Contains(msg.err.Error(), "ERR_CERT") {
 		// A look again at the page on screen — or R — failed: it stays, and
-		// the app says so (layout/panel: the old content stays, the error is
+		// the app says so (tdp panel.15: the old content stays, the error is
 		// a toast).
 		t.refreshErr = msg.err.Error()
 		return

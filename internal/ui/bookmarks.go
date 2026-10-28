@@ -308,6 +308,11 @@ func (m *AppModel) toggleFolder(path string) {
 		m.foldedFolders = map[string]bool{}
 	}
 	m.foldedFolders[path] = !m.foldedFolders[path]
+	if m.foldedFolders[path] {
+		m.did("Shut the folder " + path)
+	} else {
+		m.did("Opened the folder " + path)
+	}
 	m.refreshBookmarks()
 	m.bmList.Select(bmRowID(bmRow{folder: path, isFolder: true}))
 }
@@ -351,6 +356,7 @@ func (m *AppModel) moveBookmark(ref, idx int) tea.Cmd {
 	if err := m.saveBookmarks(); err != nil {
 		return m.saveFailed("bookmarks.yaml", err)
 	}
+	m.did("Moved " + oneLine(nameOr(m.bookmarks[ref].Title, m.bookmarks[ref].URL)) + " to " + nameOr(folder, "the top level"))
 	m.refreshBookmarks()
 	m.bmList.Select(bmRowID(bmRow{ref: ref}))
 	return nil
@@ -439,6 +445,7 @@ func (m *AppModel) deleteBookmark(b store.Bookmark) tea.Cmd {
 	if err := m.saveBookmarks(); err != nil {
 		return m.saveFailed("bookmarks.yaml", err)
 	}
+	m.did("Deleted the bookmark " + oneLine(nameOr(b.Title, b.URL)))
 	m.refreshBookmarks()
 	return nil
 }

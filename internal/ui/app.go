@@ -32,11 +32,12 @@ const searchEngine = store.DefaultSearch
 const sideW = 24
 
 // narrowW is the width under which the web screen draws only the focused
-// panel (layout/screen, narrow).
-const narrowW = 72
+// panel (tdp screen.5): 60 at most, so that at 60 columns every panel is
+// side by side (tdp L1).
+const narrowW = 60
 
 // minW and minH are webu's least size (tdp L1); under it the lib draws
-// only the name and the size it needs.
+// only the name, the size it needs and how to quit.
 const minW, minH = 60, 20
 
 // AppModel is webu: the lib's app, and webu's own state behind it.
@@ -181,9 +182,8 @@ func (m *AppModel) build() {
 	a := terminu.New("webu")
 	m.a = a
 	a.QuitDesc = "leave webu; the tabs are kept for next time"
-	// webu's least size (tdp L1): 60 × 20, the narrowest its two panels
-	// were laid out for (one at a time under narrowW) and room for its
-	// forms; smaller, only the name is drawn.
+	// webu's least size (tdp L1): 60 × 20, the two panels side by side
+	// and room for its forms; smaller, only the name is drawn.
 	a.MinWidth, a.MinHeight = minW, minH
 	a.Splash = splash()
 	a.Status = m.status
@@ -235,11 +235,12 @@ func (m *AppModel) startNews() tea.Cmd {
 			mv.Err.Error()+". webu keeps using it where it is; move it yourself.")
 	}
 	if len(moved) > 0 {
-		// The toast goes into the App Log by itself (components/dialog/note).
+		// The toast goes into the App Log by itself (tdp note.7).
 		cmds = append(cmds, m.toast("Moved "+strings.Join(moved, "; ")))
 	}
 	if len(stuck) > 0 {
-		cmds = append(cmds, m.a.Error("Move failed", strings.Join(stuck, "\n")))
+		// A row each (tdp components.5): webu's own text holds no line break.
+		cmds = append(cmds, m.a.Error("Move failed", stuck...))
 	}
 	if len(m.unread) > 0 {
 		cmds = append(cmds, m.moveAside(0))
@@ -313,23 +314,36 @@ func (m *AppModel) do(f func() tea.Cmd) func() tea.Cmd {
 	}
 }
 
-// toast says one short thing at the bottom (components/dialog/toast).
+// toast says one short thing at the bottom (tdp toast.1).
 func (m *AppModel) toast(text string) tea.Cmd { return m.a.Toast(terminu.Info, text) }
 
-// toastOK says an action is done: a Success toast (components/dialog/toast).
+// toastOK says an action is done: a Success toast (tdp toast.2).
 func (m *AppModel) toastOK(text string) tea.Cmd { return m.a.Toast(terminu.Success, text) }
 
 // toastErr says something went wrong (tdp F5); the App Log keeps it after
 // the toast goes.
 func (m *AppModel) toastErr(text string) tea.Cmd { return m.a.Toast(terminu.Error, text) }
 
+// did writes an operation the user ran into the App Log (tdp note.7), in
+// webu's words; one that ends in a toast needs none, the toast goes in.
+func (m *AppModel) did(text string) { m.a.Log(terminu.Info, text) }
+
+// tabName is how the App Log names a tab: its title, or its address.
+func tabName(t *tab) string { return oneLine(nameOr(t.title, t.url)) }
+
+// nodeName is how the App Log names a thing on the page: its name, its
+// text, or its role, on one line.
+func nodeName(n *ir.Node) string {
+	return truncate(oneLine(nameOr(n.Name, nameOr(n.Text(), n.Role))), 60)
+}
+
 // saveFailed is one of webu's files not written: an error popup, the whole
-// of the reason readable (components/dialog/note).
+// of the reason readable (tdp note.6).
 func (m *AppModel) saveFailed(file string, err error) tea.Cmd {
 	return m.a.Error("Save failed", file+": "+err.Error())
 }
 
-// status is the chip row's right end (layout/screen, statusbar): the
+// status is the chip row's right end (tdp screen.4): the
 // downloads still running, in Green.
 func (m *AppModel) status(w int) []terminu.Span {
 	// A field of its own width, whatever the count (tdp L2).
@@ -497,7 +511,7 @@ func (m *AppModel) applyPage(msg pageMsg) tea.Cmd {
 		if n := nodeByID(t.root, id); n != nil && len(n.Children) > 0 {
 			t.drillInto(n, m.pageW(), m.pageVisible())
 		} else {
-			// A failure, so an Error toast (components/dialog/toast).
+			// A failure, so an Error toast (tdp toast.2).
 			return m.toastErr("The frame could not be entered; its address is a [Space] › Yank away")
 		}
 	}
@@ -515,7 +529,7 @@ func (m *AppModel) applyPage(msg pageMsg) tea.Cmd {
 	visited := m.recordVisit(t)
 	if t.refreshErr != "" {
 		// The page looked at again and could not be had: the one on screen
-		// stays, and a toast says so (layout/panel, loading and errors).
+		// stays, and a toast says so (tdp panel.15).
 		e := t.refreshErr
 		t.refreshErr = ""
 		return tea.Batch(visited, m.toastErr("Could not look at the page again: "+e))
@@ -548,6 +562,7 @@ func (m *AppModel) trustCert(tabID int, url string) tea.Cmd {
 	if t == nil {
 		return nil
 	}
+	m.a.Log(terminu.Warning, "Went on to "+url+" though Chromium does not trust its certificate")
 	ctx := t.ctx
 	ignore := func() tea.Msg {
 		if err := page.IgnoreCertErrors(ctx); err != nil {

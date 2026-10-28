@@ -6,7 +6,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
-v0.9.3: the frames, the menus, the popups and the keys are now the same
+v1.1.0: the frames, the menus, the popups and the keys are now the same
 code as the rest of the family's.
 
 **Two files move, and webu moves them for you**: `bookmarks.yaml` goes
@@ -21,8 +21,9 @@ yourself; one already in both places is left as it is in the old one,
 webu using the new one and naming both for you to merge.
 
 **webu needs a terminal of at least 60×20.** In a smaller window it shows
-only its name and the size it needs, no key acting but `Ctrl-C` twice,
-and everything comes back as the window grows.
+only its name, the size it needs and that `Ctrl-C` twice quits, no other
+key acting, and everything comes back as the window grows. From 60
+columns up the tab list and the page are always side by side.
 
 **A file of webu's own that will not read is no longer gone on with.**
 At the start webu names it and why, and offers to move it aside to
@@ -31,8 +32,10 @@ start; nothing opens before you answer, so nothing is written to it
 meanwhile. `Esc` quits instead, the reason on the terminal.
 
 - **`!` opens the App Log**: what webu did and what went wrong since it
-  started — every toast, a page that failed to load and why, the tabs
-  reopened from the last session. The footer says `!:log`, or how many
+  started — what you did (a page reloaded, a link followed, a tab closed,
+  a screen switched to; never what you typed into a field), every toast,
+  a page that failed to load and why, the tabs reopened from the last
+  session. The footer says `!:log`, or how many
   errors you have not seen yet. A toast's whole text is no longer written
   to `webu.log`, which keeps Chromium's own log.
 - **Control characters from outside are never sent to the terminal**:
@@ -53,6 +56,9 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   Source are its list's tabs, each with a `/` filter, and the panel
   beside shows the row under the cursor in full.
 - `go` asks for a line number; `/` in visual mode asks for what to find.
+- **Visual mode has a layer**: selecting, its name is `Visual>select` and
+  `Esc` drops the selection, back to `Visual`; `Esc` again leaves.
+  `Space` in the mode opens its own menu: Select, Copy and Press first.
 - Adding a bookmark is a form: its URL and its title, then Add.
 - Settings has the family's `hide_secrets_in_preview` and
   `input_tab_width`, and a switch flips in place. `download_dir` is
@@ -121,6 +127,16 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   `WEBU__DATA` and `WEBU__CACHE` too, and on macOS asks about a
   Chromium an older webu left under `XDG_CACHE_HOME`. `install.sh` and
   the Homebrew caveats say a truecolor terminal is needed.
+- Releases can come out as a beta first, `vX.Y.Z-beta.N`: a GitHub
+  pre-release that never reaches the Homebrew tap, so `brew` and
+  `install.sh` keep the stable version. The released binaries' build info
+  no longer ends in `+dirty` (`go version -m webu`).
+- The repository no longer tracks `CLAUDE.md` and `.claude/`, Claude
+  Code's files for its maintainer; its test pages no longer carry a path
+  of one machine, and its documents no longer point to notes kept off
+  GitHub.
+- The READMEs' terminu family section links tdp, terminu-go and
+  terminu-harness, instead of listing the other apps.
 
 ## [0.5.0] — 2026-10-06
 

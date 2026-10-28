@@ -56,7 +56,7 @@ Five things to know:
 - **Chromium is downloaded on the first launch**, once, into a cache directory (about 175–250 MB), with a progress line. After an upgrade that needs a newer Chromium, run `webu browser update`.
 - **A [Nerd Font](https://www.nerdfonts.com/) is required** in your terminal — links, fields, panels and parts are drawn with its glyphs.
 - **A truecolor terminal is required** — the colours, and how the layers under a popup fade, are drawn in 24-bit colour.
-- **The terminal needs at least 60×20** — in a smaller window webu shows only its name and the size it needs, and everything comes back as the window grows.
+- **The terminal needs at least 60×20** — in a smaller window webu shows only its name, the size it needs and how to quit (`Ctrl-C` twice), and everything comes back as the window grows.
 - **Icon width**: some terminal and font pairs move the cursor two cells for a Nerd Font icon instead of one, and some do the same for the powerline symbols (the ends of the capsules on the frames, the arrow at the end of the cursor). webu measures both when it starts; if the frames still come out crooked, set them yourself: `WEBU__ICON_WIDTH=2` (or `1`) and `WEBU__POWERLINE_WIDTH` for webu alone, or `TERMINU__ICON_WIDTH` and `TERMINU__POWERLINE_WIDTH`, which every terminu family app reads — set them once and they all follow (the `WEBU__` ones come first). Inside another family app's terminal (kbu, filu, sshu), that app sets the `TERMINU__` ones for webu.
 
 To uninstall (it asks before removing your settings, data and the downloaded Chromium):
@@ -146,7 +146,7 @@ Of the page the web screen shows. `h|l` switch between **Network** (the requests
 
 #### Visual mode (`v`)
 
-Select text and copy it. `h|j|k|l`, `w|e|b`, `0|$`, `gg|G` move; `v|V` start a selection by character or line; `y` copies to the system clipboard; `/` asks what to find and underlines every match, `n|N` step through them; `Enter` presses what the cursor is on; `Esc` leaves. While it is on, the page's frame turns yellow and says *Visual* at its top right.
+Select text and copy it. `h|j|k|l`, `w|e|b`, `0|$`, `gg|G` move; `v|V` start a selection by character or line; `y` copies to the system clipboard; `/` asks what to find and underlines every match, `n|N` step through them; `Enter` presses what the cursor is on; `Esc` drops a selection, and leaves when there is none; `Space` opens the mode's own menu. While it is on, the page's frame turns yellow and says *Visual* at its top right, *Visual>select* while selecting.
 
 ## Settings and data
 
@@ -196,7 +196,11 @@ Where things are kept:
 
 ## terminu family
 
-webu follows the [terminu design principle](https://github.com/vulcanshen/terminu) (tdp v0.9.3) and is built on [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys, menus and frames as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh), [locku](https://github.com/vulcanshen/locku) (screen lock), [kamonu](https://github.com/vulcanshen/kamonu) (the family's mark) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (Claude Code's status line).
+webu follows [terminu design](https://github.com/vulcanshen/terminu), the design the terminu family of terminal apps share.
+
+- [terminu design](https://github.com/vulcanshen/terminu) (tdp): terminal UIs you can use without reading the docs; the apps of the family are listed there
+- [terminu-go](https://github.com/vulcanshen/terminu-go): a Go library that draws and drives a terminal UI the way terminu design says; webu is built on it
+- [terminu-harness](https://github.com/vulcanshen/terminu-harness): a Claude Code plugin that makes TUI apps with terminu design and terminu-go
 
 ## License
 

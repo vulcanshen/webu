@@ -6,8 +6,8 @@ import (
 )
 
 // A look again at the page on screen that fails — a settle, a refresh, or
-// R — keeps the page and leaves the app a toast to say (layout/panel,
-// loading and errors); a new address that fails is the error in its place.
+// R — keeps the page and leaves the app a toast to say (tdp
+// panel.15); a new address that fails is the error in its place.
 func TestFailedReloadKeepsThePage(t *testing.T) {
 	root := doc(hd(1, "Kept"), para(text("Still here.")))
 	tb := &tab{id: 1, url: "https://example.com/kept", root: root, cursor: -1}

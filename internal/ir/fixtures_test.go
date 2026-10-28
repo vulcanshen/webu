@@ -1,6 +1,7 @@
 package ir_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
@@ -33,6 +34,9 @@ var (
 	update  = flag.Bool("update", false, "rewrite testdata/*.golden from the current Build")
 )
 
+// fixtureDir is where a captured fixture says it was loaded from.
+const fixtureDir = "file:///testdata/"
+
 func TestFixtures(t *testing.T) {
 	htmls, err := filepath.Glob("testdata/*.html")
 	if err != nil || len(htmls) == 0 {
@@ -63,6 +67,13 @@ func TestFixtures(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				// The fixture's address without this machine's path to the
+				// checkout: the capture is committed, the place is not.
+				dir, err := filepath.Abs("testdata")
+				if err != nil {
+					t.Fatal(err)
+				}
+				raw = bytes.ReplaceAll(raw, []byte("file://"+dir+"/"), []byte(fixtureDir))
 				if err := os.WriteFile(jsonPath, raw, 0o644); err != nil {
 					t.Fatal(err)
 				}

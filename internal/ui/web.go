@@ -9,7 +9,7 @@ import (
 )
 
 // The web screen (ui.md §1): [1] the tabs, [2] the page. [2] is [1]'s
-// details (components/layout/panel): it shows the tab under [1]'s cursor,
+// details (tdp panel.13): it shows the tab under [1]'s cursor,
 // and Enter on [1] takes the keyboard there (tdp K3).
 
 func (m *AppModel) buildWeb() {
@@ -38,7 +38,7 @@ func (m *AppModel) buildWeb() {
 func (m *AppModel) webLayout(w, h int) []terminu.Rect {
 	if m.zoom {
 		// Zoomed, the focused panel takes the whole width, the way a narrow
-		// screen draws it (layout/screen): Tab shows the other one.
+		// screen draws it (tdp screen.5): Tab shows the other one.
 		if m.web.Focused() == m.pagePanel {
 			return []terminu.Rect{{X: 0, Y: 0, W: 0, H: h}, {X: 0, Y: 0, W: w, H: h}}
 		}
@@ -178,7 +178,7 @@ func (m *AppModel) syncTabs() {
 			mark = glyphLive
 		}
 		// The page's title as it is: the lib draws a control character in it
-		// by its name (components, control characters).
+		// by its name (tdp components.5).
 		cell := mark + " " + title
 		row := terminu.Row{ID: strconv.Itoa(t.id), Cells: []string{cell}}
 		switch {
@@ -204,11 +204,18 @@ func (m *AppModel) tabActions() []terminu.Action {
 			Do:        m.do(func() tea.Cmd { i, _ := m.cursorTab(); return m.showTab(i) })},
 		// c, the page panel's C in lower case.
 		{Key: "c", Label: "Close", Desc: "this tab", Scope: terminu.ItemScope, Hint: "close",
-			Do: m.do(func() tea.Cmd { i, _ := m.cursorTab(); return m.closeTab(i) })},
+			Do: m.do(func() tea.Cmd {
+				i, t := m.cursorTab()
+				if t != nil {
+					m.did("Closed the tab " + tabName(t))
+				}
+				return m.closeTab(i)
+			})},
 		// o as on a download's row: this row's URL, in a new tab.
 		{Key: "o", Label: "Open in new tab", Desc: "the same page again", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
 				if _, t := m.cursorTab(); t != nil {
+					m.did("Opened " + t.url + " in a new tab")
 					return m.openTab(t.url, true)
 				}
 				return nil
@@ -216,6 +223,7 @@ func (m *AppModel) tabActions() []terminu.Action {
 		{Key: "r", Label: "Reload", Desc: "this tab", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
 				if _, t := m.cursorTab(); t != nil {
+					m.did("Reloaded " + tabName(t))
 					return t.load(t.url)
 				}
 				return nil
@@ -241,6 +249,7 @@ func (m *AppModel) tabActions() []terminu.Action {
 				}
 				last := m.closed[n-1]
 				m.closed = m.closed[:n-1]
+				m.did("Reopened " + last.URL)
 				return m.openTab(last.URL, true)
 			})},
 	}
@@ -252,6 +261,7 @@ func (m *AppModel) closeOthers() tea.Cmd {
 	if keep < 0 {
 		return nil
 	}
+	m.did("Closed " + plural(len(m.tabs)-1, "other tab"))
 	for i := len(m.tabs) - 1; i >= 0; i-- {
 		if i != keep {
 			m.remember(m.tabs[i])
@@ -272,6 +282,8 @@ func (m *AppModel) newTabBox() tea.Cmd {
 			if v == "" {
 				return nil
 			}
-			return m.openTab(m.resolveURL(v), true)
+			url := m.resolveURL(v)
+			m.did("Opened " + url + " in a new tab")
+			return m.openTab(url, true)
 		})})
 }

@@ -16,7 +16,7 @@ import (
 func (m *AppModel) buildHistory() {
 	m.histList = &terminu.List{
 		// The title and the URL share the room the time leaves; only when
-		// they are at their least does the time go (layout/panel).
+		// they are at their least does the time go (tdp panel.5).
 		Columns:    []terminu.Column{{Title: "Title", Shrink: true}, {Title: "URL", Shrink: true}, {Title: "When", Drop: 1}},
 		Filterable: true,
 		EmptyFact:  "No history yet",
@@ -92,6 +92,7 @@ func (m *AppModel) deleteVisit() tea.Cmd {
 	if err != nil {
 		return m.saveFailed("history.yaml", err)
 	}
+	m.did("Deleted the visit to " + v.URL + " from the history")
 	return nil
 }
 
@@ -102,6 +103,7 @@ func (m *AppModel) clearHistory() tea.Cmd {
 	if err := store.ClearHistory(); err != nil {
 		return m.saveFailed("history.yaml", err)
 	}
+	m.did("Cleared the history")
 	return nil
 }
 

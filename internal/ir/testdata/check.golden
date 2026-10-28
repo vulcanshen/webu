@@ -1,4 +1,4 @@
-document "check" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/check.html focusable #1
+document "check" url=file:///testdata/check.html focusable #1
   check "Checked" on focusable #8
   check "Unchecked" off focusable #10
   check "Mixed" mixed focusable #12

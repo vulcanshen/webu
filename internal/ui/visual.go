@@ -17,7 +17,10 @@ func (m *AppModel) visualMode() *terminu.Mode {
 	key := func(label, desc string, footer bool, keys ...string) terminu.ModeKey {
 		return terminu.ModeKey{Key: label, Keys: keys, Desc: desc, NoFooter: !footer, Do: m.visualKey}
 	}
-	return &terminu.Mode{
+	// What acts on the range or on the item under the cursor is an item
+	// operation in the mode's Space menu (tdp K11, menu.4).
+	item := func(k terminu.ModeKey) terminu.ModeKey { k.Item = true; return k }
+	md := &terminu.Mode{
 		Name: "Visual",
 		Keys: []terminu.ModeKey{
 			key("h|j|k|l", "move by character and row", false, "h", "j", "k", "l", "←", "↓", "↑", "→"),
@@ -25,15 +28,40 @@ func (m *AppModel) visualMode() *terminu.Mode {
 			key("0|$", "start, end of the row", false, "0", "$"),
 			key("u|d", "half a page up, down (PgUp, PgDn too)", false, "u", "d", "PgUp", "PgDn"),
 			key("gg|G", "top, bottom of the page", false, "g", "G"),
-			key("v|V", "select", true, "v", "V"),
-			key("y", "copy", true, "y"),
+			item(key("v|V", "select", true, "v", "V")),
+			// Named as the lib's own selection mode names it.
+			item(terminu.ModeKey{Key: "y", Desc: "copy", Label: "[y] Copy", Do: m.visualKey}),
 			{Key: "/", Desc: "find", Do: func(string) tea.Cmd { return m.visualSearch() }},
 			key("n|N", "next match", true, "n", "N"),
-			key("Enter", "press", true, "Enter"),
+			item(key("Enter", "press", true, "Enter")),
 		},
-		Exit:   "leave",
-		Pause:  true,
-		OnExit: func() tea.Cmd { cmd := m.leaveSelect(); m.sync(); return cmd },
+		Exit:  "leave",
+		Pause: true,
+	}
+	md.OnExit = func() tea.Cmd {
+		if m.sel.selecting {
+			// Esc while selecting goes back a layer (tdp K11): the
+			// selection goes, the cursor stays, and the lib, which has
+			// left the mode, is put back in it.
+			m.sel.selecting = false
+			m.visualLayer(md)
+			m.pagePanel.EnterMode(md)
+			m.sync()
+			return nil
+		}
+		cmd := m.leaveSelect()
+		m.sync()
+		return cmd
+	}
+	return md
+}
+
+// visualLayer names the mode's layer (tdp K11): once selecting it is
+// Visual>select, and Esc unselects.
+func (m *AppModel) visualLayer(md *terminu.Mode) {
+	md.Name, md.Exit = "Visual", "leave"
+	if m.sel.selecting {
+		md.Name, md.Exit = "Visual>select", "unselect"
 	}
 }
 
@@ -85,6 +113,9 @@ func (m *AppModel) visualKey(k string) tea.Cmd {
 	}
 	vis := m.pageVisible()
 	res, text := m.sel.key(k, vis)
+	if md := m.pagePanel.InMode(); md != nil {
+		m.visualLayer(md)
+	}
 	// Keep the character cursor on screen.
 	if m.sel.row < t.top {
 		t.top = m.sel.row

@@ -1,4 +1,4 @@
-document "Gauges" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/gauges.html focusable #4
+document "Gauges" url=file:///testdata/gauges.html focusable #4
   heading "Status" level=1 #10
     text "Status" #97
   paragraph #11

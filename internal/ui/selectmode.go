@@ -13,9 +13,9 @@ import (
 // the way out — because a cursor on text that moves under it is a cursor
 // on nothing.
 //
-// The mode owns the keyboard: no global letter fires, Space opens nothing
-// (? lists the keys), and Esc is layered — it drops a search being typed
-// before it drops the mode.
+// The mode owns the keyboard: no global letter fires, Space opens the
+// mode's Space menu (? lists the keys), and Esc goes back a layer — a
+// selection being made goes before the mode does (tdp K11).
 type selectMode struct {
 	on   bool
 	text [][]rune // the page's rows, as the mode sees them; fixed while on
@@ -410,7 +410,7 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 	styles := segStyles()
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	// Yellow is the mode's, and only what is selected takes it. A search
-	// adds no colour (components/color): every match is underlined in its
+	// adds no colour (tdp color.1): every match is underlined in its
 	// own colour, and the one the search is on is the panel's cursor block,
 	// Subtext1 under Base in bold — "you are here".
 	sel := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(selectColor)
@@ -428,8 +428,8 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 		b.WriteString(lineNum(r+1, gut, false))
 		for _, sg := range t.lay.rows[r].segs {
 			for _, ch := range sg.text {
-				// A control character is its name, in Red (components,
-				// control characters), still one column of the text.
+				// A control character is its name, in Red (tdp
+				// components.5), still one column of the text.
 				piece, style := string(ch), styles[sg.kind]
 				if isControl(ch) {
 					piece, style = controlName(ch), controlStyle(false)

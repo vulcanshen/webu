@@ -1,4 +1,4 @@
-document "separator" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/separator.html focusable #1
+document "separator" url=file:///testdata/separator.html focusable #1
   paragraph #7
     text "Above" #12
   separator #8

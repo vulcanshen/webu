@@ -1,4 +1,4 @@
-document "layouttable" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/layouttable.html focusable #1
+document "layouttable" url=file:///testdata/layouttable.html focusable #1
   group:LayoutTableRow #9
     cell:LayoutTableCell "1." #10
       text "1." #29

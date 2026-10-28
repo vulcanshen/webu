@@ -17,8 +17,7 @@ import (
 // DevTools (ui.md §3) is a screen of its own: what the page the web screen
 // shows has fetched, keeps, logged and is made of. [1] is four lists on
 // one panel's tabs — Network, Storage, Console, Source — each with its
-// filter; [2] is the row under [1]'s cursor in full (layout/panel,
-// details).
+// filter; [2] is the row under [1]'s cursor in full (tdp panel.13).
 //
 // It was a popup with a tab bar of its own, a cursor list and a detail
 // over it; the lib has no popup like that, and a screen gives every list a
@@ -95,7 +94,7 @@ func (m *AppModel) buildDevtools() {
 		// Long values (a URL, a name, a value, a line of text) share the room
 		// the short ones leave and are cut; the short ones keep their width.
 		// Only when the long ones are at their least does a column go, the
-		// one a row reads best without first (layout/panel).
+		// one a row reads best without first (tdp panel.5).
 		{{Title: "Method", Drop: 3}, {Title: "Status", Number: true}, {Title: "Type", Drop: 1}, {Title: "Size", Number: true, Drop: 2}, {Title: "URL", Shrink: true}},
 		{{Title: "Kind", Drop: 1}, {Title: "Name", Shrink: true}, {Title: "Value", Shrink: true}},
 		// A console message and a line of source are lines of text: their
@@ -114,6 +113,7 @@ func (m *AppModel) buildDevtools() {
 	d.detail.Actions = []terminu.Action{{Key: "Enter", Label: "Read", Desc: "the detail in full, to scroll, select and copy",
 		Scope: terminu.PanelScope, Hint: "read", Disabled: func() bool { return d.pager.Empty() },
 		Do: func() tea.Cmd {
+			m.did("Read the detail in full")
 			return m.a.Viewer(&terminu.Viewer{Title: "Detail", Glyph: glyphDevTools, Lines: d.pager.Lines(),
 				Select: selection()})
 		}}}
@@ -200,8 +200,8 @@ func (m *AppModel) devMsg(msg tea.Msg) tea.Cmd {
 				e, _ := m.netEntry(msg.id)
 				if text, ok := textBody(msg.body, e.Mime); ok {
 					// Reading content: the lib draws a Tab as input_tab_width
-					// spaces, a \n in a line as a line break (components,
-					// control characters).
+					// spaces, a \n in a line as a line break (tdp
+					// components.5).
 					lines = append(lines, text)
 				} else {
 					lines = append(lines, terminu.Fg(terminu.Overlay0).Render(humanBytes(float64(len(msg.body)))+" of "+nameOr(e.Mime, "binary")))
@@ -239,8 +239,8 @@ func (m *AppModel) refreshDev() {
 	var rows []terminu.Row
 	for _, e := range d.net {
 		// The values as they are, the lib drawing any control character by
-		// its name; a colour of webu's own is a span (components, control
-		// characters).
+		// its name; a colour of webu's own is a span (tdp
+		// components.5).
 		status, ink := "", terminu.Style{}
 		switch {
 		case e.Error != "":
@@ -442,8 +442,10 @@ func (m *AppModel) devActions() []terminu.Action {
 			Hidden: on(devStorage, devSource), Disabled: noPage,
 			Do: m.do(func() tea.Cmd {
 				if d.panel.Tab == devStorage {
+					m.did("Read the storage again")
 					return m.fetchStorage()
 				}
+				m.did("Read the source again")
 				return m.fetchSource()
 			})},
 		{Key: "C", Label: "Clear", Desc: "the list: the requests, the console lines", Scope: terminu.PanelScope,
@@ -457,6 +459,7 @@ func (m *AppModel) devActions() []terminu.Action {
 				if t == nil || origin == "" {
 					return nil
 				}
+				m.did("Cleared the site data of " + origin)
 				return m.storageThen(t, "Clear site data", func(ctx context.Context) error { return page.ClearSiteData(ctx, origin) })
 			})},
 	}
@@ -520,6 +523,7 @@ func (m *AppModel) deleteStorageRow() tea.Cmd {
 	if !ok {
 		return nil
 	}
+	m.did("Deleted " + oneLine(key) + " from the storage")
 	if cookie != nil {
 		return m.storageThen(t, "Delete cookie", func(ctx context.Context) error { return page.DeleteCookie(ctx, cookie) })
 	}
@@ -537,8 +541,10 @@ func (m *AppModel) devClear() tea.Cmd {
 	switch m.dev.panel.Tab {
 	case devNetwork:
 		t.dev.ClearNet()
+		m.did("Cleared the requests")
 	case devConsole:
 		t.dev.ClearConsole()
+		m.did("Cleared the console")
 	}
 	m.refreshDev()
 	return nil
@@ -555,6 +561,7 @@ func (m *AppModel) evalBox() tea.Cmd {
 			if t == nil || expr == "" {
 				return nil
 			}
+			m.did("Ran " + oneLine(expr) + " in the page")
 			t.dev.Add(page.ConsoleEntry{Level: "input", Text: expr})
 			m.refreshDev()
 			ctx, id := t.ctx, t.id

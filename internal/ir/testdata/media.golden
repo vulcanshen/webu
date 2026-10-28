@@ -1,4 +1,4 @@
-document "media" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/media.html focusable #3
+document "media" url=file:///testdata/media.html focusable #3
   paragraph #8
     media:image "Has alt text" url=file:///with-alt.png #23
   paragraph #9

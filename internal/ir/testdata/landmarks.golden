@@ -1,4 +1,4 @@
-document "landmarks" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/landmarks.html focusable #2
+document "landmarks" url=file:///testdata/landmarks.html focusable #2
   landmark:banner #7
     text "Site header " #39
     link "Home" url=file:/// focusable #25

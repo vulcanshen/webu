@@ -9,7 +9,7 @@ import (
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
-// The finder is [/] (finder: components/input/finder): every node of
+// The finder is [/] (tdp finder): every node of
 // the page that holds text, across all its parts, and Enter GOES there —
 // the part switches, the section opens, the list item is drilled into, and
 // the cursor lands. It never presses anything: a hit on a link's text must
@@ -207,6 +207,7 @@ func (m *AppModel) openFinder() tea.Cmd {
 			if !m.goToHit(t, hits[i]) {
 				return m.toast("That is not on the page any more")
 			}
+			m.did("Went to " + nodeName(hits[i].node))
 			return m.focusPage()
 		}})
 }

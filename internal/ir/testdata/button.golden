@@ -1,4 +1,4 @@
-document "button" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/button.html focusable #1
+document "button" url=file:///testdata/button.html focusable #1
   button "Plain" focusable #7
   button "Disabled" disabled #8
   button "Input button" focusable #9

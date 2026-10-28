@@ -1,4 +1,4 @@
-document "list" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/list.html focusable #1
+document "list" url=file:///testdata/list.html focusable #1
   list #7
     listitem marker="• " #8
       text "Bullet one" #28

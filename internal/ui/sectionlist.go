@@ -29,7 +29,7 @@ import (
 const glyphCode = "\U000f0169" // nf-md-code_braces
 
 // sectionRows draws the list at innerW × innerH: its header, then a
-// section a row, the way layout/panel draws an ordinary list.
+// section a row, the way tdp panel.5 draws an ordinary list.
 func (m *AppModel) sectionRows(t *tab, innerW, innerH int) []string {
 	if innerH <= 0 {
 		return nil
@@ -46,7 +46,7 @@ func (m *AppModel) sectionRows(t *tab, innerW, innerH int) []string {
 		return ord + stem + name + strings.Repeat(" ", gap) + tail
 	}
 	out := make([]string, 0, innerH)
-	// The header: Blue, upper case, held at the top (layout/panel).
+	// The header: Blue, upper case, held at the top (tdp panel.5).
 	head := " " + padLeft("#", numW) + "  SECTION"
 	out = append(out, num.Render(head+strings.Repeat(" ", max(0, w-dispW(head)-5))+"SIZE ")+spaces(arrow))
 	end := min(len(t.secs), t.secTop+innerH-1)

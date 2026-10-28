@@ -60,6 +60,7 @@ func (m *AppModel) buildDownloads() {
 		{Key: "o", Label: "Open source", Desc: "the page it came from, in a new tab", Scope: terminu.ItemScope,
 			Do: m.do(func() tea.Cmd {
 				if d, ok := m.dlCurrent(); ok && d.url != "" {
+					m.did("Opened " + d.url + " in a new tab")
 					return m.openTab(d.url, true)
 				}
 				return nil
@@ -104,7 +105,7 @@ func (m *AppModel) refreshDownloads() {
 		row := terminu.Row{ID: d.guid, Cells: []string{d.name, state}}
 		switch d.state {
 		case dlRunning:
-			row.Styled = [][]terminu.Span{nil, {{Text: state, Style: terminu.Fg(terminu.Green)}}} // in progress (components/color)
+			row.Styled = [][]terminu.Span{nil, {{Text: state, Style: terminu.Fg(terminu.Green)}}} // in progress (tdp color.1)
 		case dlCancelled:
 			row.Styled = [][]terminu.Span{nil, {{Text: state, Style: terminu.Fg(terminu.Overlay0)}}}
 		}
@@ -217,6 +218,7 @@ func (m *AppModel) removeDownload() tea.Cmd {
 	i := m.downloadIndex(d.guid)
 	m.dls = append(m.dls[:i], m.dls[i+1:]...)
 	m.refreshDownloads()
+	m.did("Removed " + d.name + " from the downloads")
 	if d.state != dlRunning || m.browser == nil {
 		return nil
 	}
@@ -238,6 +240,7 @@ func (m *AppModel) clearDownloads() {
 			kept = append(kept, d)
 		}
 	}
+	m.did("Cleared " + plural(len(m.dls)-len(kept), "finished download"))
 	m.dls = kept
 	m.refreshDownloads()
 }

@@ -1,4 +1,4 @@
-document "heading" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/heading.html focusable #1
+document "heading" url=file:///testdata/heading.html focusable #1
   heading "Level one" level=1 #7
     text "Level one" #16
   heading "Level two" level=2 #8

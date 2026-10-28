@@ -154,7 +154,7 @@ popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度�
 
 ## §3 Popup
 
-2026-10-18 起 popup 全是 terminu-go 的（components/layout/popup、dialog、input）：寬度、高度、層色、開關動畫（9 × 32 ms）、
+2026-10-18 起 popup 全是 terminu-go 的（tdp popup，與 tdp 的 dialog、input 各元件）：寬度、高度、層色、開關動畫（9 × 32 ms）、
 淡化、loading icon、`Esc` 一次一層都照 tdp，webu 不再自己畫。webu 用到的：confirm（開連結、搜尋送出、憑證、刪除、清除）、
 text／password／number input（Location、新分頁、欄位、設定、目錄名、go 的行號）、textarea（頁面的多行欄位）、select（頁面的
 select、slider 的數字、書籤搬移）、file-picker（上傳、匯入）、finder（`/`）、form（新增書籤）、viewer（表格的格、code block、
@@ -163,7 +163,7 @@ prompt 是 text input，HTTP 登入是 form；取消都經 `OnCancel` 告訴頁�
 
 **一個寬度**（2026-09-28，tdp F7）：每個 popup 的外框都是 `min(terminal 寬 − 2, 120)`，水平置中（`popup.go` `popupW`）；不依內容
 算寬。說明、值太長就在框裡截尾或捲動，不加寬框。toast 同一個寬度，固定在畫面底部。finder `/` 的清單與預覽合起來是一個 popup，
-兩框合計照這個寬度。頁面自己的彈窗不照（`dev-remarks.md`「偏離 tdp」）。
+兩框合計照這個寬度。頁面自己的彈窗不照（`dev-remarks.md`「tdp 交給 webu 決定的地方」）。
 
 **高度打開時定好**（2026-09-28，tdp F7）：依內容，上限是畫面扣留白，打開之後不跟著內容伸縮 —— 變多就在框裡捲動、變少就留白。
 editor 以打開時的行數定高（至少 6 行）；file picker 以打開時那個目錄的項目數定高（至少 8 列），過濾、換目錄只換內容；Network

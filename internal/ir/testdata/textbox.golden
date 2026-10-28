@@ -1,4 +1,4 @@
-document "textbox" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/textbox.html focusable #6
+document "textbox" url=file:///testdata/textbox.html focusable #6
   text "Empty " #54
   textbox "Empty" focusable #13
   text "Filled " #55

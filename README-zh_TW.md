@@ -56,7 +56,7 @@ go install github.com/vulcanshen/webu/cmd/webu@latest
 - **Chromium 在第一次啟動時下載**，只下載一次，放在 cache 目錄（約 175–250 MB），有進度列。升級後若需要新版 Chromium，執行 `webu browser update`。
 - **終端機必須用 [Nerd Font](https://www.nerdfonts.com/)** —— 連結、欄位、面板與頁面的各部分都用它的 glyph 畫。
 - **終端機必須支援 truecolor** —— 顏色、以及 popup 底下各層變暗的樣子，都用 24-bit 色畫。
-- **終端機至少要 60×20** —— 視窗比這小時，webu 只顯示名稱與需要的大小，視窗拉大就回到原本的畫面。
+- **終端機至少要 60×20** —— 視窗比這小時，webu 只顯示名稱、需要的大小與怎麼離開（按兩次 `Ctrl-C`），視窗拉大就回到原本的畫面。
 - **icon 寬度**：有些終端機與字型的組合，印一個 Nerd Font 的 icon 游標會前進兩格而不是一格，有些連 powerline 符號（框上膠囊的兩端、游標尾端的箭頭）也一樣。webu 啟動時兩種都會量；框線仍然歪掉的話，自己設定：`WEBU__ICON_WIDTH=2`（或 `1`）與 `WEBU__POWERLINE_WIDTH` 只給 webu，`TERMINU__ICON_WIDTH` 與 `TERMINU__POWERLINE_WIDTH` 則是 terminu 家族每個 app 都讀的共用變數 —— 設一次全家族都跟著（`WEBU__` 的優先）。在家族其他 app（kbu、filu、sshu）的終端機裡執行時，那個 app 會替 webu 設好 `TERMINU__` 的兩個。
 
 移除（刪設定、資料與下載的 Chromium 之前都會先問）：
@@ -146,7 +146,7 @@ webu help                         # 完整的命令列說明
 
 #### Visual mode（`v`）
 
-選字、複製。`h|j|k|l`、`w|e|b`、`0|$`、`gg|G` 移動；`v|V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 問你要找什麼、找到的都加底線，`n|N` 在找到的之間走；`Enter` 按下游標所在的東西；`Esc` 離開。進入後頁面的框變黃，右上角寫著 *Visual*。
+選字、複製。`h|j|k|l`、`w|e|b`、`0|$`、`gg|G` 移動；`v|V` 逐字或逐行開始選；`y` 複製到系統剪貼簿；`/` 問你要找什麼、找到的都加底線，`n|N` 在找到的之間走；`Enter` 按下游標所在的東西；`Esc` 先放掉選取，沒有選取時才離開；`Space` 開模式自己的選單。進入後頁面的框變黃，右上角寫著 *Visual*，選取中寫 *Visual>select*。
 
 ## 設定與資料
 
@@ -195,7 +195,11 @@ input_tab_width: 4
 
 ## terminu family
 
-webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v0.9.3），建在 [terminu-go](https://github.com/vulcanshen/terminu-go) 上：跟家族其他成員一樣的按鍵、menu 與框 —— [kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[locku](https://github.com/vulcanshen/locku)（螢幕鎖）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的狀態列）。
+webu 遵循 [terminu design](https://github.com/vulcanshen/terminu)，terminu 家族的終端機 app 共用的設計。
+
+- [terminu design](https://github.com/vulcanshen/terminu)（tdp）：不看文件就能用的 terminal UI；家族的 app 都列在那裡
+- [terminu-go](https://github.com/vulcanshen/terminu-go)：照 terminu design 畫出並驅動終端機介面的 Go 函式庫，webu 建在它上面
+- [terminu-harness](https://github.com/vulcanshen/terminu-harness)：照 terminu design 用 terminu-go 做 TUI app 的 Claude Code plugin
 
 ## 授權
 

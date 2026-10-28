@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -20,7 +21,7 @@ func TestTDP(t *testing.T) {
 }
 
 // What webu shows from outside — a page's title, its text, a bookmark —
-// never reaches the terminal as it is (components, control characters):
+// never reaches the terminal as it is (tdp components.5):
 // tdptest's tricky values in each, every frame checked on the way.
 func TestTrickyTextFromOutside(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
@@ -33,6 +34,8 @@ func TestTrickyTextFromOutside(t *testing.T) {
 	}
 	m := New(nil).WithStore(bms, nil, store.Config{}, nil)
 	d := tdptest.Start(t, m.Program(), 100, 30)
+	// The \n drawn by name is the tricky data's own, from outside.
+	d.AllowLineBreaks = true
 	d.Note("tdptest.Tricky as tab titles, the page's text, bookmarks")
 	d.Do(func() tea.Cmd {
 		for i, v := range tdptest.Tricky {
@@ -45,4 +48,57 @@ func TestTrickyTextFromOutside(t *testing.T) {
 		return nil
 	})
 	d.Press("2", "G", "v", "Esc", "B", "?", "Esc", "W")
+}
+
+// The App Log has what the user did (tdp note.7): an operation run by its
+// key or by Enter, in webu's words, a switch of screens in the lib's.
+func TestTheAppLogHasWhatTheUserDid(t *testing.T) {
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
+	bms := []store.Bookmark{{Title: "Go", URL: "https://go.dev", Folder: "dev"}}
+	m := New(nil).WithStore(bms, nil, store.Config{}, nil)
+	d := tdptest.Start(t, m.Program(), 100, 30)
+	d.Do(func() tea.Cmd {
+		tb := &tab{id: 1, url: "https://example.com/", title: "Example", root: doc(hd(1, "Example"), para(text("Words"))), cursor: -1}
+		m.tabs = append(m.tabs, tb)
+		m.shown = 0
+		tb.relayout(m.pageW())
+		m.sync()
+		return nil
+	})
+	d.Press("2", "j", "Z", "Z", "B", "Enter", "!")
+	for _, want := range []string{"Zoomed in on the page", "Zoomed out to the tabs and the page",
+		"Switched to Bookmarks", "Shut the folder dev"} {
+		if !d.Has(want) {
+			t.Errorf("the App Log should say %q:\n%s", want, strings.Join(d.Screen(), "\n"))
+		}
+	}
+}
+
+// Visual mode has a layer (tdp K11): selecting, it is Visual>select and
+// Esc unselects, back to Visual; Esc again leaves the mode.
+func TestVisualModeGoesBackALayer(t *testing.T) {
+	m := New(nil)
+	d := tdptest.Start(t, m.Program(), 100, 30)
+	d.Do(func() tea.Cmd {
+		tb := &tab{id: 1, url: "https://example.com/", title: "Example", root: doc(para(text("Some words to select"))), cursor: -1}
+		m.tabs = append(m.tabs, tb)
+		m.shown = 0
+		tb.relayout(m.pageW())
+		m.sync()
+		return nil
+	})
+	screen := func() string { return strings.Join(d.Screen(), "\n") }
+	d.Press("2", "v", "v")
+	if !d.Has("Visual>select") || !d.Has("Esc:unselect") {
+		t.Fatalf("selecting, the mode is Visual>select and Esc unselects:\n%s", screen())
+	}
+	d.Press("Esc")
+	if d.Has("Visual>select") || !d.Has("Visual") || !m.sel.on || m.sel.selecting {
+		t.Fatalf("Esc goes back to Visual, still in the mode:\n%s", screen())
+	}
+	d.Press("Esc")
+	if m.sel.on || m.pagePanel.InMode() != nil {
+		t.Fatalf("Esc again leaves the mode:\n%s", screen())
+	}
 }

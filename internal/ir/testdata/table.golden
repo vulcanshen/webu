@@ -1,4 +1,4 @@
-document "table" url=file:///Users/vulcan/Documents/sideproj/webu/internal/ir/testdata/table.html focusable #1
+document "table" url=file:///testdata/table.html focusable #1
   table "People" #6
     row #14
       cell:columnheader "Name" header #15
