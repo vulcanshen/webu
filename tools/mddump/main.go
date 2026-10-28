@@ -7,6 +7,7 @@
 //	go run . -whole <url>             the whole <body> as markdown, nothing left out
 //	go run . -save page.html <url>    keeps what was fetched
 //	go run . -file page.html <url>    a saved page instead of fetching it
+//	go run . -chromium <url>          the page Chromium rendered, its marks acted on
 //
 // What came back — status, content type, final URL, size — and whether
 // the page looks like a shell its JavaScript fills in go to stderr; the
@@ -45,9 +46,12 @@ func main() {
 	whole := flag.Bool("whole", false, "the whole <body> as markdown, nothing left out")
 	save := flag.String("save", "", "write the fetched HTML to this file")
 	file := flag.String("file", "", "read the HTML from this file instead of fetching the URL")
+	chromium := flag.Bool("chromium", false, "load the page in Chromium and mark what it knows on the HTML")
+	exec := flag.String("exec", "", "-chromium: the browser to run (webu's pinned one, say); else the one chromedp finds")
+	settle := flag.Duration("settle", 2*time.Second, "-chromium: how long the page's JavaScript runs before the snapshot")
 	flag.Parse()
 	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: mddump [-whole] [-save page.html | -file page.html] <url>")
+		fmt.Fprintln(os.Stderr, "usage: mddump [-whole] [-chromium [-exec path] [-settle 2s]] [-save page.html | -file page.html] <url>")
 		os.Exit(2)
 	}
 	page, err := url.Parse(flag.Arg(0))
@@ -55,29 +59,48 @@ func main() {
 		fail(err)
 	}
 
-	raw, ctype, final, err := fetch(page, *file)
-	if err != nil {
-		fail(err)
-	}
-	// Where the page really is, after its redirects: what its relative
-	// links are relative to.
-	page = final
-	if *save != "" {
-		if err := os.WriteFile(*save, raw, 0o644); err != nil {
+	var doc *html.Node
+	if *chromium {
+		doc, page, err = rendered(page.String(), *exec, *settle)
+		if err != nil {
 			fail(err)
 		}
-	}
-	if ctype != "" && !strings.Contains(ctype, "html") {
-		fail(fmt.Errorf("not HTML: %s", ctype))
-	}
-	// Whatever the page was written in, UTF-8 from here (Big5, Shift_JIS…).
-	r, err := charset.NewReader(bytes.NewReader(raw), ctype)
-	if err != nil {
-		fail(err)
-	}
-	doc, err := html.Parse(r)
-	if err != nil {
-		fail(err)
+		fmt.Fprintf(os.Stderr, "rendered by Chromium: %s\n", page)
+		if *save != "" {
+			// The rebuilt page with its marks, before they are acted on.
+			var b bytes.Buffer
+			if err := html.Render(&b, doc); err != nil {
+				fail(err)
+			}
+			if err := os.WriteFile(*save, b.Bytes(), 0o644); err != nil {
+				fail(err)
+			}
+		}
+		apply(doc)
+	} else {
+		raw, ctype, final, err := fetch(page, *file)
+		if err != nil {
+			fail(err)
+		}
+		// Where the page really is, after its redirects: what its relative
+		// links are relative to.
+		page = final
+		if *save != "" {
+			if err := os.WriteFile(*save, raw, 0o644); err != nil {
+				fail(err)
+			}
+		}
+		if ctype != "" && !strings.Contains(ctype, "html") {
+			fail(fmt.Errorf("not HTML: %s", ctype))
+		}
+		// Whatever the page was written in, UTF-8 from here (Big5, Shift_JIS…).
+		r, err := charset.NewReader(bytes.NewReader(raw), ctype)
+		if err != nil {
+			fail(err)
+		}
+		if doc, err = html.Parse(r); err != nil {
+			fail(err)
+		}
 	}
 	absolutize(doc, page)
 	text, scripts := bodyWeight(doc)
