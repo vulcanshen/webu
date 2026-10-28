@@ -61,6 +61,10 @@ const (
 	segBullet
 	segQuoteBar
 	segInlineCode
+	// A heading's capsule (docs/reader.md): its words on its level's
+	// colour, and the round ends in that colour.
+	segCapsule
+	segCapEnd
 )
 
 type seg struct {
@@ -113,6 +117,9 @@ type row struct {
 	// table's header — and ink its text colour when the ground needs one
 	// (a heading's Base). Empty for none.
 	ground, ink lipgloss.Color
+	// capsule is the colour of a heading's capsule on this row (segCapsule,
+	// segCapEnd), empty for none.
+	capsule lipgloss.Color
 	// code: a row of a code block, drawn on the code background across
 	// the row, padding included.
 	code bool

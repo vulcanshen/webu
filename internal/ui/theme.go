@@ -68,8 +68,8 @@ var (
 const (
 	baseHex  = "#1e1e2e" // canvas; also dark text on a bright chip
 	crustHex = "#11111b" // recessed background of an inactive capsule
-	// The reader's grounds (docs/reader.md): code and quotes on Mantle, a
-	// table's header on Surface0; a list's icons Blue, a quote's bar
+	// The reader's grounds (docs/reader.md): code and quotes on Mantle,
+	// code in a line on Surface0; a list's icons Blue, a quote's bar
 	// Lavender.
 	mantleHex   = "#181825"
 	surface0Hex = "#313244"

@@ -29,7 +29,7 @@ func site(t *testing.T) *httptest.Server {
 		case "/two":
 			io.WriteString(w, `<html><head><title>Second</title></head><body><h1>Second</h1><p>The second page.</p>
 <ul><li>One<ul><li>Two</li></ul></li></ul><ol><li>A</li><li>B<ol><li>C<ol><li>D</li></ol></li></ol></li></ol>
-<pre class="language-go">x := 1</pre><blockquote><p>Quoted words</p></blockquote></body></html>`)
+<table><tr><th>Key</th><th>Function</th></tr><tr><td>j</td><td>down</td></tr></table><pre class="language-go">x := 1</pre><blockquote><p>Quoted words</p></blockquote></body></html>`)
 		case "/login":
 			if r.Method == "POST" {
 				r.ParseForm()
@@ -142,7 +142,7 @@ func TestReaderReadsAndFollows(t *testing.T) {
 	d.press("enter")
 	d.until("the second page", d.shows("The second page."))
 	v := d.view()
-	for _, want := range []string{"\uf111 One", "\uf0c8 Two", "1. A", "2. B", "a. C", "i. D", "go", "x := 1", "▎ Quoted words"} {
+	for _, want := range []string{"\ue0b6 Second \ue0b4", "│ Key │ Function │", "├─────┼──────────┤", "│ j   │ down     │", "\U000f09de One", "\U000f0a15 Two", "1. A", "2. B", "a. C", "i. D", "go", "x := 1", "▎ Quoted words"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("the second page should show %q:\n%s", want, v)
 		}

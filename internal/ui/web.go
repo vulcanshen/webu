@@ -3,6 +3,7 @@ package ui
 import (
 	"sort"
 	"strconv"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	terminu "github.com/vulcanshen/terminu-go"
@@ -14,7 +15,9 @@ import (
 
 func (m *AppModel) buildWeb() {
 	m.tabsList = &terminu.List{
-		Columns:   []terminu.Column{{Title: "Tab", Shrink: true}},
+		// The border says TABS: the column says what each row shows, the
+		// address (user, 2026-10-28).
+		Columns:   []terminu.Column{{Title: "URL", Shrink: true}},
 		EmptyFact: "No tabs",
 		EmptyHint: "Press [T] to open one, or [Space] to see what you can do here",
 		OnMove:    m.tabMoved,
@@ -161,11 +164,9 @@ func (m *AppModel) syncTabs() {
 	}
 	rows := make([]terminu.Row, 0, len(m.tabs))
 	for i, t := range m.tabs {
-		title := t.title
-		if title == "" {
-			title = t.url
-		}
-		if title == "" {
+		// The address, its scheme left off: the whole of it is on [2].
+		title := strings.TrimPrefix(strings.TrimPrefix(t.url, "https://"), "http://")
+		if title == "" || t.url == "about:blank" {
 			title = "new tab"
 		}
 		if n := seq[t]; n > 0 {

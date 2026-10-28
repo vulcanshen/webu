@@ -473,6 +473,13 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 			// The cursor is the panel cursor on every item, a heading too
 			// (tdp panel.5).
 			style = st.cur
+		case row.capsule != "" && s.kind == segCapsule:
+			style = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(row.capsule)
+		case row.capsule != "" && s.kind == segCapEnd:
+			style = lipgloss.NewStyle().Foreground(row.capsule)
+			if row.ground != "" {
+				style = style.Background(row.ground)
+			}
 		case row.code:
 			var ok bool
 			if style, ok = st.codeStyles[s.kind]; !ok {
@@ -502,8 +509,10 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 		default:
 			style = st.styles[s.kind]
 		}
-		if row.ground != "" && !cursor && s.kind != segInlineCode {
-			// A reader row on its ground: the whole row, its ink with it.
+		// A reader row on its ground: the whole row, its ink with it. Code
+		// in a line keeps its own chip, but not in a heading, whose row is
+		// one bar of its colour (user, 2026-10-28).
+		if row.ground != "" && !cursor && (s.kind != segInlineCode || row.ink != "") {
 			style = style.Background(row.ground)
 			if row.ink != "" {
 				style = style.Foreground(row.ink)
@@ -698,7 +707,9 @@ func lineNum(n, w int, dimmed bool) string {
 	if w <= 0 {
 		return ""
 	}
-	ink := focusColor
+	// Dim: the numbers are where the text is, not the text (user,
+	// 2026-10-28).
+	ink := pageDim
 	if dimmed {
 		ink = dimColor
 	}

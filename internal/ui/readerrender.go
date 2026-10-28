@@ -159,6 +159,31 @@ func trimCells2(cs []rcell) []rcell {
 // characters, the first row after the block's head, the rest after its
 // hang; a line break in the page is one here too.
 func (r *rrender) flow(cs []rcell, c *rctx, ground, ink lipgloss.Color) {
+	r.flowIn(cs, c, ground, ink, "")
+}
+
+// flowIn is flow, each row's words in a capsule of that colour when there
+// is one: a heading's (docs/reader.md).
+func (r *rrender) flowIn(cs []rcell, c *rctx, ground, ink, capsule lipgloss.Color) {
+	room := r.width
+	if capsule != "" {
+		room -= 4 // the two ends and a space inside each
+	}
+	put := func(cur []rcell, start int) {
+		cur = trimCells2(cur)
+		if capsule != "" {
+			words := append([]rcell{}, cur[start:]...)
+			cur = append(append([]rcell{}, cur[:start]...), cells("\ue0b6", segCapEnd, 0, -1)...)
+			cur = append(cur, cells(" ", segCapsule, 0, -1)...)
+			cur = append(cur, words...)
+			cur = append(cur, cells(" ", segCapsule, 0, -1)...)
+			cur = append(cur, cells("\ue0b4", segCapEnd, 0, -1)...)
+		}
+		r.row(cur, ground, ink, false)
+		if capsule != "" {
+			r.lay.rows[len(r.lay.rows)-1].capsule = capsule
+		}
+	}
 	for len(cs) > 0 && cs[0].r == ' ' {
 		cs = cs[1:]
 	}
@@ -170,7 +195,7 @@ func (r *rrender) flow(cs []rcell, c *rctx, ground, ink lipgloss.Color) {
 	start := len(cur)
 	w, brk := cellsW(cur), -1
 	emit := func() {
-		r.row(trimCells2(cur), ground, ink, false)
+		put(cur, start)
 		cur = append([]rcell{}, c.hang...)
 		start = len(cur)
 		w, brk = cellsW(cur), -1
@@ -180,7 +205,7 @@ func (r *rrender) flow(cs []rcell, c *rctx, ground, ink lipgloss.Color) {
 			emit()
 			continue
 		}
-		if w+x.w > r.width && len(cur) > start {
+		if w+x.w > room && len(cur) > start {
 			cut := len(cur)
 			if brk > start && brk < len(cur) {
 				cut = brk
@@ -204,7 +229,7 @@ func (r *rrender) flow(cs []rcell, c *rctx, ground, ink lipgloss.Color) {
 		}
 	}
 	if len(cur) > start {
-		r.row(trimCells2(cur), ground, ink, false)
+		put(cur, start)
 	}
 }
 
@@ -245,7 +270,12 @@ func (r *rrender) block(n *ir.Node, c *rctx) {
 		for _, k := range n.Children {
 			run = r.inline(run, k, attrBold, -1)
 		}
-		r.flow(run, c, levelColor(n.Level), lipgloss.Color(baseHex))
+		// One capsule: a link or code in the heading is drawn as the heading
+		// is, the link still an item.
+		for i := range run {
+			run[i].kind = segCapsule
+		}
+		r.flowIn(run, c, c.ground, "", levelColor(n.Level))
 	case ir.Paragraph:
 		r.blank(c)
 		var run []rcell
@@ -321,9 +351,10 @@ func (r *rrender) list(n *ir.Node, c *rctx) {
 	}
 }
 
-// bullets are a bulleted list's icons by depth: nf-fa-circle, nf-fa-square,
-// nf-fa-diamond.
-var bullets = []string{string(rune(0xf111)), string(rune(0xf0c8)), string(rune(0xf219))}
+// bullets are a bulleted list's icons by depth: Material's small circle,
+// small square and small rhombus, the user's pick (2026-10-28) over the
+// Font Awesome ones, which drew too big.
+var bullets = []string{string(rune(0xf09de)), string(rune(0xf0a15)), string(rune(0xf0a10))}
 
 // olLabel is a numbered list's number at its depth: 1, a, i, then 1 again.
 func olLabel(n, depth int) string {
@@ -412,9 +443,15 @@ func (r *rrender) table(n *ir.Node, c *rctx) {
 		var rowCells [][]rcell
 		header := len(row.Children) > 0
 		for _, cell := range row.Children {
+			// A header cell is bold; the rule under the header row is
+			// what sets it apart, no ground of its own (user, 2026-10-28).
+			var attr textAttr
+			if cell.Header {
+				attr = attrBold
+			}
 			var run []rcell
 			for _, k := range cell.Children {
-				run = r.inline(run, k, 0, -1)
+				run = r.inline(run, k, attr, -1)
 			}
 			for i := range run {
 				if run[i].r == '\n' {
@@ -482,11 +519,7 @@ func (r *rrender) table(n *ir.Node, c *rctx) {
 			rc = append(rc, cells(strings.Repeat(" ", widths[j]-cellsW(cl)+1), segPlain, 0, -1)...)
 			rc = append(rc, cells("│", segDim, 0, -1)...)
 		}
-		var ground lipgloss.Color = c.ground
-		if head[i] {
-			ground = lipgloss.Color(surface0Hex)
-		}
-		r.row(rc, ground, "", false)
+		r.row(rc, c.ground, "", false)
 		if head[i] && i+1 < len(grid) && !head[i+1] {
 			r.row(rule("├", "┼", "┤"), c.ground, "", false)
 		}
