@@ -42,7 +42,7 @@ func (m *AppModel) syncPage() {
 	p.Actions = m.pageActions(t)
 	// Esc is listed, and does something, only where there is a level up.
 	p.OnEsc = nil
-	if t != nil && (t.drilled() || t.read || t.popupNode() != nil) {
+	if t != nil && (t.drilled() || t.read || t.popupNode() != nil || t.find != nil) {
 		p.OnEsc = m.do(m.pageEsc)
 	}
 }
@@ -68,6 +68,11 @@ func (m *AppModel) partTab(i int) tea.Cmd {
 // content it is no popup (tdp F1).
 func (m *AppModel) pageEsc() tea.Cmd {
 	t := m.shownTab()
+	if t != nil && t.reader {
+		// Reading, one level up is the search put away.
+		t.find = nil
+		return nil
+	}
 	switch {
 	case t == nil:
 		return nil
@@ -353,6 +358,9 @@ func targetDesc(n *ir.Node, _ int) string {
 // panelActions are the page's own (ux.md §A.1): what it does to the whole
 // page, not to the item.
 func (m *AppModel) panelActions(t *tab) []terminu.Action {
+	if t != nil && t.reader {
+		return m.readerPanelActions(t)
+	}
 	noTab := func() bool { return m.shownTab() == nil }
 	noPage := func() bool { t := m.shownTab(); return t == nil || t.root == nil }
 	panel := func(key, label, desc, hint string, off func() bool, do func() tea.Cmd) terminu.Action {
@@ -418,7 +426,6 @@ func (m *AppModel) panelActions(t *tab) []terminu.Action {
 			}
 			return copyToClipboard(ir.Markdown(m.shownTab().root))
 		}),
-		m.wholeAction(t),
 		panel("C", "Close", "this tab", "", noTab, func() tea.Cmd {
 			m.did("Closed the tab " + tabName(m.shownTab()))
 			return m.closeTab(m.shown)
@@ -434,7 +441,7 @@ func (m *AppModel) wholeAction(t *tab) terminu.Action {
 	if t != nil && t.whole {
 		label, desc = "Content only", "what the page itself presents"
 	}
-	return terminu.Action{Key: "f", Label: label, Desc: desc, Scope: terminu.PanelScope,
+	return terminu.Action{Key: "w", Label: label, Desc: desc, Scope: terminu.PanelScope,
 		// A Chromium tab's page has no content apart from its whole.
 		Hidden:   func() bool { t := m.shownTab(); return t != nil && !t.reader },
 		Disabled: func() bool { t := m.shownTab(); return t == nil || t.doc == nil },

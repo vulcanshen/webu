@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/vulcanshen/webu/internal/ir"
 )
@@ -55,6 +56,11 @@ const (
 	segCodeHeading
 	segCodeStrong
 	segCodeEmph
+	// The reader's elements (docs/reader.md): a bulleted list's icon, a
+	// quote's bar, code inside a line.
+	segBullet
+	segQuoteBar
+	segInlineCode
 )
 
 type seg struct {
@@ -102,6 +108,11 @@ func attrOf(role string) textAttr {
 
 type row struct {
 	segs []seg
+	// ground is a reader row's background across the whole row — a
+	// heading's level colour, a code block's or a quote's Mantle, a
+	// table's header — and ink its text colour when the ground needs one
+	// (a heading's Base). Empty for none.
+	ground, ink lipgloss.Color
 	// code: a row of a code block, drawn on the code background across
 	// the row, padding included.
 	code bool

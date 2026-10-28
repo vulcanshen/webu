@@ -173,6 +173,12 @@ func (b *pageBody) Key(key string, _ tea.KeyMsg) (bool, tea.Cmd) {
 	default:
 		return false, nil
 	}
+	if t.reader {
+		// Reading: the page scrolls, as in less (docs/reader.md).
+		m.readerScroll(t, k)
+		m.syncPage()
+		return true, nil
+	}
 	if t.listing() {
 		t.moveSection(k, m.pageVisible())
 		m.syncPage()
@@ -230,6 +236,12 @@ func (b *pageBody) Scroll() string {
 	t := m.shownTab()
 	if t == nil || t.root == nil || m.sel.on {
 		return ""
+	}
+	if t.reader && t.cursor >= 0 {
+		// Focus mode: where the focused link or image goes (docs/reader.md).
+		if n := t.current(); n != nil && n.URL != "" {
+			return n.URL
+		}
 	}
 	vis := max(1, b.h-m.headRows(t))
 	if t.listing() {
@@ -490,7 +502,18 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 		default:
 			style = st.styles[s.kind]
 		}
+		if row.ground != "" && !cursor && s.kind != segInlineCode {
+			// A reader row on its ground: the whole row, its ink with it.
+			style = style.Background(row.ground)
+			if row.ink != "" {
+				style = style.Foreground(row.ink)
+			}
+		}
 		style = withAttr(style, s.attr)
+		if hits := m.findHits(t, i); len(hits) > 0 && !strings.ContainsFunc(s.text, isControl) {
+			used += writeFound(&b, style, st.cur, s.text, used, innerW, hits)
+			continue
+		}
 		if strings.ContainsFunc(s.text, isControl) {
 			// What the page wrote never reaches the terminal as it is: a
 			// control character is its name, in Red (tdp
@@ -509,6 +532,8 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 		b.WriteString(style.Render(text))
 	}
 	switch {
+	case row.ground != "":
+		b.WriteString(lipgloss.NewStyle().Background(row.ground).Render(strings.Repeat(" ", max(0, innerW-used))))
 	case row.code:
 		span := min(innerW, max(used, t.textWidth()))
 		b.WriteString(st.codePad.Render(strings.Repeat(" ", max(0, span-used))))
@@ -624,6 +649,9 @@ func segStyles() map[segKind]lipgloss.Style {
 		segCaret:       lipgloss.NewStyle().Foreground(pageInput).Background(pageInputBg),
 		segCheck:       lipgloss.NewStyle().Foreground(pageInput),
 		segMedia:       lipgloss.NewStyle().Foreground(pageMedia),
+		segBullet:      lipgloss.NewStyle().Foreground(lipgloss.Color(blueHex)),
+		segQuoteBar:    lipgloss.NewStyle().Foreground(lipgloss.Color(lavenderHex)),
+		segInlineCode:  lipgloss.NewStyle().Foreground(pageCode).Background(lipgloss.Color(surface0Hex)),
 		segCode:        lipgloss.NewStyle().Foreground(pageCode),
 		segUnsupported: lipgloss.NewStyle().Foreground(pageDim),
 		segInvalid:     lipgloss.NewStyle().Foreground(pageInvalid),

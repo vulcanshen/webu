@@ -6,12 +6,22 @@ Each release names the version of terminu design (tdp) it follows.
 
 **webu is becoming a reader** ([`docs/reader.md`](docs/reader.md)).
 A page is fetched as it is, over plain HTTP, and its JavaScript is not
-run; what the page itself presents is shown — as markdown for now, webu's
-own look later — and the site around it is left out: navigation,
-sidebars, footers, cookie notices. `f` shows the full page, and again its
-content. A link opens at once, without asking first; `P|N` go along the
-tab's own history and come back to where you were. A table the page laid
-itself out with reads as lines, not as a grid.
+run; what the page itself presents is shown, and the site around it is
+left out: navigation, sidebars, footers, cookie notices. A heading is a
+row on its level's colour; a list item has its icon (a circle, a square,
+a diamond by depth) or its number (1., a., i. by depth); code and quotes
+are on their own ground, code coloured by its language; a link and an
+image have an icon before their words, their address on the frame when
+in Focus. A table the page laid itself out with reads as lines, a table
+of data as a grid.
+
+- The page's keys are a reader's: `j|k|u|d|gg|G` scroll; `/` finds text,
+  every hit underlined, `n|N` step through them, `Esc` puts it away; `f`
+  is Focus mode, where `j|k` go from one link, image, field or button to
+  the next and `Enter` presses it; `v` is Visual mode, from the top of
+  the screen; `H|L` go back and forward along the tab's own history, to
+  where you were; `o` is the address box; `w` shows the full page, and
+  again its content. A link opens at once, without asking first.
 
 - Forms work as far as a search box and a plain sign-in: `Enter` fills a
   field (a password never shown, nothing typed going to the App Log),

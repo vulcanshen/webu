@@ -17,6 +17,15 @@ import (
 // text. That keeps a JSON document readable as key / value at a glance
 // without turning it into a Christmas tree.
 
+// guessLang is chroma's guess at what language text is in, for a code
+// block the page did not name (docs/reader.md); "" when it cannot say.
+func guessLang(text string) string {
+	if l := lexers.Analyse(text); l != nil {
+		return strings.ToLower(l.Config().Name)
+	}
+	return ""
+}
+
 // highlightLines lexes text as lang and returns one segment list per line.
 // nil when there is no lexer for lang, and the caller draws plain.
 func highlightLines(lang, text string) [][]seg {

@@ -27,7 +27,9 @@ func site(t *testing.T) *httptest.Server {
 <article><h1>First</h1><p><a href="/two">the second page</a> `+prose+`</p><p>`+prose+`</p>
 <p><a href="/f.zip">a file</a></p></article></body></html>`)
 		case "/two":
-			io.WriteString(w, `<html><head><title>Second</title></head><body><h1>Second</h1><p>The second page.</p></body></html>`)
+			io.WriteString(w, `<html><head><title>Second</title></head><body><h1>Second</h1><p>The second page.</p>
+<ul><li>One<ul><li>Two</li></ul></li></ul><ol><li>A</li><li>B<ol><li>C<ol><li>D</li></ol></li></ol></li></ol>
+<pre class="language-go">x := 1</pre><blockquote><p>Quoted words</p></blockquote></body></html>`)
 		case "/login":
 			if r.Method == "POST" {
 				r.ParseForm()
@@ -84,10 +86,13 @@ func readerAt(t *testing.T, url, dl string) (*driver, *AppModel) {
 	return d, m
 }
 
-// readerOn moves the cursor of the page onto the item whose node says
-// what, j by j.
+// readerOn moves Focus mode's cursor onto the item whose node says what,
+// j by j, going into the mode first.
 func readerOn(d *driver, what string) {
 	d.t.Helper()
+	if md := d.m.pagePanel.InMode(); md == nil || md.Name != "Focus" {
+		d.press("f")
+	}
 	for range 40 {
 		if t := d.m.shownTab(); t != nil {
 			if n := t.current(); n != nil && (strings.Contains(n.Name, what) || strings.Contains(n.URL, what) ||
@@ -106,23 +111,49 @@ func readerOn(d *driver, what string) {
 func TestReaderReadsAndFollows(t *testing.T) {
 	srv := site(t)
 	d, m := readerAt(t, srv.URL+"/", t.TempDir())
-	d.until("the first page", d.shows("# First"))
-	if strings.Contains(d.view(), "Site menu") {
-		t.Errorf("the content holds the site's menu:\n%s", d.view())
+	d.until("the first page", d.shows("Words of the first page"))
+	if v := d.view(); strings.Contains(v, "Site menu") || strings.Contains(v, "# First") {
+		t.Errorf("the content holds the site's menu, or a markdown symbol:\n%s", v)
 	}
 	d.press("2")
-	d.press("f")
+	d.press("w")
 	d.until("the full page", d.shows("Site menu"))
-	d.press("f")
+	d.press("w")
 	d.until("the content again", func() bool { return !strings.Contains(d.view(), "Site menu") })
+
+	// / finds, n steps, Esc puts the search away.
+	d.press("/")
+	d.key("enough")
+	d.press("enter")
+	tb := m.shownTab()
+	if tb.find == nil || len(tb.find.hits) < 2 {
+		t.Fatalf("the search found %v", tb.find)
+	}
+	d.press("n")
+	if tb.find.at != 1 {
+		t.Errorf("n should go to the second hit, is on %d", tb.find.at)
+	}
+	d.press("esc")
+	if tb.find != nil {
+		t.Error("Esc should put the search away")
+	}
 
 	readerOn(d, "/two")
 	d.press("enter")
-	d.until("the second page", d.shows("# Second"))
-	d.press("P")
-	d.until("back on the first", d.shows("# First"))
-	d.press("N")
-	d.until("forward on the second", d.shows("# Second"))
+	d.until("the second page", d.shows("The second page."))
+	v := d.view()
+	for _, want := range []string{"\uf111 One", "\uf0c8 Two", "1. A", "2. B", "a. C", "i. D", "go", "x := 1", "▎ Quoted words"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("the second page should show %q:\n%s", want, v)
+		}
+	}
+	if md := m.pagePanel.InMode(); md != nil {
+		t.Errorf("following a link should leave Focus mode, is in %s", md.Name)
+	}
+	d.press("H")
+	d.until("back on the first", d.shows("Words of the first page"))
+	d.press("L")
+	d.until("forward on the second", d.shows("The second page."))
 	if tb := m.shownTab(); !tb.canBack || tb.canForward {
 		t.Errorf("history: back %v forward %v", tb.canBack, tb.canForward)
 	}
@@ -164,7 +195,7 @@ func TestReaderSignsInAndSearches(t *testing.T) {
 		t.Errorf("the cookie is not kept: %s", raw)
 	}
 
-	d.press("L")
+	d.press("o")
 	d.key("backspace")
 	d.key(srv.URL + "/search")
 	d.press("enter")
@@ -184,7 +215,7 @@ func TestReaderDownloadsAndMissingPages(t *testing.T) {
 	srv := site(t)
 	dl := t.TempDir()
 	d, m := readerAt(t, srv.URL+"/", dl)
-	d.until("the first page", d.shows("# First"))
+	d.until("the first page", d.shows("Words of the first page"))
 	d.press("2")
 	readerOn(d, "f.zip")
 	d.press("enter")
@@ -195,7 +226,8 @@ func TestReaderDownloadsAndMissingPages(t *testing.T) {
 	if tb := m.shownTab(); tb.title != "First" || tb.doc == nil {
 		t.Errorf("the page should stay, not %q:\n%s", tb.title, d.view())
 	}
-	d.press("L")
+	d.press("esc") // out of Focus mode, where o opens a new tab
+	d.press("o")
 	d.key("backspace")
 	d.key(srv.URL + "/nowhere")
 	d.press("enter")

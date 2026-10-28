@@ -211,6 +211,8 @@ type tab struct {
 	hist       []readerPlace
 	histAt     int
 	loadCancel context.CancelFunc
+	// find is what / found on the page, nil when nothing is being found.
+	find *readerFind
 }
 
 // blankGrace is how long a page that keeps arriving empty is still shown

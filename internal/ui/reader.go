@@ -163,6 +163,11 @@ func (m *AppModel) applyReader(msg readerMsg) tea.Cmd {
 		return tea.Batch(append(cmds, m.readerDownload(msg.resp, msg.cancel))...)
 	}
 	d := msg.doc
+	// Another page: Focus mode and a search were on the one before.
+	if md := m.pagePanel.InMode(); md != nil && md.Name == "Focus" {
+		m.pagePanel.LeaveMode()
+	}
+	t.find = nil
 	if t.histAt >= 0 && t.histAt < len(t.hist) {
 		t.hist[t.histAt].top, t.hist[t.histAt].cursor = t.top, t.cursor
 	}
@@ -215,7 +220,7 @@ func (m *AppModel) remark(t *tab) {
 func (t *tab) relayoutReader(width int) {
 	t.parts, t.secs, t.shape, t.read, t.drill = nil, nil, shapeOne, false, nil
 	t.back, t.backParts = layout{}, nil
-	draw := func(g int) layout { return mdLayout(t.lines, max(1, width-g), t.tabW) }
+	draw := func(g int) layout { return renderReader(t.root, t.doc, max(1, width-g), t.tabW) }
 	g := t.gutter
 	lay := draw(g)
 	if g2 := lineNumW(len(lay.rows)); g2 != g {
@@ -223,6 +228,16 @@ func (t *tab) relayoutReader(width int) {
 	}
 	t.lay, t.gutter, t.layW = lay, g, width
 	t.drillHead, t.drillBody = -1, 0
+	if t.find != nil {
+		// The rows moved: the hits are found again, the one the search was
+		// on kept as near as there is.
+		at := t.find.at
+		t.find.hits = findHits(t, t.find.query)
+		t.find.at = clamp(at, 0, max(0, len(t.find.hits)-1))
+		if len(t.find.hits) == 0 {
+			t.find = nil
+		}
+	}
 }
 
 // readerJump puts the cursor on what a link to #frag lands on: the row it
@@ -236,14 +251,8 @@ func (m *AppModel) readerJump(t *tab, frag string) bool {
 	if !ok {
 		return false
 	}
-	t.top = row
-	t.cursor = -1
-	for i, it := range t.lay.items {
-		if it.first >= row {
-			t.cursor = i
-			break
-		}
-	}
+	// Reading, nothing is chosen: the row comes to the top.
+	t.top = clamp(row, 0, max(0, len(t.lay.rows)-1))
 	return true
 }
 

@@ -73,7 +73,8 @@ HTML 來源（二選一）
 - **Visual mode（`v`）**：照舊，從畫面最上面那一列開始；複製的是畫面上的字。
 - **上一頁、下一頁**：`H|L`（原本的 `P|N`，因為 `N` 要給搜尋）；章節的 `n|p` 在閱讀器拿掉。
 - **正文／整頁**：`w`（原本的 `f` 給了 Focus mode）。
-- `f` 當 Focus、`w` 當整頁是我定的預設，user 可以再改。
+- `f` 當 Focus、`w` 當整頁是我定的預設，user 可以再改。`H|L` 給了上一頁、下一頁，原本的 `L`（網址框）就移到 `o`，跟 Vimium 一樣（`o` 開網址、`H|L`、`f`、`/` 與 `n|N`）。
+- 實作：`renderReader` 從內容樹直接畫（不經 markdown 文字）；一列可以有整列的底色與字色（`row.ground`、`row.ink`，`rowLine` 鋪滿）；閱讀時沒有項目被選（`cursor` -1），Focus mode 才有；搜尋的命中照 tdp color.1 畫（底線，目前那一個是 cursor 色塊）；Focus 中的連結、圖片網址寫在框的右下（panel 的 Scroll）。
 
 ## 第 1～3 階段定下的細節
 
@@ -98,7 +99,8 @@ HTML 來源（二選一）
 | 1 | 取內容：`net/http`＋存檔的 cookie → 解析 → 挑正文 → 內容樹 → markdown；測試資料是照真實網站樣子寫的小頁面（真實網站的 HTML 有著作權，不放進 repo），8 個真實網站用 `tools/mddump` 與暫時的測試對照 | 完成（fea867a，`internal/reader`） |
 | 2 | [2] 暫時顯示 markdown 原文，能在連結之間移動、按 `Enter` 開 | 完成 |
 | 3 | 表單：GET 組網址送出；POST 帶隱藏欄位、存 cookie、能登入 | 完成 |
-| 4 | 元件的畫法（render）；Chromium 只留給空殼頁；DevTools 重新設計；拿掉不再做的；CHANGELOG | |
+| 4 | 元件的畫法（render）與按鍵 | 完成（`readerrender.go`、`readerkeys.go`） |
+| 5 | Chromium 只留給空殼頁；DevTools 重新設計；拿掉不再做的；CHANGELOG | |
 
 ## 還沒定的
 
