@@ -4,6 +4,30 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
+**webu is becoming a reader** ([`docs/reader.md`](docs/reader.md)).
+A page is fetched as it is, over plain HTTP, and its JavaScript is not
+run; what the page itself presents is shown — as markdown for now, webu's
+own look later — and the site around it is left out: navigation,
+sidebars, footers, cookie notices. `f` shows the full page, and again its
+content. A link opens at once, without asking first; `P|N` go along the
+tab's own history and come back to where you were. A table the page laid
+itself out with reads as lines, not as a grid.
+
+- Forms work as far as a search box and a plain sign-in: `Enter` fills a
+  field (a password never shown, nothing typed going to the App Log),
+  ticks a box, chooses an option; `Enter` on the button sends the form,
+  its hidden fields with it. A form with one box to type in offers to send
+  itself, as Enter in it does on the page. Sign-ins that need JavaScript,
+  another site's account, a captcha or a second step do not work.
+- Cookies are kept in `cookies.json` with the state, a file only you can
+  read; `S` › `Clear sign-in data` signs you out everywhere. A file that
+  will not read is offered to be moved aside, as webu's other files are.
+- A link to a file downloads it into the download folder, its row in
+  Downloads, `x` stopping it.
+- Not yet on the reader: a page's own dialogs, frames, what its JavaScript
+  draws, and DevTools, which shows nothing for these pages until it is
+  thought through again.
+
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
 v1.1.0: the frames, the menus, the popups and the keys are now the same

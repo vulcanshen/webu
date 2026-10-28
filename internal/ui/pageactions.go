@@ -10,6 +10,7 @@ import (
 	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/page"
+	"github.com/vulcanshen/webu/internal/reader"
 )
 
 // Panel [2]'s actions (ux.md §A.1), registered with the lib: Enter's,
@@ -129,7 +130,9 @@ func (m *AppModel) enterAction(t *tab) *terminu.Action {
 	}
 	act := &terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint,
 		Disabled: m.busy, Do: m.do(m.enterItem)}
-	if n := t.current(); n != nil && !t.listing() {
+	// A reader tab's link goes at once: the markdown shows where to
+	// (docs/reader.md).
+	if n := t.current(); n != nil && !t.listing() && !t.reader {
 		if l := leavingLink(t, n); l != nil {
 			// A link would leave the page for somewhere the screen does not
 			// show: it asks first, its text and its address — as the
@@ -285,6 +288,10 @@ func (m *AppModel) itemActions(t *tab, n *ir.Node) []terminu.Action {
 		yank.Disabled = func() bool { return n.URL == "" }
 		out = append(out, yank)
 	case ir.Textbox:
+		if t.reader {
+			out = append(out, m.readerItemActions(t, n)...)
+			break
+		}
 		if n.Value != "" {
 			if !n.Multiline {
 				out = append(out, busy(m.item("Submit", "press [Enter] in the field", func() tea.Cmd { return m.submit(t, n) })))
@@ -367,10 +374,16 @@ func (m *AppModel) panelActions(t *tab) []terminu.Action {
 		away(panel("T", "Tab", "a new one, at a URL", "", nil, m.newTabBox)),
 		panel("P", "Previous", "back in this tab", "", func() bool { t := m.shownTab(); return t == nil || !t.canBack || m.busy() }, func() tea.Cmd {
 			m.did("Went back in " + tabName(m.shownTab()))
+			if t := m.shownTab(); t.reader {
+				return t.readerGo(-1)
+			}
 			return m.shownTab().navigate("back", page.Back)
 		}),
 		panel("N", "Next", "forward in this tab", "", func() bool { t := m.shownTab(); return t == nil || !t.canForward || m.busy() }, func() tea.Cmd {
 			m.did("Went forward in " + tabName(m.shownTab()))
+			if t := m.shownTab(); t.reader {
+				return t.readerGo(1)
+			}
 			return m.shownTab().navigate("forward", page.Forward)
 		}),
 		away(panel("/", "Search", "every part of the page; [Enter] goes there", "search",
@@ -400,14 +413,43 @@ func (m *AppModel) panelActions(t *tab) []terminu.Action {
 		}),
 		panel("Y", "Yank page url", "to the clipboard", "", noTab, func() tea.Cmd { return copyToClipboard(m.shownTab().url) }),
 		panel("", "Yank markdown", "the page itself, as markdown", "", noPage, func() tea.Cmd {
+			if t := m.shownTab(); t.reader {
+				return copyToClipboard(reader.Text(t.lines))
+			}
 			return copyToClipboard(ir.Markdown(m.shownTab().root))
 		}),
+		m.wholeAction(t),
 		panel("C", "Close", "this tab", "", noTab, func() tea.Cmd {
 			m.did("Closed the tab " + tabName(m.shownTab()))
 			return m.closeTab(m.shown)
 		}),
 	}
 	return acts
+}
+
+// wholeAction is f on a reader tab: the whole page, its navigation and
+// all, or back to its content (docs/reader.md).
+func (m *AppModel) wholeAction(t *tab) terminu.Action {
+	label, desc := "Full page", "everything on it, the site around the content too"
+	if t != nil && t.whole {
+		label, desc = "Content only", "what the page itself presents"
+	}
+	return terminu.Action{Key: "f", Label: label, Desc: desc, Scope: terminu.PanelScope,
+		// A Chromium tab's page has no content apart from its whole.
+		Hidden:   func() bool { t := m.shownTab(); return t != nil && !t.reader },
+		Disabled: func() bool { t := m.shownTab(); return t == nil || t.doc == nil },
+		Do: m.do(func() tea.Cmd {
+			t := m.shownTab()
+			t.whole = !t.whole
+			t.top, t.cursor = 0, -1
+			m.remark(t)
+			if t.whole {
+				m.did("Showed the full page of " + tabName(t))
+			} else {
+				m.did("Showed the content of " + tabName(t))
+			}
+			return nil
+		})}
 }
 
 // sectionsAction turns the cut into sections off for a page it does not
@@ -495,6 +537,9 @@ func (m *AppModel) enterItem() tea.Cmd {
 	t := m.shownTab()
 	if t == nil {
 		return nil
+	}
+	if t.reader {
+		return m.readerEnter(t, t.current())
 	}
 	if t.listing() {
 		t.openSection(m.pageVisible())
@@ -588,6 +633,9 @@ func firstItemIn(n *ir.Node) *ir.Node {
 
 // click presses a node.
 func (m *AppModel) click(t *tab, n *ir.Node) tea.Cmd {
+	if t.reader {
+		return m.readerEnter(t, n)
+	}
 	if m.busy() {
 		return nil
 	}
@@ -602,6 +650,12 @@ func (m *AppModel) click(t *tab, n *ir.Node) tea.Cmd {
 
 // submit presses Enter in a field: the page's implicit submission.
 func (m *AppModel) submit(t *tab, n *ir.Node) tea.Cmd {
+	if t.reader {
+		if f := t.doc.Field(n); f != nil && f.Form != nil {
+			return m.readerSubmit(t, f.Form, nil)
+		}
+		return nil
+	}
 	m.did("Submitted " + nodeName(n))
 	id := n.ID
 	return t.press(func(ctx context.Context) error { return page.Submit(ctx, id) })
@@ -611,6 +665,9 @@ func (m *AppModel) submit(t *tab, n *ir.Node) tea.Cmd {
 // the one thing a table cell holds. A field opens to type, a select drops
 // its list, a link asks first, the rest is a click.
 func (m *AppModel) enterOn(t *tab, n *ir.Node) tea.Cmd {
+	if t.reader {
+		return m.readerEnter(t, n)
+	}
 	if m.busy() {
 		return nil
 	}

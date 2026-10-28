@@ -173,12 +173,15 @@ type SessionTab struct {
 // where an older webu kept it, if somewhere else: config.yaml is a
 // setting; session.yaml is state, under paths.Data until 2026-10-19;
 // bookmarks.yaml and history.yaml are data, bookmarks.yaml under
-// paths.Config until 2026-10-19.
+// paths.Config until 2026-10-19. cookies.json, the reader's sign-ins
+// (docs/reader.md), is state: deleted, you are signed out, and sign in
+// again.
 var files = map[string]struct{ dir, old func() (string, error) }{
 	"config.yaml":    {dir: paths.Config},
 	"session.yaml":   {dir: paths.State, old: paths.Data},
 	"bookmarks.yaml": {dir: paths.Data, old: paths.Config},
 	"history.yaml":   {dir: paths.Data},
+	"cookies.json":   {dir: paths.State},
 }
 
 // path is where name is read and written: where it goes, or where an older

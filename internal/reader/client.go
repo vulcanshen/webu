@@ -27,9 +27,13 @@ type Client struct {
 	http *http.Client
 }
 
-// NewClient is a client on jar.
+// NewClient is a client on jar. A server has a while to start answering;
+// the answer itself has as long as it takes — a download may be big —
+// and the caller's context ends it.
 func NewClient(jar *Jar, ua string) *Client {
-	return &Client{Jar: jar, UA: ua, http: &http.Client{Jar: jar, Timeout: 60 * time.Second}}
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.ResponseHeaderTimeout = 30 * time.Second
+	return &Client{Jar: jar, UA: ua, http: &http.Client{Jar: jar, Transport: tr}}
 }
 
 // Response is what came back: where from, after its redirects; what it is;

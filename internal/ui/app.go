@@ -15,6 +15,7 @@ import (
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/page"
 	"github.com/vulcanshen/webu/internal/paths"
+	"github.com/vulcanshen/webu/internal/reader"
 	"github.com/vulcanshen/webu/internal/store"
 )
 
@@ -56,6 +57,14 @@ type AppModel struct {
 	zoom bool
 	// sel is visual mode on the shown tab (ux.md §1; visual.go).
 	sel selectMode
+	// rc is the reader's client (docs/reader.md): the pages of a tab that
+	// is not Chromium's come through it, with its cookies. chromiumPages
+	// says a new tab is Chromium's instead (reader.go); rdCancel stops a
+	// download of the reader's, by its row, and rdSeq names the next.
+	rc            *reader.Client
+	chromiumPages bool
+	rdCancel      map[string]context.CancelFunc
+	rdSeq         int
 
 	// webu's own files, loaded by main and written back as they change.
 	bookmarks []store.Bookmark
@@ -125,6 +134,13 @@ func New(b *browser.Browser, start ...string) *AppModel {
 		browser:   b,
 		events:    make(chan tea.Msg, 16),
 		startURLs: urls,
+		// A jar that forgets until main hands over the one in the file.
+		rc:            reader.NewClient(reader.EmptyJar(""), readerUA),
+		chromiumPages: chromiumPagesDefault,
+		rdCancel:      map[string]context.CancelFunc{},
+	}
+	if b != nil && b.UserAgent != "" {
+		m.rc.UA = b.UserAgent
 	}
 	m.build()
 	m.listenBrowser()
@@ -136,6 +152,19 @@ func (m *AppModel) WithStore(bookmarks []store.Bookmark, folders []string, cfg s
 	m.bookmarks, m.folders, m.cfg, m.history = bookmarks, folders, cfg, history
 	m.applyConfig()
 	m.refreshLists()
+	return m
+}
+
+// WithReader hands the app the reader's client, its jar the cookies'
+// file (docs/reader.md).
+func (m *AppModel) WithReader(c *reader.Client) *AppModel {
+	if m.browser != nil && m.browser.UserAgent != "" {
+		c.UA = m.browser.UserAgent
+	}
+	if c.UA == "" {
+		c.UA = readerUA
+	}
+	m.rc = c
 	return m
 }
 
@@ -469,6 +498,9 @@ func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 
 	case pageMsg:
 		return m.applyPage(msg)
+
+	case readerMsg:
+		return m.applyReader(msg)
 	}
 	return nil
 }

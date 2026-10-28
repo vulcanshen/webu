@@ -219,6 +219,12 @@ func (m *AppModel) removeDownload() tea.Cmd {
 	m.dls = append(m.dls[:i], m.dls[i+1:]...)
 	m.refreshDownloads()
 	m.did("Removed " + d.name + " from the downloads")
+	if cancel, ok := m.rdCancel[d.guid]; ok {
+		// One of the reader's: its request ends, and the file with it.
+		cancel()
+		delete(m.rdCancel, d.guid)
+		return nil
+	}
 	if d.state != dlRunning || m.browser == nil {
 		return nil
 	}

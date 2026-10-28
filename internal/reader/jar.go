@@ -48,6 +48,15 @@ type savedCookie struct {
 	HTTPOnly bool      `json:"httpOnly,omitempty"`
 }
 
+// EmptyJar is a jar that starts empty and writes to path: what a file
+// that could not be read is replaced with, once it is moved aside (tdp
+// E3) — nothing is written before a page is loaded, and none is until
+// the question is answered.
+func EmptyJar(path string) *Jar {
+	jar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	return &Jar{jar: jar, path: path, saved: map[string]savedCookie{}}
+}
+
 // OpenJar reads the jar's file at path; an empty path is a jar that
 // forgets at the end. A file that is not there is an empty jar; one that
 // cannot be read is an error, for the MOVE ASIDE question (tdp E3).

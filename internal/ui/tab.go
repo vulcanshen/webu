@@ -18,6 +18,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/page"
+	"github.com/vulcanshen/webu/internal/reader"
 )
 
 // tab is one Chromium target and everything webu knows about it: the page
@@ -197,6 +198,19 @@ type tab struct {
 	// tick is the app's clock (App.Tick), for the settle timer a test can
 	// move; tea.Tick when unset.
 	tick func(time.Duration, func(time.Time) tea.Msg) tea.Cmd
+
+	// reader: the tab's pages come over net/http, through rc, and show
+	// as markdown (reader.go, docs/reader.md). doc is the page, lines it
+	// written out — its content, or the whole of it while whole —, hist
+	// and histAt the tab's own history, loadCancel the request on its way.
+	reader     bool
+	rc         *reader.Client
+	doc        *reader.Doc
+	lines      []reader.Line
+	whole      bool
+	hist       []readerPlace
+	histAt     int
+	loadCancel context.CancelFunc
 }
 
 // blankGrace is how long a page that keeps arriving empty is still shown
@@ -346,6 +360,9 @@ type settleMsg struct {
 
 // newTab opens a target on the browser and starts listening to it.
 func (m *AppModel) newTab() *tab {
+	if !m.chromiumPages {
+		return m.newReaderTab()
+	}
 	return m.newTabWith(chromedp.NewContext(m.browser.Ctx))
 }
 
@@ -469,6 +486,9 @@ func (t *tab) adopt() tea.Cmd {
 }
 
 func (t *tab) close() {
+	if t.loadCancel != nil {
+		t.loadCancel()
+	}
 	if t.cancel != nil {
 		t.cancel()
 	}
@@ -477,6 +497,9 @@ func (t *tab) close() {
 // load navigates and captures. The tab shows as loading until the capture
 // lands.
 func (t *tab) load(url string) tea.Cmd {
+	if t.reader {
+		return t.readerLoad(url, -1)
+	}
 	t.gen++
 	t.loading, t.navigating, t.pending, t.errText = true, true, false, ""
 	t.reloading = false
@@ -878,6 +901,10 @@ func (t *tab) landOn(i, visible int) {
 }
 
 func (t *tab) relayout(width int) {
+	if t.reader {
+		t.relayoutReader(width)
+		return
+	}
 	if t.root == nil {
 		return
 	}

@@ -17,6 +17,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/paths"
+	"github.com/vulcanshen/webu/internal/reader"
 	"github.com/vulcanshen/webu/internal/store"
 	"github.com/vulcanshen/webu/internal/ui"
 	"github.com/vulcanshen/webu/internal/version"
@@ -118,11 +119,19 @@ func main() {
 	cfg, cfgErr := store.LoadConfig()
 	history, histErr := store.LoadHistory()
 	session, sessErr := store.LoadSession()
+	// The reader's cookies (docs/reader.md). One that will not read is
+	// asked about like the rest; meanwhile the jar is empty, and nothing
+	// is written over the file before the answer.
+	jar, jarErr := reader.OpenJar(store.Path("cookies.json"))
+	if jarErr != nil {
+		jar = reader.EmptyJar(store.Path("cookies.json"))
+	}
 	var unread []ui.Unread
 	for _, e := range []struct {
 		name string
 		err  error
-	}{{"config.yaml", cfgErr}, {"bookmarks.yaml", bmErr}, {"history.yaml", histErr}, {"session.yaml", sessErr}} {
+	}{{"config.yaml", cfgErr}, {"bookmarks.yaml", bmErr}, {"history.yaml", histErr}, {"session.yaml", sessErr},
+		{"cookies.json", jarErr}} {
 		if e.err != nil {
 			unread = append(unread, ui.Unread{Name: e.name, Path: store.Path(e.name), Err: e.err})
 		}
@@ -134,7 +143,7 @@ func main() {
 		session = store.Session{}
 	}
 	app := ui.New(b, startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session).
-		WithUnread(unread).WithMoves(moves)
+		WithUnread(unread).WithMoves(moves).WithReader(reader.NewClient(jar, ""))
 
 	// Whatever door the program leaves through — q, an outside SIGINT or
 	// SIGTERM, the terminal closing — Chromium goes too (terminu family: leave

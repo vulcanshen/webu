@@ -127,6 +127,8 @@ webu help                         # 完整的命令列說明
 
 #### 頁面
 
+webu 正在改成閱讀器（[`docs/reader.md`](docs/reader.md)）：網頁照原樣抓下來、不跑它的 JavaScript，先用 markdown 顯示這一頁直接給的內容，網站外殼 —— 導覽列、側欄、頁尾、cookie 告示 —— 不顯示；`f` 切到整頁，再按一次回到正文。連結上按 `Enter` 直接開。表單做到搜尋框與簡單的帳密登入：用 `Enter` 填欄位，在按鈕上按 `Enter` 送出；只有一個可以打字的欄位時，填完會問要不要送出。連到檔案的連結會下載它。
+
 `j|k` 照閱讀順序一個一個走 —— 先同一列、再往下 —— 到頭尾繞回。`h|l` 看整頁或其中一個部分。`Enter` 在連結上先問再開；在按鈕上按下；在輸入框上開框打字；在 select 上列出選項；在標題上收合；在一節、長的清單項目或 frame 上走進去。`Esc` 走出來。
 
 `Space` 就是右鍵選單：連結開新分頁、複製連結或文字、送出、清除或複製輸入框的值、檢查元素。對整頁：`R` 重新載入 · `T` 新分頁 · `P|N` 上一頁 / 下一頁 · `/` finder · `go` 依行號跳到某行 · `n|p` 下一節 / 上一節 · `Sections` / `One sheet` · `v` visual mode · `L` 網址 · `A` 加書籤 · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。
@@ -175,7 +177,7 @@ input_tab_width: 4
 | | 內容 | 位置 |
 |---|---|---|
 | 設定 | `config.yaml` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`，或 `$WEBU__CONFIG`） |
-| 狀態 | `session.yaml`，上次離開時開著的分頁 | 跟設定放一起（或 `$WEBU__STATE`） |
+| 狀態 | `session.yaml`，上次離開時開著的分頁；`cookies.json`，讀過的網頁讓你登入的狀態（只有你自己能讀；`S` › `Clear sign-in data` 清空） | 跟設定放一起（或 `$WEBU__STATE`） |
 | 資料 | `bookmarks.yaml`、歷史、下載、瀏覽器 profile（cookie、登入）、Chromium 的 log（`webu.log`） | `~/.webu/datas`（`$WEBU__DATA`） |
 | cache | 下載的 Chromium | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$XDG_CACHE_HOME/webu`；或 `$WEBU__CACHE`） |
 

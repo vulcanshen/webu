@@ -127,6 +127,8 @@ The page follows the cursor. `Enter` go to the page · `c` close · `o` open aga
 
 #### Page
 
+webu is becoming a reader ([`docs/reader.md`](docs/reader.md)): a page is fetched as it is, without running its JavaScript, and what it presents is shown as markdown for now, the site around it — navigation, sidebars, footers, cookie notices — left out; `f` shows the full page, and again its content. `Enter` on a link opens it at once. Forms work as far as a search box and a plain sign-in: fill the fields with `Enter`, then `Enter` on the button sends it; a form with one box to type in offers to send itself. A link to a file downloads it.
+
 `j|k` walk the items in reading order — along a row, then down — and come round at the ends. `h|l` show the whole page, or one of its parts. `Enter` on a link asks, then opens; on a button presses; on a box opens it to type; on a select lists its options; on a heading folds it; on a section, a long list item or a frame goes in. `Esc` comes back out.
 
 `Space` is the right-click menu: open a link in a new tab, yank a link or text, submit, clear or yank a box, inspect an element. For the page: `R` reload · `T` new tab · `P|N` back / forward · `/` finder · `go` go to a line by its number · `n|p` next / previous section · `Sections` / `One sheet` · `v` visual mode · `L` location · `A` bookmark it · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab.
@@ -176,7 +178,7 @@ Where things are kept:
 | | What | Where |
 |---|---|---|
 | settings | `config.yaml` | `~/.config/webu` (`$XDG_CONFIG_HOME/webu`, or `$WEBU__CONFIG`) |
-| state | `session.yaml`, the tabs open when webu last quit | with the settings (or `$WEBU__STATE`) |
+| state | `session.yaml`, the tabs open when webu last quit; `cookies.json`, where the pages you read have signed you in (only you can read it; `S` › `Clear sign-in data` empties it) | with the settings (or `$WEBU__STATE`) |
 | data | `bookmarks.yaml`, the history, downloads, the browser profile (cookies, logins), Chromium's log (`webu.log`) | `~/.webu/datas` (`$WEBU__DATA`) |
 | cache | the downloaded Chromium | macOS `~/Library/Caches/webu`, Linux `~/.cache/webu` (`$XDG_CACHE_HOME/webu`; or `$WEBU__CACHE`) |
 

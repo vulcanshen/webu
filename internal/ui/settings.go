@@ -129,6 +129,17 @@ func (m *AppModel) buildSettings() {
 				_, cmd := m.setValues.Key("Enter", tea.KeyMsg{Type: tea.KeyEnter})
 				return cmd
 			})},
+		// The reader's cookies (docs/reader.md): signed out of every site
+		// at once, the file gone.
+		{Key: "C", Label: "Clear sign-in data", Desc: "every site's cookies: signed out everywhere", Scope: terminu.PanelScope,
+			Ask: &terminu.Ask{Title: "Clear sign-in data", Details: []string{"Every site webu is signed in to signs you out."},
+				Question: "Clear the sign-in data?", Verb: "clear", Warn: []int{0}},
+			Do: m.do(func() tea.Cmd {
+				if err := m.rc.Jar.Clear(); err != nil {
+					return m.a.Error("Clear failed", err.Error())
+				}
+				return m.toastOK("Cleared the sign-in data")
+			})},
 	}}
 	m.setScreen = m.a.AddScreen(&terminu.Screen{Name: "Settings", Key: "S", Desc: "config.yaml, a key a row",
 		Panels: []*terminu.Panel{m.setPanel}})

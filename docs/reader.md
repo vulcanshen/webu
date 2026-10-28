@@ -58,6 +58,17 @@ HTML 來源（二選一）
 │ ( 送出 )
 ```
 
+## 第 1～3 階段定下的細節
+
+- **閱讀器的分頁**：新分頁一律是閱讀器的（`tab.reader`），頁面經 `reader.Client` 來，Chromium 不參與；Chromium 的分頁只剩舊的測試在用（`chromiumPagesDefault`，測試的 `TestMain` 打開），第 4 階段定 Chromium 還畫哪些頁。分頁有自己的上一頁／下一頁（`hist`），回去時回到離開時的位置。
+- **連結直接開，不先問**：markdown 原文就寫著網址，以前「畫面看不出會去哪」的理由不在了。頁內的 `#錨點` 跳到那一節。
+- **可以按的**：標題（裡面有連結時換成連結）、連結、圖片、欄位、按鈕；`j|k` 在它們之間走。
+- **表單**：欄位的值記在 `reader.Field`，同一個欄位在正文和整頁裡是同一份；送出時照 HTML 的規則組值（勾選框只在勾了時、按鈕只送按下的那個、不送檔案）。只有一個可以打字的欄位時，填完問要不要送出（頁面上在那一欄按 Enter 就是送出）。不在表單裡的按鈕、`type=button`：toast 說要網頁的 JavaScript。打進欄位的值不進 App Log。
+- **cookie**：`cookies.json` 放狀態目錄（tdp E3：刪了只是登出），`0600`；讀不了時照 MOVE ASIDE 問，問的時候是空的 jar、不寫檔。Settings 的 `C` 清除。
+- **不是網頁的**（HTML、純文字、JSON 以外，且狀態碼不是錯誤）：下載到下載資料夾，Downloads 有一列，`x` 取消。狀態碼 400 以上照樣顯示內容，toast 說狀態。
+- **`f`**：正文與整頁切換（只在閱讀器的分頁出現）。
+- **DevTools**：閱讀器的分頁沒有 Chromium，Network／Console／Storage／Source 都是空的，等第 4 階段重新設計。
+
 ## 不再做的
 
 相對現在的 webu：網頁的 JavaScript 互動、網頁自己的對話框（alert、confirm、prompt）、iframe、靠 JavaScript 或第三方的登入、現在的 DevTools（要重新想，見下）。哪些真的拿掉，做到第 4 階段時寫進 CHANGELOG。
@@ -66,10 +77,10 @@ HTML 來源（二選一）
 
 | 階段 | 內容 | 狀態 |
 |---|---|---|
-| 0 | 這份設計 | 寫好 |
-| 1 | 取內容：`net/http`＋存檔的 cookie → 解析 → 挑正文 → 內容樹 → markdown；8 個網站存成固定的測試資料 | |
-| 2 | [2] 暫時顯示 markdown 原文，能在連結之間移動、按 `Enter` 開 | |
-| 3 | 表單：GET 組網址送出；POST 帶隱藏欄位、存 cookie、能登入 | |
+| 0 | 這份設計 | 寫好（8c44e4e） |
+| 1 | 取內容：`net/http`＋存檔的 cookie → 解析 → 挑正文 → 內容樹 → markdown；測試資料是照真實網站樣子寫的小頁面（真實網站的 HTML 有著作權，不放進 repo），8 個真實網站用 `tools/mddump` 與暫時的測試對照 | 完成（fea867a，`internal/reader`） |
+| 2 | [2] 暫時顯示 markdown 原文，能在連結之間移動、按 `Enter` 開 | 完成 |
+| 3 | 表單：GET 組網址送出；POST 帶隱藏欄位、存 cookie、能登入 | 完成 |
 | 4 | 元件的畫法（render）；Chromium 只留給空殼頁；DevTools 重新設計；拿掉不再做的；CHANGELOG | |
 
 ## 還沒定的

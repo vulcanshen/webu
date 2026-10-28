@@ -406,7 +406,9 @@ func (m *AppModel) devActions() []terminu.Action {
 			return true
 		}
 	}
-	noPage := func() bool { return m.shownTab() == nil }
+	// A reader tab has no Chromium behind it: nothing to read again, run
+	// or clear the data of (docs/reader.md, stage 4 for DevTools).
+	noPage := func() bool { t := m.shownTab(); return t == nil || t.reader }
 	return []terminu.Action{
 		// [1] streams, so its rows stay bright off focus; its hint dims as
 		// any panel's does, [2]'s Enter alone lit there (tdp T2, M9).
@@ -468,8 +470,8 @@ func (m *AppModel) devActions() []terminu.Action {
 // fetchStorage reads the shown page's cookies and storage.
 func (m *AppModel) fetchStorage() tea.Cmd {
 	t := m.shownTab()
-	if t == nil {
-		return nil
+	if t == nil || t.reader {
+		return nil // a reader tab has no Chromium to ask (docs/reader.md)
 	}
 	return m.storageThen(t, "", nil)
 }
@@ -501,7 +503,7 @@ func (m *AppModel) storageThen(t *tab, what string, fn func(context.Context) err
 // fetchSource reads the shown page's HTML.
 func (m *AppModel) fetchSource() tea.Cmd {
 	t := m.shownTab()
-	if t == nil {
+	if t == nil || t.reader {
 		return nil
 	}
 	m.dev.panel.Loading, m.dev.panel.LoadingText = true, "reading the source…"
