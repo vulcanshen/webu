@@ -66,6 +66,7 @@ internal/ui/         TUI，建在 terminu-go 上：app.go（AppModel、向 lib �
 internal/store/      config / bookmarks / history / session 的 YAML；Netscape 書籤匯入
 internal/paths/      設定、狀態、資料、快取四個目錄的解析，舊位置搬過來
 tools/axdump/        看任何頁面的 AX tree（本機 Chrome）
+tools/mddump/        實驗：不用 Chromium，抓一頁、挑出內容、印成 markdown
 ```
 
 依賴方向：`ui → page → ir`、`ui → browser`；`ir` 不依賴 CDP 以外的任何東西。`page/sessions.go` 用 `ir.CarriedFrom` 當 id 偏移的單位，是 page 對 ir 唯一的反向依賴（一個常數）。
@@ -292,7 +293,9 @@ make build     # → ./webu（CGO_ENABLED=0、-trimpath、strip；版本是 dev�
 ./webu
 ```
 
-開發用的小工具放在頂層的 `tools/`（tdp project 允許，不算 app 本身）：`tools/axdump` 看任何頁面的 accessibility tree（`make axdump`，有自己的 `go.mod`）。tdp project 圖上沒有、由 app 決定的另外兩樣：`CLAUDE.md`（指向 2026-10-18 那次重構的交代，給 AI 協作時找回脈絡）與 `.claude/`（AI 協作用的專案設定；個人的 `settings.local.json` 與 `worktrees/` 照 `.gitignore` 不進版控）。
+開發用的小工具放在頂層的 `tools/`（tdp project 允許，不算 app 本身）：`tools/axdump` 看任何頁面的 accessibility tree（`make axdump`，有自己的 `go.mod`）；`tools/mddump` 是頁面顯示重新設計的實驗（`make mddump`，也有自己的 `go.mod`，見下一段）。維護者自己的 Claude Code 檔案（`CLAUDE.md`、`.claude/`）照 tdp project.3 不進 git。
+
+**頁面顯示的重新設計（2026-10-28 起，實驗中）**：user 要 [2] 只呈現這一頁直接給的內容，排掉 nav、sidebar、modal 這些網站外殼，先以 markdown 原文顯示，怎麼 render 之後再談；DevTools 也要重想，之後再談。取內容不再靠 Chromium：`net/http` 抓原始 HTML（cookie jar、轉址、`x/net/html/charset` 轉 UTF-8），`x/net/html` 解析，Chromium 變成選配，只在偵測到靠 JavaScript 才有內容的空殼頁時用它算好的 DOM（user 選的 2：抽內容只寫一份、只吃 HTML）。`tools/mddump` 先拿 Readability（`codeberg.org/readeck/go-readability/v2`，Firefox 閱讀模式的 Go 版）挑內容、`html-to-markdown/v2`（含 table、strikethrough）轉 markdown，當基準量自己的規則；兩個都是 MIT。`-whole` 照轉整個 `<body>` 對照，`-save`／`-file` 存下與重放 HTML。
 
 Chromium 的 snapshot bucket 沒有 Linux ARM 版，webu 只跑釘死的 snapshot，所以 `.goreleaser.yaml` 在範本留給 app 的 `ignore` 排除 linux/arm64，`install.sh` 在 app 自己的段擋掉這個平台。
 
