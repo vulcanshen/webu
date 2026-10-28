@@ -292,6 +292,9 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 		return terminu.Action{Key: key, Label: label, Desc: desc, Scope: terminu.PanelScope, Disabled: off, Do: m.do(do)}
 	}
 	away := func(a terminu.Action) terminu.Action { a.Clear = true; return a }
+	// H and L are on the hint: how to go back and forward is not
+	// something to look up (user, 2026-10-28).
+	hint := func(a terminu.Action, verb string) terminu.Action { a.Hint = verb; return a }
 	noFind := func() bool { t := m.shownTab(); return t == nil || t.find == nil }
 	return []terminu.Action{
 		panel("R", "Reload", "this page", func() bool { return m.shownTab() == nil || m.busy() }, func() tea.Cmd {
@@ -300,14 +303,14 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 			return t.reload()
 		}),
 		away(panel("T", "Tab", "a new one, at a URL", nil, m.newTabBox)),
-		panel("H", "Back", "in this tab", func() bool { t := m.shownTab(); return t == nil || !t.canBack || m.busy() }, func() tea.Cmd {
+		hint(panel("H", "Back", "in this tab", func() bool { t := m.shownTab(); return t == nil || !t.canBack || m.busy() }, func() tea.Cmd {
 			m.did("Went back in " + tabName(m.shownTab()))
 			return m.shownTab().readerGo(-1)
-		}),
-		panel("L", "Forward", "in this tab", func() bool { t := m.shownTab(); return t == nil || !t.canForward || m.busy() }, func() tea.Cmd {
+		}), "back"),
+		hint(panel("L", "Forward", "in this tab", func() bool { t := m.shownTab(); return t == nil || !t.canForward || m.busy() }, func() tea.Cmd {
 			m.did("Went forward in " + tabName(m.shownTab()))
 			return m.shownTab().readerGo(1)
-		}),
+		}), "forward"),
 		away(panel("o", "Open", "a URL or a search; this page's own is offered", nil, m.locationBox)),
 		away(panel("/", "Find", "text on the page; n|N step through it", noPage, m.readerFindBox)),
 		panel("n", "Next match", "of the text found", noFind, func() tea.Cmd { return m.readerFindStep(1) }),

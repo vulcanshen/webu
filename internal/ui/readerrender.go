@@ -167,16 +167,16 @@ func (r *rrender) flow(cs []rcell, c *rctx, ground, ink lipgloss.Color) {
 func (r *rrender) flowIn(cs []rcell, c *rctx, ground, ink, capsule lipgloss.Color) {
 	room := r.width
 	if capsule != "" {
-		room -= 4 // the two ends and a space inside each
+		room -= 2 // the two ends, the words right against them
 	}
 	put := func(cur []rcell, start int) {
 		cur = trimCells2(cur)
 		if capsule != "" {
 			words := append([]rcell{}, cur[start:]...)
+			// No space inside the ends: the colour is the edge (user,
+			// 2026-10-28).
 			cur = append(append([]rcell{}, cur[:start]...), cells("\ue0b6", segCapEnd, 0, -1)...)
-			cur = append(cur, cells(" ", segCapsule, 0, -1)...)
 			cur = append(cur, words...)
-			cur = append(cur, cells(" ", segCapsule, 0, -1)...)
 			cur = append(cur, cells("\ue0b4", segCapEnd, 0, -1)...)
 		}
 		r.row(cur, ground, ink, false)
@@ -351,10 +351,9 @@ func (r *rrender) list(n *ir.Node, c *rctx) {
 	}
 }
 
-// bullets are a bulleted list's icons by depth: Material's small circle,
-// small square and small rhombus, the user's pick (2026-10-28) over the
-// Font Awesome ones, which drew too big.
-var bullets = []string{string(rune(0xf09de)), string(rune(0xf0a15)), string(rune(0xf0a10))}
+// bullets are a bulleted list's mark by depth: a dash at every depth, the
+// indent telling them apart — icons were too much (user, 2026-10-28).
+var bullets = []string{"-"}
 
 // olLabel is a numbered list's number at its depth: 1, a, i, then 1 again.
 func olLabel(n, depth int) string {

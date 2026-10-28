@@ -142,7 +142,7 @@ func TestReaderReadsAndFollows(t *testing.T) {
 	d.press("enter")
 	d.until("the second page", d.shows("The second page."))
 	v := d.view()
-	for _, want := range []string{"\ue0b6 Second \ue0b4", "│ Key │ Function │", "├─────┼──────────┤", "│ j   │ down     │", "\U000f09de One", "\U000f0a15 Two", "1. A", "2. B", "a. C", "i. D", "go", "x := 1", "▎ Quoted words"} {
+	for _, want := range []string{"\ue0b6Second\ue0b4", "H:back", "│ Key │ Function │", "├─────┼──────────┤", "│ j   │ down     │", "- One", "  - Two", "1. A", "2. B", "a. C", "i. D", "go", "x := 1", "▎ Quoted words"} {
 		if !strings.Contains(v, want) {
 			t.Errorf("the second page should show %q:\n%s", want, v)
 		}
