@@ -271,6 +271,7 @@ webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 td
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|
+| [`reader.md`](reader.md) | 2026-10-28 起的重新設計：改成閱讀器，`net/http` 取頁、挑正文、內容樹、表單做到哪、階段與進度；跟下面三份衝突的以它為準 | 最先 |
 | [`function.md`](function.md) | Chromium 做什麼、webu 做什麼、做到哪；翻譯層（accessibility tree + 版面快照 → 一份文件）；role 表；frame；彈窗；Chromium 怎麼取得、怎麼跑 | 第 1 |
 | [`ui.md`](ui.md) | 版面、header 的 screen 與兩個面板、頁面的三個畫面與四個 part、每種東西怎麼畫、popup、兩套配色、存檔 | 第 2 |
 | [`ux.md`](ux.md) | core-key 語意、每種東西的 Enter、每個焦點的 `Space` 選單、finder、每種輸入的行為、熱鍵全表、時間軸；§A、§B 沿用 VTP 時期的分章，標題標出對應的 tdp 條目 | 第 3 |
