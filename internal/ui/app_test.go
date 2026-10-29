@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 	terminu "github.com/vulcanshen/terminu-go"
@@ -119,6 +120,21 @@ func (d *driver) view() string { return terminu.StripStyles(strings.Join(d.m.a.F
 // shows is a condition: the screen has s on it.
 func (d *driver) shows(s string) func() bool {
 	return func() bool { return strings.Contains(d.view(), s) }
+}
+
+// showsWrapped is shows for a sentence a viewer may wrap: the screen and s
+// are read without their spaces and box lines, so where it wraps does not
+// matter (a temp dir's path is longer on one system than on another and
+// moves the wrap along; v0.6.0-beta.1 failed on Linux so).
+func (d *driver) showsWrapped(s string) func() bool {
+	return func() bool { return strings.Contains(squeezed(d.view()), squeezed(s)) }
+}
+
+// squeezed is s without its spaces and box-drawing characters.
+func squeezed(s string) string {
+	return strings.Join(strings.FieldsFunc(s, func(r rune) bool {
+		return unicode.IsSpace(r) || r >= '\u2500' && r <= '\u257f'
+	}), "")
 }
 
 // until pumps messages until cond holds, or fails the test.
@@ -679,11 +695,11 @@ func TestUnreadableFilesAreMovedAside(t *testing.T) {
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("the first question", d.shows("MOVE ASIDE"))
-	if v := d.view(); !strings.Contains(v, "config.yaml can't be read") || !strings.Contains(v, "config.yaml.bak") {
-		t.Errorf("the question names the file and where it goes:\n%s", v)
+	if !d.showsWrapped("config.yaml can't be read")() || !d.showsWrapped("config.yaml.bak")() {
+		t.Errorf("the question names the file and where it goes:\n%s", d.view())
 	}
 	d.press("enter")
-	d.until("the second question", d.shows("session.yaml can't be read"))
+	d.until("the second question", d.showsWrapped("session.yaml can't be read"))
 	d.press("enter")
 	d.until("both moved", func() bool { return !strings.Contains(d.view(), "MOVE ASIDE") })
 	for _, p := range []string{filepath.Join(cfg, "config.yaml.bak"), filepath.Join(cfg, "session.yaml.bak")} {
@@ -696,8 +712,6 @@ func TestUnreadableFilesAreMovedAside(t *testing.T) {
 	}
 }
 
-// What main moved is an Info toast saying from where to where; what it
-// could not move is an error popup naming both places (tdp E3).
 // A key config.yaml still has that webu no longer reads is named in the App
 // Log at every start, as a file no longer used is, and a save keeps it
 // (tdp E3, user 2026-10-29).
@@ -718,10 +732,7 @@ func TestARetiredConfigKeyIsNamed(t *testing.T) {
 	d.settle()
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.press("!")
-	d.until("the App Log", d.shows("No longer used: measure in"))
-	if !strings.Contains(d.view(), "delete it if you don't need it") {
-		t.Errorf("the App Log should say it can go:\n%s", d.view())
-	}
+	d.until("the App Log", d.showsWrapped("No longer used: measure in "+paths.Short(store.Path("config.yaml"))+"; delete it if you don't need it"))
 	if err := store.SaveConfig(m.cfg); err != nil {
 		t.Fatal(err)
 	}
@@ -730,6 +741,8 @@ func TestARetiredConfigKeyIsNamed(t *testing.T) {
 	}
 }
 
+// What main moved is an Info toast saying from where to where; what it
+// could not move is an error popup naming both places (tdp E3).
 func TestMovesOnTheFirstScreen(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())

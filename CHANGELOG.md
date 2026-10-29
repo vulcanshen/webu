@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## v0.6.0-beta.1 — tdp v1.1.3
+## v0.6.0-beta.2 — tdp v1.1.3
 
 **webu is a reader, and no longer runs Chromium** ([`docs/reader.md`](docs/reader.md)).
 A page is fetched as it is, over plain HTTP, and its JavaScript is not
