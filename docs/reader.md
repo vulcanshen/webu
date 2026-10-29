@@ -86,7 +86,11 @@ HTML 來源（二選一）
 - **cookie**：`cookies.json` 放狀態目錄（tdp E3：刪了只是登出），`0600`；讀不了時照 MOVE ASIDE 問，問的時候是空的 jar、不寫檔。Settings 的 `C` 清除。
 - **不是網頁的**（HTML、純文字、JSON 以外，且狀態碼不是錯誤）：下載到下載資料夾，Downloads 有一列，`x` 取消。狀態碼 400 以上照樣顯示內容，toast 說狀態。
 - **`f`**：正文與整頁切換（只在閱讀器的分頁出現）。
-- **DevTools**：閱讀器的分頁沒有 Chromium，Network／Console／Storage／Source 都是空的，等第 4 階段重新設計。
+- **這一頁的資訊**（user 2026-10-29，取代 DevTools）：[2] 的 `Space` menu 最上面三項，沒有熱鍵，各開一個 lib 的 viewer（捲動、`/`、`v` 選取複製都是 viewer 的）。
+  - **Source**：抓下來的原始內容（轉成 UTF-8），照它的 media type 上色。
+  - **Cookies**：這個網站（可註冊網域，`en.wikipedia.org` 算 `wikipedia.org`；IP 與 localhost 就是自己）的 cookie，`名稱=值` 一行、domain／path／到期／Secure／HttpOnly 一行；`C` 先問再清掉這個網站的 cookie（`Jar.ClearSite`）。值只在這裡顯示，不進 App Log。
+  - **Requests**：載入這一頁發出的請求，照 `curl -v` 的寫法：方法與網址、狀態／到回應 header 的時間／讀到的 body 大小、`>` 送出的 header、`<` 收到的 header；轉址每一跳都是一筆。記錄方式：載入時 context 帶 `reader.Requests`，client 的 transport（`recorder`）記下每個請求；favicon 這種不是這一頁的請求不帶，就不記。
+  - 留不下來的：網頁的 Console 與 web storage（沒有 JavaScript）、樣式／script／圖片的請求（webu 不抓）。
 
 ## 不再做的
 
@@ -101,11 +105,10 @@ HTML 來源（二選一）
 | 2 | [2] 暫時顯示 markdown 原文，能在連結之間移動、按 `Enter` 開 | 完成 |
 | 3 | 表單：GET 組網址送出；POST 帶隱藏欄位、存 cookie、能登入 | 完成 |
 | 4 | 元件的畫法（render）與按鍵 | 完成（`readerrender.go`、`readerkeys.go`） |
-| 5 | Chromium 只留給空殼頁；DevTools 重新設計；拿掉不再做的；CHANGELOG | |
+| 5 | Chromium 完全拿掉（user 2026-10-29），空殼頁也不例外；DevTools 縮成「這一頁的資訊」；拿掉不再做的；CHANGELOG | 進行中：這一頁的資訊做好 |
 
 ## 還沒定的
 
-- DevTools 要變成什麼（user：「現在的 uiux 甚是詭異」，之後再談）；也許縮成「這個回應的資訊與原始 HTML」。
 - 空殼頁怎麼判斷：實驗工具用「`<body>` 文字少於 200 字又有 script」，x.com 沒登入時回的是靜態登入頁，這條判不出來，要找真正的空殼頁調整。
 - 切到整頁的鍵、現在 [2] 那排 PAGE／HEADER／BODY／OTHERS／FOOTER 的 tab 怎麼處理。
 - 按鈕（不在表單裡的 `<button>`）要怎麼顯示、按了做什麼：沒有 JavaScript 時多半什麼都不會發生。

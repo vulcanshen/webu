@@ -7,11 +7,13 @@ package reader
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -22,7 +24,8 @@ import (
 // Jar is the cookie jar of the reader's pages: Go's, which does the
 // matching, with every cookie it is handed also written to a file, so a
 // sign-in outlives webu. The file is the user's alone (0600), and no value
-// goes to the App Log or the screen. A session cookie is kept too: it is
+// goes to the App Log; the screen shows one only in the Cookies popup,
+// opened for it. A session cookie is kept too: it is
 // what most sign-ins are, and signing in again at every start is what the
 // file is there to spare.
 type Jar struct {
@@ -86,10 +89,14 @@ func OpenJar(path string) (*Jar, error) {
 			continue
 		}
 		j.saved[s.key()] = s
-		u := &url.URL{Scheme: "https", Host: s.Host, Path: nameOr(s.Path, "/")}
-		j.jar.SetCookies(u, []*http.Cookie{s.cookie()})
+		j.jar.SetCookies(s.url(), []*http.Cookie{s.cookie()})
 	}
 	return j, nil
+}
+
+// url is where the cookie is handed back to the jar from: its host.
+func (s savedCookie) url() *url.URL {
+	return &url.URL{Scheme: "https", Host: s.Host, Path: nameOr(s.Path, "/")}
 }
 
 func (s savedCookie) key() string {
@@ -151,6 +158,71 @@ func (j *Jar) Clear() error {
 		return err
 	}
 	return nil
+}
+
+// Site is the site host belongs to, as a browser's "this site" is: its
+// registrable domain (en.wikipedia.org → wikipedia.org), or the host
+// itself when it has none (localhost, an address).
+func Site(host string) string {
+	host = strings.ToLower(host)
+	if net.ParseIP(host) != nil {
+		return host
+	}
+	if s, err := publicsuffix.EffectiveTLDPlusOne(host); err == nil {
+		return s
+	}
+	return host
+}
+
+// SiteCookies are the cookies kept for host's site (Site), by domain,
+// name and path; one that named no Domain has the host it came from as
+// its Domain.
+func (j *Jar) SiteCookies(host string) []*http.Cookie {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	site, now := Site(host), time.Now()
+	var out []*http.Cookie
+	for _, s := range j.saved {
+		if Site(nameOr(s.Domain, s.Host)) != site || !s.Expires.IsZero() && s.Expires.Before(now) {
+			continue
+		}
+		c := s.cookie()
+		c.Domain = nameOr(s.Domain, s.Host)
+		out = append(out, c)
+	}
+	sort.Slice(out, func(a, b int) bool {
+		x, y := out[a], out[b]
+		if x.Domain != y.Domain {
+			return x.Domain < y.Domain
+		}
+		if x.Name != y.Name {
+			return x.Name < y.Name
+		}
+		return x.Path < y.Path
+	})
+	return out
+}
+
+// ClearSite forgets the cookies of host's site (Site), signed out of it
+// alone, and says how many there were.
+func (j *Jar) ClearSite(host string) (int, error) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	if err != nil {
+		return 0, err
+	}
+	site, n := Site(host), 0
+	for k, s := range j.saved {
+		if Site(nameOr(s.Domain, s.Host)) == site {
+			delete(j.saved, k)
+			n++
+			continue
+		}
+		jar.SetCookies(s.url(), []*http.Cookie{s.cookie()})
+	}
+	j.jar = jar
+	return n, j.save()
 }
 
 // Err is the last time the file could not be written, once: the app says

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,6 +61,8 @@ func site(t *testing.T) *httptest.Server {
 			io.WriteString(w, `<html><head><title>Search</title></head><body><form action="/find"><input name="q" placeholder="Find words"></form></body></html>`)
 		case "/find":
 			io.WriteString(w, `<html><head><title>Found</title></head><body><p>Results for `+r.URL.Query().Get("q")+`</p></body></html>`)
+		case "/old":
+			http.Redirect(w, r, "/two", http.StatusMovedPermanently)
 		case "/favicon.ico":
 			// A red icon, the colour the site's tabs are marked in.
 			w.Header().Set("Content-Type", "image/x-icon")
@@ -101,6 +104,51 @@ func TestSiteMarks(t *testing.T) {
 	d.until("the favicon's colour", func() bool { _, c := m.siteMark(srv.URL + "/"); return c == "#c81e1e" })
 	if !strings.Contains(d.view(), glyphGlobe+" First") {
 		t.Errorf("the tab should start with the globe:\n%s", d.view())
+	}
+}
+
+// [2]'s Space menu starts with what is left of DevTools, no key to any:
+// the page's source, its site's cookies (C clearing them, asked first)
+// and what loading it asked for, a redirect among it (user, 2026-10-29).
+func TestReaderPageInfo(t *testing.T) {
+	srv := site(t)
+	d, m := readerAt(t, srv.URL+"/old", t.TempDir())
+	d.until("the second page", d.shows("Second"))
+	d.press("2")
+	d.press(" ")
+	v := d.view()
+	src, ck, rq, rl := strings.Index(v, "Source"), strings.Index(v, "Cookies"), strings.Index(v, "Requests"), strings.Index(v, "[R]eload")
+	if src < 0 || src > ck || ck > rq || rq > rl {
+		t.Fatalf("the menu should start with Source, Cookies, Requests:\n%s", v)
+	}
+	d.press("esc")
+
+	d.action("Source")
+	d.until("the source", d.shows("<h1>Second</h1>"))
+	d.press("esc")
+
+	d.action("Requests")
+	d.until("the requests", d.shows("GET "+srv.URL+"/old"))
+	for _, want := range []string{"301 Moved Permanently", "< Location: /two", "GET " + srv.URL + "/two", "200 OK", "> User-Agent:"} {
+		if !strings.Contains(d.view(), want) {
+			t.Errorf("the requests should have %q:\n%s", want, d.view())
+		}
+	}
+	d.press("esc")
+
+	d.action("Cookies")
+	d.until("no cookies", d.shows("No cookies for 127.0.0.1"))
+	d.press("esc")
+	u, _ := url.Parse(srv.URL + "/")
+	m.rc.Jar.SetCookies(u, []*http.Cookie{{Name: "session", Value: "me", Path: "/"}})
+	d.action("Cookies")
+	d.until("the cookie", d.shows("session=me"))
+	d.press("C")
+	d.until("the question", d.shows("Clear 1 cookie?"))
+	d.press("enter")
+	d.until("cleared", d.shows("No cookies for 127.0.0.1"))
+	if len(m.rc.Jar.SiteCookies("127.0.0.1")) != 0 {
+		t.Error("the jar still has the cookie")
 	}
 }
 

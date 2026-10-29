@@ -33,7 +33,7 @@ type Client struct {
 func NewClient(jar *Jar, ua string) *Client {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.ResponseHeaderTimeout = 30 * time.Second
-	return &Client{Jar: jar, UA: ua, http: &http.Client{Jar: jar, Transport: tr}}
+	return &Client{Jar: jar, UA: ua, http: &http.Client{Jar: jar, Transport: recorder{tr}}}
 }
 
 // Response is what came back: where from, after its redirects; what it is;

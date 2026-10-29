@@ -34,6 +34,11 @@ type Doc struct {
 	// Icon is where the page says its icon is (<link rel=icon>), "" when
 	// it does not.
 	Icon string
+	// Source is the page as it came, in UTF-8, and Type its media type
+	// ("text/html"): the Source popup. Requests is what loading it asked
+	// for, set by whoever loaded it: the Requests popup.
+	Source, Type string
+	Requests     []Exchange
 
 	fields  map[*ir.Node]*Field
 	anchors map[*ir.Node]map[string]*ir.Node
@@ -47,18 +52,19 @@ func (d *Doc) Anchor(root *ir.Node, id string) *ir.Node { return d.anchors[root]
 
 // Read reads a page off what came back.
 func Read(r *Response) (*Doc, error) {
-	d := &Doc{URL: r.URL, Status: r.Status, StatusText: r.StatusText,
+	d := &Doc{URL: r.URL, Status: r.Status, StatusText: r.StatusText, Type: r.Type,
 		fields: map[*ir.Node]*Field{}, anchors: map[*ir.Node]map[string]*ir.Node{}}
 	body, err := charset.NewReader(bytes.NewReader(r.Body), r.ContentType)
 	if err != nil {
 		body = bytes.NewReader(r.Body)
 	}
+	raw, err := io.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
+	d.Source = string(raw)
 	if r.Type != "" && r.Type != "text/html" && r.Type != "application/xhtml+xml" {
 		// Text reads as itself: one block, as it came.
-		raw, err := io.ReadAll(body)
-		if err != nil {
-			return nil, err
-		}
 		lang := ""
 		if strings.Contains(r.Type, "json") {
 			lang = "json"
@@ -68,7 +74,7 @@ func Read(r *Response) (*Doc, error) {
 		d.Whole, d.Picked, d.Title = d.Content, "text", lastPart(r.URL)
 		return d, nil
 	}
-	doc, err := html.Parse(body)
+	doc, err := html.Parse(strings.NewReader(d.Source))
 	if err != nil {
 		return nil, err
 	}

@@ -61,19 +61,19 @@ func (m *AppModel) newReaderTab() *tab {
 // readerLoad fetches url into the tab, to the history entry to (-1: a new
 // one). The page on screen stays until the new one lands.
 func (t *tab) readerLoad(url string, to int) tea.Cmd {
-	ctx := t.startLoad(url)
+	ctx, reqs := t.startLoad(url)
 	t.reloading = t.doc != nil && url == t.url && to < 0
 	t.url = url
 	gen, id, rc, cancel := t.gen, t.id, t.rc, t.loadCancel
 	return func() tea.Msg {
 		resp, err := rc.Get(ctx, url)
-		return readerResult(id, gen, url, to, resp, err, cancel)
+		return readerResult(id, gen, url, to, resp, err, cancel, reqs)
 	}
 }
 
 // readerSend sends a form of the page, by the button that sent it.
 func (t *tab) readerSend(fm *reader.Form, by *reader.Field) tea.Cmd {
-	ctx := t.startLoad(t.url)
+	ctx, reqs := t.startLoad(t.url)
 	gen, id, rc, cancel := t.gen, t.id, t.rc, t.loadCancel
 	return func() tea.Msg {
 		req, err := fm.Request(ctx, by)
@@ -82,13 +82,14 @@ func (t *tab) readerSend(fm *reader.Form, by *reader.Field) tea.Cmd {
 			return readerMsg{tabID: id, gen: gen, url: fm.Action.String(), to: -1, err: err}
 		}
 		resp, err := rc.Do(req)
-		return readerResult(id, gen, req.URL.String(), -1, resp, err, cancel)
+		return readerResult(id, gen, req.URL.String(), -1, resp, err, cancel, reqs)
 	}
 }
 
 // startLoad says the tab is on its way somewhere and gives the request a
-// context of its own, the one before it cancelled.
-func (t *tab) startLoad(url string) context.Context {
+// context of its own, the one before it cancelled, that keeps what the
+// load asks for (the Requests popup).
+func (t *tab) startLoad(url string) (context.Context, *reader.Requests) {
 	t.gen++
 	t.loading, t.navigating, t.pending, t.errText = true, true, false, ""
 	if t.loadCancel != nil {
@@ -97,10 +98,11 @@ func (t *tab) startLoad(url string) context.Context {
 	// Not the tab's: a download outlives the tab it started in.
 	ctx, cancel := context.WithCancel(context.Background())
 	t.loadCancel = cancel
-	return ctx
+	reqs := &reader.Requests{}
+	return reader.Record(ctx, reqs), reqs
 }
 
-func readerResult(id, gen int, url string, to int, resp *reader.Response, err error, cancel context.CancelFunc) tea.Msg {
+func readerResult(id, gen int, url string, to int, resp *reader.Response, err error, cancel context.CancelFunc, reqs *reader.Requests) tea.Msg {
 	msg := readerMsg{tabID: id, gen: gen, url: url, to: to, err: err}
 	switch {
 	case err != nil:
@@ -112,6 +114,9 @@ func readerResult(id, gen int, url string, to int, resp *reader.Response, err er
 	default:
 		cancel()
 		msg.doc, msg.err = reader.Read(resp)
+		if msg.doc != nil {
+			msg.doc.Requests = reqs.List()
+		}
 	}
 	return msg
 }

@@ -297,6 +297,11 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 	hint := func(a terminu.Action, verb string) terminu.Action { a.Hint = verb; return a }
 	noFind := func() bool { t := m.shownTab(); return t == nil || t.find == nil }
 	return []terminu.Action{
+		// What is left of DevTools (pageinfo.go): first in the menu, with
+		// no key (user, 2026-10-29).
+		panel("", "Source", "the page's HTML, as it came", noPage, m.showSource),
+		panel("", "Cookies", "this site's; C in it clears them", noPage, m.showCookies),
+		panel("", "Requests", "what loading this page asked for", noPage, m.showRequests),
 		panel("R", "Reload", "this page", func() bool { return m.shownTab() == nil || m.busy() }, func() tea.Cmd {
 			t := m.shownTab()
 			m.did("Reloaded " + tabName(t))

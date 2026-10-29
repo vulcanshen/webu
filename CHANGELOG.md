@@ -32,6 +32,10 @@ blue until that is known.
   its hidden fields with it. A form with one box to type in offers to send
   itself, as Enter in it does on the page. Sign-ins that need JavaScript,
   another site's account, a captcha or a second step do not work.
+- `Space` on the page starts with Source, Cookies and Requests, what is
+  left of DevTools for a page read without a browser: the page's HTML as
+  it came; its site's cookies, `C` clearing them; and what loading the
+  page asked for, each redirect, with the headers both ways.
 - Cookies are kept in `cookies.json` with the state, a file only you can
   read; `S` › `Clear sign-in data` signs you out everywhere. A file that
   will not read is offered to be moved aside, as webu's other files are.
