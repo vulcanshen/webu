@@ -152,6 +152,26 @@ func TestReaderPageInfo(t *testing.T) {
 	}
 }
 
+// Focus mode's j and k come round at the ends (tdp K12): one past the
+// last item is the first, one back from the first is the last.
+func TestFocusModeWraps(t *testing.T) {
+	m := New()
+	root := doc(para(link("one", "https://example.com/1"), text(" and "), link("two", "https://example.com/2")))
+	tb := &tab{id: 1, url: "https://example.com/", root: root, doc: &reader.Doc{Content: root}, cursor: -1}
+	m.tabs, m.shown = []*tab{tb}, 0
+	tb.relayout(60)
+	if n := len(tb.lay.items); n != 2 {
+		t.Fatalf("%d items, want the two links", n)
+	}
+	m.focusKey("G")
+	if m.focusKey("j"); tb.cursor != 0 {
+		t.Errorf("j on the last should go to the first, is on %d", tb.cursor)
+	}
+	if m.focusKey("k"); tb.cursor != 1 {
+		t.Errorf("k on the first should go to the last, is on %d", tb.cursor)
+	}
+}
+
 // readerAt is webu with a reader tab at url, its files in scratch
 // directories, its downloads in dl.
 func readerAt(t *testing.T, url, dl string) (*driver, *AppModel) {

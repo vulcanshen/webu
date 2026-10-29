@@ -254,9 +254,15 @@ func (m *AppModel) focusKey(k string) tea.Cmd {
 	n := len(t.lay.items)
 	switch moveName(k) {
 	case "j":
-		t.cursor = min(n-1, t.cursor+1)
+		// One past the last is the first, one back from the first the
+		// last (tdp K12).
+		t.cursor = (t.cursor + 1) % n
 	case "k":
-		t.cursor = max(0, t.cursor-1)
+		if t.cursor <= 0 {
+			t.cursor = n - 1
+		} else {
+			t.cursor--
+		}
 	case "g", "gg":
 		t.cursor = 0
 	case "G":
