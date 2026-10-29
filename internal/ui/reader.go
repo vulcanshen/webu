@@ -10,7 +10,6 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/ir"
-	"github.com/vulcanshen/webu/internal/page"
 	"github.com/vulcanshen/webu/internal/reader"
 )
 
@@ -51,7 +50,7 @@ type readerMsg struct {
 // of its own that ends with it.
 func (m *AppModel) newReaderTab() *tab {
 	ctx, cancel := context.WithCancel(context.Background())
-	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1, dev: &page.DevLog{},
+	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1,
 		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth(), tabW: m.cfg.TabWidth(), tick: m.a.Tick,
 		reader: true, rc: m.rc, histAt: -1}
 	m.nextTabID++

@@ -101,7 +101,7 @@ type AppModel struct {
 	moves []paths.Move
 
 	// The screens (web.go, bookmarks.go, history.go, downloads.go,
-	// settings.go, devtools.go).
+	// settings.go).
 	web       *terminu.Screen
 	tabsList  *terminu.List
 	tabsPanel *terminu.Panel
@@ -120,7 +120,6 @@ type AppModel struct {
 	setScreen  *terminu.Screen
 	setValues  *terminu.Values
 	setPanel   *terminu.Panel
-	dev        *devtools
 }
 
 // New builds the app over a running browser. Every start argument — a
@@ -231,7 +230,6 @@ func (m *AppModel) build() {
 	m.buildHistory()
 	m.buildDownloads()
 	m.buildSettings()
-	m.buildDevtools()
 	m.sync()
 }
 
@@ -243,7 +241,7 @@ func (m *AppModel) start() tea.Cmd {
 	if len(m.unread) == 0 {
 		cmds = append(cmds, m.firstFrame())
 	}
-	return tea.Batch(append(cmds, m.devTick(), m.startNews())...)
+	return tea.Batch(append(cmds, m.startNews())...)
 }
 
 // startNews says on the first screen what main found: the things it moved
@@ -423,9 +421,6 @@ func (m *AppModel) onMsg(msg tea.Msg) tea.Cmd {
 
 func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case devTickMsg, storageMsg, bodyMsg, evalMsg, devSourceMsg:
-		return m.devMsg(msg)
-
 	case dialogMsg:
 		return tea.Batch(waitEvent(m.events), m.askDialog(msg))
 

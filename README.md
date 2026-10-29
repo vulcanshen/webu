@@ -25,7 +25,7 @@ webu opens real web pages — logins, JavaScript, cookies and all — and lays t
 - **Forms that behave like forms.** Text boxes say what they take, a textarea opens in an editor, selects list their options, sliders list their numbers, dates and colours are checked before they are sent, files come from a picker.
 - **The page's own dialogs and menus float** over it and wait for your answer — and so do `alert`, `confirm`, HTTP auth, uploads and certificate warnings.
 - **Frames, including other sites',** are one row you can step into and out of.
-- **Everything else a browser has**: tabs, bookmarks in folders (importable from any browser), history, downloads, a DevTools screen (Network, Storage, Console, Source), visual-mode selection to the clipboard, and the whole page as markdown.
+- **Everything else a browser has**: tabs, bookmarks in folders (importable from any browser), history, downloads, the page's source, cookies and requests, visual-mode selection to the clipboard, and the whole page as markdown.
 
 ## Install
 
@@ -96,7 +96,7 @@ Then:
 ### The screens
 
 ```
- [W]EB  [B]OOKMARKS  [H]ISTORY  [D]OWNLOADS  [S]ETTINGS  [I] DEVTOOLS
+ [W]EB  [B]OOKMARKS  [H]ISTORY  [D]OWNLOADS  [S]ETTINGS
 ```
 
 Switch with a capital letter, or from `Space` › `Global operation`:
@@ -106,7 +106,6 @@ Switch with a capital letter, or from `Space` › `Global operation`:
 - **`H` History** — every page you visited, newest first.
 - **`D` Downloads** — this session's downloads and their progress.
 - **`S` Settings** — `config.yaml`, a value a row, saved the moment it is set.
-- **`I` DevTools** — what the page on the web screen fetched, keeps, logged and is made of.
 
 ### Key bindings
 
@@ -141,10 +140,6 @@ webu is becoming a reader ([`docs/reader.md`](docs/reader.md)): a page is fetche
 - **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `C` clear · `/` filter
 - **Downloads** — `Enter` open the file · `o` open its source · `x` remove · `y` yank path · `C` clear finished · `/` filter
 - **Settings** — `Enter` edit a value or flip a switch
-
-#### DevTools (`I`)
-
-Of the page the web screen shows. `h|l` switch between **Network** (the requests; the one under the cursor in full, headers and body, in the panel beside it), **Storage** (cookies, local and session storage — `x` delete, `y` yank, `C` clear site data, `R` read again), **Console** (`i` runs a line of JavaScript in the page) and **Source** (the page's HTML). `/` filters each list.
 
 #### Visual mode (`v`)
 

@@ -360,8 +360,8 @@ func TestScreensAndSession(t *testing.T) {
 		nil, store.Config{}, nil)
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	if v := d.view(); !strings.Contains(v, "[W]EB") || !strings.Contains(v, "[S]ETTINGS") || !strings.Contains(v, "[I] DEVTOOLS") {
-		t.Errorf("the chip row names every screen:\n%s", v)
+	if v := d.view(); !strings.Contains(v, "[W]EB") || !strings.Contains(v, "[S]ETTINGS") || strings.Contains(v, "DEVTOOLS") {
+		t.Errorf("the chip row names every screen, DevTools no longer one:\n%s", v)
 	}
 
 	// B is the Bookmarks screen: the whole body, the web kept.

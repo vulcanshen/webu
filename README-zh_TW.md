@@ -25,7 +25,7 @@ webu 開的是真正的網頁 —— 能登入、JavaScript 會跑、cookie 留�
 - **表單就是表單。** 輸入框寫清楚它收什麼、textarea 開在編輯器裡、select 列出選項、slider 列出數字、日期和顏色送出前先檢查、檔案用 picker 選。
 - **頁面自己的對話框與選單浮在上面**，等你回答 —— `alert`、`confirm`、HTTP 認證、上傳、憑證警告也一樣。
 - **frame，包括別站的**，是一列，走得進去也走得出來。
-- **瀏覽器該有的都有**：分頁、有目錄的書籤（能從任何瀏覽器匯入）、歷史、下載、DevTools 畫面（Network、Storage、Console、Source）、visual mode 選字複製到剪貼簿、整頁輸出成 markdown。
+- **瀏覽器該有的都有**：分頁、有目錄的書籤（能從任何瀏覽器匯入）、歷史、下載、這一頁的原始碼、cookie 與請求、visual mode 選字複製到剪貼簿、整頁輸出成 markdown。
 
 ## 安裝
 
@@ -96,7 +96,7 @@ webu help                         # 完整的命令列說明
 ### 畫面
 
 ```
- [W]EB  [B]OOKMARKS  [H]ISTORY  [D]OWNLOADS  [S]ETTINGS  [I] DEVTOOLS
+ [W]EB  [B]OOKMARKS  [H]ISTORY  [D]OWNLOADS  [S]ETTINGS
 ```
 
 用大寫字母切換，或從 `Space` › `Global operation` 選：
@@ -106,7 +106,6 @@ webu help                         # 完整的命令列說明
 - **`H` History** —— 所有看過的頁，新的在上。
 - **`D` Downloads** —— 這次開啟以來的下載與進度。
 - **`S` Settings** —— `config.yaml`，一列一個值，設好就存。
-- **`I` DevTools** —— Web 畫面上那一頁抓了什麼、存了什麼、印了什麼、原始碼是什麼。
 
 ### 按鍵
 
@@ -141,10 +140,6 @@ webu 正在改成閱讀器（[`docs/reader.md`](docs/reader.md)）：網頁照�
 - **History** —— `Enter` 開新分頁 · `x` 刪除 · `y` 複製網址 · `C` 清空 · `/` 過濾
 - **Downloads** —— `Enter` 開檔 · `o` 開來源頁 · `x` 移除 · `y` 複製路徑 · `C` 清掉已完成的 · `/` 過濾
 - **Settings** —— `Enter` 改值或切換開關
-
-#### DevTools（`I`）
-
-看的是 Web 畫面上那一頁。`h|l` 切換 **Network**（各個 request；游標那一個的 header 與 body 完整顯示在旁邊的面板）、**Storage**（cookie、local 與 session storage —— `x` 刪除、`y` 複製、`C` 清除站台資料、`R` 重新讀取）、**Console**（`i` 在頁面裡執行一行 JavaScript）與 **Source**（頁面 HTML）。每個清單都能用 `/` 過濾。
 
 #### Visual mode（`v`）
 

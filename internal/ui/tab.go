@@ -178,8 +178,6 @@ type tab struct {
 	// frozen is a capture that arrived while selection mode held the page
 	// still (ux.md §1); applied when the mode ends.
 	frozen *pageMsg
-	// dev is the tab's network and console record for DevTools (ui.md §3.2).
-	dev *page.DevLog
 	// ua and uaMeta are what the tab says it is (browser.Browser.identify),
 	// applied when it is prepared.
 	ua     string
@@ -378,11 +376,10 @@ func (m *AppModel) newTabWith(ctx context.Context, cancel context.CancelFunc) *t
 	// (page.Sessions): a capture reads such a frame through them, an
 	// action finds the session its node belongs to. They die with it.
 	ctx = page.WithSessions(ctx, page.NewSessions(ctx))
-	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1, dev: &page.DevLog{},
+	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1,
 		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth(), tabW: m.cfg.TabWidth(), tick: m.a.Tick,
 		ua: m.browser.UserAgent, uaMeta: m.browser.UAMeta, acting: &sync.Mutex{}}
 	m.nextTabID++
-	page.Observe(ctx, t.dev)
 	ch := m.events
 	id := t.id
 	chromedp.ListenTarget(ctx, func(ev any) {

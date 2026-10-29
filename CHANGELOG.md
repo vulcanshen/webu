@@ -42,8 +42,7 @@ blue until that is known.
 - A link to a file downloads it into the download folder, its row in
   Downloads, `x` stopping it.
 - Not yet on the reader: a page's own dialogs, frames, what its JavaScript
-  draws, and DevTools, which shows nothing for these pages until it is
-  thought through again.
+  draws.
 
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
@@ -80,10 +79,10 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   errors you have not seen yet. A toast's whole text is no longer written
   to `webu.log`, which keeps Chromium's own log.
 - **Control characters from outside are never sent to the terminal**:
-  in a page's text, a tab's title, a bookmark, a DevTools row or a toast
+  in a page's text, a tab's title, a bookmark or a toast
   each one shows as its name in red (`\t`, `\n`, `\x1b`), nothing dropped
   — a title or link text is no longer cut at a line break. A Tab in a
-  code block, a DevTools console message or a line of source is
+  code block or a line of source is
   `input_tab_width` spaces.
 - **The page's parts are the page panel's tabs.** Its frame reads
   `[2] PAGE HEADER BODY OTHERS FOOTER` (the parts this page has); `h|l`
@@ -93,9 +92,10 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   down — and come round at the ends. `h|l` no longer move along a row.
 - **The page follows the tab list's cursor**; `Enter` on the tab list
   takes you to the page.
-- **DevTools is a screen of its own, `I`**: Network, Storage, Console and
-  Source are its list's tabs, each with a `/` filter, and the panel
-  beside shows the row under the cursor in full.
+- **DevTools is gone**, its screen and `I` with it: a page read without a
+  browser has no console, no storage of its own and no requests but its
+  own. What is left is at the top of the page's `Space` menu: Source,
+  Cookies, Requests.
 - `go` asks for a line number; `/` in visual mode asks for what to find.
 - **Visual mode has a layer**: selecting, its name is `Visual>select` and
   `Esc` drops the selection, back to `Visual`; `Esc` again leaves.
@@ -128,13 +128,10 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
 - A list's long values — titles, URLs, a line of text — share the room
   the short ones leave and are cut; short values — a status, a size, a
   time — stay whole. Only when the long ones are at their least does a
-  column go, the one a row reads best without first (a visit's time;
-  DevTools' Type, Size and Method).
+  column go, the one a row reads best without first (a visit's time).
 - Settings' `?` starts with what each setting is, and `input_tab_width`'s
   box writes its unit under the number.
-- DevTools' list keeps its rows bright while the focus is on the detail,
-  as a stream does; its hint dims, as any panel's.
-- Every viewer — Inspect, a table cell, a code block, DevTools' detail —
+- Every viewer — Inspect, a table cell, a code block —
   can select and copy (`v`).
 - A number field opens a number input; a filled password field shows
   its dots and keeps its value when `Enter` is pressed on nothing.

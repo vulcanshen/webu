@@ -105,7 +105,7 @@ HTML 來源（二選一）
 | 2 | [2] 暫時顯示 markdown 原文，能在連結之間移動、按 `Enter` 開 | 完成 |
 | 3 | 表單：GET 組網址送出；POST 帶隱藏欄位、存 cookie、能登入 | 完成 |
 | 4 | 元件的畫法（render）與按鍵 | 完成（`readerrender.go`、`readerkeys.go`） |
-| 5 | Chromium 完全拿掉（user 2026-10-29），空殼頁也不例外；DevTools 縮成「這一頁的資訊」；拿掉不再做的；CHANGELOG | 進行中：這一頁的資訊做好 |
+| 5 | Chromium 完全拿掉（user 2026-10-29），空殼頁也不例外；DevTools 縮成「這一頁的資訊」；拿掉不再做的；CHANGELOG | 進行中：這一頁的資訊做好、DevTools 畫面拿掉 |
 
 ## 還沒定的
 
