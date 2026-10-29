@@ -112,7 +112,8 @@ func readerResult(id, gen int, url string, to int, resp *reader.Response, err er
 	return msg
 }
 
-// readerGo is P and N on a reader tab: delta entries along its history.
+// readerGo is H and L, and a page picked in the breadcrumb: delta entries
+// along the tab's history.
 func (t *tab) readerGo(delta int) tea.Cmd {
 	j := t.histAt + delta
 	if j < 0 || j >= len(t.hist) {
@@ -271,7 +272,7 @@ func (m *AppModel) readerEnter(t *tab, n *ir.Node) tea.Cmd {
 	case ir.Button:
 		return m.readerPress(t, n)
 	case ir.Media:
-		return m.toast("An image: [Space] › Yank media url copies its address")
+		return m.toast("An image: [y] copies its address")
 	}
 	return nil
 }

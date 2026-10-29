@@ -84,8 +84,8 @@ func (m *AppModel) enterSelect() tea.Cmd {
 	return m.focusPage()
 }
 
-// leaveSelect ends the mode: the item cursor lands nearest the character
-// cursor.
+// leaveSelect ends the mode, reading again with no item under a cursor
+// (docs/reader.md).
 func (m *AppModel) leaveSelect() tea.Cmd {
 	if !m.sel.on {
 		return nil
@@ -94,14 +94,9 @@ func (m *AppModel) leaveSelect() tea.Cmd {
 	if m.pagePanel.InMode() != nil {
 		m.pagePanel.LeaveMode()
 	}
-	t := m.shownTab()
-	if t == nil {
-		return nil
+	if t := m.shownTab(); t != nil {
+		t.scrollToCursor(m.pageVisible())
 	}
-	if i := t.lay.nearestItem(m.sel.row); i >= 0 {
-		t.cursor = i
-	}
-	t.scrollToCursor(m.pageVisible())
 	return nil
 }
 
@@ -137,9 +132,9 @@ func (m *AppModel) visualKey(k string) tea.Cmd {
 		if i < 0 {
 			return m.toast("Nothing to press here")
 		}
+		n := t.lay.items[i].node
 		left := m.leaveSelect()
-		t.cursor = i
-		return tea.Batch(left, m.enterItem())
+		return tea.Batch(left, m.readerEnter(t, n))
 	}
 	return nil
 }

@@ -22,28 +22,12 @@ type segKind uint8
 const (
 	segPlain segKind = iota
 	segDim
-	segHeading
 	segLink
 	segButton
 	segInput
-	// segCaret is the one cell that says a value can be typed here
-	// (theme.pageInputBg).
-	segCaret
 	segCheck
 	segMedia
 	segCode
-	segUnsupported
-	// segInvalid is a field's value the page marked wrong: the one seg
-	// kind in the colour of "is wrong" (theme pageInvalid).
-	segInvalid
-	// A tablist's strip (tabChain): a tab not chosen, the chosen one,
-	// and the caps and seams between. Drawn in the colour of the
-	// section the strip sits in (pagepanel rowLine).
-	segTabOff
-	segTabOn
-	segTabCap
-	segLandmark    // a landmark's rule row: its role and name
-	segTableHeader // a table's header cells
 	// Inside a code block with a language (highlight.go).
 	segCodeKey
 	segCodeString
@@ -120,18 +104,6 @@ type row struct {
 	// code: a row of a code block, drawn on the code background across
 	// the row, padding included.
 	code bool
-	// table: a row of a data table, on the table's ground; header marks
-	// the header row, on the deeper one (2026-09-21).
-	table, header bool
-	// heading: how deep the heading this row belongs to sits, counting
-	// from 1, which is the ink it is drawn in (theme.levelColor). Zero
-	// for every other row.
-	heading int
-	// box: the row is part of a framed block — a form — and which part;
-	// boxW is how wide that block is. The frame is drawn by the panel,
-	// the way a code block's ground is (pagepanel.pageRows).
-	box  boxPart
-	boxW int
 }
 
 // plain is the row's text with no styling — what tests and the search read.
@@ -142,16 +114,6 @@ func (r row) plain() string {
 	}
 	return b.String()
 }
-
-// boxPart is which part of a framed block a row is.
-type boxPart uint8
-
-const (
-	boxNone boxPart = iota
-	boxTop
-	boxSide
-	boxBottom
-)
 
 type item struct {
 	node        *ir.Node
@@ -194,38 +156,6 @@ func (l layout) itemAtCol(row, col int) int {
 	}
 	return -1
 }
-
-// nearestItem is the item whose rows are closest to row — where the item
-// cursor lands when selection mode ends (ux.md §1).
-func (l layout) nearestItem(row int) int {
-	best, bestD := -1, 1<<30
-	for i, it := range l.items {
-		d := 0
-		switch {
-		case row < it.first:
-			d = it.first - row
-		case row > it.last:
-			d = row - it.last
-		}
-		if d < bestD {
-			best, bestD = i, d
-		}
-	}
-	return best
-}
-
-// A piece of page chrome — a banner, a navigation or breadcrumb, a
-// search, a sidebar, a footer, a dialog — is an entry, not a region
-// (ux.md §A.0.K, 2026-09-21): what it holds is its item operations, not
-// items, since a row of links invites walking sideways and a terminal
-// has no width to spare for one. Since 2026-09-22 it is a capsule on
-// the pagetab under the URL rather than a row of the page (capsule).
-
-const ()
-
-// ------------------------------------------------------------------ blocks
-
-// ------------------------------------------------------------------ inline
 
 // oneLine folds a value into one line for a field or a chip: the first line,
 // with an ellipsis when there is more.

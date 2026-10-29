@@ -96,16 +96,6 @@ var (
 	// Fill it in: a text field, a check box, a radio, a select. The
 	// input group, which is one concept however many controls it has.
 	pageInput = lipgloss.Color("#cba6f7") // mauve
-	// One cell, where the next character would go. The field's glyph has
-	// already said what this is, so the value needs no bed under it and
-	// no dashes beside it — only a mark that there is somewhere to type
-	// (user, 2026-09-22). It is what sshu's form shows in an empty
-	// field: one lit cell and nothing else.
-	pageInputBg = lipgloss.Color("#45475a") // surface1
-	// pageInvalid is a field's value the page marked wrong: the app's
-	// "is wrong" red, on the page. The one state colour a field has —
-	// required is an asterisk, disabled is dim (2026-09-23).
-	pageInvalid = warnColor
 	// Code, inline and block, keys included: one colour for one concept.
 	// A block sits on a ground so it reads as a block.
 	pageCode   = lipgloss.Color("#f5c2e7") // pink
@@ -117,10 +107,6 @@ var (
 	// says "Priority: Highest" is the only copy of that fact (user,
 	// 2026-09-22).
 	pageMedia = lipgloss.Color("#6c7086") // overlay0
-	// A data table's ground, its header row one step up: the header is
-	// told by ground, not by foreground (revised 2026-09-21).
-	pageTableBg     = lipgloss.Color("#313244") // surface0
-	pageTableHeadBg = lipgloss.Color("#45475a") // surface1
 )
 
 // levelInk is the colour a name wears for how deep it sits: five hues,
@@ -225,9 +211,8 @@ var (
 	glyphFolder   = string(rune(0xf024b)) // nf-md-folder — a bookmark folder's row
 	glyphCode     = "\uf121"              // nf-fa-code — the page's source
 
-	// Panel [1]: a tab still loading; also panel [2]'s URL row while the
-	// page is on its way. The same codepoint as kbu's Logs live glyph
-	// (ui.md §2): the family says "live" with one shape.
+	// Panel [1]: a tab still loading. The same codepoint as kbu's Logs
+	// live glyph (ui.md §2): the family says "live" with one shape.
 	glyphLive = string(rune(0xf0753)) // kbu logsLiveGlyph, U+F0753
 	// Panel [2]'s URL row, at rest. It wears the structural band — blue,
 	// the colour of the URL beside it — because the pair is one thing:

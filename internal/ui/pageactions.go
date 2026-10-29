@@ -163,7 +163,7 @@ func (m *AppModel) wholeAction(t *tab) terminu.Action {
 		})}
 }
 
-// locationBox is [L]: the page's own URL is offered — Tab takes it into
+// locationBox is [o]: the page's own URL is offered — Tab takes it into
 // the line to edit, Backspace drops it, typing over it starts fresh
 // (ux.md §2.2).
 func (m *AppModel) locationBox() tea.Cmd {

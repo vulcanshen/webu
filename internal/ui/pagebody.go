@@ -29,7 +29,7 @@ func (b *pageBody) Draw(w, h int, focused bool) []string {
 	m.syncPage()
 	t := m.shownTab()
 	if t == nil {
-		return terminu.EmptyState(w, h, "No page", "Press [L] to enter a location, or [T] for a new tab")
+		return terminu.EmptyState(w, h, "No page", "Press [o] to enter a location, or [T] for a new tab")
 	}
 	out := make([]string, 0, h)
 	out = append(out, m.urlRow(t, w))
@@ -237,25 +237,11 @@ func (m *AppModel) rowStyles(t *tab) rowStyles {
 }
 
 // rowLine draws one row of the layout at innerW, the cursor lit where it
-// is. The panel's rows and the header row a drilled thing's first line
-// becomes (headRow) are drawn by the one function, so they cannot
-// disagree about what a link or a cursor looks like.
+// is.
 func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 	var b strings.Builder
 	used := 0
 	row := t.lay.rows[i]
-	// A framed block — a form — is drawn by the panel, because only
-	// the panel knows how wide the row ended up (render.boxPart).
-	span := min(innerW, max(1, row.boxW))
-	if row.box == boxTop || row.box == boxBottom {
-		b.WriteString(st.frame.Render(boxRule(row, span)))
-		b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
-		return b.String()
-	}
-	if row.box == boxSide {
-		b.WriteString(st.frame.Render("│"))
-		used++
-	}
 	for _, s := range row.segs {
 		var style lipgloss.Style
 		cursor := s.item >= 0 && s.item == t.cursor
@@ -271,27 +257,6 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 			if style, ok = st.codeStyles[s.kind]; !ok {
 				style = st.codeStyles[segCode]
 			}
-		case s.kind == segTabOn || s.kind == segTabOff || s.kind == segTabCap:
-			// A tablist's strip, in the colour of the section it sits in,
-			// the chosen tab filled with it. Dimmed with the page.
-			ink := levelColor(max(1, row.heading))
-			if t.loading {
-				ink = dimColor
-			}
-			style = lipgloss.NewStyle().Foreground(ink)
-			if s.kind == segTabOn {
-				style = lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(ink).Bold(true)
-			}
-		case row.heading > 0 && !t.loading:
-			// The page's own outline, drawn on the ink: one bright hue
-			// per depth, cycling (theme.levelColor).
-			style = st.styles[s.kind].Foreground(levelColor(row.heading))
-		case row.table:
-			bg := pageTableBg
-			if row.header {
-				bg = pageTableHeadBg
-			}
-			style = st.styles[s.kind].Background(bg)
 		default:
 			style = st.styles[s.kind]
 		}
@@ -332,10 +297,6 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 	case row.code:
 		span := min(innerW, max(used, t.textWidth()))
 		b.WriteString(st.codePad.Render(strings.Repeat(" ", max(0, span-used))))
-		b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
-	case row.box == boxSide:
-		b.WriteString(strings.Repeat(" ", max(0, span-used-1)))
-		b.WriteString(st.frame.Render("│"))
 		b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
 	default:
 		b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
@@ -392,20 +353,6 @@ func writeNamed(b *strings.Builder, style, name lipgloss.Style, text string, roo
 	return used
 }
 
-// boxRule is a framed block's top or bottom edge, the name of the block
-// set into the top one when it has one.
-func boxRule(r row, span int) string {
-	left, right := "╭", "╮"
-	if r.box == boxBottom {
-		left, right = "╰", "╯"
-	}
-	name := strings.TrimSpace(r.plain())
-	if name != "" {
-		name = " " + truncate(name, max(1, span-6)) + " "
-	}
-	return left + name + strings.Repeat("─", max(0, span-2-dispW(name))) + right
-}
-
 // withAttr puts the page's own markup on top of whatever the run is
 // already drawn as: <strong> stays bold inside a link, <del> stays
 // struck through inside a table cell (render textAttr, 2026-09-22).
@@ -435,26 +382,17 @@ func withAttr(st lipgloss.Style, a textAttr) lipgloss.Style {
 // ordinary page and visual mode so the two cannot drift.
 func segStyles() map[segKind]lipgloss.Style {
 	return map[segKind]lipgloss.Style{
-		segPlain:       lipgloss.NewStyle().Foreground(pageText),
-		segDim:         lipgloss.NewStyle().Foreground(pageDim),
-		segHeading:     lipgloss.NewStyle().Foreground(pageText).Bold(true),
-		segLink:        lipgloss.NewStyle().Foreground(pageClick).Underline(true),
-		segButton:      lipgloss.NewStyle().Foreground(pageClick),
-		segInput:       lipgloss.NewStyle().Foreground(pageInput),
-		segCaret:       lipgloss.NewStyle().Foreground(pageInput).Background(pageInputBg),
-		segCheck:       lipgloss.NewStyle().Foreground(pageInput),
-		segMedia:       lipgloss.NewStyle().Foreground(pageMedia),
-		segBullet:      lipgloss.NewStyle().Foreground(lipgloss.Color(blueHex)),
-		segQuoteBar:    lipgloss.NewStyle().Foreground(lipgloss.Color(lavenderHex)),
-		segInlineCode:  lipgloss.NewStyle().Foreground(pageCode).Background(lipgloss.Color(surface0Hex)),
-		segCode:        lipgloss.NewStyle().Foreground(pageCode),
-		segUnsupported: lipgloss.NewStyle().Foreground(pageDim),
-		segInvalid:     lipgloss.NewStyle().Foreground(pageInvalid),
-		segTabOff:      lipgloss.NewStyle().Foreground(pageText),
-		segTabOn:       lipgloss.NewStyle().Foreground(pageText).Bold(true),
-		segTabCap:      lipgloss.NewStyle().Foreground(pageDim),
-		segLandmark:    lipgloss.NewStyle().Foreground(pageDim).Bold(true),
-		segTableHeader: lipgloss.NewStyle().Foreground(pageText).Bold(true),
+		segPlain:      lipgloss.NewStyle().Foreground(pageText),
+		segDim:        lipgloss.NewStyle().Foreground(pageDim),
+		segLink:       lipgloss.NewStyle().Foreground(pageClick).Underline(true),
+		segButton:     lipgloss.NewStyle().Foreground(pageClick),
+		segInput:      lipgloss.NewStyle().Foreground(pageInput),
+		segCheck:      lipgloss.NewStyle().Foreground(pageInput),
+		segMedia:      lipgloss.NewStyle().Foreground(pageMedia),
+		segBullet:     lipgloss.NewStyle().Foreground(lipgloss.Color(blueHex)),
+		segQuoteBar:   lipgloss.NewStyle().Foreground(lipgloss.Color(lavenderHex)),
+		segInlineCode: lipgloss.NewStyle().Foreground(pageCode).Background(lipgloss.Color(surface0Hex)),
+		segCode:       lipgloss.NewStyle().Foreground(pageCode),
 	}
 }
 
