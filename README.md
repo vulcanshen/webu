@@ -127,7 +127,7 @@ A page is fetched as it is, without running its JavaScript, and what it presents
 
 Forms work as far as a search box and a plain sign-in: in Focus mode `Enter` fills a field, ticks a box or chooses an option, and `Enter` on the button sends the form; a form with one box to type in offers to send itself. A sign-in that needs JavaScript, another site's account, a CAPTCHA or a second step does not work.
 
-`Space` starts with **Source** (the page as it came), **Cookies** (its site's; `C` there clears them) and **Requests** (what loading the page asked for: each redirect, the headers both ways). Then `R` reload · `T` new tab · `H|L` back / forward · `b` breadcrumb · `o` open · `/` find · `n|N` next / previous match · `f` Focus mode · `v` Visual mode · `w` full page · `A` bookmark it · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab. On an item in Focus mode: open a link in a new tab, yank a link, an image's address or the text, inspect it.
+`Space` starts with **Source** (the page as it came), **Cookies** (its site's; `C` there clears them) and **Requests** (what loading the page asked for: each redirect, the headers both ways). Then `R` reload · `T` new tab · `H|L` back / forward · `b` breadcrumb · `o` open · `/` find · `n|N` next / previous match · `f` Focus mode · `v` Visual mode · `w` full page · `A` bookmark it · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab. In Focus mode `o` opens the focused link in a new tab and `y` copies its address.
 
 `o` opens the address box with the current URL on offer, in grey: `Tab` takes it to edit, `Backspace` drops it, typing starts afresh.
 

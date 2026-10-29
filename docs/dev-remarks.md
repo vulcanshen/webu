@@ -134,7 +134,7 @@ webu 不跑 JavaScript，所以靠 script 才長出內容的網頁（app、dashb
 - 不在表單裡的 `<button>`：沒有 JavaScript 時多半什麼都不會發生，目前只 toast 說明
 - 媒體（圖片、影片、音訊只有 icon 與網址）
 - 頁面名字自帶 Nerd Font glyph 時看起來像多一格空白 —— 先放著
-- `docs/demo.gif` 還是 Chromium 時期錄的，要重錄
+- `docs/demo.gif` 還是 Chromium 時期錄的：等 app 確認好、發版前再重錄（user 2026-10-29）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
 webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21），再對齊 tdp v1.1.0、升到 terminu-go v1.1.0（2026-10-28），升到 terminu-go v1.1.1（2026-10-29，Visual>select 改用 lib 的 `EnterLayer`）。2026-10-28 起改成閱讀器，2026-10-29 拿掉 Chromium 與 DevTools 畫面。tdp 交給 webu 自己決定、webu 定得跟別的成員不一樣的地方列在下一節。
@@ -148,9 +148,9 @@ webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 td
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|
 | [`reader.md`](reader.md) | 閱讀器：`net/http` 取頁、挑正文、內容樹、元件與按鍵、表單做到哪、這一頁的資訊、階段；跟下面三份衝突的以它為準 | 最先 |
-| [`function.md`](function.md) | Chromium 時期（到 0.5.0）的功能設計：Chromium 做什麼、webu 做什麼、翻譯層、role 表、frame、彈窗。Chromium 已拿掉，留作歷史 | — |
-| [`ui.md`](ui.md) | 版面、header 的 screen 與兩個面板、每種東西怎麼畫、popup、兩套配色、存檔；頁面的畫法以 `reader.md` 為準 | 第 2 |
-| [`ux.md`](ux.md) | core-key 語意、每個焦點的 `Space` 選單、每種輸入的行為、熱鍵全表、時間軸；頁面的按鍵以 `reader.md` 為準 | 第 3 |
+| [`function.md`](function.md) | 定位與牆、資料流、做到哪（完整度矩陣）、Shell 功能清單、已決事項、驗收、CLI | 第 1 |
+| [`ui.md`](ui.md) | 版面、畫面 chip 列與兩個面板、[2] 怎麼畫、popup、配色、存檔 | 第 2 |
+| [`ux.md`](ux.md) | core-key 語意、閱讀／Focus mode／Visual mode、每個焦點的 `Space` 選單、欄位與表單、熱鍵全表、時間軸 | 第 3 |
 
 設計本身 —— 包含試過而被否決的做法 —— 每條決定都在原地標了日期。
 

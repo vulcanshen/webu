@@ -1,18 +1,12 @@
 # webu — UI
 
-> **2026-10-29 起 webu 是閱讀器，不再跑 Chromium**（[`reader.md`](reader.md)）。畫面、面板、書籤、歷史、
-> 下載、設定、popup 的部分仍適用；[2] 頁面的畫法（目錄與節、四個 part、頁面的彈窗、表單的框、DevTools）
-> 是 Chromium 時期的，以 `reader.md` 為準。
+> 本文件講**版面與 surface**：畫面、Web 畫面的兩個面板、`[2]` 裡頁面的擺法、popup、配色、存檔。頁面的元件怎麼畫、
+> 按鍵的規格在 [`reader.md`](reader.md)；互動語意（core-key、Space menu、hotkey）在 `ux.md`；實作註記在 `dev-remarks.md`。
+> 依 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp）撰寫，每條版面決定標日期。
 
-> 本文件講**版面與 surface**：面板、頁面的三個畫面、pagetab、popup、色帶、存檔。互動語意
-> （core-key、Space menu 內容、hotkey）在 `ux.md`；功能與 Chromium 邊界在 `function.md`；
-> 實作註記在 `dev-remarks.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp）撰寫，每條版面決定標日期。
-
-> **2026-10-18 起畫面建在 terminu-go 上（tdp v0.7.4）。** 框、膠囊、畫面 chip 列、footer、每一種 popup、淡化、loading icon
-> 都是 lib 的，長相照 tdp components；本文件以下講 webu 自己的部分 —— [2] 裡面的頁面。跟下面舊段落不同的地方：
-> 頁面的四個 part 是 [2] 的 panel tab（`[2] PAGE HEADER BODY OTHERS FOOTER`，第一個 tab 是整頁），網址列下的 pagetab 拿掉；
-> [2] 跟著 [1] 的游標換分頁；DevTools 是第六個畫面 `[I] DEVTOOLS`；Settings 是 lib 的一列一個值；書籤、歷史、下載是 lib 的清單；
-> popup 的寬度、高度、層色、動畫照 tdp F2、tdp F7、tdp F8，由 lib 決定。
+> **2026-10-18 起畫面建在 terminu-go 上。** 框、膠囊、畫面 chip 列、footer、每一種 popup、淡化、loading icon 都是 lib 的，
+> 長相照 tdp components，本文件只寫 webu 用到哪些；webu 自己畫的只有 `[2]` 裡面的頁面。2026-10-28 起 webu 是閱讀器，
+> 2026-10-29 起不再跑 Chromium（`reader.md`）。
 
 ---
 
@@ -21,220 +15,177 @@
 ### 1.1 Grid
 
 ```
-[W]EB[B]OOKMARKS[H]ISTORY[D]OWNLOADS[S]ETTINGS[I] DEVTOOLS        1 download in flight   ← 畫面 chip 列（lib）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← 分隔線；下載中兼進度條
-┌[1] TABS────────────┐┏[2]PAGEHEADERBODYOTHERSFOOTER━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓  ← part 是 [2] 的 tab
-│ TAB                  │┃ 󰖟 https://en.wikipedia.org/wiki/Terminal_emulator                  ┃  ← URL 列
-│   example.com        │┃  1  Terminal emulator                              󰓫 1  258 lines ┃  ← 目錄：一列一節
-│ ▓ Terminal emulator▓ │┃  2    Background                                         27 lines ┃
-│                      │┃  3      Character-oriented terminals                     19 lines ┃
-└─ Enter:read c:close ─┘┗━ Enter:open /:search ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1-16 of 16 ━┛  ← hint、捲動位置（lib）
-Space:menu ?:help Tab|1–2:panels q:quit                                                     ← footer（lib）
+ [W]EB  [B]OOKMARKS  [H]ISTORY  [D]OWNLOADS  [S]ETTINGS                    1 download in flight   ← 畫面 chip 列（lib）；右端是 statusbar
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← 分隔線；下載中從左邊填 Green 當進度條
+┌[1] TABS──────────────┐┏[2] PAGE━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+│ TITLE                │┃ 󰖟 https://en.wikipedia.org/wiki/Terminal_emulator                    ┃  ← 網址列：位置列，Lavender
+│  Example Domain     │┃   1  Terminal emulator                                               ┃  ← 行號（Overlay0）＋頁面：h1 的字在 Peach 上
+│  Terminal emulator  │┃   2                                                                  ┃
+│                      │┃   3 A terminal emulator is a computer program that emulates a        ┃
+│                      │┃   4 󰌷 video terminal within some other display architecture.         ┃  ← 連結：link icon＋字，Sapphire、底線
+└─ Enter:read c:close ─┘┗━ H:back L:forward ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1-24 of 310 ━┛  ← hint、捲動位置（lib）
+Space:menu ?:help !:log Tab|1–2:panels q:quit                                                     ← footer（lib）
 ```
 
-兩個面板並列，編號左到右。頂部一列 header：五個 screen 的 chip chain（sshu 的 tab 列作法，
-chip 之間右上左下的斜線，2026-09-21），目前的點亮；右端狀態槽寫 `N download(s) in flight`；
-header 下一列分隔線，下載中兼進度條。URL 在 `[2]` 內部第一列。
+Web 畫面兩個面板並列，編號左到右：`[1]` 分頁清單、`[2]` 頁面。最上面一列是 lib 的畫面 chip 列（tdp screen.3），五個畫面
+各一個膠囊，目前的那個點亮；右端是 statusbar（tdp screen.4），有下載進行中時寫 `N download(s) in flight`（Green、固定寬）。
+chip 列下面一條分隔線，下載中從左邊填 Green 當進度條。最下面一列是 lib 的 footer（tdp screen.2）。網址在 `[2]` 裡面的第一列（§2）。
 
 ### 1.2 尺寸規則
 
 | 項目 | 規則 |
 |---|---|
-| 側欄寬 | 固定 24 欄 |
-| `[1]` 高 | header 與 footer 之間全部；分頁清單捲動 |
-| 窄寬 | `w < 72` 只畫焦點那一側；`Z` zoom 讓頁面佔滿（header / footer 仍在）；focus 離開 `[2]`（`Tab`、`1`）就還原，focus 所在的 panel 一定畫出來（2026-09-29，tdp L5，照 sshu） |
-| chrome | header + 分隔線 + footer 共 3 列，鎖死不 reflow |
-| 寬度穩定 | 每一列都恰好是終端機寬（`TestViewFitsTheTerminal` 跨尺寸檢查）；URL 縮 path、host 永不縮；分頁標題截斷不折行 |
-| 文字欄寬 | 段落折行寬 = min(面板寬, `measure`)；`measure` 收 `full`（預設）或 ≥ 20 的數字；表格、code、分隔線用整個面板寬 |
-| 行號欄 | 每個畫面都有（2026-09-23）；寬度依行數，量兩次至多（先用上一頁的位數排一次，位數變了再排一次） |
+| 最低尺寸 | 60×20（2026-10-19，tdp L1：家族的標準是 60×32，app 可以調低）：兩個面板並排，也放得下加書籤、登入這些表單。再小，lib 只畫名稱、`needs a terminal of at least 60×20` 與 `Press [Ctrl-C] twice to quit`（tdp screen.7） |
+| 側欄寬 | `[1]` 固定 24 欄（`sideW`），`[2]` 拿其餘 |
+| 窄寬 | 門檻 60 欄（`narrowW`，2026-10-28，tdp screen.5 不能高於 60），跟最低寬度一樣，所以 webu 畫得出來的寬度都是兩個面板並排 |
+| zoom | `[2]` 的 `Z`：有 focus 的面板佔滿寬度，`Tab`、數字鍵照樣換面板、換到的也佔滿，在 `[2]` 再按 `Z` 還原（tdp screen.6 的預設） |
+| chrome | chip 列 + 分隔線 + footer 共 3 列（lib）；`[2]` 的框上下 2 列、網址列 1 列，頁面拿其餘 |
+| 寬度穩定 | 每一列都恰好是終端機寬：`TestTDP` 在各種尺寸、icon 一格／兩格下走過每個畫面與 popup，`TestEveryPopupFits`、`TestUnderTheLeastSize` 縮到最低尺寸以下（tdp L4、E5、E6）。網址從前面截，分頁標題截斷不折行 |
+| 行號欄 | `[2]` 的頁面都有（2026-09-23）；寬度是位數加前後各一格，依頁面的列數；最多排兩次（先用上一次的寬度排，位數變了再排一次） |
 
 ---
 
-## §2 header 與兩個面板
+## §2 畫面與兩個面板
 
-### header — 全域動作的常駐揭露
+### 畫面 chip 列 — 全域動作的常駐揭露
 
-`[W]eb` `[B]ookmarks` `[H]istory` `[D]ownloads` `[S]ettings`，各一個全域鍵切換 screen；header
-沒有 cursor、Tab 不停。DevTools 不在這裡：它的作用對象是目前頁面，走 `[2]` 的 Space menu。
+`[W]eb` `[B]ookmarks` `[H]istory` `[D]ownloads` `[S]ettings`，各一個全域鍵切換畫面；chip 列沒有 cursor、`Tab` 不停
+（lib，tdp screen.3）。全域動作只有切畫面與離開，`[1]`、`[2]` 的熱鍵各自歸各自的面板（tdp P3、M4）。2026-10-29 起沒有
+DevTools 畫面：留下來的 Source、Cookies、Requests 在 `[2]` 的 Space menu（§3）。
 
 ### list screen — Bookmarks / History / Downloads / Settings
 
-一個面板佔滿 header 與 footer 之間：title chip、下邊框 hint 列該 screen 的鍵、Space menu 同一份
-（item / panel 兩 region）。第一列是欄位 header（Blue）。Enter 開 bookmark / history 一律新分頁並回
-`[W]eb`。Bookmarks 是目錄樹（可巢狀、可收合、可搬移、可改名、可匯入瀏覽器的匯出檔）；Settings
-一列一個 key，`config.yaml` 有的 key 一定有一列（`TestSettingsCoverConfig` 守著）。細節 2026-09-21
-起未變，見 `ux.md` §A.1。
+一個面板佔滿 chip 列與 footer 之間，是 lib 的面板（2026-10-18）：表頭、下框 hint、Space menu 都由 lib 從 webu 的登記產生。
+
+| 畫面 | 欄 | 內容 |
+|---|---|---|
+| Bookmarks | Title、URL | 目錄樹：可巢狀、可收合（目錄那一列按 `Enter`）、可搬移、可改名、可匯入瀏覽器匯出的書籤檔；`/` 篩選 |
+| History | Title、URL、When | 造訪過的每一頁，新的在上，清除之前一直留著；`/` 篩選 |
+| Downloads | File、State | 這次 session 的下載，新的在上；`/` 篩選 |
+| Settings | 一列一個值（lib 的 `Values`，tdp panel.12） | `config.yaml` 的每個 key 一定有一列（`TestSettingsCoverConfig` 守著），設好就存；`C` 清除登入資料（`cookies.json`） |
+
+長的欄（標題、URL、檔名、狀態）分短欄剩下的寬度；縮到最少還放不下時，History 整欄收掉 When（tdp panel.5）。書籤與歷史的
+`Enter` 在背後開新分頁、留在清單上，toast 說開在哪裡（2026-10-18，tdp K3）。
 
 ### `[1]` — 分頁清單
 
-一列一個 Chromium target：標題截斷；載入中掛 live glyph。cursor 反白 = 你在哪；綠字 = `[2]`
-現在顯示的分頁；同 URL 的分頁依開啟順序編號。**Enter 才切換 `[2]`**。`target=_blank` 的新分頁加到
-尾端並自動切換。
+lib 的清單，欄名 `Title`（user 2026-10-28：外框已經寫 TABS，原本的欄名 `Tab` 重複；試過顯示網址，user 要保留標題）。一列一個分頁：
 
-### `[2]` — 頁面（0.3.0 重新定義）
+- **網站的記號**在最前面（user 2026-10-28，`siteicon.go`）：Nerd Font 有那個網站的 icon 就用它，沒有就是地球；顏色是網站
+  favicon 的主色，每個網站一個 session 問一次，拿到之前是 Blue。游標那一列的記號照 tdp color.1 換成 Base（lib 畫的）。載入中
+  記號換成 live 記號（`glyphLive`，跟 kbu 的 Logs 同一個碼位）。
+- **標題**：頁面的標題，沒有標題就是網址；截斷不折行。同一個網址的幾個分頁，照開啟的順序在前面標 `(1)`、`(2)`。
+- **字色**：Green 是 `[2]` 正在顯示的分頁；Overlay0 是上次 session 留下、還沒載入的分頁。
 
-**單一職責，永遠是頁面。** 第一列 URL（前面的地球在抓取中換成圓餅填滿的動畫，只要頁面還在
-長就一直轉——settling，`function.md` §6）；第二列是 **pagetab**；之後是頁面的三個畫面之一。
+### `[2]` — 頁面
 
-#### 2.1 頁面的四個 part（2026-10-18 起是 [2] 的 panel tab）
+**單一職責，永遠是頁面。** lib 的面板，label `Page`，沒有 panel tab；框、loading icon、失焦時的淡化是 lib 的，框裡面是 webu
+自己畫的（`pagebody.go`）。
 
-一頁被幾何切成四塊（`parts.go`，2026-09-23）：**body** 是最大面積的頂層區塊、**others** 在它
-旁邊（側欄、廣告欄）、**header** 在它前面、**footer** 在它後面。不看標籤叫什麼——`nav` 也好、
-`div` 也好，位置決定它是什麼。2026-10-18 起它們是 [2] 的 panel tab：第一個 tab `PAGE` 是整頁，後面是這一頁有的 part，
-`h|l` 換、一開頁在 BODY；只有一塊的頁面沒有 tab。下面是 2026-10-18 以前的 pagetab，留作紀錄：
+**`[2]` 是 `[1]` 的明細**（2026-10-18 暫定，到現在沒有重談；tdp panel.13）：`[1]` 的游標移到哪個分頁，`[2]` 就顯示哪個，
+還沒載入的分頁換到才載；`[1]` 的 `Enter` 把 focus 送到 `[2]`（tdp K3）。`T`、連結的「開新分頁」換到 Web 畫面、focus 到 `[2]`；
+載入完成這種背景的事不搶 focus。
 
-- `Esc` 上去（整條反色 rosewater、含到面板邊的那條線；目前的 part 深底 rosewater 字）、`h`/`l`
-  走到哪**內容就切到哪**、`Enter` = 確認回頁面、`j` 也回頁面（2026-09-23 user 定案：走就是選）。
-- **兩個守門**：頁面比視窗矮（`Page.getLayoutMetrics`）、或最大區塊不到頁面面積的 25% → 整頁一塊、
-  pagetab 只畫一條線（一個 part 沒有東西可選）。
-- 修訂史：2026-09-21 是「入口行」（每個 landmark 一列在頁面裡）；09-22 搬上 URL 底下成「膠囊」，
-  一種 landmark 一顆、字是固定字彙（skip / header / nav / search / sidebar / footer / dialog /
-  other）、只在鏈頭掛一個漢堡；09-23 改成**四個 part 由幾何切**，理由：沒宣告 landmark 的站（w3schools）
-  什麼都收不到、宣告了的站字又跟 URL 重複，而「東西在哪」是每個站都有的事實。膠囊、Outline popup、
-  `other` 膠囊、skip 膠囊全部拿掉；skip link 與頁內錨點仍直接跳。
+#### 網址列
 
-#### 2.2 三個畫面：目錄、一節、一整張
+`[2]` 的第一列，tdp panel.10 的位置列（2026-10-29，terminu 確認）：glyph（nf-md-web）與網址都是 Lavender；太長從前面截、
+保留尾端；只能看，不能按、cursor 不停、捲動位置不算它；`[2]` 失焦時跟著淡化。visual mode 裡用 `/` 找字時，這一列換成找的字與
+目前是第幾筆（`/query  2/5`，Yellow）。
 
-有 ≥ 3 個標題的頁面是**文件**（`shapeDoc`），開頁先進**目錄**（section list，`section.go`）：
+#### 頁面
 
-| 畫面 | 內容 | 鍵 |
-|---|---|---|
-| **目錄** | 一列一節：序號（就是 `go` 的行號）、依深度縮排的標題、右欄 `󰓫 N`（表）`󰅩 N`（code）`󰋩 N`（媒體）與行數；標題用該深度的 ink（五個 hue 輪流，`levelColor`），游標列用同色反白 | `j`/`k`/`u`/`d`/`gg`/`G` 走、Enter 開一節、Esc 上 pagetab |
-| **一節** | 面板 header 列變成 `☰ 2/26 節名`（該深度的 ink），內容從節的本文開始（標題不再印第二次）；**一節包含它的子節**（2026-09-23：MDN 的「Try it」是 h2、內容全在它的 h4 底下，不含子節就是空的；章包含節，h1 = 整篇），下框 hint `2/26 · 節名 · 40%`（下框本身填成進度條的做法 2026-09-29 拿掉，user：狀態字已經有百分比） | `n`/`p` 同深度的下一節 / 上一節、Esc 回目錄 |
-| **一整張** | 從頭到尾一張紙 | Space menu 的 `One sheet` / `Sections` 切換 |
+網址列以下是頁面：左邊是行號欄（Overlay0，user 2026-10-28：行號說的是字在哪，不是字本身），右邊是內容樹畫成的 webu 元件
+（`readerrender.go`）。規格以 `reader.md`「元件」為準，這裡是摘要：
 
-不到三個標題、表單、app、搜尋結果：`shapeOne`，就是一整張。沒有內文只有連結的「節」（w3schools 的
-側欄目錄）不列進目錄、行數併進前一節（`pruneNav`）。
+- **標題**：字（Base、粗體）放在該層的顏色上、左右各一格空白，不畫圓端（user 2026-10-28：圓端是 tdp 的膠囊，P4）；顏色依層
+  Peach、Yellow、Green、Teal、Flamingo，第六層起輪迴；標題裡的連結、程式碼畫在同一條上。
+- **段落**：Text；粗體、斜體、刪除線、標記用終端機的粗體、斜體、刪除線、反白。
+- **清單**：無序清單每一層都是 `-`（Blue），靠縮排分層；有序清單依層 `1.`、`a.`、`i.`，再回到數字輪迴。
+- **程式碼**：區塊是 Mantle 底、照語言上色（chroma；網頁沒標語言就讓 chroma 猜），語言名寫在右上角（Overlay0），Tab 畫成
+  `input_tab_width` 格；行內程式碼是 Pink 字、Surface0 底。
+- **引用**：開頭一條 Lavender 的 `▎`（多層引用多條），Mantle 底。
+- **表格**：資料表格畫成格子，表頭粗體、下面一條分隔線，不鋪底色；太寬切掉加 `…`。沒有 `<th>` 也沒有 `<caption>` 的表格當一般區塊。
+- **連結與圖片**：連結是 link icon＋字，Sapphire、底線；圖片是 image icon＋alt（沒有 alt 寫網址的檔名），Overlay0；包在連結裡的
+  圖片用連結的顏色。網址在 Focus 到它時寫在下框右邊。
+- **表單**：`┌ Form: 名字` 開頭、`│` 沿著左邊、`└` 收尾（Overlay0）；文字欄位 `[值]`、密碼 `[•••]`、勾選框 `[ ]`／`[x]`、
+  單選 `( )`／`(•)`、select `[值 ▾]` 是 Mauve，按鈕 `( 名字 )` 是 Sapphire。
+- **分隔線**：一條橫跨面板的細線（Overlay0）。
+- 畫面上沒有 markdown 符號，visual mode 複製的是畫面上的字；`Yank markdown` 把內容寫成 markdown。
+- 頁面上的控制字元畫成 Red 的名字（`\t`、`\x1b`……，tdp components.5），整列照舊截到面板寬。
 
-#### 2.3 頁面怎麼畫
+`w` 在正文與整頁（整個 `<body>`）之間切換（user 2026-10-28）。
 
-- **item 與 flow**：cursor 只停在 item（可按的、可填的、heading、landmark 標題列、清單裡的一件事、
-  frame、code block、資料表的每一格）；文字段落是 item 之間的 flow。`j`/`k` 換列，`h`/`l` 同列的
-  item 之間走（一列連結才走得動）。
-- **顏色是概念不是元素**（2026-09-23 定案）：**可按的**（link、button、tab…）sapphire、**可填的**
-  （每種 input）mauve、**code** pink、**媒體** overlay0、**pagetab** rosewater、**填錯的值** 紅；
-  heading 與目錄用五個 hue 輪流表深度。不再有 `[ xxx ]` 括號、不用 emoji、每個控制項以 glyph 開頭；
-  glyph 一律從字型的 cmap 讀碼位、不憑記憶。
-- **heading**：`#`×層級 + 文字，用該深度的 ink（2026-09-23 改：09-22 曾是六級底色從 surface2
-  lerp 到 crust，改成五個 hue 後底色拿掉）；Enter 收合到下一個同級或更高級 heading。
-- **清單裡的一件事**（listitem、article、card）**一列**（2026-09-23）：第一行當它的名字，Enter 走進去
-  （面板 header 列變成它的第一行）、Esc 出來、路徑無上限；只有一行的不走進去，Enter 直接對裡面的
-  東西做事。理由：一張卡片攤成十幾列沒有標籤的文字，是一件看不見的事。
-- **表單畫成表單**（2026-09-22 / 23）：`<form>` 是 sshu 的 popup 框畫進頁面裡（不是浮在上面）：label
-  一欄對齊、值靠一邊、值前面是欄位 glyph；label **不截斷**——擠不下就 stack 成兩列；`<fieldset>`
-  的 legend 是粗體分組標題；`aria-invalid` 的值畫紅；必填在 label 上標 `*`。
-- **資料表**：整表 surface0 底、表頭列 surface1 底 + 粗體，每格一停，長了 Enter 看全文。沒有表頭的
-  是排版表，一列一行流式。
-- **code block**：pink 字、surface0 底、保留行、chroma 語法色；是一個可停的區塊，Enter 開全文 popup。
-- **tabs**（tablist）：一條 pagetab 式的鏈，選中的 tab 用所在節的 ink 填底、其餘描字；只有選中的
-  panel 在樹裡，所以畫面就只顯示那一個。
-- **tree**：依 `aria-level` 縮排，`▾`/`▸` 依 `aria-expanded`；**listbox** 的 option 是 radio（單選）
-  或 check（多選）列；**menu** 的 menuitem 是按鈕列，從按鈕開出來的 menu 是彈窗。
-- **slider**：`Red ──────●───── 128`（12 格軌道）；**progressbar / meter**：`Upload ━━━━━━────── 50%`
-  （0..1 顯示百分比、其他 `v/max`、沒值 `…`），不是停靠點。
-- **`<details>`**：`▸ Show more` / `▾ Already open`，Enter 開合。**tooltip**：`󰋼 文字` dim 旁白，只在
-  頁面顯示它時出現（Enter 就是 hover）。**timer / status**：文字在句子裡流動、跟著跳。
-- **frame**：`󰘔 名字` 一列，Enter 走進去（同站、跨站、巢狀都一樣；進不去的說進不去 + Yank url）。
-- **裸連結串流動**：連續兩個以上、裡面沒有區塊的 block 連結流成一段（一列一個是 CSS，不是結構）。
-- **同一個名字只印一次**（2026-09-23）：region 的名字 = 裡面第一個標題 → 不畫 rule；走進一件事時
-  第一行是 header 列不重印；空的節只剩標題列。
-- **inline 標記**：`<strong>` 粗、`<em>` 斜、`<del>` 刪除線、`<ins>` 底線、`<mark>` 反白。
-- **markdown**：Space menu 的 `Yank markdown` 把整頁寫成 markdown 進剪貼簿。
-- **sr-only 丟掉**：排在 1×1 點上的元素是寫給 screen reader 的（2026-09-22）。
-- **非 HTML**：JSON / 純文字 / XML 整份一個 code block；PDF 是「unsupported media type」一頁。
-- **起點**：main 裡第一個 item、視窗捲到它；沒 main 停最上層 heading。載入中 URL 列的 glyph 轉、
-  頁面不 dim（dim 只給「正在離開的頁面」）。
+#### 下框
 
-#### 2.4 頁面自己的彈窗：浮在頁面上
+lib 畫的（tdp panel.1）：左邊是 hint，閱讀時是 `H:back L:forward`（user 2026-10-28：不然不知道怎麼上下頁）；右邊是捲動位置
+（`1-24 of 310`，整頁放得下時不寫）。Focus mode 裡右邊換成 focus 中的連結或圖片的網址（`reader.md`）。
 
-頁面跳出的 modal / alertdialog / menu / cookie 橫幅（`function.md` §4.3 的判定）畫成 webu 自己的
-popup 框浮在 `[2]` 上（`pagepopup.go`，2026-09-23）：對話框的寬度（`max(20, min(panelW−8, 76))`）、
-底下的頁面 dim 當 backdrop（原生 `showModal` 會砍掉 dialog 以外整棵樹，所以用彈窗出現前那刻的
-版面）、疊層往右下錯開 3 欄 1 列。裡面沒有行號、沒有 `go`、沒有 `/`（它要的是一個回答，不是
-一頁）；`Esc` 不關；答完回到原本的節與位置。修訂：第一版把彈窗當成整個面板，user 2026-09-23
-打回：「popup 變成一頁，不是 popup」。
+#### 狀態與模式
+
+- **loading**：lib 的 loading icon 接在 `[2]` 的膠囊後面；還沒有任何內容時，中間寫 `loading <host>…`（tdp panel.15）。換頁時，
+  正在離開的那一頁留著並變暗，新的一頁到了才換。
+- **錯誤**：置中兩句，事實是 Red，`Press [R] to retry` 是 Overlay0（tdp panel.15）。
+- **Focus mode（`f`）與 Visual mode（`v`）**是 `[2]` 的 mode（tdp K11）：框變 Yellow、上框右邊是模式名（`Focus`、`Visual`，
+  選取中 `Visual>select`），都是 lib 畫的。Focus 中的項目、`/` 找到的目前那一筆是 tdp 的 panel cursor 色塊（Subtext1 底、Base
+  粗體）；其他找到的字加底線、保留原本的顏色（2026-10-19 user 定，tdp color）。
 
 ---
 
 ## §3 Popup
 
-2026-10-18 起 popup 全是 terminu-go 的（tdp popup，與 tdp 的 dialog、input 各元件）：寬度、高度、層色、開關動畫（9 × 32 ms）、
-淡化、loading icon、`Esc` 一次一層都照 tdp，webu 不再自己畫。webu 用到的：confirm（開連結、搜尋送出、憑證、刪除、清除）、
-text／password／number input（Location、新分頁、欄位、設定、目錄名、go 的行號）、textarea（頁面的多行欄位）、select（頁面的
-select、slider 的數字、書籤搬移）、file-picker（上傳、匯入）、finder（`/`）、form（新增書籤）、viewer（表格的格、code block、
-Inspect）、toast、error popup。頁面自己的問題也是 lib 的（2026-10-19，`pageask.go`）：alert／confirm／beforeunload 是 confirm，
-prompt 是 text input，HTTP 登入是 form；取消都經 `OnCancel` 告訴頁面「不」。以下是 2026-10-18 以前 webu 自己的 popup，留作紀錄：
+2026-10-18 起 popup 全是 terminu-go 的（tdp layout/popup 與 dialog、input 各元件）：外框、寬度、高度、層色、開關動畫、淡化、
+loading icon、錯誤列、`Esc` 一次一層都照 tdp，webu 不自己畫。從 menu 執行之後，打開來看的、選一個值寫回的、新增的，menu 留在
+底下；要去別的地方的（`T` 新分頁、`o` 網址、書籤的 `m`）開的時候清掉 menu（tdp T1）。webu 用到的：
 
-**一個寬度**（2026-09-28，tdp F7）：每個 popup 的外框都是 `min(terminal 寬 − 2, 120)`，水平置中（`popup.go` `popupW`）；不依內容
-算寬。說明、值太長就在框裡截尾或捲動，不加寬框。toast 同一個寬度，固定在畫面底部。finder `/` 的清單與預覽合起來是一個 popup，
-兩框合計照這個寬度。頁面自己的彈窗不照（`dev-remarks.md`「tdp 交給 webu 決定的地方」）。
-
-**高度打開時定好**（2026-09-28，tdp F7）：依內容，上限是畫面扣留白，打開之後不跟著內容伸縮 —— 變多就在框裡捲動、變少就留白。
-editor 以打開時的行數定高（至少 6 行）；file picker 以打開時那個目錄的項目數定高（至少 8 列），過濾、換目錄只換內容；Network
-detail 一打開就用最大高度（body 還在路上，幾乎都比 headers 長），body 到了在框裡捲動；Console detail 以打開時的內容定高。
-
-**loading icon**（2026-09-28，tdp F7、tdp D3）：popup 的內容還在路上時，標題後面轉 `[2]` URL 列同一個 loading icon（`spinnerFrame`，
-circle slice 八格、90 ms、由時鐘決定），用標題的層色；到了就換回同寬的空白，標題與後面的分頁鏈不位移。有三處：Network detail 等 body、
-DevTools 的 Storage 分頁（含刪除、清網站資料之後重讀）、Source 分頁。Network / Console 分頁一直流進來的 log 是項目層級的資料流，不放。
-
-**只有最上層是亮的**（2026-09-28，tdp F8）：有 popup 開著時，最上層那個（握著鍵盤的，`owns()`）以外全部畫暗 —— 底下的 popup、
-頁面自己的彈窗、整個 base 畫面，header 的下載進度與警示色也一樣（tdp T2 的例外）。**怎麼暗**（2026-09-28，tdp F8、tdp D2
-v0.1.11–v0.1.12）：每個顏色——前景與背景——往底色淡化，`c × 0.45 + base × 0.55`（base `#1e1e2e`），而且絕不比原色亮；沒設色的字給
-`dim(Text)` = `#6d7187`。所以膠囊、cursor bar、選取、code block 與表格的底色都還在，只是變暗；下層 popup 的邊框自然是自己層色的暗版，
-看得出是哪一層；bold、reverse 不動。（2026-09-28 較早的做法是把前景全換成 dim 色、背景拿掉，拆掉了膠囊與游標列，已改。）還在關閉動畫的 popup 已經不是最上層，畫暗。toast 不是一層：不讓別人變暗，自己也不變暗。畫的順序、`Esc`
-關哪一層、按鍵給誰，都讀同一份由下而上的順序（`app.go` `floats()`；D3）：spaceMenu、globalMenu、DevTools、DevTools detail、
-options、message、finder、confirm、picker、input、editor、help、quitAsk、quitHelp。實作是把畫好的字串改色（`dim.go` `dimANSI`），
-不必每個 popup 各有一個暗的畫法。
-
-| Popup | 類型 | 用途 |
-|---|---|---|
-| Space menu | menu | item / panel 兩 region；捲動、環繞、`u`/`d` 半窗、`gg`/`G` 首尾（2026-09-23） |
-| choices | menu | select 的選項、slider 的數字（10 列一窗）：自己一個 popup，疊在叫它的 item menu 或 Space menu 上，`Esc` 回到那裡、選了關整疊（2026-09-28，tdp F1 多步驟、tdp F4） |
-| global operation | menu | Space menu 最後一列打開：全域動作，可執行 |
-| `?` key reference | viewport | 最前端 surface 的按鍵，唯讀：面板上是面板的鍵 + core key，浮層上是這個浮層的鍵。menu 裡變暗的鍵，這裡也列出、變暗（tdp M6）。兩欄：鍵 Blue、說明 Text；鍵不加括號、不加冒號，幾個鍵做同一件事用 `/`（`j/k`、`q/Ctrl-C`），範圍用 `–`（`0–9`）（2026-09-29，tdp M5、tdp D2 v0.1.15） |
-| Location | input | `L`：目前 URL 當提議（`Tab` 接受、Backspace 拒絕）；非 URL 當搜尋 |
-| input | input | 一行的欄位：**邊框寫型別**（`email`、`number`、`date · YYYY-MM-DD`、`password`、`email · invalid`），**框裡一行是欄位名**（2026-09-23 user 定：邊框是 chrome 說這是哪種框，框內那行說是哪一個欄位）；JS `prompt`；設定值。**input group**：一個框幾個欄位（加書籤 URL + 標題、HTTP auth 帳號 + 密碼遮罩），聚焦那一欄的名字亮起、只有它有游標，送出不成立時那一欄的名字變 Red、原因寫在最下面的錯誤列 —— 每個框打開時就留著這一列，框的高度不變（2026-09-28，tdp F7；2026-10-06 起每個框都會被拒：值裡有換行或 Tab 時，之前只有會失敗的框留） |
-| editor | 大框 | textarea / contenteditable：多行、**寫 / 移兩態**（Esc 出到框層 h/j/k/l 走、`i`/`a`/`A`/`o` 回寫、Enter 設值、再 Esc 取消） |
-| **finder** | 三區（輸入 / 清單 / 預覽，filu 的 `/` 形式；寬 ≥ 96 欄並排、否則上下） | `/`：整頁四個 part 的節點索引（「持有文字的最小區塊」各一次），字面比對優先、名字模糊比對；清單列前綴 part 的 glyph；打字時 Enter 或 `Tab` 進清單，清單上 `Tab` 回輸入、Enter = **去那裡**（切 part、開節、沿路走進去、游標落定），不按；`Esc` 從哪一區都關掉整個 finder |
-| go | 清單 | `go` 後打數字：只管**行號**（目錄上是節的序號）；數字當前綴篩 |
-| options | menu | `<select>` 的 option；slider 的數字（10 列一窗、游標在目前值置中）；書籤搬移的目錄 picker |
-| file picker | menu（filu finder 形式） | `<input type=file>`、書籤匯入：一次一個目錄，Enter 進目錄 / 選檔，空過濾時 Backspace 回上層 |
-| confirm | message | 連結 Open、搜尋框 Search、憑證、`beforeunload`、JS confirm、刪除 / 清除 |
-| message | viewport | 表格格內容、code block 全文、Inspect |
-| page popup | 浮窗 | 頁面自己的彈窗（§2.4） |
-| DevTools | 帶 tab bar 的 viewport | Network / Storage / Console / Source；`h`/`l` 切分頁 |
-| toast | message | 下載、yank、拒絕的操作（disabled、popup 裡的 `/`）…；除了 `Esc` 不收鍵，其他鍵照樣到底下，toast 留著（tdp F1、tdp F8 v0.1.14） |
-
-DevTools 的四個分頁與 2026-09-21 相同：Network（清單 + detail：headers / body）、Storage（cookie /
-local / session：刪、yank、清站資料）、Console（每筆完整折行、物件列 own property、`i` REPL）、
-Source（HTML + `/` grep）。
+| Popup（lib） | webu 用在 |
+|---|---|
+| Space menu、global operation、`?` key reference | lib 從 webu 的登記產生（`dev-remarks.md`「一份登記、lib 產生其餘」） |
+| menu | 麵包屑（`[2]` 的 `b`，user 2026-10-29，照 kbu）：這個分頁走過的每一頁，編號加標題，選一頁就直接跳過去；歷史只有一頁時沒有這個動作 |
+| viewer | **Source**（抓下來的原始內容）、**Cookies**（這個網站的；`C` 先問再清掉）、**Requests**（載入這一頁發出的請求）：`[2]` Space menu 最上面三項，沒有熱鍵（user 2026-10-29，取代 DevTools）。**Inspect**：Focus 中項目的 Space menu |
+| text input | `o` 網址（目前的網址當灰字提議）、`T` 新分頁、`/` 找字（閱讀與 visual mode）、頁面的文字欄位、Settings 的文字設定、書籤的新目錄、改名、匯入到哪個目錄 |
+| password input | 頁面的密碼欄位 |
+| textarea | 頁面的多行欄位 |
+| number input | Settings 的 `input_tab_width` |
+| select | 頁面的 select、書籤搬到哪個目錄（`m`） |
+| file picker | 匯入書籤（`I`）、Settings 的 `download_dir`（選目錄） |
+| form | 加書籤（URL＋Title） |
+| confirm | 只有一個可以打字的欄位的表單，填完時問要不要送出；刪書籤、刪目錄；清歷史、清登入資料、清一個網站的 cookie；有下載進行中時離開（tdp K9） |
+| MoveAside | 讀不了的 `config.yaml`、`bookmarks.yaml`、`history.yaml`、`session.yaml`、`cookies.json`（tdp E3） |
+| toast、error popup、App Log（`!`）、splash（`V`） | lib 的；成功做完的是 Success toast（tdp toast.2） |
 
 ---
 
 ## §4 色帶
 
-**兩套配色（2026-09-22 定案）**：**app 配色**是 webu 的外殼（面板、邊框、header、pagetab、游標、
-選單、popup、footer），完整吃 tdp D2——少數錨點、明度當 z-axis、一個語意一條色帶；**page 配色**是文件
-自己的結構，封閉集合，只出現在 `[2]` 的內容區、不參與 z-axis。錨點 catppuccin-mocha。
+**兩套配色（2026-09-22 定案）**：**外殼配色**（框、膠囊、chip 列、cursor、hint、footer、popup 的層色、模式色、淡化）2026-10-18
+起都是 terminu-go 的，照 tdp color，webu 不另外定；**頁面配色**是 `[2]` 頁面自己的結構，封閉集合，只出現在 `[2]` 的頁面裡、
+不參與層級（`theme.go`）。錨點都是 catppuccin-mocha。
 
-| 色帶 | 意思 | 值 |
-|---|---|---|
-| Blue | focus（結構）、行號、URL、抓取中的 glyph | `#89b4fa` |
-| Surface2 | unfocused | `#585b70` |
-| Green | `[1]` 裡 `[2]` 正在顯示的分頁（全 app 只表達這一件事） | `#a6e3a1` |
-| Mauve | header 鏈；page 側：**可填的** | `#cba6f7` |
-| Rosewater | pagetab（Esc 上去時整條反色） | `#f5e0dc` |
-| Sapphire | page 側：**可按的**（連結底線） | `#74c7ec` |
-| Pink | code；code block 另鋪 surface0 底 | `#f5c2e7` |
-| Overlay0 | 媒體、frame、dim 旁白 | `#6c7086` |
-| Red（warn） | 填錯的值（`aria-invalid`）；單行的值裡貼上的換行與 Tab，畫成 `\n`、`\t`（2026-10-06）；override 色不參與層級 | — |
-| 五個 hue 輪流 | 標題深度：目錄的縮排、節的 header 列、heading、tab 鏈、游標在標題上時的底 | `levelInk` |
-| Lavender | visual mode 的選取 | `#b4befe` |
-| Surface0 / Surface1 | 資料表底 / 表頭底 | `#313244` / `#45475a` |
-| popup layer scale | 浮層層級，依 tdp D2 的插值 | — |
-| 語法色 | key Mauve、string Pink、number Flamingo、常數 Sky、註解 dim 斜體、標點 Overlay2 | — |
+外殼的顏色在 webu 說什麼（意思由 tdp color 定）：
 
-focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。visual mode 邊框 Yellow、線型照 focus 的雙線，上框右側嵌一個標籤 `╡Visual╞`：接頭是框的線型與顏色，名字 Yellow 加粗、一個詞（`?` 的標題仍是 `Visual mode`）；放不下時先截膠囊的標題，名字一律留著，框線不歪（2026-09-29，tdp K11、tdp L5、tdp D3 v0.1.20）。
+| 色 | webu 用在 |
+|---|---|
+| Lavender | `[2]` 的網址列（使用者足跡：位置列，tdp panel.10） |
+| Green | `[1]` 裡 `[2]` 正在顯示的分頁；chip 列右端的下載數與進度條（tdp 的「生效中」、進行中的工作） |
+| Overlay0 | `[1]` 裡還沒載入的分頁 |
+| Yellow | Focus mode、Visual mode 的框與模式名；visual mode 的選取範圍、網址列上的找字狀態 |
+| Subtext1 底、Base 粗體 | cursor 色塊：Focus 中的項目、`/` 找到的目前那一筆 |
+| Red | 頁面上畫成名字的控制字元（tdp components.5） |
+
+頁面配色（`theme.go`；**顏色是概念不是元素**，2026-09-23 定案：可按的一個顏色、可填的一個顏色，靠 icon 分是哪一種）：
+
+| 色 | 意思 |
+|---|---|
+| Text `#cdd6f4` | 段落 |
+| Peach、Yellow、Green、Teal、Flamingo | 標題的底，依層輪迴（`levelInk`），字 Base |
+| Sapphire `#74c7ec` | **可按的**：連結（加底線）、按鈕 |
+| Mauve `#cba6f7` | **可填的**：文字欄位、勾選框、單選、select |
+| Pink `#f5c2e7` | 行內程式碼的字，Surface0 `#313244` 底 |
+| Mantle `#181825` | 程式碼區塊、引用的底 |
+| Blue `#89b4fa` | 無序清單的 `-` |
+| Lavender `#b4befe` | 引用的直槓 `▎` |
+| Overlay0 `#6c7086` | 行號、圖片、分隔線、表單的框線、程式碼區塊的語言名 |
+| 語法色 | 程式碼區塊裡（chroma）：key 與 string Pink、number Flamingo、常數與 keyword Sky、註解 Overlay0 斜體、標點 Overlay2 |
 
 ---
 
@@ -242,14 +193,18 @@ focus 二態同家族（tdp D2）：雙線 `╔═╗` + Blue ↔ 圓角細線 `
 
 | 件 | webu |
 |---|---|
-| Border title chip | `[1] Tabs`、`[2] Page`；讀一節 / 走進一件事時 `[2]` 的第二列變成 `☰ 2/26 節名` 或那件事的第一行 |
-| Panel tab bar | 面板都沒有；tab bar 只出現在 DevTools popup |
-| Border hint | `[2]` 下框：在哪（`2/26 · 節名 · 40%`、part 名）、loading。這些是狀態、不是鍵：用說明的 Overlay0 畫，不寫成 `鍵:說明`；手在 pagetab 上時後面接 `Enter:stay`（2026-09-29，tdp M5）。`[2]` 失焦時整條變灰：鍵 Overlay0、冒號與說明與狀態字 Surface2 —— Blue 只給拿鍵的地方（2026-09-29，tdp D2 v0.1.18） |
+| Border title chip | `[1] TABS`、`[2] PAGE`（lib，tdp panel.1）；載入中 loading icon 接在膠囊後面（tdp panel.15）；在 mode 裡上框右邊是模式名 |
+| Panel tab bar | 沒有：`[1]`、`[2]` 都沒有 tab |
+| Border hint | 下框左邊 hint、右邊捲動位置，lib 從登記產生（tdp panel.1）：`[1]` 是 `Enter:read c:close`……，`[2]` 閱讀時是 `H:back L:forward`；`[2]` 的右邊在 Focus mode 是項目的網址（§2） |
 
-footer：`Space:menu ?:help Tab/1–2:panels q:quit`；list screen 上 `Space:menu ?:help Esc:web q:quit`。footer 與每個下框 hint 都寫 `鍵:說明`：鍵 Blue、冒號與說明 Overlay0，項目之間一個空格，寬度不夠從尾端整組捨棄（2026-09-29，tdp M5、tdp D1、tdp D2 v0.1.15）。popup 與 DevTools 的下框 hint 也一樣，不截在項目中間；`[2]` 的下框先捨棄後面的鍵，最後才捨棄狀態字（2026-09-29，tdp D3 v0.1.18；`fitLegend` / `fitStatus`）。
+focus 的框是 Blue 粗線 `┏━┓`、失焦是 Surface2 細線 `┌─┐`，同寬、切換零位移，失焦的面板內容淡化（lib，tdp panel.1、T2）。
+footer 是 lib 的（tdp screen.2）：`Space:menu ?:help !:log Tab|1–2:panels q:quit`，只有一個面板的畫面沒有 `Tab|1–2:panels`，
+mode 裡換成 `Space:menu ?:help`、模式的鍵、最後 `Esc:<離開的動詞>`；鍵 Blue、冒號與說明 Overlay0，寬度不夠從尾端整組捨棄。
 
-`docs/icon.svg` 是 terminu family mark 的 webu 版；`V` 觸發 splash 彩蛋（家族同鍵，visual mode 因此是小寫 `v`）。
-**Nerd Font 是設計、必裝**：role glyph、part glyph、spinner、powerline 鏈都靠它，排版量它的寬。
+`docs/icon.svg` 是 terminu family mark 的 webu 版；`V` 開 splash（lib，tdp S1；visual mode 因此是小寫 `v`）。
+**Nerd Font 是設計、必裝**：網站記號、連結與圖片的 icon、框上的膠囊與 loading icon 都靠它，排版量它的寬；icon 與 powerline
+符號佔一格還是兩格，lib 在啟動時探測，`WEBU__ICON_WIDTH`、`WEBU__POWERLINE_WIDTH`（或家族共用的 `TERMINU__` 兩個）可以自己指定。
+終端機也要 truecolor：顏色與淡化都是 24-bit。
 
 ---
 
@@ -257,12 +212,15 @@ footer：`Space:menu ?:help Tab/1–2:panels q:quit`；list screen 上 `Space:me
 
 | 資料 | 形式 | 位置 |
 |---|---|---|
-| 設定 | `config.yaml`：`search_engine`（預設 DuckDuckGo html）、`download_dir`、`measure`（`full` 或數字）、`restore_session`、`hide_secrets_in_preview`、`input_tab_width` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`、`$WEBU__CONFIG`） |
-| session（狀態） | 離開時寫下所有分頁 | 同上（`$WEBU__STATE`） |
-| 書籤 | flat yaml：`bookmarks:`（各帶 `folder`）+ `folders:` | `~/.webu/datas`（`$WEBU__DATA`） |
-| 歷史 | YAML sequence，一次 append 一筆；無限保留 | 同上 |
+| 設定 | `config.yaml`：`search_engine`（預設 DuckDuckGo html）、`download_dir`、`measure`（`full` 或 ≥ 20 的數字）、`restore_session`、`hide_secrets_in_preview`、`input_tab_width` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`、`$WEBU__CONFIG`） |
+| session（狀態） | `session.yaml`：離開時開著的分頁 | 同上（`$WEBU__STATE`） |
+| 登入（狀態） | `cookies.json`：每一個收到的 cookie，`0600`；Settings 的 `C` 全部清掉，Cookies popup 的 `C` 清一個網站的 | 同 session |
+| 書籤 | `bookmarks.yaml`：flat yaml，`bookmarks:`（各帶 `folder`）+ `folders:`（讓空目錄留得住） | `~/.webu/datas`（`$WEBU__DATA`） |
+| 歷史 | `history.yaml`：YAML sequence，一次 append 一筆；清除之前一直留著 | 同上 |
 | 下載檔案 | `download_dir`，預設 `~/.webu/datas/downloads` | 同上 |
-| profile / log | Chromium user-data-dir；chromedp 的 log（絕不進終端機） | 同上 |
-| Chromium | 釘死 revision，可重新下載 | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$WEBU__CACHE`） |
+| 快取 | 現在沒有東西要放；0.5.0 以前的 Chromium 本體（`chromium-<rev>`）啟動時刪掉，App Log 寫刪了哪裡 | macOS `~/Library/Caches/webu`、Linux `~/.cache/webu`（`$WEBU__CACHE`） |
 
-分法照 tdp E3「刪掉會怎樣」（2026-10-19；原本是使用者寫的在 config、webu 產生的在 data）：**設定**與**狀態**（刪了只是回到預設）在 config、**資料**（刪了找不回來）在 data、**可重抓的**在 cache。舊版放在別處的，第一次啟動搬過去。每次寫檔原子。
+分法照 tdp E3「刪掉會怎樣」（2026-10-19；原本是使用者寫的在 config、webu 產生的在 data）：**設定**與**狀態**（刪了只是回到預設、
+要重新登入）在 config、**資料**（刪了找不回來）在 data、**可重抓的**在 cache。舊版放在別處的，第一次啟動搬過去；搬不動就照舊用舊
+位置。每次寫檔原子。讀不了的檔照 tdp E3 先問要不要搬開成 `.bak`（§3 的 MoveAside）。0.5.0 以前留在資料目錄裡的 `profile/` 與
+`webu.log` 是資料，不刪，每次啟動在 App Log 寫一筆。

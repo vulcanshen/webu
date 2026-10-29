@@ -127,7 +127,7 @@ webu help                             # 完整的命令列說明
 
 表單做到搜尋框與簡單的帳密登入：在 Focus mode 裡，`Enter` 填欄位、勾選、選選項，在按鈕上按 `Enter` 送出；只有一個可以打字的欄位時，填完會問要不要送出。需要 JavaScript 的登入、用別的網站帳號登入、CAPTCHA、兩步驟驗證都不行。
 
-`Space` 選單最上面是 **Source**（這一頁原始的內容）、**Cookies**（這個網站的 cookie；在裡面按 `C` 清掉）、**Requests**（載入這一頁發出的請求：每一次轉址、兩個方向的 header）。接著是 `R` 重新載入 · `T` 新分頁 · `H|L` 上一頁 / 下一頁 · `b` 麵包屑 · `o` 開網址 · `/` 找字 · `n|N` 下一個 / 上一個找到的 · `f` Focus mode · `v` Visual mode · `w` 整頁 · `A` 加書籤 · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。在 Focus mode 的項目上：連結開新分頁、複製連結、圖片網址或文字、檢查元素。
+`Space` 選單最上面是 **Source**（這一頁原始的內容）、**Cookies**（這個網站的 cookie；在裡面按 `C` 清掉）、**Requests**（載入這一頁發出的請求：每一次轉址、兩個方向的 header）。接著是 `R` 重新載入 · `T` 新分頁 · `H|L` 上一頁 / 下一頁 · `b` 麵包屑 · `o` 開網址 · `/` 找字 · `n|N` 下一個 / 上一個找到的 · `f` Focus mode · `v` Visual mode · `w` 整頁 · `A` 加書籤 · `Z` 縮放 · `Y` 複製網址 · `Yank markdown` · `C` 關這個分頁。在 Focus mode 裡，`o` 把游標所在的連結開在新分頁，`y` 複製它的網址。
 
 `o` 開網址框時會用灰字提議目前的網址：`Tab` 接過來改、`Backspace` 不要它、直接打字就從頭打。
 
