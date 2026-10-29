@@ -2,6 +2,173 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## v0.6.0 — tdp v1.1.3
+
+Everything since v0.5.0, the beta v0.6.0-beta.2 included;
+v0.6.0-beta.1 was tagged but never released.
+
+**webu is a reader, and no longer runs Chromium** ([`docs/reader.md`](docs/reader.md)).
+A page is fetched as it is, over plain HTTP, and its JavaScript is not
+run; what the page itself presents is shown, and the site around it is
+left out: navigation, sidebars, footers, cookie notices. A heading's
+words are on its level's colour, a space either side; a list item has a
+dash or its number (1., a., i. by depth); code and quotes
+are on their own ground, code coloured by its language; a link and an
+image have an icon before their words; in Focus mode an inspect toast
+says where the link under the cursor goes. A table the page laid itself out with reads as lines, a table
+of data as a grid. In the tab list a tab is its page's title, after its
+site's mark: the site's own icon where Nerd Fonts has one (GitHub,
+Wikipedia, Go…), else a globe, in the colour of the site's favicon, and
+blue until that is known. Nothing is downloaded at the first start, and
+there is a Linux arm64 build.
+
+- The page's keys are a reader's: `j|k|u|d|gg|G` scroll; `/` finds text,
+  every hit underlined, `n|N` step through them, `Esc` puts it away; `f`
+  is Focus mode, where `j|k` go from one link, image, field or button to
+  the next and `Enter` presses it; `v` is Visual mode, from the top of
+  the screen; `H|L` go back and forward along the tab's own history, to
+  where you were, and `b` lists every page the tab went through, by its
+  title, this one marked, to go to any of them, as kbu's breadcrumb
+  does; the address is Lavender now, cut at the front when long; `o` is the address box; `w` shows the
+  full page, and again its content. A link opens at once, without asking
+  first.
+- Forms work as far as a search box and a plain sign-in: `Enter` fills a
+  field (a password never shown, nothing typed going to the App Log),
+  ticks a box, chooses an option; `Enter` on the button sends the form,
+  its hidden fields with it. A form with one box to type in offers to send
+  itself, as Enter in it does on the page. Sign-ins that need JavaScript,
+  another site's account, a captcha or a second step do not work.
+- `Space` on the page starts with Source, Cookies and Requests, what is
+  left of DevTools for a page read without a browser: the page's HTML as
+  it came; its site's cookies, `C` clearing them; and what loading the
+  page asked for, each redirect, with the headers both ways.
+- Cookies are kept in `cookies.json` with the state, a file only you can
+  read; `S` › `Clear sign-in data` signs you out everywhere. A file that
+  will not read is offered to be moved aside, as webu's other files are.
+- A link to a file downloads it into the download folder, its row in
+  Downloads, `x` stopping it.
+- **Gone with Chromium**: what a page's JavaScript draws, and the pages it
+  builds; a page's own dialogs, frames, HTTP sign-in, file uploads and
+  certificate questions; DevTools and `I`; the table of contents, the
+  sections and the page's parts (`h|l`); the cursor on every item in
+  reading order, and with it `go` (go to a line) and the finder; `webu
+  browser update`, and the Chromium revision in `webu version`. `L`
+  (Location) is now `o`, and `P|N` (back, forward) are now `H|L`.
+- **Sign in again**: what the old browser profile kept is not read.
+  The Chromium an older webu downloaded into the cache is deleted at the
+  first start, the App Log saying where and how big; its profile
+  (`~/.webu/datas/profile`) and its log (`~/.webu/datas/webu.log`) are
+  data, so they are left for you, named in the App Log at every start
+  until you delete them.
+
+webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
+the terminu family's shared library, following terminu design (tdp)
+v1.1.3: the frames, the menus, the popups and the keys are now the same
+code as the rest of the family's.
+
+**Two files move, and webu moves them for you**: `bookmarks.yaml` goes
+from `~/.config/webu` to `~/.webu/datas`, with the history (it is data:
+deleted, it is gone), and `session.yaml`, the tabs open when webu last
+quit, from `~/.webu/datas` to `~/.config/webu` (a new `WEBU__STATE` can put
+it elsewhere). The first start moves each one that is in its old place
+and not yet in the new one, says from where to where, and takes away an
+old folder the move left empty. One that cannot be moved stays and is
+still used where it is, and webu names both places so you can move it
+yourself; one already in both places is left as it is in the old one,
+webu using the new one and naming both for you to merge.
+
+**webu needs a terminal of at least 60×20.** In a smaller window it shows
+only its name, the size it needs and that `Ctrl-C` twice quits, no other
+key acting, and everything comes back as the window grows. From 60
+columns up the tab list and the page are always side by side.
+
+**A file of webu's own that will not read is no longer gone on with.**
+At the start webu names it and why, and offers to move it aside to
+`.bak` (`.bak.1` and on, never over another) and start as on the first
+start; nothing opens before you answer, so nothing is written to it
+meanwhile. `Esc` quits instead, the reason on the terminal.
+
+- **`!` opens the App Log**: what webu did and what went wrong since it
+  started — what you did (a page reloaded, a link followed, a tab closed,
+  a screen switched to; never what you typed into a field), every toast,
+  a page that failed to load and why, the tabs reopened from the last
+  session. The footer says `!:log`, or how many
+  errors you have not seen yet.
+- **Control characters from outside are never sent to the terminal**:
+  in a page's text, a tab's title, a bookmark or a toast
+  each one shows as its name in red (`\t`, `\n`, `\x1b`), nothing dropped
+  — a title or link text is no longer cut at a line break. A Tab in a
+  code block or a line of source is
+  `input_tab_width` spaces.
+- **The page follows the tab list's cursor**; `Enter` on the tab list
+  takes you to the page.
+- `/` in visual mode asks for what to find.
+- **Visual mode has a layer**: selecting, its name is `Visual>select` and
+  `Esc` drops the selection, back to `Visual`; `Esc` again leaves.
+  Once selecting, `v` does nothing: `Esc` is what drops the selection.
+  `V` no longer selects whole rows; in Visual mode it opens the splash,
+  as everywhere else.
+  `Space` in the mode opens its own menu: Select, Copy and Press first.
+- Adding a bookmark is a form: its URL and its title, then Add.
+- Settings has the family's `hide_secrets_in_preview` and
+  `input_tab_width`, and a switch flips in place. `download_dir` is
+  picked in the file picker, and a value in `config.yaml` that a setting
+  will not take shows the setting's name in red. A number reads with its
+  unit: `4 spaces`.
+- **`measure` is gone**, the width a paragraph wrapped at: a page now
+  always runs the panel's width. A `measure:` line left in `config.yaml`
+  is kept as it is, and named in the App Log at every start for you to
+  delete, as a file no longer used is; changing a setting no longer drops
+  what `config.yaml` says that webu does not read.
+- `Enter` on a bookmark or a visit opens it in a new tab and stays on the
+  list, saying where it went.
+- What a Space menu row opens — a question, a box to type in, a viewer —
+  keeps the menu under it, and `Esc` goes back to the menu. A row that
+  goes somewhere else (a new tab, Location, moving a bookmark) puts the
+  menu away as it opens. Deleting a bookmark folder is asked every time,
+  empty or not.
+- Something done — copied, saved, added, imported, renamed — says so in
+  a green Success toast; a toast is as long as its message needs.
+- A list's long values — titles, URLs, a line of text — share the room
+  the short ones leave and are cut; short values — a status, a size, a
+  time — stay whole. Only when the long ones are at their least does a
+  column go, the one a row reads best without first (a visit's time).
+- Settings' `?` starts with what each setting is, and `input_tab_width`'s
+  box writes its unit under the number.
+- Every viewer — Inspect, Source, Cookies, Requests — can select and
+  copy (`v`).
+- A settings, bookmarks, history or session file that will not read is
+  shown in an error popup on the first screen, not printed on the
+  terminal behind it. Something that failed — a save, the download — is
+  an error popup naming what failed.
+- Zoomed (`Z`), the panel with the focus takes the whole width, and `Tab`
+  shows the other one.
+- In visual mode only the selection is Yellow: the search underlines
+  every match in its own colour, and the one it is on is the cursor's
+  block.
+- `Shift-Tab` no longer moves between panels; `PgUp` and `PgDn` scroll
+  the page and visual mode like `u` and `d`.
+- The powerline symbols' width is measured too, and can be set with
+  `WEBU__POWERLINE_WIDTH` or the family's `TERMINU__POWERLINE_WIDTH`.
+- The repository takes the terminu family's shape (tdp project): the
+  Makefile includes the shared `family.mk`, and the release workflow,
+  the goreleaser config, `install.sh`, `uninstall.sh` and `.gitignore`
+  are the family's templates. `uninstall.sh` now finds the settings,
+  state, data and cache through `WEBU__CONFIG`, `WEBU__STATE`,
+  `WEBU__DATA` and `WEBU__CACHE` too, and on macOS asks about a
+  Chromium a still older webu left under `XDG_CACHE_HOME`. `install.sh`
+  and the Homebrew caveats say a truecolor terminal is needed.
+- Releases can come out as a beta first, `vX.Y.Z-beta.N`: a GitHub
+  pre-release that never reaches the Homebrew tap, so `brew` and
+  `install.sh` keep the stable version. The released binaries' build info
+  no longer ends in `+dirty` (`go version -m webu`).
+- The repository no longer tracks `CLAUDE.md` and `.claude/`, Claude
+  Code's files for its maintainer; its test pages no longer carry a path
+  of one machine, and its documents no longer point to notes kept off
+  GitHub.
+- The READMEs' terminu family section links tdp, terminu-go and
+  terminu-harness, instead of listing the other apps.
+
 ## v0.6.0-beta.2 — tdp v1.1.3
 
 **webu is a reader, and no longer runs Chromium** ([`docs/reader.md`](docs/reader.md)).
