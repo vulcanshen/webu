@@ -199,6 +199,7 @@ make snapshot           goreleaser 本機打包到 dist/
 照 tdp project 的「發布」：`make check` 通過 → CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C` → commit、打 tag `vX.Y.Z` → push commit 與 tag。`release.yml`（範本）在 ubuntu 與 macOS 跑 `go test -race`、goreleaser 建置並推 Homebrew tap（`vulcanshen/homebrew-tap` 的 `webu.rb`），再用 CHANGELOG 那一段蓋過 release 的內文（awk 抓 `## <tag>` 那一段）。0.5.0 以前的 CHANGELOG 標題照當時的寫法（`## [0.5.0] — 2026-10-06`），不改。
 
 - **平台**：Chromium 拿掉之後沒有平台限制，`.goreleaser.yaml` 範本留給 app 的 `ignore` 是空的（`[]`），linux/arm64 也建；`install.sh` 在 app 自己的段不擋任何平台。
+- **beta**：stable 之前可以先發 `vX.Y.Z-beta.N`（N 從 1 起），步驟一樣，CHANGELOG 標題是 `## vX.Y.Z-beta.N — tdp vA.B.C`。`.goreleaser.yaml` 的 `prerelease: auto` 讓它成為 GitHub pre-release，`skip_upload: auto` 讓 tap 不動，所以 brew 與 `install.sh`（抓 latest release）還是 stable；要裝 beta 用 `go install …@vX.Y.Z-beta.N`。stable 那一段要涵蓋上一個 stable 以來的全部，beta 的也算進去。0.6.0 先發 v0.6.0-beta.1，沒問題再發 v0.6.0（user 2026-10-29 選的）。
 - **token**：goreleaser 讀 `GITHUB_TOKEN`；workflow 在 secret `ACTION_TOKEN` 有設時用它（內建的 token 寫不了 tap）。
 - **`make release-check`**：goreleaser 把 `brews` 標成 deprecated，只有這個警告不算失敗。
 - 發布後確認資產時看 `repos/<owner>/<repo>/releases/<id>/assets`；`gh release view` 與 `releases/tags/<tag>` 的 assets 剛發布時可能還是空的。**不要對已經成功的 run 重跑 release job** —— goreleaser 會因為資產已存在而失敗；真的要重來，先刪掉資產再重跑。
