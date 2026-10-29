@@ -27,12 +27,18 @@ type Bookmark struct {
 
 // Config is config.yaml, hand-written. webu reads it and does not write
 // it back — a shortcuts list used to live here and be edited from a popup;
-// it went with the Places panel (2026-09-20), and a `shortcuts:` key left
-// in an old file is ignored; so is `measure:`, the width a paragraph
-// wrapped at, which the reader never honoured (removed 2026-10-29, user).
+// it went with the Places panel (2026-09-20), before any release. What the
+// file says that webu does not read is kept in Rest and written back with
+// the rest; a key a released webu read and this one does not is one of
+// RetiredKeys.
 type Config struct {
 	SearchEngine string `yaml:"search_engine,omitempty"`
-	DownloadDir  string `yaml:"download_dir,omitempty"`
+	// Rest is what config.yaml says that webu does not read: kept as it is
+	// and written back with the rest, so a key webu no longer uses is the
+	// user's to delete, as a file no longer used is (tdp E3; user
+	// 2026-10-29), and one it never knew is not lost to a save either.
+	Rest        map[string]any `yaml:",inline"`
+	DownloadDir string         `yaml:"download_dir,omitempty"`
 	// RestoreSession: reopen the tabs that were open when webu last quit.
 	// Absent means yes; a pointer so that "not set" and "set to false"
 	// are told apart, since the default is the true side (2026-09-21).
@@ -57,6 +63,23 @@ func (c Config) TabWidth() int {
 		return c.InputTabWidth
 	}
 	return 4
+}
+
+// RetiredKeys are the keys of config.yaml a released webu read and this one
+// does not: measure, the width a paragraph wrapped at, which the reader
+// never honoured (removed 2026-10-29, user). One still in the file is
+// named in the App Log at every start and not deleted (tdp E3).
+var RetiredKeys = []string{"measure"}
+
+// Retired is which of RetiredKeys c's file still has.
+func (c Config) Retired() []string {
+	var out []string
+	for _, k := range RetiredKeys {
+		if _, ok := c.Rest[k]; ok {
+			out = append(out, k)
+		}
+	}
+	return out
 }
 
 // DefaultSearch is where a goto that is not a URL goes (ux.md §7).

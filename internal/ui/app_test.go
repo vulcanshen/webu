@@ -698,6 +698,38 @@ func TestUnreadableFilesAreMovedAside(t *testing.T) {
 
 // What main moved is an Info toast saying from where to where; what it
 // could not move is an error popup naming both places (tdp E3).
+// A key config.yaml still has that webu no longer reads is named in the App
+// Log at every start, as a file no longer used is, and a save keeps it
+// (tdp E3, user 2026-10-29).
+func TestARetiredConfigKeyIsNamed(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("WEBU__CONFIG", dir)
+	t.Setenv("WEBU__DATA", t.TempDir())
+	t.Setenv("WEBU__STATE", "")
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("measure: 96\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := store.LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := New("").WithStore(nil, nil, cfg, nil)
+	d := newDriver(t, m)
+	d.settle()
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	d.press("!")
+	d.until("the App Log", d.shows("No longer used: measure in"))
+	if !strings.Contains(d.view(), "delete it if you don't need it") {
+		t.Errorf("the App Log should say it can go:\n%s", d.view())
+	}
+	if err := store.SaveConfig(m.cfg); err != nil {
+		t.Fatal(err)
+	}
+	if raw, _ := os.ReadFile(filepath.Join(dir, "config.yaml")); !strings.Contains(string(raw), "measure: 96") {
+		t.Errorf("a save should keep the retired key:\n%s", raw)
+	}
+}
+
 func TestMovesOnTheFirstScreen(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())

@@ -3,6 +3,7 @@ package store
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -187,11 +188,22 @@ func TestHistoryIsNewestFirstAndDeletable(t *testing.T) {
 }
 
 // An old config.yaml that still says measure (removed 2026-10-29) reads as
-// ever, the key ignored, rather than as a file that cannot be read.
-func TestAnOldMeasureKeyIsIgnored(t *testing.T) {
+// ever, the key told as retired and written back with the file, not
+// dropped by a save; a key webu never knew is kept too (tdp E3).
+func TestARetiredKeyIsKept(t *testing.T) {
 	var c Config
-	if err := yaml.Unmarshal([]byte("measure: 96\nsearch_engine: https://example.com/?q=\n"), &c); err != nil || c.SearchEngine != "https://example.com/?q=" {
+	if err := yaml.Unmarshal([]byte("measure: 96\nsearch_engine: https://example.com/?q=\nmine: kept\n"), &c); err != nil || c.SearchEngine != "https://example.com/?q=" {
 		t.Fatalf("read back as %+v (%v)", c, err)
+	}
+	if got := c.Retired(); len(got) != 1 || got[0] != "measure" {
+		t.Errorf("retired keys: %v", got)
+	}
+	out, err := yaml.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), "measure: 96") || !strings.Contains(string(out), "mine: kept") {
+		t.Errorf("a save should keep what webu does not read:\n%s", out)
 	}
 }
 

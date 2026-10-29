@@ -114,7 +114,9 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   unit: `4 spaces`.
 - **`measure` is gone**, the width a paragraph wrapped at: a page now
   always runs the panel's width. A `measure:` line left in `config.yaml`
-  is ignored.
+  is kept as it is, and named in the App Log at every start for you to
+  delete, as a file no longer used is; changing a setting no longer drops
+  what `config.yaml` says that webu does not read.
 - `Enter` on a bookmark or a visit opens it in a new tab and stays on the
   list, saying where it went.
 - What a Space menu row opens — a question, a box to type in, a viewer —

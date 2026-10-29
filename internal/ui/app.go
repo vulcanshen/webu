@@ -273,6 +273,11 @@ func (m *AppModel) startNews() tea.Cmd {
 	if dir, err := paths.Data(); err == nil {
 		m.a.NoLongerUsed(filepath.Join(dir, "profile"), filepath.Join(dir, "webu.log"))
 	}
+	// A key of config.yaml no longer read is said the same way, at every
+	// start while it is there (store.RetiredKeys; user 2026-10-29).
+	for _, k := range m.cfg.Retired() {
+		m.a.Log(terminu.Info, "No longer used: "+k+" in "+paths.Short(store.Path("config.yaml"))+"; delete it if you don't need it")
+	}
 	return tea.Batch(cmds...)
 }
 
