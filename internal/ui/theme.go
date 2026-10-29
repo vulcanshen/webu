@@ -228,7 +228,7 @@ var (
 	glyphDownload = string(rune(0xf01da)) // nf-md-download
 	glyphSettings = string(rune(0xf0493)) // nf-md-cog
 	glyphFolder   = string(rune(0xf024b)) // nf-md-folder — a bookmark folder's row
-	glyphCode     = "\U000f0169"          // nf-md-code_braces — the page's source
+	glyphCode     = "\uf121"              // nf-fa-code — the page's source
 
 	// Panel [1]: a tab still loading; also panel [2]'s URL row while the
 	// page is on its way. The same codepoint as kbu's Logs live glyph
