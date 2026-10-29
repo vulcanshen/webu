@@ -61,6 +61,10 @@ func site(t *testing.T) *httptest.Server {
 			io.WriteString(w, `<html><head><title>Search</title></head><body><form action="/find"><input name="q" placeholder="Find words"></form></body></html>`)
 		case "/find":
 			io.WriteString(w, `<html><head><title>Found</title></head><body><p>Results for `+r.URL.Query().Get("q")+`</p></body></html>`)
+		case "/long":
+			// A link on the page's very last row.
+			io.WriteString(w, `<html><head><title>Long</title></head><body><h1>Long</h1>`+
+				strings.Repeat("<p>A paragraph of the long page.</p>", 60)+`<p><a href="/two">the end link</a></p></body></html>`)
 		case "/old":
 			http.Redirect(w, r, "/two", http.StatusMovedPermanently)
 		case "/favicon.ico":
@@ -169,6 +173,27 @@ func TestFocusModeWraps(t *testing.T) {
 	}
 	if m.focusKey("k"); tb.cursor != 1 {
 		t.Errorf("k on the first should go to the last, is on %d", tb.cursor)
+	}
+}
+
+// A link on the last row, the page scrolled to its end, still shows above
+// the inspect toast: the page scrolls past its end by as many rows as the
+// toast covers (tdp toast.4, as terminu-go's List does).
+func TestInspectToastUncoversTheLastRow(t *testing.T) {
+	srv := site(t)
+	d, m := readerAt(t, srv.URL+"/long", t.TempDir())
+	d.until("the long page", d.shows("A paragraph of the long page."))
+	d.press("2")
+	d.press("f")
+	d.key("G")
+	d.until("the inspect toast", d.shows("INSPECT"))
+	if !strings.Contains(d.view(), "the end link") {
+		t.Errorf("the last link should show above the inspect toast:\n%s", d.view())
+	}
+	d.press("esc")
+	d.until("the toast gone", func() bool { return !strings.Contains(d.view(), "INSPECT") })
+	if tb := m.shownTab(); tb.top > len(tb.lay.rows)-m.pageVisible() {
+		t.Errorf("with the toast gone the page should sit on its end again: top %d of %d rows, %d in sight", tb.top, len(tb.lay.rows), m.pageVisible())
 	}
 }
 

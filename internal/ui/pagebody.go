@@ -157,13 +157,20 @@ func (b *pageBody) Scroll() string {
 
 // Uncover keeps the item under Focus mode's cursor above the rows at the
 // bottom the inspect toast covers, which the lib says before each Draw
-// (tdp toast.4); 0 is none.
+// (tdp toast.4); 0 is none. Covered, the page may scroll past its end by
+// those rows, so its last item still shows above the toast; uncovered, it
+// sits on its end again — as terminu-go's List does.
 func (b *pageBody) Uncover(rows int) {
 	t := b.m.shownTab()
-	if rows == 0 || t == nil || t.cursor < 0 {
+	if t == nil {
 		return
 	}
-	t.scrollToCursor(max(1, b.m.pageVisible()-rows))
+	vis := b.m.pageVisible()
+	if rows > 0 && t.cursor >= 0 {
+		t.scrollToCursor(max(1, vis-rows))
+		return
+	}
+	t.top = clamp(t.top, 0, max(0, len(t.lay.rows)-vis))
 }
 
 // MoveKeys are the page's movement keys (tdp K6, tdp K12): reading, they
