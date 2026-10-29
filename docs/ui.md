@@ -98,7 +98,7 @@ lib 的清單，欄名 `Title`（user 2026-10-28：外框已經寫 TABS，原本
 （`readerrender.go`）。規格以 `reader.md`「元件」為準，這裡是摘要：
 
 - **標題**：字（Base、粗體）放在該層的顏色上、左右各一格空白，不畫圓端（user 2026-10-28：圓端是 tdp 的膠囊，P4）；顏色依層
-  Peach、Yellow、Green、Teal、Flamingo，第六層起輪迴；標題裡的連結、程式碼畫在同一條上。
+  Peach、Rosewater、Green、Teal、Flamingo，第六層起輪迴（Yellow 是 Visual mode 選取範圍的顏色，2026-10-29 換成 Rosewater）；標題裡的連結、程式碼畫在同一條上。
 - **段落**：Text；粗體、斜體、刪除線、標記用終端機的粗體、斜體、刪除線、反白。
 - **清單**：無序清單每一層都是 `-`（Blue），靠縮排分層；有序清單依層 `1.`、`a.`、`i.`，再回到數字輪迴。
 - **程式碼**：區塊是 Mantle 底、照語言上色（chroma；網頁沒標語言就讓 chroma 猜），語言名寫在右上角（Overlay0），Tab 畫成
@@ -177,7 +177,7 @@ loading icon、錯誤列、`Esc` 一次一層都照 tdp，webu 不自己畫。�
 | 色 | 意思 |
 |---|---|
 | Text `#cdd6f4` | 段落 |
-| Peach、Yellow、Green、Teal、Flamingo | 標題的底，依層輪迴（`levelInk`），字 Base |
+| Peach、Rosewater、Green、Teal、Flamingo | 標題的底，依層輪迴（`levelInk`），字 Base |
 | Sapphire `#74c7ec` | **可按的**：連結（加底線）、按鈕 |
 | Mauve `#cba6f7` | **可填的**：文字欄位、勾選框、單選、select |
 | Pink `#f5c2e7` | 行內程式碼的字，Surface0 `#313244` 底 |

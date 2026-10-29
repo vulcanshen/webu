@@ -128,9 +128,13 @@ var (
 // Sapphire and lavender were in it next and came out: a heading wearing
 // a link's colour, in the same prose a link appears in, is a collision
 // rather than a palette. Sapphire is still spoken for — it is the
-// press-it band. Lavender is free again since the fill-it-in band moved
-// to mauve, and could come back here if five hues ever prove too few.
-// Pink is code and stayed out. Flamingo is a code block's numbers, which
+// press-it band. Lavender is tdp's location row (the address). Pink is
+// code and stayed out.
+//
+// Yellow was the second and went to rosewater (user, 2026-10-29): a
+// heading is drawn as a chip, its words in Base on its colour, and on
+// Yellow that is exactly the range Visual mode selects (tdp color.1:
+// the mode's Yellow is for the selection alone). Flamingo is a code block's numbers, which
 // only ever appear on the code ground, so it never meets a heading on
 // equal footing; teal was unused.
 //
@@ -138,7 +142,7 @@ var (
 // two palettes are for; they appear only inside a page's own structure.
 var levelInk = []lipgloss.Color{
 	lipgloss.Color("#fab387"), // peach
-	lipgloss.Color("#f9e2af"), // yellow
+	lipgloss.Color("#f5e0dc"), // rosewater
 	lipgloss.Color("#a6e3a1"), // green
 	lipgloss.Color("#94e2d5"), // teal
 	lipgloss.Color("#f2cdcd"), // flamingo
