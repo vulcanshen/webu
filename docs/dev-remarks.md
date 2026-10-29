@@ -70,7 +70,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 #### 麵包屑（`pagebody.go` 的 `crumbRow`）
 
-網址列下面一列，tdp panel.10 的位置列：分頁的歷史（`tab.hist`，每一筆記網址、標題、離開時的位置）從頭到 `histAt`，每一段是標題（沒有就是網址），`›` 隔開，前面幾段各截到 24 格，整列 Lavender、`TruncateLeft` 從前面截；`L` 會去的不寫（user 2026-10-29）。有頁面（`histAt >= 0`）才有這一列，`headRows` 算進 [2] 上面的列數（`pageVisible`、`Scroll` 都用它）。標題經 `terminu.Escape`，控制字元畫成名字；`TestTrickyTextFromOutside` 把 `tdptest.Tricky` 放進這一列。
+網址列下面一列，跟網址列一樣是 tdp panel.10 的位置列：分頁的歷史（`tab.hist`，每一筆記網址、標題、離開時的位置）從頭到 `histAt`，每一段是標題（沒有就是網址），`›` 隔開，前面幾段各截到 24 格，整列 Lavender、`TruncateLeft` 從前面截；`L` 會去的不寫（user 2026-10-29）。有頁面（`histAt >= 0`）才有這一列，`headRows` 算進 [2] 上面的列數（`pageVisible`、`Scroll` 都用它）。標題經 `terminu.Escape`，控制字元畫成名字；`TestTrickyTextFromOutside` 把 `tdptest.Tricky` 放進這一列。
 
 #### 按鍵（`readerkeys.go`）
 
@@ -86,7 +86,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 #### 兩套配色（`theme.go`）
 
-外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（tdp color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只有頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列用 Blue（`urlColor`），行號 Overlay0。頁面內容用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
+外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（tdp color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只有頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列與麵包屑是 [2] 的兩列位置列（tdp panel.10，terminu 2026-10-29 確認網址列也是）：Lavender、太長從前面截、只能看；行號 Overlay0。頁面內容用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
 
 ## 設計決定
 

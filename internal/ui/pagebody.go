@@ -75,17 +75,18 @@ func stateRows(w, h int, fact, hint string) []string {
 	return out
 }
 
-// urlRow is the page's address, behind the web glyph. In visual mode a
-// search shows its query and where it is instead.
+// urlRow is the page's address, behind the web glyph: where the panel is,
+// a location row as the trail under it is (tdp panel.10), Lavender and
+// cut at the front. In visual mode a search shows its query and where it
+// is instead.
 func (m *AppModel) urlRow(t *tab, w int) string {
 	if st := m.sel.status(); m.sel.on && st != "" {
 		sel := lipgloss.NewStyle().Foreground(selectColor)
 		return " " + sel.Render(truncate(st, w-1)) + spaces(w-1-dispW(truncate(st, w-1)))
 	}
-	blue := lipgloss.NewStyle().Foreground(urlColor)
 	lead := " " + glyphWeb + " "
-	shown := fitURL(t.url, w-dispW(lead))
-	return blue.Render(lead) + blue.Render(shown) + spaces(w-dispW(lead)-dispW(shown))
+	shown := terminu.TruncateLeft(terminu.Escape(t.url), max(1, w-dispW(lead)))
+	return terminu.Pad(terminu.Fg(terminu.Lavender).Render(lead+shown), w)
 }
 
 // Key moves the cursor (tdp K12); the panel's actions take the rest.
@@ -198,28 +199,6 @@ func (b *pageBody) MoveKeys() []terminu.KeyRow {
 		{Key: "u|d", Desc: "half a page up, down (PgUp, PgDn too)"},
 		{Key: "gg|G", Desc: "top, bottom of the page"},
 	}
-}
-
-// fitURL shrinks a URL to w cells. The host is kept whole; the path gives
-// way from its middle, so the tail (usually the interesting part) survives.
-func fitURL(u string, w int) string {
-	if dispW(u) <= w {
-		return u
-	}
-	scheme, rest := "", u
-	if i := strings.Index(u, "://"); i >= 0 {
-		scheme, rest = u[:i+3], u[i+3:]
-	}
-	host, path := rest, ""
-	if i := strings.IndexByte(rest, '/'); i >= 0 {
-		host, path = rest[:i], rest[i:]
-	}
-	head := scheme + host
-	room := w - dispW(head)
-	if room < 4 {
-		return truncate(head, w)
-	}
-	return head + truncateHead(path, room)
 }
 
 // pageRows colours the visible window of the layout. The cursor's item is

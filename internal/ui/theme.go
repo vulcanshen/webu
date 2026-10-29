@@ -58,11 +58,6 @@ var (
 	headerColor = lipgloss.Color("#f5e0dc") // rosewater
 	// the cursor row in a list.
 	rowSelColor = focusColor
-	// the URL on panel [2]'s first row: "where you are", which is the
-	// structural band's question, so it shares the hex on purpose (as
-	// sshu's nestColor shares editColor). Named separately so the sharing
-	// is deliberate and greppable.
-	urlColor = focusColor
 )
 
 const (
