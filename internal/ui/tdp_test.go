@@ -37,13 +37,17 @@ func TestTrickyTextFromOutside(t *testing.T) {
 	d := tdptest.Start(t, m.Program(), 100, 30)
 	// The \n drawn by name is the tricky data's own, from outside.
 	d.AllowLineBreaks = true
-	d.Note("tdptest.Tricky as tab titles, the page's text, bookmarks")
+	d.Note("tdptest.Tricky as tab titles, the shown tab's trail, the page's text, bookmarks")
 	d.Do(func() tea.Cmd {
 		for i, v := range tdptest.Tricky {
 			tb := &tab{id: i + 1, url: "https://example.com/" + itoa(i), title: v, root: doc(append([]*ir.Node{hd(1, v)}, paras...)...), cursor: -1}
 			m.tabs = append(m.tabs, tb)
 		}
 		m.shown = 0
+		for i, v := range tdptest.Tricky {
+			m.tabs[0].hist = append(m.tabs[0].hist, readerPlace{url: "https://example.com/" + itoa(i), title: v})
+		}
+		m.tabs[0].histAt = len(m.tabs[0].hist) - 1
 		m.tabs[0].relayout(m.pageW())
 		m.sync()
 		return nil

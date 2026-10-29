@@ -24,8 +24,10 @@ there is a Linux arm64 build.
   is Focus mode, where `j|k` go from one link, image, field or button to
   the next and `Enter` presses it; `v` is Visual mode, from the top of
   the screen; `H|L` go back and forward along the tab's own history, to
-  where you were; `o` is the address box; `w` shows the full page, and
-  again its content. A link opens at once, without asking first.
+  where you were, and under the address the tab's trail names the pages
+  it went through to this one; `o` is the address box; `w` shows the
+  full page, and again its content. A link opens at once, without asking
+  first.
 - Forms work as far as a search box and a plain sign-in: `Enter` fills a
   field (a password never shown, nothing typed going to the App Log),
   ticks a box, chooses an option; `Enter` on the button sends the form,

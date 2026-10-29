@@ -76,7 +76,7 @@ func (m *AppModel) pageW() int {
 // rows above the page.
 func (m *AppModel) pageVisible() int {
 	_, h := m.a.Size()
-	return max(1, h-3-2-1)
+	return max(1, h-3-2-headRows(m.shownTab()))
 }
 
 // goWeb brings the web screen up, from a list that opened a page in it:

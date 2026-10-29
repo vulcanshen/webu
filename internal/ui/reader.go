@@ -22,7 +22,7 @@ const readerUA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, lik
 // place is where the reader was on a page of a tab's history, for going
 // back to it.
 type readerPlace struct {
-	url         string
+	url, title  string
 	top, cursor int
 }
 
@@ -180,6 +180,7 @@ func (m *AppModel) applyReader(msg readerMsg) tea.Cmd {
 		t.histAt = len(t.hist) - 1
 	}
 	t.canBack, t.canForward = t.histAt > 0, t.histAt < len(t.hist)-1
+	t.hist[t.histAt].title = d.Title
 	t.doc, t.url, t.title, t.errText = d, url, d.Title, ""
 	t.top, t.cursor = 0, -1
 	m.remark(t)

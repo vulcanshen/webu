@@ -235,8 +235,16 @@ func TestReaderReadsAndFollows(t *testing.T) {
 	if md := m.pagePanel.InMode(); md != nil {
 		t.Errorf("following a link should leave Focus mode, is in %s", md.Name)
 	}
+	// Under the address, the tab's trail: the pages it went through to
+	// this one, by their titles; going back, the ones ahead leave it.
+	if !strings.Contains(v, "First › Second") {
+		t.Errorf("the trail should read First › Second:\n%s", v)
+	}
 	d.press("H")
 	d.until("back on the first", d.shows("Words of the first page"))
+	if strings.Contains(d.view(), "› Second") {
+		t.Errorf("back on the first, the second leaves the trail:\n%s", d.view())
+	}
 	d.press("L")
 	d.until("forward on the second", d.shows("The second page."))
 	if tb := m.shownTab(); !tb.canBack || tb.canForward {

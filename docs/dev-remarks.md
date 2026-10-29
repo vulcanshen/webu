@@ -68,6 +68,10 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 `renderReader` 把內容樹畫成 `layout{rows, items, marks}`：block 斷行、inline 流式折行，每個 `seg` 記它是哪個 item；`row.ground`／`ink` 是整列的底色與字色，`row.chip` 是標題（字放在該層顏色上、左右各一格空白，不用膠囊的圓端：那是 tdp 的 title，P4）。清單一律短橫線，編號 1／a／i 輪流；code block 在 Mantle 底上、照語言上色、右上角寫語言；引用是 `▎` 加 Mantle 底；資料表格畫格子、表頭粗體；連結與圖片前面是 icon。行號（`lineNumW`／`lineNum`）從文字寬扣、面板寬不變，顏色是 Overlay0。`/` 找到的字加底線、目前那一筆是 cursor 色塊（`writeFound`）。
 
+#### 麵包屑（`pagebody.go` 的 `crumbRow`）
+
+網址列下面一列，tdp panel.10 的位置列：分頁的歷史（`tab.hist`，每一筆記網址、標題、離開時的位置）從頭到 `histAt`，每一段是標題（沒有就是網址），`›` 隔開，前面幾段各截到 24 格，整列 Lavender、`TruncateLeft` 從前面截；`L` 會去的不寫（user 2026-10-29）。有頁面（`histAt >= 0`）才有這一列，`headRows` 算進 [2] 上面的列數（`pageVisible`、`Scroll` 都用它）。標題經 `terminu.Escape`，控制字元畫成名字；`TestTrickyTextFromOutside` 把 `tdptest.Tricky` 放進這一列。
+
 #### 按鍵（`readerkeys.go`）
 
 閱讀時 `j|k|u|d|gg|G` 捲動（像 `less`，`readerScroll`）；`f` 進 Focus mode（lib 的 panel mode），`j|k` 在連結、圖片、欄位、按鈕之間走，`Enter` 交給 `readerEnter`；`/` 開 lib 的 TextInput，`n|N` 走找到的，`Esc` 收起來（`pageEsc`）；`H|L` 是分頁自己的歷史（`readerGo`，回到離開時的位置）；`o` 網址框；`w` 整頁與正文互換。
