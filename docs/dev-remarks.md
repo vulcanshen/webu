@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.1.0），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.3）上，是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.1.3），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.4）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -137,7 +137,7 @@ webu 不跑 JavaScript，所以靠 script 才長出內容的網頁（app、dashb
 - `docs/demo.gif` 還是 Chromium 時期錄的：等 app 確認好、發版前再重錄（user 2026-10-29）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
-webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21），再對齊 tdp v1.1.0、升到 terminu-go v1.1.0（2026-10-28），升到 terminu-go v1.1.1（2026-10-29，Visual>select 改用 lib 的 `EnterLayer`）、v1.1.3（tdp v1.1.2，Focus mode 連結的網址改用 inspect toast）。2026-10-28 起改成閱讀器，2026-10-29 拿掉 Chromium 與 DevTools 畫面。tdp 交給 webu 自己決定、webu 定得跟別的成員不一樣的地方列在下一節。
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21），再對齊 tdp v1.1.0、升到 terminu-go v1.1.0（2026-10-28），升到 terminu-go v1.1.1（2026-10-29，Visual>select 改用 lib 的 `EnterLayer`）、v1.1.3（tdp v1.1.2，Focus mode 連結的網址改用 inspect toast）、v1.1.4（tdp v1.1.3，webu 這邊沒有行為變化）。2026-10-28 起改成閱讀器，2026-10-29 拿掉 Chromium 與 DevTools 畫面。tdp 交給 webu 自己決定、webu 定得跟別的成員不一樣的地方列在下一節。
 
 ## tdp 交給 webu 決定的地方
 

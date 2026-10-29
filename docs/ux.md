@@ -3,7 +3,7 @@
 > 本文件講**互動語意**：core key、每個焦點的 Space menu、閱讀與兩個 mode（Focus、Visual）、頁面上的欄位怎麼填、
 > 熱鍵全表、浮層行為、時間軸。閱讀器本身（取頁、挑正文、元件的畫法、表單做到哪）在 [`reader.md`](reader.md)，
 > 版面在 `ui.md`，設計理由與實作在 [`dev-remarks.md`](dev-remarks.md)。
-> 依 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.1.0）撰寫，畫面建在 terminu-go（v1.1.3）上；
+> 依 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.1.3）撰寫，畫面建在 terminu-go（v1.1.4）上；
 > §A、§B 是 tdp 的對照，各條標出對應的 tdp 條目；每條決定標日期。
 
 > **一份登記、lib 產生其餘**（2026-10-18）：webu 把每個畫面、panel、動作（鍵、名稱、說明、範圍、要不要先問、做什麼）
