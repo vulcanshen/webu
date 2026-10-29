@@ -52,25 +52,25 @@ func (m *AppModel) visualKeys(selecting bool) []terminu.ModeKey {
 	// What acts on the range or on the item under the cursor is an item
 	// operation in the mode's Space menu (tdp K11, menu.4).
 	item := func(k terminu.ModeKey) terminu.ModeKey { k.Item = true; return k }
-	sel := item(key("v|V", "select", true, "v", "V"))
-	if selecting {
-		// Only how it selects changes; the hint is y:copy Esc:unselect
-		// (tdp note.4).
-		sel = key("v|V", "select by characters, by rows", false, "v", "V")
-	}
-	return []terminu.ModeKey{
+	keys := []terminu.ModeKey{
 		key("h|j|k|l", "move by character and row", false, "h", "j", "k", "l", "←", "↓", "↑", "→"),
 		key("w|b|e", "next word, previous word, end of the word", false, "w", "b", "e"),
 		key("0|$", "start, end of the row", false, "0", "$"),
 		key("u|d", "half a page up, down (PgUp, PgDn too)", false, "u", "d", "PgUp", "PgDn"),
 		key("gg|G", "top, bottom of the page", false, "g", "G"),
-		sel,
+	}
+	if !selecting {
+		// Once selecting, v does nothing (tdp note.4). V is the splash's
+		// (tdp S1).
+		keys = append(keys, item(key("v", "select", true, "v")))
+	}
+	return append(keys,
 		// Named as the lib's own selection mode names it.
 		item(terminu.ModeKey{Key: "y", Desc: "copy", Label: "[y] Copy", Do: m.visualKey}),
-		{Key: "/", Desc: "find", Do: func(string) tea.Cmd { return m.visualSearch() }},
+		terminu.ModeKey{Key: "/", Desc: "find", Do: func(string) tea.Cmd { return m.visualSearch() }},
 		key("n|N", "next match", true, "n", "N"),
 		item(key("Enter", "press", true, "Enter")),
-	}
+	)
 }
 
 // enterSelect starts visual mode on the shown tab (ux.md §1).

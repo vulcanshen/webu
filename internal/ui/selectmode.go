@@ -23,7 +23,6 @@ type selectMode struct {
 	col  int // rune index into text[row]; may equal len (past the end)
 
 	selecting bool
-	lineWise  bool
 	anchorRow int
 	anchorCol int
 
@@ -133,9 +132,7 @@ func (s *selectMode) key(k string, visible int) (selResult, string) {
 	case "b":
 		s.wordBack()
 	case "v":
-		s.startSelect(false)
-	case "V":
-		s.startSelect(true)
+		s.startSelect()
 	case "y":
 		text := s.selectedText()
 		s.selecting = false
@@ -154,14 +151,14 @@ func (s *selectMode) key(k string, visible int) (selResult, string) {
 	return selNone, ""
 }
 
-// startSelect is v or V: selecting from the cursor, by characters or by
-// rows. Once selecting, the other one changes how, and the same one does
+// startSelect is v: selecting from the cursor. Once selecting it does
 // nothing: Esc is what unselects (tdp note.4, K7).
-func (s *selectMode) startSelect(lineWise bool) {
-	if !s.selecting {
-		s.anchorRow, s.anchorCol = s.row, s.col
+func (s *selectMode) startSelect() {
+	if s.selecting {
+		return
 	}
-	s.selecting, s.lineWise = true, lineWise
+	s.anchorRow, s.anchorCol = s.row, s.col
+	s.selecting = true
 }
 
 // ------------------------------------------------------------- motions
@@ -269,9 +266,6 @@ func (s *selectMode) selected(row, col int) bool {
 	if row < r1 || row > r2 {
 		return false
 	}
-	if s.lineWise {
-		return true
-	}
 	if r1 == r2 {
 		return col >= c1 && col <= c2
 	}
@@ -296,13 +290,11 @@ func (s *selectMode) selectedText() string {
 	for r := r1; r <= r2; r++ {
 		line := s.text[r]
 		from, to := 0, len(line)
-		if !s.lineWise {
-			if r == r1 {
-				from = min(c1, len(line))
-			}
-			if r == r2 {
-				to = min(c2+1, len(line))
-			}
+		if r == r1 {
+			from = min(c1, len(line))
+		}
+		if r == r2 {
+			to = min(c2+1, len(line))
 		}
 		if from > to {
 			from = to

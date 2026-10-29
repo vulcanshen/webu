@@ -77,8 +77,7 @@ func TestTheAppLogHasWhatTheUserDid(t *testing.T) {
 
 // Visual mode has a layer (tdp K11): selecting, it is Visual>select and
 // Esc unselects, back to Visual; Esc again leaves the mode. Once
-// selecting, v does nothing and V only selects by rows: neither goes back
-// (tdp note.4, K7).
+// selecting, v does nothing: it does not go back (tdp note.4, K7).
 func TestVisualModeGoesBackALayer(t *testing.T) {
 	m := New(nil)
 	d := tdptest.Start(t, m.Program(), 100, 30)
@@ -96,7 +95,7 @@ func TestVisualModeGoesBackALayer(t *testing.T) {
 		t.Fatalf("selecting, the mode is Visual>select and Esc unselects:\n%s", screen())
 	}
 	d.Press("Esc")
-	if d.Has("Visual>select") || !d.Has("Visual") || !m.sel.on || m.sel.selecting || !d.Has("v|V:select") {
+	if d.Has("Visual>select") || !d.Has("Visual") || !m.sel.on || m.sel.selecting || !d.Has("v:select") {
 		t.Fatalf("Esc goes back to Visual, still in the mode, v on the hint:\n%s", screen())
 	}
 	d.Press("Esc")
@@ -104,12 +103,8 @@ func TestVisualModeGoesBackALayer(t *testing.T) {
 		t.Fatalf("Esc again leaves the mode:\n%s", screen())
 	}
 	d.Press("v", "v", "v")
-	if !d.Has("Visual>select") || !m.sel.selecting || d.Has("v|V:select") {
+	if !d.Has("Visual>select") || !m.sel.selecting || d.Has("v:select") {
 		t.Fatalf("v again does nothing, and the hint has no v:\n%s", screen())
-	}
-	d.Press("V")
-	if !d.Has("Visual>select") || !m.sel.selecting || !m.sel.lineWise {
-		t.Fatalf("V selects by rows instead:\n%s", screen())
 	}
 	d.Press("Esc", "Esc")
 	if m.sel.on || m.pagePanel.InMode() != nil {

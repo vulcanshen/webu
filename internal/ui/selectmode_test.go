@@ -75,11 +75,6 @@ func TestSelectMotionsAndYank(t *testing.T) {
 	if s.selecting {
 		t.Error("selection should end after a yank")
 	}
-	press(&s, "V", "j", "j")
-	_, text = press(&s, "y")
-	if text != "alpha beta gamma\n\nsee \U000f0337 the Link now" {
-		t.Errorf("V j j y → %q", text)
-	}
 	press(&s, "gg")
 	if s.row != 0 {
 		t.Errorf("gg → row %d", s.row)

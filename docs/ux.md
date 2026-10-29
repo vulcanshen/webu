@@ -38,7 +38,7 @@
 | `Tab` | `[1]` ↔ `[2]`；`1/2` 直達 | 不作用，toast 說先 `Esc` 離開模式（2026-09-27，tdp K2、tdp K4） |
 | `Enter` | **滑鼠左鍵在 terminal 的對應**（定案 2026-09-21；0.3.0 起先 hover 再按）；左鍵沒有對應的才自定義——**進去**：目錄開一節、清單裡的一件事走進去、frame 走進去；heading / landmark 開合；pagetab 上 = 確認回頁面。細表在 §A.0.K.1 | 對字元所屬的節點做同一件事，並離開模式 |
 | `Esc` | **往上一層，一次一步**（2026-09-23）：關最上層浮層 → 走出一件事 / frame → 回目錄 → 上 pagetab → 再 Esc 回頁面。頁面自己的彈窗**不關**（toast：它要一個回答）。上一頁是 `P`，Esc 不兼職 | 打字中取消；回應 `Tab` 的 toast 還在時先收 toast（2026-09-29，tdp K11、tdp K4）；選取中放掉選取、回到 `Visual`（模式名 `Visual>select` 縮回，tdp K11 v0.9.12）；否則離開模式 |
-| `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-27，tdp K5、tdp F6） | **模式的 Space menu**（tdp K11 v0.9.6）：ITEM OPERATION 是 `[v] Select`、`[y] Copy`、`[Enter] Press`，VISUAL MODE 是移動鍵（只列出）、`/`、`n|N` 與 `[Esc] Leave`；選取中是 VISUAL>SELECT MODE，沒有 `[v] Select`（`v` 不作用、`V` 改成整行選，tdp note.4），`[Esc] Unselect`；`Esc` 只關這個 menu |
+| `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-27，tdp K5、tdp F6） | **模式的 Space menu**（tdp K11 v0.9.6）：ITEM OPERATION 是 `[v] Select`、`[y] Copy`、`[Enter] Press`，VISUAL MODE 是移動鍵（只列出）、`/`、`n|N` 與 `[Esc] Leave`；選取中是 VISUAL>SELECT MODE，沒有 `[v] Select`（`v` 不作用，tdp note.4），`[Esc] Unselect`；`Esc` 只關這個 menu |
 | `?` | **最前端 surface 的 key reference**，唯讀、可捲動：面板上是這個面板的鍵（由它的 Space menu 產生）+ core key；浮層上是這個浮層的鍵；再按關閉（2026-09-27，tdp K6、tdp M4） | **模式的 key reference**，唯讀：模式的鍵直接按，列在這裡與 footer（tdp K11） |
 
 #### §A.0.K.1 Enter 對每種東西
@@ -279,7 +279,7 @@ Mouse：不做；日後若加必須是鍵盤的 mapping。
 | History | `x` `y` / `C` `/` |
 | Settings | Enter |
 | DevTools（畫面 `I`） | `y`、Storage `x` / `C` `/` `R`；`h` `l` 換清單；Console `i`；Source `R` |
-| visual mode | `h/j/k/l` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `V` `y` `/` `n` `N` |
+| visual mode | `h/j/k/l` `w` `e` `b` `0` `$` `u` `d` `gg` `G` `v` `y` `/` `n` `N` |
 | editor（移） | `h/j/k/l` `u` `d` `g` `G` `0` `$` `i` `a` `A` `o` |
 
 撞字：`n/p` 小寫只在讀一節時有意義，與 `N/P`（前後頁）只差大小寫、同 sshu 的 `[D]isconnect` 與 `d`；

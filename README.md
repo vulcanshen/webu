@@ -148,7 +148,7 @@ Of the page the web screen shows. `h|l` switch between **Network** (the requests
 
 #### Visual mode (`v`)
 
-Select text and copy it. `h|j|k|l`, `w|e|b`, `0|$`, `gg|G` move; `v|V` start a selection by character or line; `y` copies to the system clipboard; `/` asks what to find and underlines every match, `n|N` step through them; `Enter` presses what the cursor is on; `Esc` drops a selection, and leaves when there is none; `Space` opens the mode's own menu. While it is on, the page's frame turns yellow and says *Visual* at its top right, *Visual>select* while selecting.
+Select text and copy it. `h|j|k|l`, `w|e|b`, `0|$`, `gg|G` move; `v` starts a selection; `y` copies to the system clipboard; `/` asks what to find and underlines every match, `n|N` step through them; `Enter` presses what the cursor is on; `Esc` drops a selection, and leaves when there is none; `Space` opens the mode's own menu. While it is on, the page's frame turns yellow and says *Visual* at its top right, *Visual>select* while selecting.
 
 ## Settings and data
 
