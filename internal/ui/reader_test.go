@@ -235,15 +235,20 @@ func TestReaderReadsAndFollows(t *testing.T) {
 	if md := m.pagePanel.InMode(); md != nil {
 		t.Errorf("following a link should leave Focus mode, is in %s", md.Name)
 	}
-	// Under the address, the tab's trail: the pages it went through to
-	// this one, by their titles; going back, the ones ahead leave it.
-	if !strings.Contains(v, "First › Second") {
-		t.Errorf("the trail should read First › Second:\n%s", v)
+	// b is the tab's breadcrumb, as kbu's: every page it went through,
+	// numbered by its title, the one shown where the tab is now; picking
+	// one goes there at once.
+	d.press("b")
+	d.until("the breadcrumb", d.shows("BREADCRUMB"))
+	for _, want := range []string{"1. First", "go to it", "2. Second", "where the tab is now"} {
+		if !strings.Contains(d.view(), want) {
+			t.Errorf("the breadcrumb should list %q:\n%s", want, d.view())
+		}
 	}
-	d.press("H")
+	d.press("enter") // the cursor is on the first row
 	d.until("back on the first", d.shows("Words of the first page"))
-	if strings.Contains(d.view(), "› Second") {
-		t.Errorf("back on the first, the second leaves the trail:\n%s", d.view())
+	if tb := m.shownTab(); tb.histAt != 0 || len(tb.hist) != 2 {
+		t.Errorf("the breadcrumb went to entry %d of %d", tb.histAt, len(tb.hist))
 	}
 	d.press("L")
 	d.until("forward on the second", d.shows("The second page."))
@@ -251,7 +256,7 @@ func TestReaderReadsAndFollows(t *testing.T) {
 		t.Errorf("history: back %v forward %v", tb.canBack, tb.canForward)
 	}
 	d.press("!")
-	for _, want := range []string{"Showed the full page of First", "Followed the link to " + srv.URL + "/two", "Went back in Second"} {
+	for _, want := range []string{"Showed the full page of First", "Followed the link to " + srv.URL + "/two", "Went to First in Second"} {
 		if !strings.Contains(d.view(), want) {
 			t.Errorf("the App Log should say %q:\n%s", want, d.view())
 		}

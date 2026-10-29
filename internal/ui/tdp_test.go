@@ -37,7 +37,7 @@ func TestTrickyTextFromOutside(t *testing.T) {
 	d := tdptest.Start(t, m.Program(), 100, 30)
 	// The \n drawn by name is the tricky data's own, from outside.
 	d.AllowLineBreaks = true
-	d.Note("tdptest.Tricky as tab titles, the shown tab's trail, the page's text, bookmarks")
+	d.Note("tdptest.Tricky as tab titles, the shown tab's breadcrumb, the page's text, bookmarks")
 	d.Do(func() tea.Cmd {
 		for i, v := range tdptest.Tricky {
 			tb := &tab{id: i + 1, url: "https://example.com/" + itoa(i), title: v, root: doc(append([]*ir.Node{hd(1, v)}, paras...)...), cursor: -1}
@@ -52,7 +52,7 @@ func TestTrickyTextFromOutside(t *testing.T) {
 		m.sync()
 		return nil
 	})
-	d.Press("2", "G", "v", "Esc", "B", "?", "Esc", "W")
+	d.Press("2", "b", "Esc", "G", "v", "Esc", "B", "?", "Esc", "W")
 }
 
 // The App Log has what the user did (tdp note.7): an operation run by its

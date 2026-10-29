@@ -295,6 +295,7 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 	// H and L are on the hint: how to go back and forward is not
 	// something to look up (user, 2026-10-28).
 	hint := func(a terminu.Action, verb string) terminu.Action { a.Hint = verb; return a }
+	hidden := func(a terminu.Action, h func() bool) terminu.Action { a.Hidden = h; return a }
 	noFind := func() bool { t := m.shownTab(); return t == nil || t.find == nil }
 	return []terminu.Action{
 		// What is left of DevTools (pageinfo.go): first in the menu, with
@@ -316,6 +317,8 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 			m.did("Went forward in " + tabName(m.shownTab()))
 			return m.shownTab().readerGo(1)
 		}), "forward"),
+		hidden(panel("b", "Breadcrumb", "the pages this tab went through; pick one to go there", m.busy, m.openBreadcrumb),
+			func() bool { t := m.shownTab(); return t == nil || len(t.hist) < 2 }),
 		away(panel("o", "Open", "a URL or a search; this page's own is offered", nil, m.locationBox)),
 		away(panel("/", "Find", "text on the page; n|N step through it", noPage, m.readerFindBox)),
 		panel("n", "Next match", "of the text found", noFind, func() tea.Cmd { return m.readerFindStep(1) }),
@@ -348,4 +351,27 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 			return m.closeTab(m.shown)
 		}),
 	}
+}
+
+// openBreadcrumb lists the tab's history, as kbu's breadcrumb lists its
+// chain (user, 2026-10-29): every page the tab went through, numbered by
+// its title, the one shown said to be where the tab is now. Picking
+// another goes there at once, as H and L do; the pages L would go on to
+// are on it too.
+func (m *AppModel) openBreadcrumb() tea.Cmd {
+	t := m.shownTab()
+	var rows []terminu.Action
+	for i, p := range t.hist {
+		name := nameOr(strings.TrimSpace(p.title), p.url)
+		row := terminu.Action{Label: itoa(i+1) + ". " + name, Desc: "go to it", Clear: true,
+			Do: m.do(func() tea.Cmd {
+				m.did("Went to " + name + " in " + tabName(t))
+				return t.readerGo(i - t.histAt)
+			})}
+		if i == t.histAt {
+			row.Desc, row.Clear, row.Do = "where the tab is now", false, func() tea.Cmd { return nil }
+		}
+		rows = append(rows, row)
+	}
+	return m.a.Menu("Breadcrumb", terminu.MenuSection{Actions: rows})
 }

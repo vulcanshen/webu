@@ -24,9 +24,9 @@ there is a Linux arm64 build.
   is Focus mode, where `j|k` go from one link, image, field or button to
   the next and `Enter` presses it; `v` is Visual mode, from the top of
   the screen; `H|L` go back and forward along the tab's own history, to
-  where you were, and under the address — Lavender now, cut at the front
-  when long — the tab's trail names the pages it went through to this
-  one; `o` is the address box; `w` shows the
+  where you were, and `b` lists every page the tab went through, by its
+  title, this one marked, to go to any of them, as kbu's breadcrumb
+  does; the address is Lavender now, cut at the front when long; `o` is the address box; `w` shows the
   full page, and again its content. A link opens at once, without asking
   first.
 - Forms work as far as a search box and a plain sign-in: `Enter` fills a

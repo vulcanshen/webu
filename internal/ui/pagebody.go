@@ -33,9 +33,6 @@ func (b *pageBody) Draw(w, h int, focused bool) []string {
 	}
 	out := make([]string, 0, h)
 	out = append(out, m.urlRow(t, w))
-	if headRows(t) == 2 {
-		out = append(out, crumbRow(t, w))
-	}
 	rest := h - len(out)
 	switch {
 	case m.sel.on && t.root != nil:
@@ -76,8 +73,7 @@ func stateRows(w, h int, fact, hint string) []string {
 }
 
 // urlRow is the page's address, behind the web glyph: where the panel is,
-// a location row as the trail under it is (tdp panel.10), Lavender and
-// cut at the front. In visual mode a search shows its query and where it
+// its location row (tdp panel.10), Lavender and cut at the front. In visual mode a search shows its query and where it
 // is instead.
 func (m *AppModel) urlRow(t *tab, w int) string {
 	if st := m.sel.status(); m.sel.on && st != "" {
@@ -141,32 +137,6 @@ func (b *pageBody) HasItem() bool {
 	return t.current() != nil
 }
 
-// headRows is how many rows sit above the page: the URL row, and once a
-// page has come, the tab's trail to it (crumbRow).
-func headRows(t *tab) int {
-	if t != nil && t.histAt >= 0 && t.histAt < len(t.hist) {
-		return 2
-	}
-	return 1
-}
-
-// crumbRow is the tab's trail, its location row (tdp panel.10): the
-// titles of the pages it went through to the one shown, that one last,
-// in Lavender, cut at the front (user, 2026-10-29). The pages L would go
-// on to are not on it, and nothing on it is pressed.
-func crumbRow(t *tab, w int) string {
-	var parts []string
-	for i, p := range t.hist[:t.histAt+1] {
-		name := nameOr(strings.TrimSpace(p.title), strings.TrimPrefix(strings.TrimPrefix(p.url, "https://"), "http://"))
-		if i < t.histAt {
-			name = truncate(name, 24) // one long title does not push the rest off
-		}
-		parts = append(parts, name)
-	}
-	trail := terminu.TruncateLeft(terminu.Escape(strings.Join(parts, " › ")), max(1, w-1))
-	return " " + terminu.Pad(terminu.Fg(terminu.Lavender).Render(trail), w-1)
-}
-
 // Scroll is where the panel is (tdp panel.1): the rows in sight, or in
 // Focus mode where the focused item goes.
 func (b *pageBody) Scroll() string {
@@ -181,7 +151,7 @@ func (b *pageBody) Scroll() string {
 			return n.URL
 		}
 	}
-	vis := max(1, b.h-headRows(t))
+	vis := max(1, b.h-1) // under the URL row
 	lo, hi := t.rowRange()
 	total := hi - lo + 1
 	if total <= vis {

@@ -68,9 +68,9 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 `renderReader` 把內容樹畫成 `layout{rows, items, marks}`：block 斷行、inline 流式折行，每個 `seg` 記它是哪個 item；`row.ground`／`ink` 是整列的底色與字色，`row.chip` 是標題（字放在該層顏色上、左右各一格空白，不用膠囊的圓端：那是 tdp 的 title，P4）。清單一律短橫線，編號 1／a／i 輪流；code block 在 Mantle 底上、照語言上色、右上角寫語言；引用是 `▎` 加 Mantle 底；資料表格畫格子、表頭粗體；連結與圖片前面是 icon。行號（`lineNumW`／`lineNum`）從文字寬扣、面板寬不變，顏色是 Overlay0。`/` 找到的字加底線、目前那一筆是 cursor 色塊（`writeFound`）。
 
-#### 麵包屑（`pagebody.go` 的 `crumbRow`）
+#### 麵包屑（`readerkeys.go` 的 `openBreadcrumb`）
 
-網址列下面一列，跟網址列一樣是 tdp panel.10 的位置列：分頁的歷史（`tab.hist`，每一筆記網址、標題、離開時的位置）從頭到 `histAt`，每一段是標題（沒有就是網址），`›` 隔開，前面幾段各截到 24 格，整列 Lavender、`TruncateLeft` 從前面截；`L` 會去的不寫（user 2026-10-29）。有頁面（`histAt >= 0`）才有這一列，`headRows` 算進 [2] 上面的列數（`pageVisible`、`Scroll` 都用它）。標題經 `terminu.Escape`，控制字元畫成名字；`TestTrickyTextFromOutside` 把 `tdptest.Tricky` 放進這一列。
+照 kbu 的 Breadcrumb（user 2026-10-29）：[2] 的 panel 動作 `b`（`B` 是 Bookmarks 畫面鍵），歷史少於兩頁時 `Hidden`；開 lib 的 `Menu`，一列一頁（`tab.hist`，每一筆記網址、標題、離開時的位置），`1. 標題`，目前那一頁 `where the tab is now`、選了只是關掉選單，其他 `go to it`、`Clear`，選了就 `readerGo(i - histAt)`，不先問。原本是網址列下一列的位置列（`A › B › C`），user 說不好用，換掉了。
 
 #### 按鍵（`readerkeys.go`）
 
@@ -86,7 +86,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 #### 兩套配色（`theme.go`）
 
-外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（tdp color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只有頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列與麵包屑是 [2] 的兩列位置列（tdp panel.10，terminu 2026-10-29 確認網址列也是）：Lavender、太長從前面截、只能看；行號 Overlay0。頁面內容用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
+外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（tdp color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只有頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列是 [2] 的位置列（tdp panel.10，terminu 2026-10-29 確認）：Lavender、太長從前面截、只能看；行號 Overlay0。頁面內容用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
 
 ## 設計決定
 
@@ -105,7 +105,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 - **搜尋不加顏色**（2026-10-19 user 定，寫進 tdp color 的 cursor 與 tdp note 的搜尋）：命中的字加底線、保留原本的顏色；目前那一筆是 panel 的 cursor 色塊（Subtext1 底、Base 粗體）；模式色 Yellow 只給選取範圍。閱讀時的 `/` 也一樣。
 - **書籤是資料，上次的分頁是狀態**（2026-10-19，tdp E3「刪掉會怎樣」；書籤的位置 user 定）：書籤刪了找不回來，是資料，放 `~/.webu/datas`；`session.yaml` 刪了只是回到空的開始畫面，是狀態，放設定目錄，`WEBU__STATE` 可以另外指定。`cookies.json` 刪了只是要重新登入，也是狀態。都是可以手改的檔。
 - **visual mode 是小寫 `v`**：`V` 保留給 splash（tdp S1）。
-- **[1] 與 [2] 的熱鍵各自歸各自的 panel**（tdp P3、tdp M4）：`H`／`L`、`o`、`/`、`n`／`N`、`f`、`v`、`w` 作用在頁面上，只在 [2] 按得到；`T`（新分頁）兩邊都有。全域動作只有切畫面（`W`／`B`／`H`／`D`／`S`）與離開。
+- **[1] 與 [2] 的熱鍵各自歸各自的 panel**（tdp P3、tdp M4）：`H`／`L`、`b`、`o`、`/`、`n`／`N`、`f`、`v`、`w` 作用在頁面上，只在 [2] 按得到；`T`（新分頁）兩邊都有。全域動作只有切畫面（`W`／`B`／`H`／`D`／`S`）與離開。
 - **離開只在有下載進行中時先問**（tdp K9 的離開流程由 app 決定）：`syncQuit` 依下載數設 `App.Quit`。
 - **Settings 是一列一個值的 panel**（lib 的 `Values`）：文字設定開 TextInput（目前生效的值當灰字提議，`Backspace` 再 `Enter` 是預設）、`input_tab_width` 開 NumberInput、`download_dir` 開 file-picker 選目錄（從最近一層存在的目錄開始）、開關是原地翻的 checkbox，設好就存（tdp panel.12）。數字帶單位、寫完整的字（`4 spaces`、`96 cells`，tdp number.2）；`input_tab_width` 的輸入框打字列下面有單位列（`NumberInput.Unit`），清空就是預設（`Optional`）。設定名稱只是一兩個字，`?` 最前面有「每一列」一節寫每個 key 管什麼（`Field.Desc`，tdp panel.12）。家族共用的 `hide_secrets_in_preview`、`input_tab_width`（tdp E3）也在這裡，交給 lib 的 `App.HideSecretsInPreview`、`App.InputTabWidth`。`C` 清除所有登入（`cookies.json`）。
 - **預設搜尋是 DuckDuckGo 的 HTML 端點**，因為 Google 對程式送來的搜尋回 reCAPTCHA。
