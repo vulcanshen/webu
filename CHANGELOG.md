@@ -95,6 +95,8 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
 - `go` asks for a line number; `/` in visual mode asks for what to find.
 - **Visual mode has a layer**: selecting, its name is `Visual>select` and
   `Esc` drops the selection, back to `Visual`; `Esc` again leaves.
+  Once selecting, `v` does nothing and `V` only selects by rows: neither
+  drops the selection any more, `Esc` does.
   `Space` in the mode opens its own menu: Select, Copy and Press first.
 - Adding a bookmark is a form: its URL and its title, then Add.
 - Settings has the family's `hide_secrets_in_preview` and

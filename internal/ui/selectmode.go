@@ -133,9 +133,9 @@ func (s *selectMode) key(k string, visible int) (selResult, string) {
 	case "b":
 		s.wordBack()
 	case "v":
-		s.toggleSelect(false)
+		s.startSelect(false)
 	case "V":
-		s.toggleSelect(true)
+		s.startSelect(true)
 	case "y":
 		text := s.selectedText()
 		s.selecting = false
@@ -154,11 +154,10 @@ func (s *selectMode) key(k string, visible int) (selResult, string) {
 	return selNone, ""
 }
 
-func (s *selectMode) toggleSelect(lineWise bool) {
-	if s.selecting && s.lineWise == lineWise {
-		s.selecting = false
-		return
-	}
+// startSelect is v or V: selecting from the cursor, by characters or by
+// rows. Once selecting, the other one changes how, and the same one does
+// nothing: Esc is what unselects (tdp note.4, K7).
+func (s *selectMode) startSelect(lineWise bool) {
 	if !s.selecting {
 		s.anchorRow, s.anchorCol = s.row, s.col
 	}

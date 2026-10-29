@@ -16,7 +16,7 @@ import (
 func (m *AppModel) visualMode() *terminu.Mode {
 	return &terminu.Mode{
 		Name:  "Visual",
-		Keys:  m.visualKeys(),
+		Keys:  m.visualKeys(false),
 		Exit:  "leave",
 		Pause: true,
 		OnExit: func() tea.Cmd {
@@ -32,7 +32,7 @@ func (m *AppModel) visualMode() *terminu.Mode {
 func (m *AppModel) selectLayer() *terminu.Mode {
 	return &terminu.Mode{
 		Name:  "select",
-		Keys:  m.visualKeys(),
+		Keys:  m.visualKeys(true),
 		Exit:  "unselect",
 		Pause: true,
 		OnExit: func() tea.Cmd {
@@ -44,21 +44,27 @@ func (m *AppModel) selectLayer() *terminu.Mode {
 	}
 }
 
-// visualKeys are the keys of the mode and of its layer.
-func (m *AppModel) visualKeys() []terminu.ModeKey {
+// visualKeys are the keys of the mode, or of its layer once selecting.
+func (m *AppModel) visualKeys(selecting bool) []terminu.ModeKey {
 	key := func(label, desc string, footer bool, keys ...string) terminu.ModeKey {
 		return terminu.ModeKey{Key: label, Keys: keys, Desc: desc, NoFooter: !footer, Do: m.visualKey}
 	}
 	// What acts on the range or on the item under the cursor is an item
 	// operation in the mode's Space menu (tdp K11, menu.4).
 	item := func(k terminu.ModeKey) terminu.ModeKey { k.Item = true; return k }
+	sel := item(key("v|V", "select", true, "v", "V"))
+	if selecting {
+		// Only how it selects changes; the hint is y:copy Esc:unselect
+		// (tdp note.4).
+		sel = key("v|V", "select by characters, by rows", false, "v", "V")
+	}
 	return []terminu.ModeKey{
 		key("h|j|k|l", "move by character and row", false, "h", "j", "k", "l", "←", "↓", "↑", "→"),
 		key("w|b|e", "next word, previous word, end of the word", false, "w", "b", "e"),
 		key("0|$", "start, end of the row", false, "0", "$"),
 		key("u|d", "half a page up, down (PgUp, PgDn too)", false, "u", "d", "PgUp", "PgDn"),
 		key("gg|G", "top, bottom of the page", false, "g", "G"),
-		item(key("v|V", "select", true, "v", "V")),
+		sel,
 		// Named as the lib's own selection mode names it.
 		item(terminu.ModeKey{Key: "y", Desc: "copy", Label: "[y] Copy", Do: m.visualKey}),
 		{Key: "/", Desc: "find", Do: func(string) tea.Cmd { return m.visualSearch() }},
@@ -116,12 +122,8 @@ func (m *AppModel) visualKey(k string) tea.Cmd {
 	vis := m.pageVisible()
 	was := m.sel.selecting
 	res, text := m.sel.key(k, vis)
-	switch {
-	case !was && m.sel.selecting:
+	if !was && m.sel.selecting {
 		m.pagePanel.EnterLayer(m.selectLayer())
-	case was && !m.sel.selecting && res == selNone:
-		// v again: back to Visual, the layer left without its OnExit.
-		m.pagePanel.EnterMode(m.visualMode())
 	}
 	// Keep the character cursor on screen.
 	if m.sel.row < t.top {
