@@ -1,5 +1,9 @@
 # webu — UI
 
+> **2026-10-29 起 webu 是閱讀器，不再跑 Chromium**（[`reader.md`](reader.md)）。畫面、面板、書籤、歷史、
+> 下載、設定、popup 的部分仍適用；[2] 頁面的畫法（目錄與節、四個 part、頁面的彈窗、表單的框、DevTools）
+> 是 Chromium 時期的，以 `reader.md` 為準。
+
 > 本文件講**版面與 surface**：面板、頁面的三個畫面、pagetab、popup、色帶、存檔。互動語意
 > （core-key、Space menu 內容、hotkey）在 `ux.md`；功能與 Chromium 邊界在 `function.md`；
 > 實作註記在 `dev-remarks.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp）撰寫，每條版面決定標日期。

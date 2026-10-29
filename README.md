@@ -10,7 +10,7 @@
 
 **A terminal browser that reads a web page as a document.**
 
-webu opens real web pages — logins, JavaScript, cookies and all — and lays them out in your terminal the way you would read them: a table of contents, one section at a time, or the whole page in one run. Jump anywhere with a few keystrokes, fill in forms, answer the page's dialogs, step into frames — all from the keyboard.
+webu fetches a web page and lays out what the page itself presents in your terminal, the way you would read it — headings, lists, code, quotes, tables, links — with the site around it left out. Follow links, find text, fill in a search box or a sign-in, all from the keyboard. It does not run a page's JavaScript: a page its scripts build shows little.
 
 > _When in doubt, hit_ **`Space`**.
 
@@ -18,18 +18,16 @@ webu opens real web pages — logins, JavaScript, cookies and all — and lays t
 
 ## Why webu
 
-- **It is a real browser.** A pinned Chromium runs headless behind the text, with its own persistent profile. Sites log you in and keep you logged in, JavaScript runs, and your own Chrome is never touched.
-- **A page is a document.** A page with headings opens on its table of contents; `Enter` reads a section, `n|p` move to the next or previous one, `Esc` goes back. `Space` › `One sheet` shows the whole page at once.
-- **Header, body, sidebars, footer — kept apart.** webu splits every page into its parts by where they sit; each part is a tab of the page panel, so the article is the article and the sidebar stays out of the way until you `h|l` over to it.
-- **Find anything in a few keys.** `/` searches every block of text on the page, lists the hits with a preview, and takes you straight there.
-- **Forms that behave like forms.** Text boxes say what they take, a textarea opens in an editor, selects list their options, sliders list their numbers, dates and colours are checked before they are sent, files come from a picker.
-- **The page's own dialogs and menus float** over it and wait for your answer — and so do `alert`, `confirm`, HTTP auth, uploads and certificate warnings.
-- **Frames, including other sites',** are one row you can step into and out of.
-- **Everything else a browser has**: tabs, bookmarks in folders (importable from any browser), history, downloads, the page's source, cookies and requests, visual-mode selection to the clipboard, and the whole page as markdown.
+- **The page, not the site.** What the page presents — the article, the documentation, the answer — and not its navigation, sidebars, footers or cookie notices. `w` shows the full page when you want it.
+- **Drawn for a terminal.** A heading's words on its level's colour, lists with dashes and numbers, code coloured by its language, quotes, tables as grids, an icon before each link and image, line numbers down the left.
+- **Read the way `less` reads.** `j|k|u|d|gg|G` scroll, `/` finds and `n|N` step through what it found; `f` is Focus mode, which walks what can be pressed — links, images, fields, buttons.
+- **Forms as far as they go without JavaScript**: a search box, a plain sign-in. The cookies are kept, so you stay signed in.
+- **Light.** No browser to download or run: a page is a request.
+- **Everything else a browser has**: tabs, each marked with its site's icon in its favicon's colour; bookmarks in folders (importable from any browser), history, downloads; the page's source, its site's cookies and the requests that loaded it; visual-mode selection to the clipboard, and the page as markdown.
 
 ## Install
 
-> **macOS** (Intel and Apple Silicon) and **Linux** (amd64). No Windows or Linux ARM build.
+> **macOS** (Intel and Apple Silicon) and **Linux** (amd64 and arm64). No Windows build.
 
 **Homebrew**:
 
@@ -51,15 +49,14 @@ go install github.com/vulcanshen/webu/cmd/webu@latest
 
 Building from source is in [docs/dev-remarks.md](docs/dev-remarks.md).
 
-Five things to know:
+Four things to know:
 
-- **Chromium is downloaded on the first launch**, once, into a cache directory (about 175–250 MB), with a progress line. After an upgrade that needs a newer Chromium, run `webu browser update`.
-- **A [Nerd Font](https://www.nerdfonts.com/) is required** in your terminal — links, fields, panels and parts are drawn with its glyphs.
+- **A [Nerd Font](https://www.nerdfonts.com/) is required** in your terminal — links, fields, panels and site marks are drawn with its glyphs.
 - **A truecolor terminal is required** — the colours, and how the layers under a popup fade, are drawn in 24-bit colour.
 - **The terminal needs at least 60×20** — in a smaller window webu shows only its name, the size it needs and how to quit (`Ctrl-C` twice), and everything comes back as the window grows.
 - **Icon width**: some terminal and font pairs move the cursor two cells for a Nerd Font icon instead of one, and some do the same for the powerline symbols (the ends of the capsules on the frames, the arrow at the end of the cursor). webu measures both when it starts; if the frames still come out crooked, set them yourself: `WEBU__ICON_WIDTH=2` (or `1`) and `WEBU__POWERLINE_WIDTH` for webu alone, or `TERMINU__ICON_WIDTH` and `TERMINU__POWERLINE_WIDTH`, which every terminu family app reads — set them once and they all follow (the `WEBU__` ones come first). Inside another family app's terminal (kbu, filu, sshu), that app sets the `TERMINU__` ones for webu.
 
-To uninstall (it asks before removing your settings, data and the downloaded Chromium):
+To uninstall (it asks before removing your settings and data):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/uninstall.sh | sh
@@ -68,18 +65,18 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/uninstall.sh |
 ## Quick start
 
 ```bash
-webu                              # reopen the last session's tabs
-webu https://news.ycombinator.com # open a page
-webu go.dev lobste.rs             # one tab each
-webu "terminal browser"           # anything that is not a URL is searched
-webu help                         # the whole command line
+webu                                  # reopen the last session's tabs
+webu https://go.dev/doc/effective_go  # read a page
+webu go.dev lobste.rs                 # one tab each
+webu "terminal browser"               # anything that is not a URL is searched
+webu help                             # the whole command line
 ```
 
 Then:
 
-- On a documentation page — `j|k` down the table of contents, `Enter` to read a section, `n` for the next, `Esc` back to the list.
-- On any page — `/`, type a word, `Enter`, `Enter`: you are there. `h|l` show the page's header, body, sidebars and footer one at a time; the first tab is the whole page.
-- `L` to go to an address, `P|N` for back and forward, `q` to quit.
+- `j|k|u|d` scroll, `/` finds a word, `n|N` go to the next and the one before.
+- `f`, then `j|k` to a link and `Enter` follows it; `H|L` back and forward.
+- `o` to go to an address, `w` for the full page, `q` to quit.
 
 ## Usage
 
@@ -87,9 +84,9 @@ Then:
 
 | Key | What it does |
 |---|---|
-| **`Enter`** | What a mouse click would do — follow a link (it asks first), press a button, type into a box, open a list. Where a click has no meaning, it **goes in**: into a section, a list item, a frame |
+| **`Enter`** | In Focus mode, what a mouse click would do — follow a link, press a button, type into a box, choose an option. On the tab list, go to the page |
 | **`Space`** | *What can I do here?* — a menu of everything for the thing under the cursor and for the panel. Every hotkey is listed there, so there is nothing to memorize |
-| **`Esc`** | One step back up: close a popup, leave an item or frame, back to the table of contents. It never quits |
+| **`Esc`** | One step back up: close a popup, leave a mode, put away what `/` found. It never quits |
 | **`Tab`** | The next panel: the tab list, then the page (`1` and `2` go straight there) |
 | **`?`** | *Which keys work here?* — the keys of what is in front, to read: a panel's own keys and the core keys, or on a popup that popup's. What can be done is under `Space`; every Space menu ends in `Global operation`, the list of what works from anywhere |
 
@@ -101,7 +98,7 @@ Then:
 
 Switch with a capital letter, or from `Space` › `Global operation`:
 
-- **`W` Web** — your tabs beside the page; the page shows the tab under the cursor in the tab list, and `Enter` there takes you to it. The page's frame names its parts as tabs (`PAGE HEADER BODY OTHERS FOOTER`); under the address bar is the table of contents, a section, or the whole page, with line numbers down the left and your position in the bottom border.
+- **`W` Web** — your tabs beside the page; the page shows the tab under the cursor in the tab list, and `Enter` there takes you to it. The page has its address on top, line numbers down the left and your position in the bottom border.
 - **`B` Bookmarks** — a folder tree; `a` adds the current page, `A` a folder, `m` moves, `r` renames, `I` imports a browser's bookmark export.
 - **`H` History** — every page you visited, newest first.
 - **`D` Downloads** — this session's downloads and their progress.
@@ -114,25 +111,25 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
 #### Everywhere
 
 ```
- screens   W|B|H|D|S|I
+ screens   W|B|H|D|S
  panels    Tab, 1–2
- cursor    j|k    u|d (half page)      gg|G      h|l the panel's tabs
+ cursor    j|k    u|d (half page)      gg|G
  global    Space menu    ? keys    ! App Log    q|Ctrl-C quit
 ```
 
 #### Tabs
 
-The page follows the cursor. `Enter` go to the page · `c` close · `o` open again in a new tab · `r` reload · `y` yank url · `T` new tab · `X` close the others · `U` reopen the last closed
+The page follows the cursor. Each tab starts with its site's mark — the site's own icon, or a globe — in the colour of its favicon. `Enter` go to the page · `c` close · `o` open again in a new tab · `r` reload · `y` yank url · `T` new tab · `X` close the others · `U` reopen the last closed
 
 #### Page
 
-webu is becoming a reader ([`docs/reader.md`](docs/reader.md)): a page is fetched as it is, without running its JavaScript, and what it presents is shown, the site around it — navigation, sidebars, footers, cookie notices — left out. A heading's words are on its level's colour, a list item has a dash or its number, code and quotes on their own ground, a link and an image an icon before their words. In the tab list each tab starts with its site's mark — the site's own icon, or a globe — in the colour of its favicon. `j|k|u|d|gg|G` scroll; `/` finds text and `n|N` step through it; `f` is Focus mode, where `j|k` go from one link, image, field or button to the next and `Enter` presses it (a link opens at once; its address is on the frame); `v` is Visual mode; `H|L` go back and forward; `o` is the address box; `w` shows the full page, and again its content; `Space` starts with Source, Cookies and Requests: the page's HTML as it came, its site's cookies (`C` clears them), and what loading it asked for, redirects and headers both ways. Forms work as far as a search box and a plain sign-in: fill the fields with `Enter` in Focus mode, then `Enter` on the button sends it; a form with one box to type in offers to send itself. A link to a file downloads it.
+A page is fetched as it is, without running its JavaScript, and what it presents is shown, the site around it — navigation, sidebars, footers, cookie notices — left out ([`docs/reader.md`](docs/reader.md)). `j|k|u|d|gg|G` scroll; `/` finds text, `n|N` step through it and `Esc` puts it away; `f` is Focus mode, where `j|k` go from one link, image, field or button to the next, the address of a link or image is on the frame, and `Enter` presses it — a link opens at once. `H|L` go back and forward along the tab's own history; `o` is the address box; `w` shows the full page, and again its content; `v` is Visual mode. A link to a file downloads it.
 
-`j|k` walk the items in reading order — along a row, then down — and come round at the ends. `h|l` show the whole page, or one of its parts. `Enter` on a link asks, then opens; on a button presses; on a box opens it to type; on a select lists its options; on a heading folds it; on a section, a long list item or a frame goes in. `Esc` comes back out.
+Forms work as far as a search box and a plain sign-in: in Focus mode `Enter` fills a field, ticks a box or chooses an option, and `Enter` on the button sends the form; a form with one box to type in offers to send itself. A sign-in that needs JavaScript, another site's account, a CAPTCHA or a second step does not work.
 
-`Space` is the right-click menu: open a link in a new tab, yank a link or text, submit, clear or yank a box, inspect an element. For the page: `R` reload · `T` new tab · `P|N` back / forward · `/` finder · `go` go to a line by its number · `n|p` next / previous section · `Sections` / `One sheet` · `v` visual mode · `L` location · `A` bookmark it · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab.
+`Space` starts with **Source** (the page as it came), **Cookies** (its site's; `C` there clears them) and **Requests** (what loading the page asked for: each redirect, the headers both ways). Then `R` reload · `T` new tab · `H|L` back / forward · `o` open · `/` find · `n|N` next / previous match · `f` Focus mode · `v` Visual mode · `w` full page · `A` bookmark it · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab. On an item in Focus mode: open a link in a new tab, yank a link, an image's address or the text, inspect it.
 
-`L` opens the address box with the current URL on offer, in grey: `Tab` takes it to edit, `Backspace` drops it, typing starts afresh. The page's own questions — `alert`, `confirm`, a prompt, a sign-in — wait for `Enter`; `Esc` answers no.
+`o` opens the address box with the current URL on offer, in grey: `Tab` takes it to edit, `Backspace` drops it, typing starts afresh.
 
 #### Bookmarks, History, Downloads, Settings
 
@@ -150,8 +147,8 @@ Select text and copy it. `h|j|k|l`, `w|e|b`, `0|$`, `gg|G` move; `v` starts a se
 `~/.config/webu/config.yaml` — or edit it on the `S` screen:
 
 ```yaml
-# Where words typed at L go when they are not a URL. Default DuckDuckGo
-# (Google shows a headless browser a CAPTCHA). Brave works too:
+# Where words typed at o go when they are not a URL. Default DuckDuckGo
+# (Google answers a program with a CAPTCHA). Brave works too:
 # https://search.brave.com/search?q=
 search_engine: https://html.duckduckgo.com/html/?q=
 # Where downloads land. Default ~/.webu/datas/downloads.
@@ -161,8 +158,8 @@ measure: full
 # Reopen the last session's tabs on launch.
 restore_session: true
 # The terminu family's own keys, the same in every family app:
-# in the file preview of the upload and import pickers, show only the first
-# line of a private key and nothing of a file only its owner may read.
+# in the file preview of the import picker, show only the first line of a
+# private key and nothing of a file only its owner may read.
 hide_secrets_in_preview: false
 # How many spaces Tab puts in a text of several lines (a textarea).
 input_tab_width: 4
@@ -174,16 +171,17 @@ Where things are kept:
 |---|---|---|
 | settings | `config.yaml` | `~/.config/webu` (`$XDG_CONFIG_HOME/webu`, or `$WEBU__CONFIG`) |
 | state | `session.yaml`, the tabs open when webu last quit; `cookies.json`, where the pages you read have signed you in (only you can read it; `S` › `Clear sign-in data` empties it) | with the settings (or `$WEBU__STATE`) |
-| data | `bookmarks.yaml`, the history, downloads, the browser profile (cookies, logins), Chromium's log (`webu.log`) | `~/.webu/datas` (`$WEBU__DATA`) |
-| cache | the downloaded Chromium | macOS `~/Library/Caches/webu`, Linux `~/.cache/webu` (`$XDG_CACHE_HOME/webu`; or `$WEBU__CACHE`) |
+| data | `bookmarks.yaml`, the history, downloads | `~/.webu/datas` (`$WEBU__DATA`) |
 
 `config.yaml` and `bookmarks.yaml` are plain YAML you can edit by hand. When a new version of webu keeps something in a new place, the first start moves it there and says from where to where; if it cannot, webu says so and goes on using the old place. A file of webu's own that will not read (a broken `config.yaml`, say) is offered to be moved aside to `.bak` at the start, webu then starting as it does the first time — nothing opens before you answer; or webu quits and says why. `!` opens the App Log: what webu did and what went wrong this time, toasts included.
 
+An older webu ran its own Chromium. The one it downloaded into the cache (macOS `~/Library/Caches/webu`, Linux `~/.cache/webu`) is deleted at the first start, the App Log saying so; its profile (`profile/`) and its log (`webu.log`) in `~/.webu/datas` are left for you, named in the App Log at every start until you delete them.
+
 ## Limitations
 
-- **Images, video and audio** are placeholders — yank the URL and open it elsewhere.
-- **CAPTCHAs, passkeys / WebAuthn and WebRTC** are not supported; webu says so and puts the URL a yank away.
-- **App-like pages** (boards, dashboards) work, but they are dense — use `/` to get around rather than scrolling. A site built entirely from unlabelled `div`s gives webu only its text and its clickable things.
+- **JavaScript does not run.** A page its scripts build — an app, a dashboard, many social sites — shows little or nothing, and a page's own dialogs and frames are not shown.
+- **Images, video and audio** are an icon and their address — yank it and open it elsewhere.
+- **CAPTCHAs, passkeys / WebAuthn**, and sign-ins that need JavaScript or another site's account do not work.
 - No mouse: webu, like the rest of the terminu family, is keyboard only.
 
 ## More

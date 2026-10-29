@@ -1,6 +1,6 @@
 # webu 閱讀器：重新設計（2026-10-28 起）
 
-webu 從「在終端機裡上網的瀏覽器」改成「在終端機裡讀網頁內容的閱讀器」。這份是重新設計的規格與進度；`function.md`、`ui.md`、`ux.md` 寫的是現在的 webu，跟這份衝突的地方以這份為準，等新版做完再整理掉。
+webu 從「在終端機裡上網的瀏覽器」改成「在終端機裡讀網頁內容的閱讀器」。這份是重新設計的規格與進度；`function.md`、`ui.md`、`ux.md` 寫的是 Chromium 時期（到 0.5.0）的 webu，跟這份衝突的地方以這份為準。
 
 ## 定位
 
@@ -13,22 +13,20 @@ webu 從「在終端機裡上網的瀏覽器」改成「在終端機裡讀網頁
 | 題目 | 決定 |
 |---|---|
 | 定位 | 閱讀器，不是瀏覽器（user，2026-10-28） |
-| 取得頁面 | Go 的 `net/http` 抓原始 HTML，`x/net/html` 解析；Chromium 變選配，只在偵測到靠 JavaScript 才有內容的空殼頁時，用它跑完的 DOM（user 選 2） |
+| 取得頁面 | Go 的 `net/http` 抓原始 HTML，`x/net/html` 解析（user 選 2）；原本 Chromium 留給靠 JavaScript 才有內容的空殼頁，2026-10-29 user 決定完全拿掉，空殼頁也不例外 |
 | 表單與登入 | 做到第 2 層：GET 表單（站內搜尋、篩選）把欄位組進網址；簡單的帳號密碼 POST 表單，帶上隱藏欄位送出。靠 JavaScript 的登入、第三方登入、驗證碼、兩步驟驗證不做 |
-| cookie | 存在資料目錄，檔案只有使用者自己能讀寫（`0600`）；值不進 App Log、不上畫面；Settings 有「清除登入資料」 |
+| cookie | 存在狀態目錄，檔案只有使用者自己能讀寫（`0600`）；值不進 App Log，只在使用者打開的 Cookies popup 裡顯示；Settings 有「清除登入資料」 |
 | 顯示 | 只顯示正文，有一個鍵切到整頁 |
 | markdown | **階段性的**：先用 markdown 原文顯示，檢查挑出來的內容對不對；最終畫成 webu 定義的元件（例：h1 反白），表單也有自己的畫法 |
 
 ## 流程
 
 ```
-HTML 來源（二選一）
- ├─ net/http 的原始 HTML（預設）
- └─ Chromium 跑完的 DOM（空殼頁才用；帶上元素有沒有畫出來、位置、role 的標註）
+net/http 的原始 HTML
         │
         ▼
-   解析 → 挑正文 → 內容樹（webu 的元件）─┬─→ markdown（現在：檢查用、[2] 暫時的顯示、Yank markdown）
-                                     └─→ webu 的元件畫法（最終）
+   解析 → 挑正文 → 內容樹 ─┬─→ webu 的元件畫法（[2]）
+                         └─→ markdown（Yank markdown）
 ```
 
 核心是**內容樹**，不是 markdown。markdown 寫不出來的（表單、欄位、按鈕）在樹裡有正式的節點；每個連結、欄位都記著它對應的 HTML 元素，之後才能按、能填。
@@ -43,7 +41,7 @@ HTML 來源（二選一）
 - **清單頁**：Readability 判斷不是文章時（HN、搜尋結果、新聞首頁），改走備援：整頁去掉 `<nav>`、`<header>`、`<footer>`、`<aside>`、navigation／complementary／contentinfo 等 role 與選單類的區塊。
 - **浮層**：cookie 告示、對話框（dialog、alertdialog）、固定在畫面上的浮層拿掉。
 - **程式碼**：`<pre>` 照原樣；被 JavaScript 改成編輯器的，退回原始 HTML 裡的版本。
-- **藏起來的元素**：有 Chromium 的標註時，沒畫出來的拿掉；只有原始 HTML 時，看 `hidden`、`aria-hidden`、`style="display:none"`。
+- **藏起來的元素**：看 `hidden`、`aria-hidden`、`style="display:none"`。
 
 ## 元件（user 2026-10-28 定）
 
@@ -79,7 +77,7 @@ HTML 來源（二選一）
 
 ## 第 1～3 階段定下的細節
 
-- **閱讀器的分頁**：新分頁一律是閱讀器的（`tab.reader`），頁面經 `reader.Client` 來，Chromium 不參與；Chromium 的分頁只剩舊的測試在用（`chromiumPagesDefault`，測試的 `TestMain` 打開），第 4 階段定 Chromium 還畫哪些頁。分頁有自己的上一頁／下一頁（`hist`），回去時回到離開時的位置。
+- **分頁**：每個分頁的頁面都經 `reader.Client` 來（Chromium 在第 5 階段拿掉）。分頁有自己的上一頁／下一頁（`hist`），回去時回到離開時的位置。
 - **連結直接開，不先問**：markdown 原文就寫著網址，以前「畫面看不出會去哪」的理由不在了。頁內的 `#錨點` 跳到那一節。
 - **可以按的**：標題（裡面有連結時換成連結）、連結、圖片、欄位、按鈕；`j|k` 在它們之間走。
 - **表單**：欄位的值記在 `reader.Field`，同一個欄位在正文和整頁裡是同一份；送出時照 HTML 的規則組值（勾選框只在勾了時、按鈕只送按下的那個、不送檔案）。只有一個可以打字的欄位時，填完問要不要送出（頁面上在那一欄按 Enter 就是送出）。不在表單裡的按鈕、`type=button`：toast 說要網頁的 JavaScript。打進欄位的值不進 App Log。
@@ -94,7 +92,7 @@ HTML 來源（二選一）
 
 ## 不再做的
 
-相對現在的 webu：網頁的 JavaScript 互動、網頁自己的對話框（alert、confirm、prompt）、iframe、靠 JavaScript 或第三方的登入、現在的 DevTools（要重新想，見下）。哪些真的拿掉，做到第 4 階段時寫進 CHANGELOG。
+相對 0.5.0 的 webu（第 5 階段拿掉，CHANGELOG 的 Unreleased 寫了）：Chromium 本身與它跑的 JavaScript、靠 script 才長出內容的頁面、網頁自己的對話框（alert、confirm、prompt）、iframe、HTTP 認證、檔案上傳、憑證詢問、靠 JavaScript 或第三方的登入、DevTools 畫面（剩下「這一頁的資訊」）、目錄與一節一節讀、頁面的四個 part、照閱讀順序走每個項目的游標與 `go`、finder、`webu browser update`。
 
 ## 階段
 
@@ -105,10 +103,9 @@ HTML 來源（二選一）
 | 2 | [2] 暫時顯示 markdown 原文，能在連結之間移動、按 `Enter` 開 | 完成 |
 | 3 | 表單：GET 組網址送出；POST 帶隱藏欄位、存 cookie、能登入 | 完成 |
 | 4 | 元件的畫法（render）與按鍵 | 完成（`readerrender.go`、`readerkeys.go`） |
-| 5 | Chromium 完全拿掉（user 2026-10-29），空殼頁也不例外；DevTools 縮成「這一頁的資訊」；拿掉不再做的；CHANGELOG | 進行中：這一頁的資訊做好、DevTools 畫面拿掉 |
+| 5 | Chromium 完全拿掉（user 2026-10-29），空殼頁也不例外；DevTools 縮成「這一頁的資訊」；拿掉不再做的；CHANGELOG | 完成（a4a892c 這一頁的資訊、0217dba DevTools、5775a66 Chromium，之後是文件） |
 
 ## 還沒定的
 
-- 空殼頁怎麼判斷：實驗工具用「`<body>` 文字少於 200 字又有 script」，x.com 沒登入時回的是靜態登入頁，這條判不出來，要找真正的空殼頁調整。
-- 切到整頁的鍵、現在 [2] 那排 PAGE／HEADER／BODY／OTHERS／FOOTER 的 tab 怎麼處理。
+- 挑正文的規則：中央社這類清單頁 Readability 會先挑到選單、Wikipedia 的 infobox 怎麼放。
 - 按鈕（不在表單裡的 `<button>`）要怎麼顯示、按了做什麼：沒有 JavaScript 時多半什麼都不會發生。

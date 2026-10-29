@@ -1,5 +1,8 @@
 # webu — Function
 
+> **2026-10-29 起 webu 是閱讀器，不再跑 Chromium**（[`reader.md`](reader.md)）。本文件寫的是
+> Chromium 時期（到 0.5.0）的功能設計，留作歷史：頁面怎麼取得、怎麼畫、能做什麼，以 `reader.md` 為準。
+
 > 本文件講「功能怎麼實現」：webu 站在 Chromium 上，哪些事 Chromium 做、哪些事 webu 做、
 > 做到什麼程度。版面與 surface 在 `ui.md`、互動語意在 `ux.md`、實作落地在
 > `dev-remarks.md`。每條決定標日期；被推翻的寫在「修訂」裡，不刪。

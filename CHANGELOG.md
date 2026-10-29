@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-**webu is becoming a reader** ([`docs/reader.md`](docs/reader.md)).
+**webu is a reader, and no longer runs Chromium** ([`docs/reader.md`](docs/reader.md)).
 A page is fetched as it is, over plain HTTP, and its JavaScript is not
 run; what the page itself presents is shown, and the site around it is
 left out: navigation, sidebars, footers, cookie notices. A heading's
@@ -16,7 +16,8 @@ in Focus. A table the page laid itself out with reads as lines, a table
 of data as a grid. In the tab list a tab is its page's title, after its
 site's mark: the site's own icon where Nerd Fonts has one (GitHub,
 Wikipedia, Go…), else a globe, in the colour of the site's favicon, and
-blue until that is known.
+blue until that is known. Nothing is downloaded at the first start, and
+there is a Linux arm64 build.
 
 - The page's keys are a reader's: `j|k|u|d|gg|G` scroll; `/` finds text,
   every hit underlined, `n|N` step through them, `Esc` puts it away; `f`
@@ -25,7 +26,6 @@ blue until that is known.
   the screen; `H|L` go back and forward along the tab's own history, to
   where you were; `o` is the address box; `w` shows the full page, and
   again its content. A link opens at once, without asking first.
-
 - Forms work as far as a search box and a plain sign-in: `Enter` fills a
   field (a password never shown, nothing typed going to the App Log),
   ticks a box, chooses an option; `Enter` on the button sends the form,
@@ -41,8 +41,19 @@ blue until that is known.
   will not read is offered to be moved aside, as webu's other files are.
 - A link to a file downloads it into the download folder, its row in
   Downloads, `x` stopping it.
-- Not yet on the reader: a page's own dialogs, frames, what its JavaScript
-  draws.
+- **Gone with Chromium**: what a page's JavaScript draws, and the pages it
+  builds; a page's own dialogs, frames, HTTP sign-in, file uploads and
+  certificate questions; DevTools and `I`; the table of contents, the
+  sections and the page's parts (`h|l`); the cursor on every item in
+  reading order, and with it `go` (go to a line) and the finder; `webu
+  browser update`, and the Chromium revision in `webu version`. `L`
+  (Location) is now `o`, and `P|N` (back, forward) are now `H|L`.
+- **Sign in again**: what the old browser profile kept is not read.
+  The Chromium an older webu downloaded into the cache is deleted at the
+  first start, the App Log saying where and how big; its profile
+  (`~/.webu/datas/profile`) and its log (`~/.webu/datas/webu.log`) are
+  data, so they are left for you, named in the App Log at every start
+  until you delete them.
 
 webu is rebuilt on [terminu-go](https://github.com/vulcanshen/terminu-go),
 the terminu family's shared library, following terminu design (tdp)
@@ -76,27 +87,16 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   a screen switched to; never what you typed into a field), every toast,
   a page that failed to load and why, the tabs reopened from the last
   session. The footer says `!:log`, or how many
-  errors you have not seen yet. A toast's whole text is no longer written
-  to `webu.log`, which keeps Chromium's own log.
+  errors you have not seen yet.
 - **Control characters from outside are never sent to the terminal**:
   in a page's text, a tab's title, a bookmark or a toast
   each one shows as its name in red (`\t`, `\n`, `\x1b`), nothing dropped
   — a title or link text is no longer cut at a line break. A Tab in a
   code block or a line of source is
   `input_tab_width` spaces.
-- **The page's parts are the page panel's tabs.** Its frame reads
-  `[2] PAGE HEADER BODY OTHERS FOOTER` (the parts this page has); `h|l`
-  switch between them, and the first tab is the whole page. The strip
-  under the address bar, and `Esc` up onto it, are gone.
-- **`j|k` walk the page's items in reading order** — along a row, then
-  down — and come round at the ends. `h|l` no longer move along a row.
 - **The page follows the tab list's cursor**; `Enter` on the tab list
   takes you to the page.
-- **DevTools is gone**, its screen and `I` with it: a page read without a
-  browser has no console, no storage of its own and no requests but its
-  own. What is left is at the top of the page's `Space` menu: Source,
-  Cookies, Requests.
-- `go` asks for a line number; `/` in visual mode asks for what to find.
+- `/` in visual mode asks for what to find.
 - **Visual mode has a layer**: selecting, its name is `Visual>select` and
   `Esc` drops the selection, back to `Visual`; `Esc` again leaves.
   Once selecting, `v` does nothing: `Esc` is what drops the selection.
@@ -113,16 +113,9 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   list, saying where it went.
 - What a Space menu row opens — a question, a box to type in, a viewer —
   keeps the menu under it, and `Esc` goes back to the menu. A row that
-  goes somewhere else (a new tab, the search, Location, Go to line,
-  moving a bookmark) puts the menu away as it opens. Deleting a bookmark
-  folder is asked every time, empty or not.
-- A table cell's menu names its column: `CELL: Price`.
-- The page's questions are the family's popups, and `Esc` on any of them
-  still answers no: its alert, confirm and "leave this page?" are a
-  confirm; its prompt is a text box under the page's whole message, the
-  page's answer offered in grey (`Enter` sends it as it is); an HTTP
-  sign-in is a form with Name,
-  Password and Sign in.
+  goes somewhere else (a new tab, Location, moving a bookmark) puts the
+  menu away as it opens. Deleting a bookmark folder is asked every time,
+  empty or not.
 - Something done — copied, saved, added, imported, renamed — says so in
   a green Success toast; a toast is as long as its message needs.
 - A list's long values — titles, URLs, a line of text — share the room
@@ -131,20 +124,12 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   column go, the one a row reads best without first (a visit's time).
 - Settings' `?` starts with what each setting is, and `input_tab_width`'s
   box writes its unit under the number.
-- Every viewer — Inspect, a table cell, a code block —
-  can select and copy (`v`).
-- A number field opens a number input; a filled password field shows
-  its dots and keeps its value when `Enter` is pressed on nothing.
-- The section list has a header and the same cursor as every list.
-- A page's message too long for its popup scrolls with `j|k`; an alert
-  asks you to dismiss it.
-- A page that cannot be fetched again — `R` included — keeps the copy you
-  had, and says so.
+- Every viewer — Inspect, Source, Cookies, Requests — can select and
+  copy (`v`).
 - A settings, bookmarks, history or session file that will not read is
   shown in an error popup on the first screen, not printed on the
-  terminal behind it. Something that failed — a save, an action on the
-  page, the download folder — is an error popup naming what failed; an
-  error toast cut short is written in full to `webu.log`.
+  terminal behind it. Something that failed — a save, the download — is
+  an error popup naming what failed.
 - Zoomed (`Z`), the panel with the focus takes the whole width, and `Tab`
   shows the other one.
 - In visual mode only the selection is Yellow: the search underlines
@@ -154,20 +139,14 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   the page and visual mode like `u` and `d`.
 - The powerline symbols' width is measured too, and can be set with
   `WEBU__POWERLINE_WIDTH` or the family's `TERMINU__POWERLINE_WIDTH`.
-- On macOS the downloaded Chromium goes to `~/Library/Caches/webu` even
-  when `XDG_CACHE_HOME` is set; one already fetched under
-  `XDG_CACHE_HOME` is moved there on the first start, the same way as
-  the two files above.
-- The certificate question's Continue loads the address that failed, not
-  the error page Chromium drew in its place.
 - The repository takes the terminu family's shape (tdp project): the
   Makefile includes the shared `family.mk`, and the release workflow,
   the goreleaser config, `install.sh`, `uninstall.sh` and `.gitignore`
   are the family's templates. `uninstall.sh` now finds the settings,
   state, data and cache through `WEBU__CONFIG`, `WEBU__STATE`,
   `WEBU__DATA` and `WEBU__CACHE` too, and on macOS asks about a
-  Chromium an older webu left under `XDG_CACHE_HOME`. `install.sh` and
-  the Homebrew caveats say a truecolor terminal is needed.
+  Chromium a still older webu left under `XDG_CACHE_HOME`. `install.sh`
+  and the Homebrew caveats say a truecolor terminal is needed.
 - Releases can come out as a beta first, `vX.Y.Z-beta.N`: a GitHub
   pre-release that never reaches the Homebrew tap, so `brew` and
   `install.sh` keep the stable version. The released binaries' build info

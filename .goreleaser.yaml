@@ -30,9 +30,7 @@ builds:
     #   - goos: linux
     #     goarch: arm64
     # or none.
-    ignore:
-      - goos: linux
-        goarch: arm64
+    ignore: []
 
 archives:
   - formats:
@@ -69,23 +67,17 @@ brews:
     skip_upload: auto
     homepage: "https://github.com/vulcanshen/webu"
     # app: one line, what the app is, ending in (terminu family).
-    description: "webu: a terminal browser, headless Chromium's accessibility tree drawn as a TUI (terminu family)"
+    description: "webu: a terminal browser that reads a web page as a document (terminu family)"
     # app: what to run first, where the settings and data live, the Nerd
     # Font and truecolor requirements, the platforms.
     caveats: |
       Run `webu` to start.
 
-      webu runs its own Chromium (a pinned revision), fetched once on the
-      first launch — about 175–250 MB into the cache directory (macOS:
-      ~/Library/Caches/webu, Linux: ~/.cache/webu). After an upgrade that
-      pins a new revision, `webu browser update` fetches it.
-
-      Settings and the last session's tabs live in ~/.config/webu;
-      bookmarks, history, downloads and the browser profile in
-      ~/.webu/datas.
+      Settings, the last session's tabs and the sign-in cookies live in
+      ~/.config/webu; bookmarks, history and downloads in ~/.webu/datas.
 
       A Nerd Font terminal profile and a truecolor (24-bit) terminal are
-      required. macOS and Linux x86-64 (WSL too).
+      required. macOS and Linux (WSL too).
     # app: dependencies, when the app calls other programs.
     test: |
       system "#{bin}/webu", "version"

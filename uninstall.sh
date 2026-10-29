@@ -84,9 +84,9 @@ echo ""
 echo "$APP uninstalled."
 
 # --- app's own: anything left for the user to do (none by default) ---
-# An older webu kept Chromium under XDG_CACHE_HOME on macOS too (before tdp
-# E3); webu moves it to ~/Library/Caches on the first start, so it is left
-# there only when that move failed.
+# A still older webu kept its Chromium under XDG_CACHE_HOME on macOS (before
+# tdp E3); webu deletes it on the first start, so it is left there only when
+# that failed.
 if [ "$(uname -s)" = "Darwin" ] && [ -n "${XDG_CACHE_HOME:-}" ] && [ "$XDG_CACHE_HOME/$APP" != "$CACHE_DIR" ]; then
   ask "$XDG_CACHE_HOME/$APP" "an older $APP cache"
 fi

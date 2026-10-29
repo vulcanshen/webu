@@ -37,12 +37,6 @@ case "$ARCH" in
 esac
 
 # --- app's own: checks before the download (none by default) ---
-# webu runs only the pinned Chromium snapshot, and the snapshot bucket has
-# no Linux ARM build.
-if [ "$OS" = "linux" ] && [ "$ARCH" = "arm64" ]; then
-  echo "Error: no Chromium snapshot for linux/arm64, so there is no webu build for it."
-  exit 1
-fi
 # --- end of the app's own ---
 
 # Get latest version
@@ -90,10 +84,6 @@ case ":$PATH:" in
 esac
 
 # --- app's own: what to know, and what to run first ---
-echo ""
-echo "NOTE: $APP runs its own Chromium (a pinned revision). The first launch"
-echo "      downloads it once — about 175–250 MB — into the cache directory"
-echo "      (macOS: ~/Library/Caches/webu, Linux: ~/.cache/webu) and says so."
 echo ""
 echo "NOTE: $APP draws with Nerd Font glyphs. Use a Nerd Font terminal"
 echo "      profile (https://www.nerdfonts.com) or they render as boxes."
