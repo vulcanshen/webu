@@ -14,54 +14,56 @@ import (
 
 // visualMode is the mode as the lib knows it.
 func (m *AppModel) visualMode() *terminu.Mode {
+	return &terminu.Mode{
+		Name:  "Visual",
+		Keys:  m.visualKeys(),
+		Exit:  "leave",
+		Pause: true,
+		OnExit: func() tea.Cmd {
+			cmd := m.leaveSelect()
+			m.sync()
+			return cmd
+		},
+	}
+}
+
+// selectLayer is the mode's layer while selecting (tdp K11): the lib
+// names it Visual>select, and Esc unselects, back to Visual.
+func (m *AppModel) selectLayer() *terminu.Mode {
+	return &terminu.Mode{
+		Name:  "select",
+		Keys:  m.visualKeys(),
+		Exit:  "unselect",
+		Pause: true,
+		OnExit: func() tea.Cmd {
+			// The selection goes, the cursor stays.
+			m.sel.selecting = false
+			m.sync()
+			return nil
+		},
+	}
+}
+
+// visualKeys are the keys of the mode and of its layer.
+func (m *AppModel) visualKeys() []terminu.ModeKey {
 	key := func(label, desc string, footer bool, keys ...string) terminu.ModeKey {
 		return terminu.ModeKey{Key: label, Keys: keys, Desc: desc, NoFooter: !footer, Do: m.visualKey}
 	}
 	// What acts on the range or on the item under the cursor is an item
 	// operation in the mode's Space menu (tdp K11, menu.4).
 	item := func(k terminu.ModeKey) terminu.ModeKey { k.Item = true; return k }
-	md := &terminu.Mode{
-		Name: "Visual",
-		Keys: []terminu.ModeKey{
-			key("h|j|k|l", "move by character and row", false, "h", "j", "k", "l", "←", "↓", "↑", "→"),
-			key("w|b|e", "next word, previous word, end of the word", false, "w", "b", "e"),
-			key("0|$", "start, end of the row", false, "0", "$"),
-			key("u|d", "half a page up, down (PgUp, PgDn too)", false, "u", "d", "PgUp", "PgDn"),
-			key("gg|G", "top, bottom of the page", false, "g", "G"),
-			item(key("v|V", "select", true, "v", "V")),
-			// Named as the lib's own selection mode names it.
-			item(terminu.ModeKey{Key: "y", Desc: "copy", Label: "[y] Copy", Do: m.visualKey}),
-			{Key: "/", Desc: "find", Do: func(string) tea.Cmd { return m.visualSearch() }},
-			key("n|N", "next match", true, "n", "N"),
-			item(key("Enter", "press", true, "Enter")),
-		},
-		Exit:  "leave",
-		Pause: true,
-	}
-	md.OnExit = func() tea.Cmd {
-		if m.sel.selecting {
-			// Esc while selecting goes back a layer (tdp K11): the
-			// selection goes, the cursor stays, and the lib, which has
-			// left the mode, is put back in it.
-			m.sel.selecting = false
-			m.visualLayer(md)
-			m.pagePanel.EnterMode(md)
-			m.sync()
-			return nil
-		}
-		cmd := m.leaveSelect()
-		m.sync()
-		return cmd
-	}
-	return md
-}
-
-// visualLayer names the mode's layer (tdp K11): once selecting it is
-// Visual>select, and Esc unselects.
-func (m *AppModel) visualLayer(md *terminu.Mode) {
-	md.Name, md.Exit = "Visual", "leave"
-	if m.sel.selecting {
-		md.Name, md.Exit = "Visual>select", "unselect"
+	return []terminu.ModeKey{
+		key("h|j|k|l", "move by character and row", false, "h", "j", "k", "l", "←", "↓", "↑", "→"),
+		key("w|b|e", "next word, previous word, end of the word", false, "w", "b", "e"),
+		key("0|$", "start, end of the row", false, "0", "$"),
+		key("u|d", "half a page up, down (PgUp, PgDn too)", false, "u", "d", "PgUp", "PgDn"),
+		key("gg|G", "top, bottom of the page", false, "g", "G"),
+		item(key("v|V", "select", true, "v", "V")),
+		// Named as the lib's own selection mode names it.
+		item(terminu.ModeKey{Key: "y", Desc: "copy", Label: "[y] Copy", Do: m.visualKey}),
+		{Key: "/", Desc: "find", Do: func(string) tea.Cmd { return m.visualSearch() }},
+		key("n|N", "next match", true, "n", "N"),
+		item(key("Enter", "press", true, "Enter")),
 	}
 }
 
@@ -112,9 +114,14 @@ func (m *AppModel) visualKey(k string) tea.Cmd {
 		return m.leaveSelect()
 	}
 	vis := m.pageVisible()
+	was := m.sel.selecting
 	res, text := m.sel.key(k, vis)
-	if md := m.pagePanel.InMode(); md != nil {
-		m.visualLayer(md)
+	switch {
+	case !was && m.sel.selecting:
+		m.pagePanel.EnterLayer(m.selectLayer())
+	case was && !m.sel.selecting && res == selNone:
+		// v again: back to Visual, the layer left without its OnExit.
+		m.pagePanel.EnterMode(m.visualMode())
 	}
 	// Keep the character cursor on screen.
 	if m.sel.row < t.top {

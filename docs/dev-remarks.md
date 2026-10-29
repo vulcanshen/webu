@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.1.0），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.0）上，是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.1.0），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v1.1.1）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -215,7 +215,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - **清單的欄**（tdp panel.5，tdp v0.8.2 起）：長的值（分頁、書籤、歷史的標題與 URL，下載的檔名與狀態，DevTools 的 URL、名稱、值、console 的一行、原始碼）標 `Column.Shrink`，分短欄剩下的寬度、照自己的截法截；短欄（Method、Status、Type、Size、Level、行號、When）照最寬的值，不縮。長欄縮到最少（12 格）還放不下，才照 `Column.Drop` 整欄收：歷史的 When；Network 的 Type、Size、Method（Status 與 URL 不收）；Storage 的 Kind；Console 的 Level；Source 的行號。
 - **App Log 記使用者做的事**（tdp note.7）：每個從 menu、熱鍵或 `Enter` 跑的操作，只是打開來看的也算，用 `did` 記一句過去式（`Reloaded …`、`Followed the link to …`、`Shut the folder …`）；跳了 toast 的不另外記，toast 自己就進去了；切換畫面由 lib 記 `Switched to …`。不記的：移動 cursor 與 focus、Space menu、`?`、`!`、清單的 `/` 篩選、進明細（[1] 的 `Enter`）、在 confirm 或輸入框按 `Esc` 取消的（`Done` 不會跑）、進入 visual mode；打進欄位的值也不記（可能是密碼），只記 `Typed into <欄位>`。頁面自己問的（alert、confirm、prompt、登入、選檔案）算觸發它的那個操作裡面的事，只記那個操作（`Clicked …`）。
 - **成功做完的用 Success toast**（tdp toast.2）：Copied、Saved、Opened、Added、Imported、Renamed、搬了目錄、`… saved to config.yaml`；中性的告知（`Downloading`、開在新分頁、搬家）是 Info，失敗是 Error。
-- **visual mode 是 [2] 的 mode**（tdp K11）：lib 畫模式名與模式色、`Space` 開模式的 Space menu（`v|V`、`y`、`Enter` 標 `Item`，放在 ITEM OPERATION）、`Tab` 與數字鍵暫停（`Pause`）、`?` 列模式的鍵；選取中模式名是 `Visual>select`、`Esc` 是 `unselect`，退一層回到 `Visual`（lib 的 panel mode 按 `Esc` 一定離開，`OnExit` 在選取中把 mode 放回去，名字由 `visualLayer` 跟著換），不在選取中 `Esc` 才離開；模式裡的鍵（`h|j|k|l`、`w|b|e`、`0|$`、`u|d`、`gg|G`、`v|V`、`y`、`/`、`n|N`、`Enter`）是 `ModeKey`，做的事是 `selectMode` 的。`V` 登記在模式的鍵裡，lib 就不把它當 splash（`takesV`）。`/` 開 lib 的 TextInput 問要找什麼，`n|N` 在結果間走。
+- **visual mode 是 [2] 的 mode**（tdp K11）：lib 畫模式名與模式色、`Space` 開模式的 Space menu（`v|V`、`y`、`Enter` 標 `Item`，放在 ITEM OPERATION）、`Tab` 與數字鍵暫停（`Pause`）、`?` 列模式的鍵；選取中是 lib 的一層（`EnterLayer(selectLayer())`，terminu-go v1.1.1），模式名 `Visual>select`、`Esc` 是 `unselect`：lib 只退這一層、跑它的 `OnExit` 清掉選取，回到 `Visual`，再按 `Esc` 才離開；選取中再按 `v` 也回到 `Visual`，那時用 `EnterMode(visualMode())` 重新進、不跑那一層的 `OnExit`；`y`、`Enter` 用 `LeaveMode` 一次離開整個模式；模式裡的鍵（`h|j|k|l`、`w|b|e`、`0|$`、`u|d`、`gg|G`、`v|V`、`y`、`/`、`n|N`、`Enter`）是 `ModeKey`，做的事是 `selectMode` 的。`V` 登記在模式的鍵裡，lib 就不把它當 splash（`takesV`）。`/` 開 lib 的 TextInput 問要找什麼，`n|N` 在結果間走。
 - **visual mode 的搜尋不加顏色**（2026-10-19 user 定，寫進 tdp color 的 cursor 與 tdp note 的搜尋）：命中的字加底線、保留原本的顏色；目前那一筆是 panel 的 cursor 色塊（Subtext1 底、Base 粗體）；模式色 Yellow 只給選取範圍。
 - **書籤是資料，上次的分頁是狀態**（2026-10-19，tdp E3「刪掉會怎樣」；書籤的位置 user 定）：`bookmarks.yaml` 原本跟設定一起放 `~/.config/webu`，好讓人手改、同步（2026-09-21）；tdp v0.8.0 的 E3 用「刪掉會怎樣」分，書籤刪了找不回來，是資料，搬到 `~/.webu/datas`。回報時曾把書籤寫成已經在資料目錄，那是錯的（當時在設定目錄）；更正後 user 照樣定書籤放資料目錄，沒有比照「手寫的連線清單算設定」開例外。`session.yaml` 刪了只是回到空的開始畫面，是狀態，從 `~/.webu/datas` 搬到設定目錄，`WEBU__STATE` 可以另外指定。兩個都還是可以手改的 YAML。
 - **visual mode 是小寫 `v`**：`V` 保留給 splash（tdp S1）。讀一節時的 `n`／`p` 是小寫的 panel operation：大寫的 `N`／`P` 已經是上一頁／下一頁。`[go] Go to line` 用 `g` 開頭（tdp K12 允許 `g` 開頭的兩鍵組合當熱鍵），開 lib 的 NumberInput 問行號。
@@ -258,7 +258,7 @@ password、沒有 option 的 combobox、float32 的數字見上面「量出來�
 - Linux ARM（Chromium 的 snapshot bucket 沒有）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
-webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21），再對齊 tdp v1.1.0、升到 terminu-go v1.1.0（2026-10-28）。tdp 交給 webu 自己決定、webu 定得跟別的成員不一樣的地方列在下一節。user 說 webu 之後要重新設計，「[2] 是 [1] 的明細」與「DevTools 是一個畫面」兩個暫定留到那時再談。
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21），再對齊 tdp v1.1.0、升到 terminu-go v1.1.0（2026-10-28），升到 terminu-go v1.1.1（2026-10-29，Visual>select 改用 lib 的 `EnterLayer`）。tdp 交給 webu 自己決定、webu 定得跟別的成員不一樣的地方列在下一節。user 說 webu 之後要重新設計，「[2] 是 [1] 的明細」與「DevTools 是一個畫面」兩個暫定留到那時再談。
 
 ## tdp 交給 webu 決定的地方
 

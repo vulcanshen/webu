@@ -76,7 +76,8 @@ func TestTheAppLogHasWhatTheUserDid(t *testing.T) {
 }
 
 // Visual mode has a layer (tdp K11): selecting, it is Visual>select and
-// Esc unselects, back to Visual; Esc again leaves the mode.
+// Esc unselects, back to Visual; Esc again leaves the mode. v again
+// unselects too, and leaves no layer behind.
 func TestVisualModeGoesBackALayer(t *testing.T) {
 	m := New(nil)
 	d := tdptest.Start(t, m.Program(), 100, 30)
@@ -100,5 +101,13 @@ func TestVisualModeGoesBackALayer(t *testing.T) {
 	d.Press("Esc")
 	if m.sel.on || m.pagePanel.InMode() != nil {
 		t.Fatalf("Esc again leaves the mode:\n%s", screen())
+	}
+	d.Press("v", "v", "v")
+	if d.Has("Visual>select") || !d.Has("Visual") || !m.sel.on || m.sel.selecting {
+		t.Fatalf("v again goes back to Visual:\n%s", screen())
+	}
+	d.Press("Esc")
+	if m.sel.on || m.pagePanel.InMode() != nil {
+		t.Fatalf("after v again, one Esc leaves the mode:\n%s", screen())
 	}
 }
