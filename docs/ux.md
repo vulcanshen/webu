@@ -3,7 +3,7 @@
 > 本文件講**互動語意**：core key、每個焦點的 Space menu、閱讀與兩個 mode（Focus、Visual）、頁面上的欄位怎麼填、
 > 熱鍵全表、浮層行為、時間軸。閱讀器本身（取頁、挑正文、元件的畫法、表單做到哪）在 [`reader.md`](reader.md)，
 > 版面在 `ui.md`，設計理由與實作在 [`dev-remarks.md`](dev-remarks.md)。
-> 依 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.1.0）撰寫，畫面建在 terminu-go（v1.1.1）上；
+> 依 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.1.0）撰寫，畫面建在 terminu-go（v1.1.3）上；
 > §A、§B 是 tdp 的對照，各條標出對應的 tdp 條目；每條決定標日期。
 
 > **一份登記、lib 產生其餘**（2026-10-18）：webu 把每個畫面、panel、動作（鍵、名稱、說明、範圍、要不要先問、做什麼）
@@ -164,7 +164,8 @@ splash 彩蛋 `V` 不揭露（tdp S2）。
 | 邊框 Yellow、上框右側寫模式名 | 在 mode 裡：`Focus`、`Visual`、`Visual>select`（tdp K11） |
 | `[2]` 網址列 Lavender | 位置列：這個分頁在哪一頁，只能看（tdp panel.10，2026-10-29） |
 | 字加底線 | `/` 找到的字；目前那一個是 cursor 色塊（tdp color.1；搜尋不加顏色，2026-10-19） |
-| 下框右側 | 捲動位置：閱讀時是看得到的列 `N-M of T`（tdp panel.1） |
+| 下框右側 | 捲動位置：看得到的列 `N-M of T`（tdp panel.1），Focus mode 也一樣 |
+| inspect toast | Focus mode 停在連結上時，連結會去的網址（tdp toast.4，2026-10-29）：所有按鍵都穿過它，`Esc` 離開 Focus mode 它就收；一般 toast 會蓋過它，走了它再回來 |
 | glyph | 一種東西一個 glyph（連結、圖片、欄位…）；碼位查字型不憑記憶（tdp E4） |
 | `y` / `Y` | 游標下的東西 / 整頁 |
 | `r` / `R` | `[1]` 游標下的分頁 / `[2]` 這一頁 |

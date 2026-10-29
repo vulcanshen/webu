@@ -137,19 +137,13 @@ func (b *pageBody) HasItem() bool {
 	return t.current() != nil
 }
 
-// Scroll is where the panel is (tdp panel.1): the rows in sight, or in
-// Focus mode where the focused item goes.
+// Scroll is where the panel is (tdp panel.1): the rows in sight. Where a
+// focused link goes is the inspect toast's (focusInspect).
 func (b *pageBody) Scroll() string {
 	m := b.m
 	t := m.shownTab()
 	if t == nil || t.root == nil || m.sel.on {
 		return ""
-	}
-	if t.cursor >= 0 {
-		// Focus mode: where the focused link or image goes (docs/reader.md).
-		if n := t.current(); n != nil && n.URL != "" {
-			return n.URL
-		}
 	}
 	vis := max(1, b.h-1) // under the URL row
 	lo, hi := t.rowRange()
@@ -159,6 +153,17 @@ func (b *pageBody) Scroll() string {
 	}
 	from := t.top - lo + 1
 	return itoa(from) + "-" + itoa(min(total, from+vis-1)) + " of " + itoa(total)
+}
+
+// Uncover keeps the item under Focus mode's cursor above the rows at the
+// bottom the inspect toast covers, which the lib says before each Draw
+// (tdp toast.4); 0 is none.
+func (b *pageBody) Uncover(rows int) {
+	t := b.m.shownTab()
+	if rows == 0 || t == nil || t.cursor < 0 {
+		return
+	}
+	t.scrollToCursor(max(1, b.m.pageVisible()-rows))
 }
 
 // MoveKeys are the page's movement keys (tdp K6, tdp K12): reading, they

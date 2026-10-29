@@ -11,8 +11,8 @@ left out: navigation, sidebars, footers, cookie notices. A heading's
 words are on its level's colour, a space either side; a list item has a
 dash or its number (1., a., i. by depth); code and quotes
 are on their own ground, code coloured by its language; a link and an
-image have an icon before their words, their address on the frame when
-in Focus. A table the page laid itself out with reads as lines, a table
+image have an icon before their words; in Focus mode an inspect toast
+says where the link under the cursor goes. A table the page laid itself out with reads as lines, a table
 of data as a grid. In the tab list a tab is its page's title, after its
 site's mark: the site's own icon where Nerd Fonts has one (GitHub,
 Wikipedia, Go…), else a globe, in the colour of the site's favicon, and

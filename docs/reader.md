@@ -75,7 +75,7 @@ net/http 的原始 HTML
 - **麵包屑**（user 2026-10-29，照 kbu 的做法）：`b` 開一個選單，列出這個分頁走過的每一頁（整條歷史，`L` 會去的也在），編號加頁面標題（沒有標題就是網址），目前這一頁寫「where the tab is now」，其他寫「go to it」；選一頁就直接跳過去（跟 `H|L` 一樣不先問）。歷史只有一頁時沒有這個動作。原本試過放在網址列下一列（`A › B › C`），user 說不好用，換成這樣。
 - **正文／整頁**：`w`（原本的 `f` 給了 Focus mode）。
 - `f` 當 Focus、`w` 當整頁是我定的預設，user 可以再改。`H|L` 給了上一頁、下一頁，原本的 `L`（網址框）就移到 `o`，跟 Vimium 一樣（`o` 開網址、`H|L`、`f`、`/` 與 `n|N`）。
-- 實作：`renderReader` 從內容樹直接畫（不經 markdown 文字）；一列可以有整列的底色與字色（`row.ground`、`row.ink`，`rowLine` 鋪滿）；閱讀時沒有項目被選（`cursor` -1），Focus mode 才有；搜尋的命中照 tdp color.1 畫（底線，目前那一個是 cursor 色塊）；Focus 中的連結、圖片網址寫在框的右下（panel 的 Scroll）。
+- 實作：`renderReader` 從內容樹直接畫（不經 markdown 文字）；一列可以有整列的底色與字色（`row.ground`、`row.ink`，`rowLine` 鋪滿）；閱讀時沒有項目被選（`cursor` -1），Focus mode 才有；搜尋的命中照 tdp color.1 畫（底線，目前那一個是 cursor 色塊）；Focus mode 停在連結上時，連結會去的網址是 inspect toast（terminu-go v1.1.3 的 `Mode.Inspect`，tdp toast.4；user 2026-10-29 命名與設計），欄位、按鈕、單純的圖片沒有；被 toast 蓋住的那一項，`Uncover` 捲動讓它露出來；下框右邊一律是捲動位置。
 
 ## 第 1～3 階段定下的細節
 

@@ -244,6 +244,11 @@ func TestReaderReadsAndFollows(t *testing.T) {
 	}
 
 	readerOn(d, "/two")
+	// Where the link goes is the inspect toast's, not the frame's.
+	d.until("the inspect toast", d.shows("INSPECT"))
+	if !strings.Contains(d.view(), srv.URL+"/two") {
+		t.Errorf("the inspect toast should say where the link goes:\n%s", d.view())
+	}
 	d.press("enter")
 	d.until("the second page", d.shows("The second page."))
 	v := d.view()

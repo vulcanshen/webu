@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	terminu "github.com/vulcanshen/terminu-go"
+	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/reader"
 )
 
@@ -210,10 +211,23 @@ func (m *AppModel) focusMode() *terminu.Mode {
 			key("o", "open in a new tab", true, "o"),
 			key("y", "copy its address", true, "y"),
 		},
-		Exit:   "leave",
-		Pause:  true,
-		OnExit: func() tea.Cmd { m.leaveFocus(); return nil },
+		Exit:    "leave",
+		Pause:   true,
+		Inspect: m.focusInspect,
+		OnExit:  func() tea.Cmd { m.leaveFocus(); return nil },
 	}
+}
+
+// focusInspect is the inspect toast of the item under Focus mode's cursor
+// (tdp toast.4, terminu-go's Mode.Inspect): where a link goes. A field, a
+// button or an image on its own has nothing to show (user, 2026-10-29).
+func (m *AppModel) focusInspect() []string {
+	if t := m.shownTab(); t != nil {
+		if n := t.current(); n != nil && n.Kind == ir.Link && n.URL != "" {
+			return []string{n.URL}
+		}
+	}
+	return nil
 }
 
 // enterFocus is f: Focus mode, on the first thing to press on screen.

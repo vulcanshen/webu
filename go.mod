@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/vulcanshen/terminu-go v1.1.1
+	github.com/vulcanshen/terminu-go v1.1.3
 	golang.org/x/net v0.62.0
 	golang.org/x/text v0.43.0
 	gopkg.in/yaml.v3 v3.0.1
