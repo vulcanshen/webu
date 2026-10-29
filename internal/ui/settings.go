@@ -243,8 +243,6 @@ func (m *AppModel) saveConfig(key string) tea.Cmd {
 	}
 	cmds := []tea.Cmd{m.toastOK("Saved " + key + " to config.yaml")}
 	switch key {
-	case "download_dir":
-		cmds = append(cmds, m.pointDownloads())
 	case "measure", "input_tab_width":
 		m.applyMeasure()
 	}

@@ -9,12 +9,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	terminu "github.com/vulcanshen/terminu-go"
-	"github.com/vulcanshen/webu/internal/page"
 )
 
-// download is one file the browser is saving (function.md §8), as the
-// Downloads screen lists it. The list is this session's: Chromium writes
-// the file, webu only watches it land.
+// download is one file webu is saving (function.md §8), as the Downloads
+// screen lists it. The list is this session's.
 type download struct {
 	guid, name, url, path string
 	received, total       int64
@@ -220,21 +218,11 @@ func (m *AppModel) removeDownload() tea.Cmd {
 	m.refreshDownloads()
 	m.did("Removed " + d.name + " from the downloads")
 	if cancel, ok := m.rdCancel[d.guid]; ok {
-		// One of the reader's: its request ends, and the file with it.
+		// Its request ends, and the file with it.
 		cancel()
 		delete(m.rdCancel, d.guid)
-		return nil
 	}
-	if d.state != dlRunning || m.browser == nil {
-		return nil
-	}
-	ctx, guid := m.browser.Ctx, d.guid
-	return func() tea.Msg {
-		if err := page.CancelDownload(ctx, guid); err != nil && ctx.Err() == nil {
-			return actionErrMsg{what: "Cancel download", err: err}
-		}
-		return nil
-	}
+	return nil
 }
 
 // clearDownloads is C: the finished and cancelled rows go, the running

@@ -22,7 +22,7 @@ func (m *AppModel) buildWeb() {
 		OnMove:    m.tabMoved,
 	}
 	m.page = &pageBody{m: m}
-	m.pagePanel = &terminu.Panel{Label: "Page", Body: m.page, OnTab: m.partTab}
+	m.pagePanel = &terminu.Panel{Label: "Page", Body: m.page}
 	m.tabsPanel = &terminu.Panel{Label: "Tabs", Body: m.tabsList, Details: m.pagePanel}
 	m.tabsPanel.Actions = m.tabActions()
 	m.syncPage()
@@ -76,21 +76,7 @@ func (m *AppModel) pageW() int {
 // rows above the page.
 func (m *AppModel) pageVisible() int {
 	_, h := m.a.Size()
-	t := m.shownTab()
-	if t != nil && t.popupNode() != nil {
-		return m.popupVisible()
-	}
-	header := 0
-	if t != nil && t.listing() {
-		header = 1 // the section list's header
-	}
-	return max(1, h-3-2-m.headRows(t)-header)
-}
-
-// popupVisible is how many of the page popup's rows the float shows.
-func (m *AppModel) popupVisible() int {
-	_, h := m.a.Size()
-	return max(3, h-3-10)
+	return max(1, h-3-2-1)
 }
 
 // goWeb brings the web screen up, from a list that opened a page in it:

@@ -60,52 +60,40 @@ func systemCache() string {
 	return filepath.Join(dir, "webu")
 }
 
-// A Chromium fetched under XDG_CACHE_HOME on macOS, before tdp E3, is
-// moved into the system's cache directory on the first start (tdp E3); one
-// that could not be moved is used where it is.
-func TestAnOldMacCacheIsMoved(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("macOS only")
-	}
+// The Chromium an older webu fetched goes, from the cache and from the one
+// under XDG_CACHE_HOME before tdp E3 on macOS, each directory with it once
+// empty; anything else in the cache stays (user, 2026-10-29).
+func TestChromiumIsDropped(t *testing.T) {
 	home, xdg := t.TempDir(), t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("WEBU__CACHE", "")
 	t.Setenv("XDG_CACHE_HOME", xdg)
-	if moved := RelocateCache(); len(moved) != 0 {
-		t.Errorf("nothing to move, moved %+v", moved)
+	if dropped := DropChromium(); len(dropped) != 0 {
+		t.Errorf("nothing to drop, dropped %+v", dropped)
 	}
+	cache := systemCache()
 	old := filepath.Join(xdg, "webu")
-	if err := os.MkdirAll(filepath.Join(old, "chromium-1"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	moved := RelocateCache()
-	cache := filepath.Join(home, "Library", "Caches", "webu")
-	if len(moved) != 1 || moved[0].From != old || moved[0].To != cache || moved[0].Err != nil {
-		t.Fatalf("moved %+v", moved)
-	}
-	if !exists(filepath.Join(cache, "chromium-1")) || exists(old) {
-		t.Errorf("the whole directory goes: new %v, old %v", exists(cache), exists(old))
-	}
-	if d, _ := Cache(); d != cache {
-		t.Errorf("Cache after the move %q", d)
-	}
-	if moved := RelocateCache(); len(moved) != 0 {
-		t.Errorf("moved twice: %+v", moved)
-	}
-	// Item by item (tdp v0.8.1): a revision the new place has already is a
-	// cache, so the old copy goes; another one moves; the old directory
-	// goes once empty.
-	for _, rev := range []string{"chromium-1", "chromium-2"} {
-		if err := os.MkdirAll(filepath.Join(old, rev), 0o755); err != nil {
+	for _, dir := range []string{filepath.Join(cache, "chromium-1", "bin"), filepath.Join(old, "chromium-2")} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	moved = RelocateCache()
-	if len(moved) != 1 || moved[0].Err != nil {
-		t.Fatalf("moved %+v", moved)
+	if err := os.WriteFile(filepath.Join(cache, "chromium-1", "bin", "chrome"), []byte("12345"), 0o755); err != nil {
+		t.Fatal(err)
 	}
-	if !exists(filepath.Join(cache, "chromium-2")) || exists(old) {
-		t.Errorf("chromium-2 moved %v, old directory gone %v", exists(filepath.Join(cache, "chromium-2")), !exists(old))
+	if err := os.WriteFile(filepath.Join(cache, "other"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// On Linux the cache is under XDG_CACHE_HOME: one directory, both in it.
+	dropped := DropChromium()
+	if len(dropped) != 2 || dropped[0].Path != filepath.Join(cache, "chromium-1") || dropped[0].Size != 5 || dropped[0].Err != nil {
+		t.Fatalf("dropped %+v", dropped)
+	}
+	if exists(filepath.Join(cache, "chromium-1")) || !exists(filepath.Join(cache, "other")) {
+		t.Errorf("chromium-1 should go and other stay")
+	}
+	if runtime.GOOS == "darwin" && exists(old) {
+		t.Errorf("the old cache, left empty, should go")
 	}
 }
 

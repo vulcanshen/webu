@@ -1,11 +1,11 @@
 // Package paths resolves where webu keeps things. One place, because the
-// browser (its profile), the store (bookmarks, history, session) and the
-// cache (Chromium itself) all have to agree.
+// store (bookmarks, history, session, cookies) and the downloads all have
+// to agree.
 //
 // What goes where is what deleting it would cost (tdp E3): settings are
 // what the user sets; state only puts things back as they were (the tabs
-// open at the last quit); data cannot be had again (bookmarks, history,
-// downloads, the browser profile, the log); the cache webu fetches again.
+// open at the last quit, the cookies); data cannot be had again
+// (bookmarks, history, downloads); the cache webu fetches again.
 package paths
 
 import (
@@ -49,7 +49,7 @@ func State() (string, error) {
 }
 
 // Data is where webu keeps what cannot be had again: the bookmarks, the
-// history, downloads, the Chromium profile and its log — ~/.webu/datas,
+// history, downloads — ~/.webu/datas,
 // on every platform (revised 2026-09-21: settings under ~/.config/webu,
 // data under ~/.webu, so a config dir can be checked in or synced without
 // dragging a browser profile along). WEBU__DATA overrides outright.
@@ -73,9 +73,9 @@ func Downloads() (string, error) {
 	return filepath.Join(d, "downloads"), nil
 }
 
-// Cache is where the Chromium binary goes (function.md §9): a thing that can
-// be re-downloaded, so it lives with the caches rather than with the config.
-// WEBU__CACHE overrides outright; otherwise the system's cache directory
+// Cache is webu's cache directory, where an older webu kept the Chromium
+// it ran (DropChromium). WEBU__CACHE overrides outright; otherwise the
+// system's cache directory
 // (tdp E3) — macOS ~/Library/Caches/webu, Linux $XDG_CACHE_HOME/webu or
 // ~/.cache/webu, which is os.UserCacheDir. While it is not there and the
 // one an older webu used is (OldCache), that one is: Relocate could not
@@ -91,9 +91,9 @@ func Cache() (string, error) {
 	return Either(filepath.Join(dir, "webu"), OldCache()), nil
 }
 
-// OldCache is where an older webu kept Chromium and this one does not: on
-// macOS, $XDG_CACHE_HOME/webu, read there before tdp E3 named
-// ~/Library/Caches. Empty when there is no such place.
+// OldCache is where a still older webu kept Chromium: on macOS,
+// $XDG_CACHE_HOME/webu, before tdp E3 named ~/Library/Caches. Empty when
+// there is no such place.
 func OldCache() string {
 	x := os.Getenv("XDG_CACHE_HOME")
 	if x == "" || runtime.GOOS != "darwin" || os.Getenv("WEBU__CACHE") != "" {
@@ -113,7 +113,7 @@ func Either(path, old string) string {
 
 // Move is one thing an older webu kept somewhere else.
 type Move struct {
-	What     string // "bookmarks.yaml", "Chromium"
+	What     string // "bookmarks.yaml"
 	From, To string
 	// Err is why it could not be moved; it is used from From then.
 	Err error
@@ -152,51 +152,55 @@ func RemoveIfEmpty(dir string) {
 	}
 }
 
-// RelocateCache moves the Chromium an older webu fetched on macOS under
-// XDG_CACHE_HOME into the system's cache directory, item by item (tdp E3):
-// each revision not in the new place yet is moved there; one that is there
-// already is a cache, fetched again at will, so the old copy is deleted.
-// The old directory goes once it is empty. What could not be moved stays,
-// and is used from there (Cache).
-func RelocateCache() []Move {
-	old := OldCache()
-	dir, err := os.UserCacheDir()
-	if old == "" || err != nil || !exists(old) {
+// Dropped is a Chromium an older webu fetched, deleted.
+type Dropped struct {
+	Path string
+	Size int64 // its bytes, as it was
+	Err  error // why it could not all go
+}
+
+// DropChromium deletes every Chromium an older webu fetched into its
+// cache, and into the one before tdp E3 on macOS, and a cache directory
+// it leaves empty: webu no longer runs one (user, 2026-10-29). A cache is
+// what an app may delete (tdp E3: it is fetched again when needed), and
+// this one never will be. It says what went, for the App Log.
+func DropChromium() []Dropped {
+	var dirs []string
+	if c, err := Cache(); err == nil {
+		dirs = append(dirs, c)
+	}
+	if old := OldCache(); old != "" && (len(dirs) == 0 || dirs[0] != old) {
+		dirs = append(dirs, old)
+	}
+	var out []Dropped
+	for _, dir := range dirs {
+		entries, _ := os.ReadDir(dir)
+		for _, e := range entries {
+			if !strings.HasPrefix(e.Name(), "chromium-") {
+				continue
+			}
+			path := filepath.Join(dir, e.Name())
+			out = append(out, Dropped{Path: path, Size: sizeOf(path), Err: os.RemoveAll(path)})
+		}
+		if len(entries) > 0 {
+			RemoveIfEmpty(dir)
+		}
+	}
+	return out
+}
+
+// sizeOf is the bytes of the files under path.
+func sizeOf(path string) int64 {
+	var n int64
+	_ = filepath.WalkDir(path, func(_ string, d os.DirEntry, err error) error {
+		if err == nil && d.Type().IsRegular() {
+			if info, err := d.Info(); err == nil {
+				n += info.Size()
+			}
+		}
 		return nil
-	}
-	cache := filepath.Join(dir, "webu")
-	entries, err := os.ReadDir(old)
-	if err != nil {
-		return []Move{{What: "Chromium", From: old, To: cache, Err: err}}
-	}
-	made := !exists(cache)
-	mv := Move{What: "Chromium", From: old, To: cache}
-	moved := false
-	for _, e := range entries {
-		from, to := filepath.Join(old, e.Name()), filepath.Join(cache, e.Name())
-		if exists(to) {
-			_ = os.RemoveAll(from)
-			continue
-		}
-		if err := os.MkdirAll(cache, 0o700); err != nil {
-			mv.Err = err
-			break
-		}
-		if err := os.Rename(from, to); err != nil {
-			mv.Err = err
-			continue
-		}
-		moved = true
-	}
-	RemoveIfEmpty(old)
-	if made && !moved {
-		// Nothing came: the new place made for it would hide the old one.
-		RemoveIfEmpty(cache)
-	}
-	if !moved && mv.Err == nil {
-		return nil
-	}
-	return []Move{mv}
+	})
+	return n
 }
 
 // Short writes a path the way a person would: the home directory as ~.

@@ -10,11 +10,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chromedp/cdproto/cdp"
-	cdppage "github.com/chromedp/cdproto/page"
 	terminu "github.com/vulcanshen/terminu-go"
-	"github.com/vulcanshen/webu/internal/browser"
-	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/paths"
 	"github.com/vulcanshen/webu/internal/store"
 )
@@ -74,11 +70,6 @@ func (d *driver) send(msg tea.Msg) {
 	}
 	if _, quit := msg.(tea.QuitMsg); quit {
 		return
-	}
-	// A capture that failed is worth a line in the log: the app shows it as
-	// an error page, and a test that then times out says only "timed out".
-	if pm, ok := msg.(pageMsg); ok && pm.err != nil {
-		d.t.Logf("%s pageMsg tab %d gen %d: %v", time.Now().Format("15:04:05.000"), pm.tabID, pm.gen, pm.err)
 	}
 	_, cmd := d.m.a.Update(msg)
 	d.exec(cmd)
@@ -150,54 +141,6 @@ func (d *driver) until(what string, cond func() bool) {
 	}
 }
 
-func (d *driver) page() *tab { return d.m.shownTab() }
-
-// act is Enter on an item, the way a user does it (ux.md §A.0.K): the
-// click itself, and for a link — which asks first — Enter again on the
-// confirm.
-func (d *driver) act() {
-	d.t.Helper()
-	n := d.page().current()
-	d.press("enter")
-	if n != nil && n.Kind == ir.Link {
-		d.until("open link?", d.shows("OPEN LINK"))
-		d.press("enter")
-	}
-}
-
-func (d *driver) loaded(title string) func() bool {
-	return func() bool {
-		t := d.page()
-		// working, not loading: a page is loaded when webu has stopped
-		// looking at it, which is one look after the first (tab.settling).
-		return t != nil && !t.working() && t.root != nil && t.title == title
-	}
-}
-
-// cursorOn puts the cursor on an item whose text contains want.
-func (d *driver) cursorOn(kind ir.Kind, want string) {
-	d.t.Helper()
-	t := d.page()
-	for i, it := range t.lay.items {
-		if it.node.Kind == kind && strings.Contains(it.node.Text()+it.node.Name, want) {
-			t.cursor = i
-			d.m.sync()
-			return
-		}
-	}
-	d.t.Fatalf("no %s item containing %q in\n%s", kind, want, dumpLayout(t.lay))
-}
-
-// nodeNamed is the item on the page whose name has name in it.
-func nodeNamed(t *tab, name string) *ir.Node {
-	for _, it := range t.lay.items {
-		if strings.Contains(it.node.Name, name) {
-			return it.node
-		}
-	}
-	return nil
-}
-
 // bmSelect puts the bookmarks cursor on a row as a key would: the actions
 // that name the row are worked out again (OnMove runs after a message).
 func (d *driver) bmSelect(r bmRow) {
@@ -223,139 +166,11 @@ func (d *driver) action(label string) {
 	d.t.Fatalf("no action %q on [%s]", label, p.Label)
 }
 
-// launch starts the pinned Chromium, or skips the test.
-func launch(t *testing.T) *browser.Browser {
-	t.Helper()
-	t.Setenv("WEBU__CONFIG", t.TempDir()) // the history log goes to a scratch dir, not the user's
-	t.Setenv("WEBU__DATA", t.TempDir())
-	exe, ok := browser.Installed()
-	if !ok {
-		t.Skip("pinned Chromium not installed; run webu once")
-	}
-	b, err := browser.Launch(exe, t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(b.Close)
-	return b
-}
-
-// fixture is a testdata page as a file URL.
-func fixture(name string) string {
-	abs, _ := filepath.Abs("testdata/" + name)
-	return "file://" + abs
-}
-
-func TestAppNavigatesAndFillsAForm(t *testing.T) {
-	b := launch(t)
-	d := newDriver(t, New(b, fixture("nav.html")))
-	defer d.m.Close()
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.until("page A", d.loaded("Page A"))
-	if v := d.view(); !strings.Contains(v, "Page A") || !strings.Contains(v, "a link to B") {
-		t.Fatalf("page not drawn:\n%s", v)
-	}
-
-	// Enter on a link asks first — its text and URL — and Esc leaves the
-	// page where it is.
-	d.cursorOn(ir.Link, "a link to B")
-	d.press("enter")
-	d.until("open link?", d.shows("OPEN LINK"))
-	if v := d.view(); !strings.Contains(v, "nav2.html") {
-		t.Errorf("the confirm should show the link's URL:\n%s", v)
-	}
-	d.press("esc")
-	if !strings.Contains(d.page().url, "nav.html") {
-		t.Errorf("Esc should stay on page A, is on %s", d.page().url)
-	}
-	// Enter on the confirm follows it.
-	d.press("enter")
-	d.until("open link?", d.shows("OPEN LINK"))
-	d.press("enter")
-	d.until("page B", d.loaded("Page B"))
-	if !strings.Contains(d.view(), "You made it.") {
-		t.Fatalf("page B not drawn:\n%s", d.view())
-	}
-
-	// P goes back. From the keystroke the page shows as on its way, and a
-	// second P before it lands is swallowed rather than stacked (ux.md §6).
-	d.key("P")
-	if !d.page().loading || !d.m.pagePanel.Loading {
-		t.Fatal("P should mark the tab loading at once, and [2] say so")
-	}
-	gen := d.page().gen
-	d.key("P")
-	if d.page().gen != gen {
-		t.Error("a second P while the first is in flight was not swallowed")
-	}
-	d.until("page A again", d.loaded("Page A"))
-	if !strings.Contains(d.page().url, "nav.html") {
-		t.Errorf("url after back: %s", d.page().url)
-	}
-	// Nowhere further back: Previous is disabled, and its key does nothing.
-	if d.page().canBack {
-		t.Error("the entry before this one is about:blank, which does not count")
-	}
-
-	// Enter on a textbox is the box itself — the input popup, no menu in
-	// between. The title says what the box takes, the prompt which field.
-	d.cursorOn(ir.Textbox, "Name")
-	d.press("enter")
-	d.until("input popup", d.shows("EDIT: Name"))
-	if v := d.view(); !strings.Contains(v, "Name") {
-		t.Errorf("the field's name over the box:\n%s", v)
-	}
-	d.key("hi there")
-	d.key("enter")
-	d.until("value written", func() bool {
-		n := d.page().current()
-		return n != nil && n.Kind == ir.Textbox && n.Value == "hi there"
-	})
-	d.settle()
-
-	// A password box is known as one while still empty, and is masked.
-	d.cursorOn(ir.Textbox, "Secret")
-	d.press("enter")
-	d.until("password box", d.shows("EDIT: Secret"))
-	d.key("s3cret")
-	if strings.Contains(d.view(), "s3cret") {
-		t.Error("a password is masked from the first keystroke")
-	}
-	d.key("enter")
-	d.until("secret written", func() bool {
-		n := d.page().current()
-		return n != nil && n.Kind == ir.Textbox && n.Protected && n.Value != ""
-	})
-	if v := d.page().current().Value; strings.Contains(v, "s3cret") {
-		t.Errorf("the page should hand back dots, not the secret: %q", v)
-	}
-	d.settle()
-
-	// Submit is an item operation of a filled field: it presses Enter in
-	// the field, and the form's handler sees the value.
-	d.cursorOn(ir.Textbox, "Name")
-	d.action("Submit")
-	d.until("form submitted", func() bool {
-		return strings.Contains(dumpLayout(d.page().lay), "submitted:hi there")
-	})
-
-	// A select drops its options; j and Enter choose the next one.
-	d.cursorOn(ir.Combobox, "Pick")
-	d.press("enter")
-	d.until("option list", d.shows("CHOOSE"))
-	d.key("j")
-	d.key("enter")
-	d.until("option chosen", func() bool {
-		n := d.page().current()
-		return n != nil && n.Kind == ir.Combobox && n.Value == "Two"
-	})
-}
-
 // TestScreensAndSession drives the list screens without a browser.
 func TestScreensAndSession(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
-	m := New(nil, "").WithStore(
+	m := New("").WithStore(
 		[]store.Bookmark{{Title: "Hacker News", URL: "https://news.ycombinator.com/"}, {Title: "Go", URL: "https://go.dev"}},
 		nil, store.Config{}, nil)
 	d := newDriver(t, m)
@@ -524,76 +339,13 @@ func TestResolveURL(t *testing.T) {
 	}
 }
 
-// TestFrameFitsTheTerminal is tdp L4 across sizes (tdp E6): every line of
-// every screen, with a page on the web screen and with popups over it, is
-// exactly as wide as the terminal — with icons one cell and two, and the
-// powerline symbols one and two (tdp E5).
-func TestFrameFitsTheTerminal(t *testing.T) {
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	defer terminu.SetIconWidth(1, 1)
-	root := doc(hd(1, "Fitting"), para(text("A paragraph "+glyphLink+" with an icon in it, and some words to wrap around.")),
-		link("a link", "https://example.com/x", 7), hd(2, "Second"), para(text("More.")), hd(2, "Third"), para(text("End.")))
-	for _, widths := range [][2]int{{1, 1}, {2, 1}, {2, 2}} {
-		terminu.SetIconWidth(widths[0], widths[1])
-		for _, size := range [][2]int{{120, 40}, {80, 40}, {72, 24}, {60, 20}, {40, 12}} {
-			m := New(nil, "")
-			d := newDriver(t, m)
-			d.send(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
-			tb := &tab{id: 1, url: "https://example.com/fitting", title: "Fitting", root: root, cursor: -1}
-			m.tabs, m.shown = []*tab{tb}, 0
-			tb.relayout(m.pageW())
-			m.sync()
-			fits := func(where string, sw, sh int) {
-				lines := m.a.Frame()
-				if len(lines) != sh {
-					t.Errorf("%v %dx%d %s: %d lines", widths, sw, sh, where, len(lines))
-				}
-				for i, l := range lines {
-					if w := terminu.Width(l); w != sw {
-						t.Errorf("%v %dx%d %s: line %d is %d wide: %q", widths, sw, sh, where, i, w, terminu.StripStyles(l))
-					}
-				}
-			}
-			check := func(where string) { fits(where, size[0], size[1]) }
-			check("web, [1]")
-			d.key("2")
-			check("web, [2]")
-			d.press(" ")
-			check("Space menu")
-			d.press("?")
-			check("key reference over it")
-			d.press("esc")
-			d.press("esc")
-			for _, k := range []string{"B", "H", "D", "S", "I"} {
-				d.key(k)
-				check("screen " + k)
-			}
-			d.key("W")
-			d.press("L")
-			check("Location")
-			d.press("esc")
-
-			long := strings.Repeat("The page has a long thing to say, and says it. ", 12)
-			// The page's own dialog floats over the page panel (pagepopup.go).
-			dlg := &ir.Node{Kind: ir.Landmark, Role: "dialog", ID: 50, Modal: true,
-				Children: []*ir.Node{para(text(long)), link("Accept", "https://example.com/ok", 51)}}
-			tb.root, tb.popups = doc(hd(1, "Fitting"), para(text("Behind it.")), dlg), []cdp.BackendNodeID{50}
-			tb.relayout(m.pageW())
-			m.sync()
-			check("the page's dialog")
-			m.Close()
-		}
-	}
-}
-
 // Under webu's least size (tdp L1) only its name and what it needs are
 // drawn, each line the terminal's width, down to 1×1 (tdp E5); no key acts,
 // and the screen it was on comes back as the terminal grows.
 func TestUnderTheLeastSize(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
-	m := New(nil, "")
+	m := New("")
 	d := newDriver(t, m)
 	need := "needs a terminal of at least " + itoa(minW) + "×" + itoa(minH)
 	for _, s := range [][2]int{{minW - 1, minH}, {minW, minH - 1}, {80, 5}, {40, 12}, {20, 2}, {4, 1}, {1, 1}} {
@@ -634,7 +386,7 @@ func TestEveryPopupFits(t *testing.T) {
 	t.Setenv("WEBU__DATA", t.TempDir())
 	defer terminu.SetIconWidth(1, 1)
 	long := strings.Repeat("The page has a long thing to say, and says it. ", 12)
-	root := doc(hd(1, "Fitting"), para(text(long)), link("a link", "https://example.com/x", 7))
+	root := doc(hd(1, "Fitting"), para(text(long)), link("a link", "https://example.com/x"))
 	var lines, options []string
 	for i := range 60 {
 		lines = append(lines, itoa(i)+" "+long)
@@ -651,7 +403,7 @@ func TestEveryPopupFits(t *testing.T) {
 	for _, widths := range [][2]int{{1, 1}, {2, 1}, {2, 2}} {
 		terminu.SetIconWidth(widths[0], widths[1])
 		for _, size := range [][2]int{{100, 30}, {minW, minH}} {
-			m := New(nil, "")
+			m := New("")
 			d := newDriver(t, m)
 			d.send(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 			tb := &tab{id: 1, url: "https://example.com/fitting", title: "Fitting", root: root, cursor: -1}
@@ -704,7 +456,6 @@ func TestEveryPopupFits(t *testing.T) {
 				}},
 				{"form", func() tea.Cmd { return m.addBookmark("Fitting "+long, "https://example.com/"+long) }},
 				{"file-picker", func() tea.Cmd { return m.settingBox(dirSetting) }},
-				{"finder", m.openFinder},
 				{"menu", func() tea.Cmd {
 					return m.a.Menu("Cell", terminu.MenuSection{Title: "Fitting",
 						Actions: []terminu.Action{m.item("Content", long, none), m.item(long, long, none)}})
@@ -732,14 +483,14 @@ func TestEveryPopupFits(t *testing.T) {
 func TestLocationOffersThePageURL(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
-	m := New(nil, "")
+	m := New("")
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m.tabs = []*tab{{id: 1, url: "https://example.com/a"}}
 	m.shown = 0
 	m.sync()
 	d.key("2")
-	d.press("L")
+	d.press("o")
 	d.until("location open", d.shows("LOCATION"))
 	if v := d.view(); !strings.Contains(v, "https://example.com/a") || !strings.Contains(v, "Tab:edit") {
 		t.Fatalf("the page's URL should be offered, Tab taking it:\n%s", v)
@@ -789,7 +540,7 @@ func TestImportBookmarks(t *testing.T) {
 	if err := os.WriteFile(bad, []byte("not an export"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	m := New(nil, "").WithStore([]store.Bookmark{{Title: "Go", URL: "https://go.dev"}}, nil, store.Config{}, nil)
+	m := New("").WithStore([]store.Bookmark{{Title: "Go", URL: "https://go.dev"}}, nil, store.Config{}, nil)
 	d := newDriver(t, m)
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.key("B")
@@ -844,7 +595,7 @@ func TestImportBookmarks(t *testing.T) {
 func TestDeleteFolderTree(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
-	m := New(nil, "").WithStore([]store.Bookmark{
+	m := New("").WithStore([]store.Bookmark{
 		{Title: "Go", URL: "https://go.dev", Folder: "dev"},
 		{Title: "pkg", URL: "https://pkg.go.dev", Folder: "dev/go"},
 		{Title: "HN", URL: "https://news.ycombinator.com"},
@@ -891,7 +642,7 @@ func TestDeleteFolderTree(t *testing.T) {
 func TestDeleteAsksAboutTheRowUnderTheCursor(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
-	m := New(nil, "").WithStore([]store.Bookmark{
+	m := New("").WithStore([]store.Bookmark{
 		{Title: "Alpha", URL: "https://a.example"},
 		{Title: "Beta", URL: "https://b.example"},
 	}, nil, store.Config{}, nil)
@@ -931,7 +682,7 @@ func TestUnreadableFilesAreMovedAside(t *testing.T) {
 	if cfgErr == nil || sessErr == nil {
 		t.Fatal("the files should not read")
 	}
-	m := New(nil, "").WithUnread([]Unread{
+	m := New("").WithUnread([]Unread{
 		{Name: "config.yaml", Path: store.Path("config.yaml"), Err: cfgErr},
 		{Name: "session.yaml", Path: store.Path("session.yaml"), Err: sessErr},
 	})
@@ -958,74 +709,13 @@ func TestUnreadableFilesAreMovedAside(t *testing.T) {
 	}
 }
 
-// Nothing opens while one of webu's files is still asked about (tdp E3):
-// no page loads, so no visit lands in a history.yaml that could not be
-// read, one Esc would leave as it was. Enter starts webu as on its first
-// start: the page loads, and its visit starts a new history.yaml.
-func TestNothingOpensWhileAFileIsAskedAbout(t *testing.T) {
-	b := launch(t)
-	t.Setenv("WEBU__STATE", "")
-	hist := store.Path("history.yaml")
-	if err := os.MkdirAll(filepath.Dir(hist), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(hist, []byte("key: [\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	_, err := store.LoadHistory()
-	if err == nil {
-		t.Fatal("history.yaml should not read")
-	}
-	m := New(b, fixture("nav.html")).WithStore(nil, nil, store.Config{}, nil).
-		WithUnread([]Unread{{Name: "history.yaml", Path: hist, Err: err}})
-	d := newDriver(t, m)
-	defer m.Close()
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.until("the question", d.shows("MOVE ASIDE"))
-	if len(m.tabs) != 0 {
-		t.Errorf("%d tabs open while the question is up", len(m.tabs))
-	}
-	d.press("enter")
-	d.until("page A", d.loaded("Page A"))
-	d.until("its visit in a new history.yaml", func() bool {
-		h, err := store.LoadHistory()
-		return err == nil && len(h) == 1
-	})
-	if _, err := os.Stat(hist + ".bak"); err != nil {
-		t.Error(err)
-	}
-}
-
-// A page's prompt is the lib's text input with the page's whole message,
-// its line breaks too, folded on the prompt row (tdp input.2).
-func TestALongPromptIsShownWhole(t *testing.T) {
-	t.Setenv("WEBU__CONFIG", t.TempDir())
-	t.Setenv("WEBU__DATA", t.TempDir())
-	m := New(nil, "")
-	d := newDriver(t, m)
-	d.send(tea.WindowSizeMsg{Width: 80, Height: 30})
-	tb := &tab{id: 1, url: "https://example.com/", title: "Asking", root: doc(hd(1, "Asking")), cursor: -1}
-	m.tabs, m.shown = []*tab{tb}, 0
-	m.sync()
-	msg := "Before we go on, the form needs a word from you about the order you placed last week.\n" +
-		"Second line: which colour would you like the parcel wrapped in?"
-	d.exec(m.askDialog(dialogMsg{tabID: 1, kind: cdppage.DialogTypePrompt, message: msg, defaultPrompt: "blue"}))
-	d.settle()
-	v := d.view()
-	for _, want := range []string{"THE PAGE ASKS", "Before we go on", "last week.", "Second line: which colour", "blue"} {
-		if !strings.Contains(v, want) {
-			t.Errorf("the prompt should show %q:\n%s", want, v)
-		}
-	}
-}
-
 // What main moved is an Info toast saying from where to where; what it
 // could not move is an error popup naming both places (tdp E3).
 func TestMovesOnTheFirstScreen(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
 	t.Setenv("HOME", "/h")
-	m := New(nil, "").WithMoves([]paths.Move{
+	m := New("").WithMoves([]paths.Move{
 		{What: "bookmarks.yaml", From: "/h/.config/webu/bookmarks.yaml", To: "/h/.webu/datas/bookmarks.yaml"},
 	})
 	d := newDriver(t, m)
@@ -1033,7 +723,7 @@ func TestMovesOnTheFirstScreen(t *testing.T) {
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.until("the toast", d.shows("Moved bookmarks.yaml from ~/.config/webu to ~/.webu/datas"))
 
-	m = New(nil, "").WithMoves([]paths.Move{
+	m = New("").WithMoves([]paths.Move{
 		{What: "session.yaml", From: "/h/.webu/datas/session.yaml", To: "/h/.config/webu/session.yaml", Err: errors.New("permission denied")},
 	})
 	d = newDriver(t, m)
@@ -1054,7 +744,7 @@ func TestMovesOnTheFirstScreen(t *testing.T) {
 func TestRenameBookmarks(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
-	m := New(nil, "").WithStore([]store.Bookmark{
+	m := New("").WithStore([]store.Bookmark{
 		{Title: "Go", URL: "https://go.dev", Folder: "dev"},
 		{Title: "pkg", URL: "https://pkg.go.dev", Folder: "dev/go"},
 	}, []string{"dev/empty", "misc"}, store.Config{}, nil)
@@ -1088,198 +778,5 @@ func TestRenameBookmarks(t *testing.T) {
 	}
 	if r, ok := d.m.bmCurrent(); !ok || !r.isFolder || r.folder != "code" {
 		t.Errorf("the cursor should be on the renamed folder, is on %+v", r)
-	}
-}
-
-// TestPageParts: a page's four parts are panel [2]'s tabs after the whole
-// page (user, 2026-09-22). None of it reads a role — the parts are placed
-// by WHERE Chromium laid them out.
-func TestPageParts(t *testing.T) {
-	b := launch(t)
-	d := newDriver(t, New(b, fixture("parts.html")))
-	defer d.m.Close()
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.until("the parts page", d.loaded("Parts"))
-
-	p := d.page()
-	var kinds []string
-	for _, x := range p.parts {
-		kinds = append(kinds, x.kind.word())
-	}
-	if strings.Join(kinds, " ") != "header body others footer" {
-		t.Fatalf("the fixture has all four, in page order: %q", kinds)
-	}
-	if p.at != partMain || d.m.pagePanel.Tab != 2 {
-		t.Errorf("a page opens on its body: at %s, tab %d", p.at.word(), d.m.pagePanel.Tab)
-	}
-	if v := d.view(); !strings.Contains(v, "PAGE") || !strings.Contains(v, "FOOTER") {
-		t.Errorf("[2]'s frame names the page and its parts:\n%s", v)
-	}
-	if n := p.current(); n == nil || n.Kind != ir.Heading {
-		t.Errorf("and on the body's first item, is on %+v", n)
-	}
-	if v := dumpLayout(p.lay); !strings.Contains(v, "The body itself") || strings.Contains(v, "Top link") {
-		t.Errorf("the body, and only the body:\n%s", v)
-	}
-
-	// l shows the next part, h the one before; the first tab is the whole
-	// page.
-	d.key("2")
-	d.key("l")
-	if p.at != partOthers {
-		t.Errorf("l shows the next part: %s", p.at.word())
-	}
-	if v := dumpLayout(p.lay); strings.Contains(v, "The body itself") {
-		t.Errorf("the panel should be showing others:\n%s", v)
-	}
-	d.key("h")
-	d.key("h")
-	d.key("h")
-	if p.at != partWhole {
-		t.Fatalf("the first tab is the whole page: %v", p.at)
-	}
-	if v := dumpLayout(p.lay); !strings.Contains(v, "The body itself") || !strings.Contains(v, "Top link") {
-		t.Errorf("the whole page:\n%s", v)
-	}
-}
-
-// A page with no one dominant block has no parts to choose between: it
-// stays whole, and [2] has no tabs (2026-09-23).
-func TestAFlatPageIsOnePart(t *testing.T) {
-	b := launch(t)
-	d := newDriver(t, New(b, fixture("nav.html")))
-	defer d.m.Close()
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.until("page A", d.loaded("Page A"))
-	p := d.page()
-	if len(p.parts) != 0 || len(d.m.pagePanel.Tabs) != 0 {
-		t.Errorf("a flat page is not cut up: %d parts, tabs %q", len(p.parts), d.m.pagePanel.Tabs)
-	}
-	v := dumpLayout(p.lay)
-	for _, want := range []string{"Page A", "Ann Example", "About"} {
-		if !strings.Contains(v, want) {
-			t.Errorf("the whole page is on screen, %q is not:\n%s", want, v)
-		}
-	}
-}
-
-func TestTableCells(t *testing.T) {
-	b := launch(t)
-	d := newDriver(t, New(b, fixture("nav.html")))
-	defer d.m.Close()
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.until("page A", d.loaded("Page A"))
-	d.key("2")
-
-	d.cursorOn(ir.Cell, "Ann Example")
-	d.press("enter")
-	d.until("the cell in full", d.shows("CELL"))
-	if v := d.view(); !strings.Contains(v, "Name") || !strings.Contains(v, "to be cut by the column") {
-		t.Errorf("the viewer should be the whole cell under its column's header:\n%s", v)
-	}
-	d.press("esc")
-
-	// j is the next item in reading order: the next cell on the row.
-	d.key("j")
-	if n := d.page().current(); n == nil || n.Kind != ir.Cell || strings.TrimSpace(n.Text()) != "home" {
-		t.Fatalf("j should walk to the next cell, is on %+v", n)
-	}
-	d.press("enter")
-	d.until("asks to open", d.shows("OPEN LINK"))
-	d.press("esc")
-
-	d.cursorOn(ir.Cell, "none")
-	d.press("enter")
-	d.until("the other cell", d.shows("CELL — Site"))
-}
-
-// A one-line list item holding a link and more words is known to be one
-// line only once it is gone into; Enter on it still asks before leaving
-// the page, and the question is the action's own: from the Space menu,
-// Esc on it goes back to the menu (tdp T1; Action.AskFor).
-func TestOneLineItemAsksOverTheMenu(t *testing.T) {
-	b := launch(t)
-	d := newDriver(t, New(b, fixture("leave.html")))
-	defer d.m.Close()
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.until("the page", d.loaded("Leave"))
-	d.key("2")
-	d.cursorOn(ir.ListItem, "is the other page")
-	d.press(" ")
-	d.until("the Space menu", d.shows("Global operation"))
-	d.press("enter")
-	d.until("open link?", d.shows("OPEN LINK"))
-	if v := d.view(); !strings.Contains(v, "nav2.html") {
-		t.Errorf("the question should name where the link goes:\n%s", v)
-	}
-	d.press("esc")
-	d.until("back on the menu", d.shows("Global operation"))
-	if n := d.page().current(); n == nil || n.Kind != ir.ListItem {
-		t.Errorf("going in to look should leave the cursor on the item: %+v", n)
-	}
-	// Accepted, the link is followed and the menu goes with the question:
-	// it was the action's own, not a popup its Do opened over the menu.
-	d.press("enter")
-	d.until("asked again", d.shows("OPEN LINK"))
-	d.press("enter")
-	d.until("page B", d.loaded("Page B"))
-	if v := d.view(); strings.Contains(v, "Global operation") {
-		t.Errorf("the menu should be gone with the page it was on:\n%s", v)
-	}
-}
-
-// Google's search box is a textarea that calls itself a combobox, with no
-// options: Enter on it is the input, not "no options to choose from" (user,
-// 2026-09-23). A combobox WITH options still drops its list.
-func TestAComboboxWithNoOptionsOpensTheInput(t *testing.T) {
-	b := launch(t)
-	d := newDriver(t, New(b, fixture("combo.html")))
-	defer d.m.Close()
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.until("combo page", d.loaded("Combo"))
-	d.key("2")
-
-	d.cursorOn(ir.Textbox, "搜尋")
-	d.press("enter")
-	d.until("the input", d.shows("搜尋"))
-	if strings.Contains(d.view(), "No options") {
-		t.Error("no message about options")
-	}
-	d.press("esc")
-
-	d.cursorOn(ir.Combobox, "Pick")
-	d.press("enter")
-	d.until("the options", d.shows("CHOOSE"))
-}
-
-// Going back lands where the reader left, the way a browser restores its
-// scroll (user, 2026-09-23).
-func TestBackReturnsToThePlaceLeft(t *testing.T) {
-	b := launch(t)
-	d := newDriver(t, New(b, fixture("nav.html")))
-	defer d.m.Close()
-	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
-	d.until("page A", d.loaded("Page A"))
-	d.key("2")
-	p := d.page()
-
-	d.cursorOn(ir.Link, "a link to B")
-	leftCursor := p.cursor
-	d.press("enter")
-	d.until("open link?", d.shows("OPEN LINK"))
-	d.press("enter")
-	d.until("page B", d.loaded("Page B"))
-	if p.entry == 0 || len(p.places) != 1 {
-		t.Fatalf("leaving a page keeps its place under its entry: entry %d, places %d", p.entry, len(p.places))
-	}
-	d.key("P")
-	d.until("page A again", d.loaded("Page A"))
-	if p.cursor != leftCursor {
-		t.Errorf("back lands on the item the reader left: cursor %d, want %d", p.cursor, leftCursor)
-	}
-	d.key("N")
-	d.until("page B again", d.loaded("Page B"))
-	if n := p.current(); n == nil || n.Kind != ir.Heading {
-		t.Errorf("forward is back on B's start: %+v", n)
 	}
 }

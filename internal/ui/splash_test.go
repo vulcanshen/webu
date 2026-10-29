@@ -20,7 +20,7 @@ func TestTheSplashDrawsDocsIcon(t *testing.T) {
 	if !bytes.Equal(docs, icon) {
 		t.Error("internal/ui/icon.svg is not docs/icon.svg: copy docs/icon.svg over it")
 	}
-	if _, err := terminu.NewSplash(icon, "webu", version.Display(), "A terminal browser on a real Chromium"); err != nil {
+	if _, err := terminu.NewSplash(icon, "webu", version.Display(), "A terminal browser that reads web pages"); err != nil {
 		t.Errorf("the splash: %v", err)
 	}
 }

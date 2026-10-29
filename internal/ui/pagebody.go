@@ -1,13 +1,11 @@
 package ui
 
 import (
-	"context"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	terminu "github.com/vulcanshen/terminu-go"
-	"github.com/vulcanshen/webu/internal/page"
 )
 
 // Panel [2]: the page (ui.md §2). The frame, its name and tabs, the
@@ -23,15 +21,6 @@ type pageBody struct {
 	h int
 }
 
-// headRows is how many rows sit above the page: the URL row, and while a
-// section or a thing is being read, the row that names it.
-func (m *AppModel) headRows(t *tab) int {
-	if t != nil && t.popupNode() == nil && (t.drilled() || (t.read && t.sec < len(t.secs))) {
-		return 2
-	}
-	return 1
-}
-
 // Draw draws panel [2]'s inside at w × h.
 func (b *pageBody) Draw(w, h int, focused bool) []string {
 	m := b.m
@@ -44,9 +33,6 @@ func (b *pageBody) Draw(w, h int, focused bool) []string {
 	}
 	out := make([]string, 0, h)
 	out = append(out, m.urlRow(t, w))
-	if m.headRows(t) == 2 {
-		out = append(out, m.headRowOf(t, w))
-	}
 	rest := h - len(out)
 	switch {
 	case m.sel.on && t.root != nil:
@@ -60,22 +46,6 @@ func (b *pageBody) Draw(w, h int, focused bool) []string {
 		out = append(out, stateRows(w, rest, terminu.Fg(terminu.Overlay0).Render("loading…"), "")...)
 	case t.root == nil:
 		out = append(out, terminu.EmptyState(w, rest, "Nothing here yet", "Press [R] to load it")...)
-	case t.popupNode() != nil:
-		// The page under a popup: as it was, no cursor — the cursor is in
-		// the float — faded the way everything under a popup is.
-		back := m.pageRows(t.backdrop(), w, rest)
-		for i := range back {
-			back[i] = terminu.Dim(back[i])
-		}
-		for _, f := range m.pagePopupFloats(t, w) {
-			x := max(0, (w-f.w)/2) + f.dx
-			y := max(0, (rest-len(f.lines))/2) + f.dy
-			back = terminu.Composite(back, f.lines, x, y, w)
-		}
-		out = append(out, back...)
-	case t.listing():
-		// A document is its sections before it is a sheet (section.go).
-		out = append(out, m.sectionRows(t, w, rest)...)
 	default:
 		out = append(out, m.pageRows(t, w, rest)...)
 	}
@@ -102,9 +72,8 @@ func stateRows(w, h int, fact, hint string) []string {
 	return out
 }
 
-// urlRow is the page's address, behind the web glyph; while a section is
-// open it wears the section's anchor, a section being a place. In visual
-// mode a search shows its query and where it is instead.
+// urlRow is the page's address, behind the web glyph. In visual mode a
+// search shows its query and where it is instead.
 func (m *AppModel) urlRow(t *tab, w int) string {
 	if st := m.sel.status(); m.sel.on && st != "" {
 		sel := lipgloss.NewStyle().Foreground(selectColor)
@@ -112,52 +81,8 @@ func (m *AppModel) urlRow(t *tab, w int) string {
 	}
 	blue := lipgloss.NewStyle().Foreground(urlColor)
 	lead := " " + glyphWeb + " "
-	shown := fitURL(t.url+t.sectionAnchor(), w-dispW(lead))
+	shown := fitURL(t.url, w-dispW(lead))
 	return blue.Render(lead) + blue.Render(shown) + spaces(w-dispW(lead)-dispW(shown))
-}
-
-// headRowOf is the row under the URL while a section or a thing is being
-// read: which one, and its name.
-func (m *AppModel) headRowOf(t *tab, w int) string {
-	if t.drilled() {
-		// How deep, when it is more than one: the path has no bound and
-		// Esc comes back one level at a time.
-		var depth []string
-		if n := len(t.drill); n > 1 {
-			depth = append(depth, itoa(n)+"  ")
-		}
-		if t.drillHead >= 0 && t.drillHead < len(t.lay.rows) {
-			// The thing's first line IS the header row, drawn as the page
-			// draws it — its link a link, its cursor a cursor.
-			return m.headRow(t, w, depth...)
-		}
-		return m.insideRow(t, t.drillTitle(), pageClick, w, depth...)
-	}
-	s := t.secs[t.sec]
-	at := itoa(t.sec+1) + "/" + itoa(len(t.secs)) + "  "
-	return m.insideRow(t, s.title, levelColor(s.depth), w, at)
-}
-
-// insideRow names what panel [2] is showing a piece of: the menu glyph,
-// where it is, its name, and a rule to the edge.
-func (m *AppModel) insideRow(t *tab, title string, ink lipgloss.Color, w int, before ...string) string {
-	dim := lipgloss.NewStyle().Foreground(dimColor)
-	lead := " " + glyphMenu + " " + strings.Join(before, "")
-	nameStyle := lipgloss.NewStyle().Foreground(ink).Bold(true)
-	if t.loading {
-		nameStyle = dim
-	}
-	name := truncate(title, max(1, w-dispW(lead)-2))
-	return dim.Render(lead) + nameStyle.Render(name) +
-		dim.Render(" "+strings.Repeat("─", max(0, w-dispW(lead)-dispW(name)-1)))
-}
-
-// headRow is insideRow with a row of the page for its name: a drilled
-// thing's first line, live, so the cursor can stop on what it holds.
-func (m *AppModel) headRow(t *tab, w int, before ...string) string {
-	dim := lipgloss.NewStyle().Foreground(dimColor)
-	lead := " " + glyphMenu + " " + strings.Join(before, "")
-	return dim.Render(lead) + m.rowLine(t, t.drillHead, max(1, w-dispW(lead)), m.rowStyles(t))
 }
 
 // Key moves the cursor (tdp K12); the panel's actions take the rest.
@@ -173,23 +98,9 @@ func (b *pageBody) Key(key string, _ tea.KeyMsg) (bool, tea.Cmd) {
 	default:
 		return false, nil
 	}
-	if t.reader {
-		// Reading: the page scrolls, as in less (docs/reader.md).
-		m.readerScroll(t, k)
-		m.syncPage()
-		return true, nil
-	}
-	if t.listing() {
-		t.moveSection(k, m.pageVisible())
-		m.syncPage()
-		return true, nil
-	}
-	t.moveItem(k, m.pageVisible())
+	// Reading: the page scrolls, as in less (docs/reader.md).
+	m.readerScroll(t, k)
 	m.syncPage()
-	if n := t.current(); n != nil && n.ID != 0 {
-		id := n.ID
-		return true, t.act(func(ctx context.Context) error { return page.Reveal(ctx, id) })
-	}
 	return true, nil
 }
 
@@ -217,40 +128,30 @@ func (b *pageBody) Empty() bool {
 }
 
 // HasItem reports whether the cursor is on something item operations
-// apply to: a section on the list, an item on the page.
+// apply to: an item on the page, in Focus mode.
 func (b *pageBody) HasItem() bool {
 	t := b.m.shownTab()
 	if t == nil || t.root == nil {
 		return false
 	}
-	if t.listing() {
-		return len(t.secs) > 0
-	}
 	return t.current() != nil
 }
 
-// Scroll is where the panel is (tdp panel.1): the section under the
-// cursor on the list, the rows in sight on the page.
+// Scroll is where the panel is (tdp panel.1): the rows in sight, or in
+// Focus mode where the focused item goes.
 func (b *pageBody) Scroll() string {
 	m := b.m
 	t := m.shownTab()
 	if t == nil || t.root == nil || m.sel.on {
 		return ""
 	}
-	if t.reader && t.cursor >= 0 {
+	if t.cursor >= 0 {
 		// Focus mode: where the focused link or image goes (docs/reader.md).
 		if n := t.current(); n != nil && n.URL != "" {
 			return n.URL
 		}
 	}
-	vis := max(1, b.h-m.headRows(t))
-	if t.listing() {
-		vis-- // the header
-		if len(t.secs) <= vis {
-			return ""
-		}
-		return itoa(t.sec+1) + " of " + itoa(len(t.secs))
-	}
+	vis := max(1, b.h-1) // under the URL row
 	lo, hi := t.rowRange()
 	total := hi - lo + 1
 	if total <= vis {
@@ -260,102 +161,14 @@ func (b *pageBody) Scroll() string {
 	return itoa(from) + "-" + itoa(min(total, from+vis-1)) + " of " + itoa(total)
 }
 
-// MoveKeys are the page's movement keys (tdp K6, tdp K12).
+// MoveKeys are the page's movement keys (tdp K6, tdp K12): reading, they
+// scroll, as in less (docs/reader.md).
 func (b *pageBody) MoveKeys() []terminu.KeyRow {
-	if t := b.m.shownTab(); t != nil && t.listing() {
-		return []terminu.KeyRow{
-			{Key: "j|k", Desc: "next section, previous section"},
-			{Key: "u|d", Desc: "half a page up, down (PgUp, PgDn too)"},
-			{Key: "gg|G", Desc: "first section, last section"},
-		}
-	}
 	return []terminu.KeyRow{
-		{Key: "j|k", Desc: "next item, previous item, in reading order"},
+		{Key: "j|k", Desc: "a row down, up"},
 		{Key: "u|d", Desc: "half a page up, down (PgUp, PgDn too)"},
-		{Key: "gg|G", Desc: "first item, last item"},
+		{Key: "gg|G", Desc: "top, bottom of the page"},
 	}
-}
-
-// popupWidth is how wide a page's popup is laid out: a dialog's width,
-// inside the panel, never the panel's — a float as wide as what it
-// floats over is not a float.
-func popupWidth(panelW int) int {
-	return max(20, min(panelW-8, 76))
-}
-
-// popupFloat is one of the page's popups drawn as a float, and where it
-// sits: the stack cascades down and to the right, three cells and a row a
-// level, so the one under is still seen.
-type popupFloat struct {
-	lines  []string
-	w      int
-	dx, dy int
-}
-
-// pagePopupFloats is the page's popups as floats over the page, bottom to
-// top: the one on top with the cursor and a hint, the ones under it
-// dimmed, drawn as they were when they were on top (pagepopup.go). They
-// are the page's content, not webu's popups (tdp F1).
-func (m *AppModel) pagePopupFloats(t *tab, panelW int) []popupFloat {
-	if len(t.popups) == 0 || t.root == nil {
-		return nil
-	}
-	w := popupWidth(panelW)
-	vis := m.popupVisible()
-	var out []popupFloat
-	for i, id := range t.popups {
-		top := i == len(t.popups)-1
-		bt := t
-		if !top {
-			// Under the top one: the layout it had when it was on top,
-			// dimmed, no cursor — Chromium may have pruned it out of the
-			// tree behind the one over it.
-			lay, ok := t.popupLays[id]
-			if !ok {
-				continue
-			}
-			cp := *t
-			cp.lay, cp.gutter = lay, 0
-			cp.cursor, cp.top = -1, 0
-			cp.read, cp.drill = false, nil
-			bt = &cp
-		}
-		p := nodeByID(t.root, id)
-		st := m.rowStyles(bt)
-		rows := make([]string, 0, vis)
-		lo, hi := bt.rowRange()
-		end := min(hi+1, bt.top+vis)
-		for r := max(bt.top, lo); r < end; r++ {
-			// No line numbers: nothing in a dialog is reached by number.
-			rows = append(rows, m.rowLine(bt, r, w, st))
-		}
-		hint := ""
-		if top {
-			hint = "Enter:act Space:menu"
-		}
-		box := floatBox(terminu.LayerColor(i+1), glyphPopup+" "+bt.popupTitleOf(p), hint, rows, w)
-		if !top {
-			box = terminu.DimLines(box)
-		}
-		out = append(out, popupFloat{lines: box, w: w + 2, dx: 3 * i, dy: i})
-	}
-	return out
-}
-
-// floatBox frames a page popup's rows: a rounded box in its layer colour,
-// the title on the top edge, the hint on the bottom one.
-func floatBox(color terminu.Color, title, hint string, rows []string, w int) []string {
-	fg := terminu.Fg(color)
-	title = truncate(" "+title+" ", max(1, w-2))
-	out := []string{fg.Render("╭─" + title + strings.Repeat("─", max(0, w-1-dispW(title))) + "╮")}
-	for _, r := range rows {
-		out = append(out, fg.Render("│")+terminu.Pad(r, w)+fg.Render("│"))
-	}
-	bottom := "╰" + strings.Repeat("─", w) + "╯"
-	if hint != "" && dispW(hint)+4 <= w {
-		bottom = "╰─ " + hint + " " + strings.Repeat("─", max(0, w-3-dispW(hint))) + "╯"
-	}
-	return append(out, fg.Render(bottom))
 }
 
 // fitURL shrinks a URL to w cells. The host is kept whole; the path gives

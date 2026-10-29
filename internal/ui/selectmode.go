@@ -8,10 +8,7 @@ import (
 )
 
 // Selection mode (ux.md §1): a character cursor over the rendered page, so
-// text can be walked, searched, swept and copied. The page is FROZEN while
-// it is on — a capture that lands is kept aside (tab.frozen) and applied on
-// the way out — because a cursor on text that moves under it is a cursor
-// on nothing.
+// text can be walked, searched, swept and copied.
 //
 // The mode owns the keyboard: no global letter fires, Space opens the
 // mode's Space menu (? lists the keys), and Esc goes back a layer — a

@@ -159,8 +159,7 @@ func readerAt(t *testing.T, url, dl string) (*driver, *AppModel) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
 	t.Setenv("WEBU__STATE", "")
-	m := New(nil, url).WithStore(nil, nil, store.Config{DownloadDir: dl}, nil)
-	m.chromiumPages = false
+	m := New(url).WithStore(nil, nil, store.Config{DownloadDir: dl}, nil)
 	jar, err := reader.OpenJar(store.Path("cookies.json"))
 	if err != nil {
 		t.Fatal(err)

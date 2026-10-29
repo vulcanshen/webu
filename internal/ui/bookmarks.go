@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -12,7 +11,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	terminu "github.com/vulcanshen/terminu-go"
-	"github.com/vulcanshen/webu/internal/page"
 	"github.com/vulcanshen/webu/internal/store"
 )
 
@@ -541,21 +539,6 @@ func importDir() string {
 func (m *AppModel) startImport() tea.Cmd {
 	return m.a.PickFile(terminu.FilePicker{Title: "Import bookmarks", Glyph: glyphBookmark, Root: importDir(),
 		Done: m.cmdDone(m.importPicked)})
-}
-
-// uploadPicked hands the chosen file to the page's chooser.
-func (m *AppModel) uploadPicked(path string) tea.Cmd {
-	f := m.upload
-	m.upload = nil
-	if f == nil {
-		return nil
-	}
-	_, ft := m.tabByID(f.tabID)
-	if ft == nil {
-		return nil
-	}
-	node, files := f.node, []string{path}
-	return ft.press(func(ctx context.Context) error { return page.SetFiles(ctx, node, files) })
 }
 
 // importPicked reads the chosen file at once — a wrong file is news here,

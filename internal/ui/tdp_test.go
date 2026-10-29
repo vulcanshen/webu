@@ -8,16 +8,17 @@ import (
 	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/terminu-go/tdptest"
 	"github.com/vulcanshen/webu/internal/ir"
+	"github.com/vulcanshen/webu/internal/reader"
 	"github.com/vulcanshen/webu/internal/store"
 )
 
 // TestTDP is webu's first launch walked as tdptest does for every terminu
 // app (tdp L1, L4, E5): on many terminal sizes and icon widths, the Space
 // menu, the global operation popup, the App Log and ? on every screen and
-// panel, then under the least size and back. webu runs without Chromium
-// here, as New(nil) does: what is checked is the screen, not a page.
+// panel, then under the least size and back. webu runs with no page here:
+// what is checked is the screen, not a page.
 func TestTDP(t *testing.T) {
-	tdptest.Check(t, tdptest.App{Name: "webu", New: func() *terminu.App { return New(nil).Program() }})
+	tdptest.Check(t, tdptest.App{Name: "webu", New: func() *terminu.App { return New().Program() }})
 }
 
 // What webu shows from outside — a page's title, its text, a bookmark —
@@ -32,7 +33,7 @@ func TestTrickyTextFromOutside(t *testing.T) {
 		bms = append(bms, store.Bookmark{Title: v, URL: "https://example.com/" + itoa(i) + "/" + v})
 		paras = append(paras, para(text(v)))
 	}
-	m := New(nil).WithStore(bms, nil, store.Config{}, nil)
+	m := New().WithStore(bms, nil, store.Config{}, nil)
 	d := tdptest.Start(t, m.Program(), 100, 30)
 	// The \n drawn by name is the tricky data's own, from outside.
 	d.AllowLineBreaks = true
@@ -56,7 +57,7 @@ func TestTheAppLogHasWhatTheUserDid(t *testing.T) {
 	t.Setenv("WEBU__CONFIG", t.TempDir())
 	t.Setenv("WEBU__DATA", t.TempDir())
 	bms := []store.Bookmark{{Title: "Go", URL: "https://go.dev", Folder: "dev"}}
-	m := New(nil).WithStore(bms, nil, store.Config{}, nil)
+	m := New().WithStore(bms, nil, store.Config{}, nil)
 	d := tdptest.Start(t, m.Program(), 100, 30)
 	d.Do(func() tea.Cmd {
 		tb := &tab{id: 1, url: "https://example.com/", title: "Example", root: doc(hd(1, "Example"), para(text("Words"))), cursor: -1}
@@ -79,10 +80,11 @@ func TestTheAppLogHasWhatTheUserDid(t *testing.T) {
 // Esc unselects, back to Visual; Esc again leaves the mode. Once
 // selecting, v does nothing: it does not go back (tdp note.4, K7).
 func TestVisualModeGoesBackALayer(t *testing.T) {
-	m := New(nil)
+	m := New()
 	d := tdptest.Start(t, m.Program(), 100, 30)
 	d.Do(func() tea.Cmd {
-		tb := &tab{id: 1, url: "https://example.com/", title: "Example", root: doc(para(text("Some words to select"))), cursor: -1}
+		root := doc(para(text("Some words to select")))
+		tb := &tab{id: 1, url: "https://example.com/", title: "Example", root: root, doc: &reader.Doc{Content: root}, cursor: -1}
 		m.tabs = append(m.tabs, tb)
 		m.shown = 0
 		tb.relayout(m.pageW())

@@ -202,8 +202,6 @@ func hexRGB(s string) (int, int, int) {
 // the codepoint stays greppable and the file stays editor-safe (family
 // rule). One role, one glyph, one table (ux.md §B).
 var (
-	capLeft  = string(rune(0xe0b6)) // powerline round-left  — chip start
-	capRight = string(rune(0xe0b4)) // powerline round-right — chip end
 	// The seams slant like a / (revised 2026-09-21: the filled right
 	// triangle inherited from sshu read as an arrowhead here). A hard seam
 	// is the lit block's own edge, so it is a FILLED shape: the upper-left
@@ -212,13 +210,11 @@ var (
 	// tried first and left the block square. A soft seam, between two
 	// unlit chips, is the thin slash (chrome.go divider).
 	dividerHard = string(rune(0xe0bc)) // ple-upper_left_triangle
-	dividerSoft = string(rune(0xe0bb)) // ple-forwardslash_separator
 
 	// Popup titles — the type signal half of a surface label. Every
 	// codepoint below was read out of the Nerd Font glyph table
 	// (glyphnames.json), not remembered: the first draft of this file had
 	// six that were not what their comments said.
-	glyphMenu   = string(rune(0xf0c9))  // nf-fa-bars            — Space menu
 	glyphHelp   = string(rune(0xf059))  // nf-fa-question_circle — help
 	glyphWarn   = string(rune(0xf071))  // nf-fa-warning         — confirm
 	glyphInfo   = string(rune(0xf05a))  // nf-fa-info_circle     — toast
@@ -226,27 +222,13 @@ var (
 	glyphPencil = string(rune(0xf040))  // nf-fa-pencil          — input popup
 	glyphList   = string(rune(0xf0279)) // nf-md-format_list_bulleted — outline
 
-	// The page's four parts (parts.go), one Material Design family so
-	// the set reads as one set. Worn twice: on the pagetab, where they
-	// replaced a single hamburger that said only "this row is a menu",
-	// and in the search list, where a hit has to say which part of the
-	// page it was found in (user, 2026-09-23).
-	glyphHeader = string(rune(0xf06fc)) // nf-md-page_layout_header
-	glyphBody   = string(rune(0xf06fa)) // nf-md-page_layout_body
-	glyphOthers = string(rune(0xf06fd)) // nf-md-page_layout_sidebar_left
-	glyphFooter = string(rune(0xf06fb)) // nf-md-page_layout_footer
-
 	// The header's three popups (ux.md §B: one role, one glyph).
 	glyphBookmark = string(rune(0xf00c0)) // nf-md-bookmark
 	glyphHistory  = string(rune(0xf02da)) // nf-md-history
 	glyphDownload = string(rune(0xf01da)) // nf-md-download
-	glyphUpload   = string(rune(0xf0a4d)) // nf-md-file_upload — a page's file chooser, answered with the picker
 	glyphSettings = string(rune(0xf0493)) // nf-md-cog
 	glyphFolder   = string(rune(0xf024b)) // nf-md-folder — a bookmark folder's row
-	glyphTable    = string(rune(0xf04eb)) // nf-md-table — a cell's content popup
-	glyphPopup    = string(rune(0xf10ac)) // nf-md-dock_window — a page's own popup, floated (pagepopup.go)
-	// The test tube is what ui.md §3.2 drew for DevTools (U+F0668).
-	glyphDevTools = string(rune(0xf0668)) // nf-md-test_tube
+	glyphCode     = "\U000f0169"          // nf-md-code_braces — the page's source
 
 	// Panel [1]: a tab still loading; also panel [2]'s URL row while the
 	// page is on its way. The same codepoint as kbu's Logs live glyph
@@ -264,19 +246,7 @@ var (
 	// reads as text that has brackets in it, and worse, "[]" was doing
 	// three jobs at once: a button's frame, an image's frame, and a check
 	// box's state. One role, one glyph, and the ink says the rest.
-	glyphLink        = string(rune(0xf0337)) // nf-md-link
-	glyphInput       = string(rune(0xf060e)) // nf-md-form_textbox
-	glyphButton      = string(rune(0xf12a8)) // nf-md-gesture_tap_button
-	glyphSelect      = string(rune(0xf1400)) // nf-md-form_dropdown
-	glyphCheckOn     = string(rune(0xf0135)) // nf-md-checkbox_marked_outline
-	glyphCheckOff    = string(rune(0xf0131)) // nf-md-checkbox_blank_outline
-	glyphCheckMixed  = string(rune(0xf06f2)) // nf-md-minus_box_outline
-	glyphRadioOn     = string(rune(0xf043e)) // nf-md-radiobox_marked
-	glyphRadioOff    = string(rune(0xf043d)) // nf-md-radiobox_blank
-	glyphImage       = string(rune(0xf02e9)) // nf-md-image
-	glyphVideo       = string(rune(0xf0567)) // nf-md-video
-	glyphAudio       = string(rune(0xf0387)) // nf-md-music_note
-	glyphFrame       = string(rune(0xf0614)) // nf-md-application_outline
-	glyphCanvas      = string(rune(0xf01de)) // nf-md-drawing
-	glyphUnsupported = string(rune(0xf0ba6)) // nf-md-help_rhombus_outline
+	glyphLink   = string(rune(0xf0337)) // nf-md-link
+	glyphSelect = string(rune(0xf1400)) // nf-md-form_dropdown
+	glyphImage  = string(rune(0xf02e9)) // nf-md-image
 )

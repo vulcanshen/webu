@@ -143,7 +143,7 @@ type foundRange struct {
 // findHits is row's hits on t, for drawing; none outside a reader search,
 // and none in Visual mode, which draws its own.
 func (m *AppModel) findHits(t *tab, row int) []foundRange {
-	if t == nil || !t.reader || t.find == nil || m.sel.on {
+	if t == nil || t.find == nil || m.sel.on {
 		return nil
 	}
 	var out []foundRange

@@ -85,9 +85,7 @@ func (m *AppModel) enterSelect() tea.Cmd {
 }
 
 // leaveSelect ends the mode: the item cursor lands nearest the character
-// cursor, and a capture held back while it was on comes back as the
-// message it was, for applyPage to take like any other — the visit written,
-// a failed write or look said.
+// cursor.
 func (m *AppModel) leaveSelect() tea.Cmd {
 	if !m.sel.on {
 		return nil
@@ -104,11 +102,6 @@ func (m *AppModel) leaveSelect() tea.Cmd {
 		t.cursor = i
 	}
 	t.scrollToCursor(m.pageVisible())
-	if t.frozen != nil {
-		msg := *t.frozen
-		t.frozen = nil
-		return func() tea.Msg { return msg }
-	}
 	return nil
 }
 

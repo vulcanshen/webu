@@ -7,23 +7,16 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chromedp/cdproto/cdp"
 	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/ir"
 	"github.com/vulcanshen/webu/internal/reader"
 )
 
-// The reader (docs/reader.md): a tab whose pages come over net/http, the
-// content picked out of the site around it and shown, for now, as
-// markdown. Chromium draws a tab's pages only where chromiumPages says
-// so, until stage 4 settles which pages it is still for.
+// The reader (docs/reader.md): every tab's pages come over net/http, the
+// content picked out of the site around it and drawn as webu's own
+// elements (readerrender.go).
 
-// chromiumPagesDefault is what a new AppModel's chromiumPages starts as:
-// the tests from before the reader set it, their pages being Chromium's.
-var chromiumPagesDefault = false
-
-// readerUA is what the reader calls itself without a Chromium to borrow
-// the words from: a browser, and webu.
+// readerUA is what the reader calls itself: a browser, and webu.
 const readerUA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 webu"
 
 // place is where the reader was on a page of a tab's history, for going
@@ -46,13 +39,12 @@ type readerMsg struct {
 	err    error
 }
 
-// newReaderTab is a tab of the reader's: no Chromium behind it, a context
-// of its own that ends with it.
+// newReaderTab is a new tab, a context of its own that ends with it.
 func (m *AppModel) newReaderTab() *tab {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1,
-		fold: map[cdp.BackendNodeID]bool{}, measure: m.cfg.TextWidth(), tabW: m.cfg.TabWidth(), tick: m.a.Tick,
-		reader: true, rc: m.rc, histAt: -1}
+		measure: m.cfg.TextWidth(), tabW: m.cfg.TabWidth(), tick: m.a.Tick,
+		rc: m.rc, histAt: -1}
 	m.nextTabID++
 	return t
 }
@@ -220,11 +212,9 @@ func (m *AppModel) remark(t *tab) {
 	t.scrollToCursor(m.pageVisible())
 }
 
-// relayoutReader lays the tab's markdown out at width, behind the column
-// of line numbers, as relayout does a Chromium page.
+// relayoutReader lays the tab's page out at width, behind the column of
+// line numbers.
 func (t *tab) relayoutReader(width int) {
-	t.parts, t.secs, t.shape, t.read, t.drill = nil, nil, shapeOne, false, nil
-	t.back, t.backParts = layout{}, nil
 	draw := func(g int) layout { return renderReader(t.root, t.doc, max(1, width-g), t.tabW) }
 	g := t.gutter
 	lay := draw(g)
@@ -232,7 +222,6 @@ func (t *tab) relayoutReader(width int) {
 		g, lay = g2, draw(g2)
 	}
 	t.lay, t.gutter, t.layW = lay, g, width
-	t.drillHead, t.drillBody = -1, 0
 	if t.find != nil {
 		// The rows moved: the hits are found again, the one the search was
 		// on kept as near as there is.

@@ -1,6 +1,9 @@
 package ui
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 // Small helpers shared by every surface. They live here rather than next to
 // their first user so a second user does not have to know where the first
@@ -69,3 +72,5 @@ func fitLines(body []string, w, h int) []string {
 	}
 	return out
 }
+
+func fmtNum(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }

@@ -138,7 +138,7 @@ func TestSelectSearchSmartCaseAndClick(t *testing.T) {
 
 func TestSelectRowsDrawTheCursor(t *testing.T) {
 	tb := selectFixture()
-	m := New(nil, "")
+	m := New("")
 	m.tabs = append(m.tabs, tb)
 	m.shown = 0
 	m.sel.enter(tb)
@@ -184,47 +184,5 @@ func TestHighlightJSONKeysAndValues(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("yaml key not marked: %+v", y[0])
-	}
-	// A folded highlighted line keeps its segments' kinds.
-	folded := foldSegs([]seg{{text: `"key"`, kind: segCodeKey}, {text: `: "` + strings.Repeat("v", 30) + `"`, kind: segCodeString}}, 12)
-	if len(folded) < 3 || folded[0][0].kind != segCodeKey {
-		t.Errorf("fold: %+v", folded)
-	}
-	for i, l := range folded {
-		w := 0
-		for _, s := range l {
-			w += dispW(s.text)
-		}
-		if w > 12 {
-			t.Errorf("folded row %d is %d wide", i, w)
-		}
-	}
-}
-
-func TestCodeRowsAndTableHeaders(t *testing.T) {
-	root := &ir.Node{Kind: ir.Document, Children: []*ir.Node{
-		{Kind: ir.Code, Children: []*ir.Node{{Kind: ir.Text, Name: "one\ntwo"}}},
-		{Kind: ir.Table, Children: []*ir.Node{{Kind: ir.Row, Children: []*ir.Node{
-			{Kind: ir.Cell, Header: true, Children: []*ir.Node{{Kind: ir.Text, Name: "H"}}},
-			{Kind: ir.Cell, Children: []*ir.Node{{Kind: ir.Text, Name: "c"}}},
-		}}}},
-	}}
-	l := render(root, 40)
-	if !l.rows[0].code || !l.rows[1].code {
-		t.Errorf("code block rows should be flagged: %+v", l.rows[:2])
-	}
-	var header, cell segKind = segPlain, segPlain
-	for _, r := range l.rows {
-		for _, s := range r.segs {
-			if s.text == "H" {
-				header = s.kind
-			}
-			if s.text == "c" {
-				cell = s.kind
-			}
-		}
-	}
-	if header != segTableHeader || cell != segPlain {
-		t.Errorf("header kind %d, cell kind %d", header, cell)
 	}
 }

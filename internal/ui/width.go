@@ -80,12 +80,6 @@ func clipANSI(s string, w int) string {
 	return terminu.Cut(s, 0, w)
 }
 
-// padRight fits s into exactly w cells, truncating or right-padding as needed.
-func padRight(s string, w int) string {
-	s = truncate(s, w)
-	return s + strings.Repeat(" ", max(0, w-dispW(s)))
-}
-
 // padLeft fits s into exactly w cells, right-aligned.
 func padLeft(s string, w int) string {
 	s = truncate(s, w)
@@ -108,3 +102,9 @@ func cutLeft(s string, n int) string {
 
 // spaces is n blank cells.
 func spaces(n int) string { return strings.Repeat(" ", max(0, n)) }
+
+// padRight fits s into exactly w cells, truncating or right-padding as needed.
+func padRight(s string, w int) string {
+	s = truncate(s, w)
+	return s + strings.Repeat(" ", max(0, w-dispW(s)))
+}

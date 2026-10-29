@@ -18,7 +18,7 @@ var icon []byte
 // splash is the family's easter egg, V on a panel (tdp S): the lib draws
 // and plays it.
 func splash() terminu.Splash {
-	s, err := terminu.NewSplash(icon, "webu", version.Display(), "A terminal browser on a real Chromium")
+	s, err := terminu.NewSplash(icon, "webu", version.Display(), "A terminal browser that reads web pages")
 	if err != nil {
 		panic(err) // the embedded icon or the words are wrong: a mistake in the program
 	}

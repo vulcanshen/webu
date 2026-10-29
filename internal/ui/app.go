@@ -12,9 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	terminu "github.com/vulcanshen/terminu-go"
-	"github.com/vulcanshen/webu/internal/browser"
 	"github.com/vulcanshen/webu/internal/ir"
-	"github.com/vulcanshen/webu/internal/page"
 	"github.com/vulcanshen/webu/internal/paths"
 	"github.com/vulcanshen/webu/internal/reader"
 	"github.com/vulcanshen/webu/internal/store"
@@ -49,8 +47,7 @@ type AppModel struct {
 	tabs      []*tab
 	shown     int // index into tabs panel [2] displays; -1 for none
 	nextTabID int
-	browser   *browser.Browser
-	events    chan tea.Msg  // page and browser events, read by waitEvent
+	events    chan tea.Msg  // a reader download's progress, read by waitEvent
 	startURLs []string      // what the command line asked for, a tab each (function.md §12)
 	session   store.Session // what to restore on the first frame
 	started   bool
@@ -58,14 +55,12 @@ type AppModel struct {
 	zoom bool
 	// sel is visual mode on the shown tab (ux.md §1; visual.go).
 	sel selectMode
-	// rc is the reader's client (docs/reader.md): the pages of a tab that
-	// is not Chromium's come through it, with its cookies. chromiumPages
-	// says a new tab is Chromium's instead (reader.go); rdCancel stops a
-	// download of the reader's, by its row, and rdSeq names the next.
-	rc            *reader.Client
-	chromiumPages bool
-	rdCancel      map[string]context.CancelFunc
-	rdSeq         int
+	// rc is the reader's client (docs/reader.md): every tab's pages come
+	// through it, with its cookies. rdCancel stops a download of the
+	// reader's, by its row, and rdSeq names the next.
+	rc       *reader.Client
+	rdCancel map[string]context.CancelFunc
+	rdSeq    int
 	// favColor is each site's icon colour by host, for its tabs' mark;
 	// favTried the sites already asked, this session (siteicon.go).
 	favColor map[string]lipgloss.Color
@@ -77,13 +72,6 @@ type AppModel struct {
 	cfg       store.Config
 	history   []store.Visit
 
-	// dialog is the page's question being asked (function.md §5); the page
-	// is stalled until it is answered, and settle captures wait too.
-	dialog *dialogMsg
-	// auth is the HTTP challenge being answered.
-	auth *authMsg
-	// upload is the file chooser waiting on a path.
-	upload *fileMsg
 	// closed is the tabs closed this session, for [U]ndo close in [1].
 	closed []store.SessionTab
 	// dls is this session's downloads, oldest first: the Downloads screen
@@ -97,8 +85,10 @@ type AppModel struct {
 	unread        []Unread
 	sessionUnread bool
 	// moves are what main moved to where tdp E3 puts it now, or could not:
-	// said on the first frame.
-	moves []paths.Move
+	// said on the first frame; dropped the Chromium an older webu fetched,
+	// which main deleted.
+	moves   []paths.Move
+	dropped []paths.Dropped
 
 	// The screens (web.go, bookmarks.go, history.go, downloads.go,
 	// settings.go).
@@ -122,11 +112,11 @@ type AppModel struct {
 	setPanel   *terminu.Panel
 }
 
-// New builds the app over a running browser. Every start argument — a
-// URL, or words to search for, the same reading as the Location box —
-// opens as a new tab after whatever the session restores, the first of
-// them shown (function.md §12). Empty strings are ignored.
-func New(b *browser.Browser, start ...string) *AppModel {
+// New builds the app. Every start argument — a URL, or words to search
+// for, the same reading as the Location box — opens as a new tab after
+// whatever the session restores, the first of them shown (function.md
+// §12). Empty strings are ignored.
+func New(start ...string) *AppModel {
 	var urls []string
 	for _, s := range start {
 		if strings.TrimSpace(s) != "" {
@@ -135,21 +125,15 @@ func New(b *browser.Browser, start ...string) *AppModel {
 	}
 	m := &AppModel{
 		shown:     -1,
-		browser:   b,
 		events:    make(chan tea.Msg, 16),
 		startURLs: urls,
 		// A jar that forgets until main hands over the one in the file.
-		rc:            reader.NewClient(reader.EmptyJar(""), readerUA),
-		chromiumPages: chromiumPagesDefault,
-		rdCancel:      map[string]context.CancelFunc{},
-		favColor:      map[string]lipgloss.Color{},
-		favTried:      map[string]bool{},
-	}
-	if b != nil && b.UserAgent != "" {
-		m.rc.UA = b.UserAgent
+		rc:       reader.NewClient(reader.EmptyJar(""), readerUA),
+		rdCancel: map[string]context.CancelFunc{},
+		favColor: map[string]lipgloss.Color{},
+		favTried: map[string]bool{},
 	}
 	m.build()
-	m.listenBrowser()
 	return m
 }
 
@@ -164,9 +148,6 @@ func (m *AppModel) WithStore(bookmarks []store.Bookmark, folders []string, cfg s
 // WithReader hands the app the reader's client, its jar the cookies'
 // file (docs/reader.md).
 func (m *AppModel) WithReader(c *reader.Client) *AppModel {
-	if m.browser != nil && m.browser.UserAgent != "" {
-		c.UA = m.browser.UserAgent
-	}
 	if c.UA == "" {
 		c.UA = readerUA
 	}
@@ -204,15 +185,15 @@ func (m *AppModel) Run() error { return m.a.Run() }
 // tests drive it message by message).
 func (m *AppModel) Program() *terminu.App { return m.a }
 
-// Close releases every tab. Chromium itself is the caller's to stop.
+// Close releases every tab.
 func (m *AppModel) Close() {
 	for _, t := range m.tabs {
 		t.close()
 	}
 }
 
-// build registers webu with the lib: the five screens and DevTools, the
-// quit flow, the splash, what to do with webu's own messages.
+// build registers webu with the lib: the five screens, the quit flow,
+// the splash, what to do with webu's own messages.
 func (m *AppModel) build() {
 	a := terminu.New("webu")
 	m.a = a
@@ -278,6 +259,19 @@ func (m *AppModel) startNews() tea.Cmd {
 	}
 	if len(m.unread) > 0 {
 		cmds = append(cmds, m.moveAside(0))
+	}
+	// The Chromium an older webu fetched is a cache, deleted by main; its
+	// profile and its log are data, named at every start and not deleted
+	// (tdp E3, files no longer used).
+	for _, d := range m.dropped {
+		if d.Err != nil {
+			m.a.Log(terminu.Warning, "Could not delete all of "+paths.Short(d.Path)+", the Chromium webu no longer uses: "+d.Err.Error())
+			continue
+		}
+		m.a.Log(terminu.Info, "Deleted "+paths.Short(d.Path)+", the Chromium webu no longer uses ("+humanBytes(float64(d.Size))+")")
+	}
+	if dir, err := paths.Data(); err == nil {
+		m.a.NoLongerUsed(filepath.Join(dir, "profile"), filepath.Join(dir, "webu.log"))
 	}
 	return tea.Batch(cmds...)
 }
@@ -421,35 +415,8 @@ func (m *AppModel) onMsg(msg tea.Msg) tea.Cmd {
 
 func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case dialogMsg:
-		return tea.Batch(waitEvent(m.events), m.askDialog(msg))
-
-	case newTargetMsg:
-		// A window the page opened becomes a tab at the end of the list, and
-		// panel [2] switches to it, the way Chrome does (ux.md §6).
-		t := m.newTabFor(msg.id)
-		t.url = msg.url
-		m.tabs = append(m.tabs, t)
-		left := m.leaveSelect()
-		m.shown = len(m.tabs) - 1
-		return tea.Batch(left, waitEvent(m.events), t.adopt(), m.goWeb(), m.focusPage())
-
 	case downloadMsg:
 		return tea.Batch(waitEvent(m.events), m.noteDownload(msg))
-
-	case authMsg:
-		// Name and password; the request waits.
-		m.auth = &msg
-		return tea.Batch(waitEvent(m.events), m.askAuth(msg))
-
-	case fileMsg:
-		// The page asks for a file: the file-picker, walked rather than
-		// typed (user, 2026-09-23). One file at a time, even where the page
-		// would take several.
-		m.upload = &msg
-		return tea.Batch(waitEvent(m.events), m.a.PickFile(terminu.FilePicker{
-			Title: "Upload", Glyph: glyphUpload, Root: importDir(),
-			Done: m.cmdDone(m.uploadPicked)}))
 
 	case clipboardDoneMsg:
 		if msg.err != nil {
@@ -464,42 +431,6 @@ func (m *AppModel) handle(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		return m.a.Error(msg.what+" failed", msg.err.Error())
-
-	case navFailMsg:
-		_, t := m.tabByID(msg.tabID)
-		if t == nil || msg.gen != t.gen {
-			return nil
-		}
-		t.loading, t.navigating = false, false
-		if errors.Is(msg.err, page.ErrNoEntry) {
-			return m.toast("Nothing to go " + msg.what + " to")
-		}
-		return m.a.Error("Going "+msg.what+" failed", msg.err.Error())
-
-	case pageEventMsg:
-		// Chromium says the tab moved or changed; look again shortly. Always
-		// re-arm the listener, or the next event has nowhere to go.
-		_, t := m.tabByID(msg.tabID)
-		if t == nil {
-			return waitEvent(m.events)
-		}
-		return tea.Batch(waitEvent(m.events), t.settle(250*time.Millisecond))
-
-	case settleMsg:
-		_, t := m.tabByID(msg.tabID)
-		if t == nil || msg.gen != t.gen {
-			return nil
-		}
-		// A page with a dialog up answers no CDP call that touches it; the
-		// capture would only time out. It is re-asked once the dialog is.
-		if m.dialog != nil && m.dialog.tabID == t.id {
-			t.loading = false
-			return nil
-		}
-		return t.refresh()
-
-	case pageMsg:
-		return m.applyPage(msg)
 
 	case readerMsg:
 		return m.applyReader(msg)
@@ -518,97 +449,6 @@ func (m *AppModel) cmdDone(f func(string) tea.Cmd) func(string) tea.Cmd {
 		m.sync()
 		return cmd
 	}
-}
-
-// applyPage is a capture landing on its tab.
-func (m *AppModel) applyPage(msg pageMsg) tea.Cmd {
-	i, t := m.tabByID(msg.tabID)
-	if t == nil || msg.gen != t.gen {
-		return nil
-	}
-	// Visual mode holds the page still (ux.md §1): the capture is kept and
-	// applied when the mode ends.
-	if m.sel.on && i == m.shown {
-		t.frozen = &msg
-		return nil
-	}
-	fresh := msg.url != "" && msg.url != t.lastVisit
-	if msg.err != nil && !errors.Is(msg.err, context.Canceled) {
-		// The page panel says it failed; the App Log keeps what and why
-		// (tdp E3: what is outside webu, a panel error with details logged).
-		m.a.Log(terminu.Error, "Loading "+nameOr(msg.url, t.url)+": "+msg.err.Error())
-	}
-	t.apply(msg, m.pageW())
-	if !fresh {
-		t.scrollToCursor(m.pageVisible())
-	}
-	if id := t.wantDrill; id != 0 && !t.working() {
-		// The frame Enter asked for: in, now that its document is here —
-		// or not, when the frame answered nothing.
-		t.wantDrill = 0
-		if n := nodeByID(t.root, id); n != nil && len(n.Children) > 0 {
-			t.drillInto(n, m.pageW(), m.pageVisible())
-		} else {
-			// A failure, so an Error toast (tdp toast.2).
-			return m.toastErr("The frame could not be entered; its address is a [Space] › Yank away")
-		}
-	}
-	if t.stillComing() {
-		// An application's shell: <body> exists and nothing is drawn yet.
-		// Keep saying so, and look again.
-		t.loading = true
-		return t.settle(300 * time.Millisecond)
-	}
-	if t.settling() {
-		// The page is still being built: this look does not agree with the
-		// last one. Look again, and go on saying so.
-		return t.settle(300 * time.Millisecond)
-	}
-	visited := m.recordVisit(t)
-	if t.refreshErr != "" {
-		// The page looked at again and could not be had: the one on screen
-		// stays, and a toast says so (tdp panel.15).
-		e := t.refreshErr
-		t.refreshErr = ""
-		return tea.Batch(visited, m.toastErr("Could not look at the page again: "+e))
-	}
-	if visited != nil {
-		return visited
-	}
-	if i == m.shown && t.certErr && !t.certAsked {
-		t.certAsked = true
-		// The address that failed, kept now: the error page Chromium draws
-		// instead is captured too, and by the time the question is answered
-		// the tab's URL is chrome-error://.
-		id, failed := t.id, t.url
-		return m.a.Confirm(terminu.Ask{Title: "Continue",
-			Details:  []string{"Chromium does not trust this site's certificate.", failed},
-			Question: "Continue anyway, for this tab, for as long as it is open?",
-			Verb:     "continue", Warn: []int{0}}, m.do(func() tea.Cmd { return m.trustCert(id, failed) }))
-	}
-	if n := t.current(); i == m.shown && msg.err == nil && n != nil {
-		id := n.ID
-		return t.act(func(ctx context.Context) error { return page.Reveal(ctx, id) })
-	}
-	return nil
-}
-
-// trustCert is the certificate confirm's Enter: the tab ignores
-// certificate errors from now on and loads the address that failed again.
-func (m *AppModel) trustCert(tabID int, url string) tea.Cmd {
-	_, t := m.tabByID(tabID)
-	if t == nil {
-		return nil
-	}
-	m.a.Log(terminu.Warning, "Went on to "+url+" though Chromium does not trust its certificate")
-	ctx := t.ctx
-	ignore := func() tea.Msg {
-		if err := page.IgnoreCertErrors(ctx); err != nil {
-			return actionErrMsg{what: "Continue", err: err}
-		}
-		return nil
-	}
-	return tea.Sequence(ignore, t.load(url))
 }
 
 // firstFrame opens what the app starts with: the session's tabs, unloaded
@@ -637,30 +477,8 @@ func (m *AppModel) firstFrame() tea.Cmd {
 	} else if t := m.shownTab(); t != nil && t.pending {
 		cmds = append(cmds, t.load(t.url))
 	}
-	if m.browser != nil {
-		cmds = append(cmds, m.pointDownloads())
-	}
 	m.sync()
 	return tea.Batch(cmds...)
-}
-
-// pointDownloads tells the browser where downloads go (ui.md §6): on the
-// first frame, and again when the setting changes.
-func (m *AppModel) pointDownloads() tea.Cmd {
-	if m.browser == nil {
-		return nil
-	}
-	ctx, dir := m.browser.Ctx, m.downloadDir()
-	return func() tea.Msg {
-		// Chromium does not create the directory it is pointed at.
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return actionErrMsg{what: "Download folder", err: err}
-		}
-		if err := page.SetDownloads(ctx, dir); err != nil {
-			return actionErrMsg{what: "Download folder", err: err}
-		}
-		return nil
-	}
 }
 
 // downloadDir is config.yaml's download_dir, or ~/.webu/datas/downloads
@@ -730,6 +548,12 @@ func (m *AppModel) WithUnread(files []Unread) *AppModel {
 // popup names both places of one it could not move.
 func (m *AppModel) WithMoves(moves []paths.Move) *AppModel {
 	m.moves = moves
+	return m
+}
+
+// WithDropped is the Chromium main deleted, for the App Log.
+func (m *AppModel) WithDropped(dropped []paths.Dropped) *AppModel {
+	m.dropped = dropped
 	return m
 }
 
@@ -808,7 +632,7 @@ func (m *AppModel) closeTab(i int) tea.Cmd {
 	if i < 0 || i >= len(m.tabs) {
 		return nil
 	}
-	// The shown tab's held capture is for a tab going away: dropped.
+	// Visual mode on a tab going away ends with it.
 	if i == m.shown {
 		_ = m.leaveSelect()
 	}
@@ -872,8 +696,7 @@ func inspectLines(n *ir.Node) []string {
 	for _, f := range []struct {
 		on   bool
 		name string
-	}{{n.Focusable, "focusable"}, {n.Disabled, "disabled"}, {n.Expanded, "expanded"},
-		{n.Selected, "selected"}, {n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}} {
+	}{{n.Disabled, "disabled"}, {n.Selected, "selected"}, {n.Multiline, "multiline"}, {n.Protected, "protected"}} {
 		if f.on {
 			states = append(states, f.name)
 		}
@@ -884,5 +707,5 @@ func inspectLines(n *ir.Node) []string {
 	if len(states) > 0 {
 		lines = append(lines, "state    "+strings.Join(states, ", "))
 	}
-	return append(lines, "node     #"+itoa(int(n.ID)))
+	return lines
 }

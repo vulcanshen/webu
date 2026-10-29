@@ -1,25 +1,20 @@
-// Package ir is webu's intermediate representation: the accessibility tree
-// Chromium keeps for screen readers, reduced to the twenty-odd kinds a
-// terminal can draw, with every interactive node still carrying the
-// backendDOMNodeId that lets an action be sent back (function.md §3).
+// Package ir is webu's content tree: what a page presents, reduced to the
+// twenty-odd kinds a terminal can draw. The reader builds it from a
+// page's HTML (internal/reader).
 //
 // There is no layout in here — no widths, colours or coordinates. Rendering
 // is the UI's job; this package answers "what is on the page and what can be
-// done to it". The source is the AX tree today; anything else that produces
-// the same Node tree would draw the same.
+// done to it".
 package ir
 
 import (
 	"fmt"
 	"strings"
-
-	"github.com/chromedp/cdproto/cdp"
 )
 
-// Kind is what a node IS for the purpose of drawing and acting on it. One AX
-// role maps to one Kind (roles.go); several roles may share a Kind, and the
-// Role field keeps the original spelling for the Inspect popup and the
-// unsupported glyph.
+// Kind is what a node IS for the purpose of drawing and acting on it.
+// Several elements may share a Kind, and the Role field keeps the one the
+// page wrote, for the Inspect popup.
 type Kind uint8
 
 const (
@@ -35,7 +30,7 @@ const (
 	Combobox                // <select>; Children are its Options
 	Option                  // one <option>, only ever under a Combobox
 	List                    // list; Children are ListItems
-	ListItem                // one bullet; Marker is what Chromium drew for it
+	ListItem                // one bullet; Marker is its bullet or number
 	Table                   // table; Children are Rows
 	Row                     // one row; Children are Cells
 	Cell                    // cell / columnheader / rowheader; Header says which
@@ -85,87 +80,38 @@ func (t Tri) String() string {
 // Node is one thing on the page.
 type Node struct {
 	Kind Kind
-	// Role is the AX role exactly as Chromium spelled it — "searchbox", not
-	// "textbox" — for the Inspect popup and the unsupported marker.
+	// Role is what the page wrote it as — "searchbox", not "textbox" — for
+	// the Inspect popup.
 	Role string
 	// Name is the accessible name: link text, button label, the label of an
-	// input, alt of an image, the heading's text. Already computed by
-	// Chromium, so a label wired with aria-labelledby arrives resolved.
+	// input, alt of an image, the heading's text.
 	Name string
 	// Value is an input's current text, a combobox's chosen option.
 	Value string
-	// URL is a link's href or an image's src, as the AX node carries it.
+	// URL is a link's href or an image's src, made absolute.
 	URL string
 	// Level is a heading's 1–6.
 	Level int
-	// ID is the backendDOMNodeId: the one link back to Chromium, and what every
-	// action is addressed to. Zero for nodes with no DOM node behind them.
-	ID cdp.BackendNodeID
 
 	Checked   Tri
 	Multiline bool // Textbox: a textarea or a contenteditable
 	Protected bool // Textbox: a password field — the value is shown masked
-	// Invalid: the page marked the field's value wrong (aria-invalid, or
-	// the browser's own validation). Drawn in the colour of "is wrong".
-	Invalid bool
-	// Focused: the page's keyboard is here (the AX tree's focused). A
-	// block that appears after a press and takes the keyboard is asking
-	// for an answer — how a popup is told from a chat bubble (ui popup).
-	Focused bool
-	// Modal: the page declared this a modal dialog (aria-modal, or
-	// <dialog>.showModal()). Chromium prunes the rest of the tree behind
-	// one, so it is the one popup that needs no geometry to be seen.
-	Modal bool
-	// Expandable: the page can open and shut this (aria-expanded is
-	// there at all); Expanded is whether it is open. A tree's branch
-	// against its leaf: the leaf has no aria-expanded to be false.
-	Expandable bool
-	// Multi: many of these can be chosen at once — a listbox declared
-	// multiselectable, on it and on each of its options (Build). An
-	// option of one draws as a check box; of a single-choice list, as a
-	// radio button.
-	Multi bool
-	// Frame is the frame an <iframe> holds, by Chromium's frame id
-	// (Capture.FrameOf): the one Media that is a thing to go into. Its
-	// Children are that frame's document once it has been opened.
-	Frame string
-	// Min and Max are a slider's range — aria-valuemin/valuemax, or an
-	// <input type=range>'s min and max — and Value is where it stands.
-	Min, Max float64
 	// InputType is what an <input> declared it takes — "email", "date",
 	// "number" — lower-cased, empty when the page said nothing or the
-	// field is not an <input> (Capture.Types).
+	// field is not an <input>.
 	InputType string
-	// Current is aria-current: where the user is, in a navigation or a
-	// breadcrumb (on the link, or on its list item). From the DOM, not
-	// the AX tree (Capture.Current).
-	Current bool
-	// Breadcrumb marks a navigation landmark that is a breadcrumb trail:
-	// named so, or so marked in the DOM (Capture.Breadcrumb). A trail
-	// outside any navigation is wrapped in one at build time.
-	Breadcrumb bool
-	// Skip marks a link the page calls a skip link by class; a link whose
-	// text starts with "skip" and points at an anchor is one regardless
-	// (ui isSkipLink).
-	Skip     bool
-	Disabled bool
-	// Required: the form will not go without this one. The AX tree says
-	// so and a page usually says so in ink webu does not read, so the
-	// label carries it (ui render.formField).
-	Required  bool
-	Focusable bool
-	Expanded  bool // a combobox or disclosure that is open
+	Disabled  bool
 	Selected  bool // an Option
 	Header    bool // a Cell that is a column or row header
 	// Block marks an inline kind that the page laid out as a block — a link
 	// styled display:block, a button on a line of its own. Set from the
 	// captured layout, never from the role.
 	Block bool
-	// Marker is a ListItem's bullet as Chromium rendered it: "• ", "1. ".
+	// Marker is a ListItem's bullet or number: "• ", "1. ".
 	Marker string
 	// Lang is a Code block's language when it is known — a whole document
 	// that was JSON, YAML, TOML, Markdown… — for syntax colour. Empty for
-	// code found inside a page, which the AX tree does not name.
+	// code whose page does not name its language.
 	Lang string
 
 	Children []*Node
@@ -196,14 +142,11 @@ func (n *Node) IsBlock() bool {
 }
 
 // IsItem reports whether the cursor can stop here (ux.md §1): every
-// interactive node, every heading, and any unsupported node the page made
-// focusable — because Enter is a click and a click works on anything.
+// interactive node, every heading.
 func (n *Node) IsItem() bool {
 	switch n.Kind {
 	case Link, Button, Textbox, Check, Combobox, Media, Heading:
 		return true
-	case Unsupported:
-		return n.Focusable
 	}
 	return false
 }
@@ -242,66 +185,5 @@ func (n *Node) Walk(fn func(*Node) bool) {
 	}
 	for _, c := range n.Children {
 		c.Walk(fn)
-	}
-}
-
-// Dump is the IR as an indented outline, one node per line. It is the golden
-// form every fixture is checked against, so it says everything that matters
-// and nothing that does not.
-func Dump(n *Node) string {
-	var b strings.Builder
-	dump(&b, n, 0)
-	return b.String()
-}
-
-func dump(b *strings.Builder, n *Node, depth int) {
-	b.WriteString(strings.Repeat("  ", depth))
-	b.WriteString(n.Kind.String())
-	if n.Kind == Landmark || n.Kind == Unsupported || n.Kind == Media || n.Kind == Gauge ||
-		(n.Kind == Check && n.Role != "checkbox") ||
-		(n.Kind == Textbox && n.Role != "textbox") ||
-		(n.Kind == Cell && n.Role != "cell") ||
-		(n.Kind == Group && n.Role != "group") {
-		b.WriteString(":" + n.Role)
-	}
-	if n.Name != "" {
-		fmt.Fprintf(b, " %q", n.Name)
-	}
-	if n.Value != "" {
-		fmt.Fprintf(b, " value=%q", n.Value)
-	}
-	if n.URL != "" {
-		fmt.Fprintf(b, " url=%s", n.URL)
-	}
-	if n.Max > n.Min {
-		fmt.Fprintf(b, " range=%v..%v", n.Min, n.Max)
-	}
-	if n.Level > 0 {
-		fmt.Fprintf(b, " level=%d", n.Level)
-	}
-	if n.Kind == Check {
-		fmt.Fprintf(b, " %s", n.Checked)
-	}
-	if n.Marker != "" {
-		fmt.Fprintf(b, " marker=%q", n.Marker)
-	}
-	for _, f := range []struct {
-		on   bool
-		name string
-	}{
-		{n.Multiline, "multiline"}, {n.Protected, "protected"}, {n.Current, "current"}, {n.Breadcrumb, "breadcrumb"}, {n.Skip, "skip"}, {n.Disabled, "disabled"}, {n.Required, "required"}, {n.Invalid, "invalid"},
-		{n.Focusable, "focusable"}, {n.Expanded, "expanded"}, {n.Selected, "selected"},
-		{n.Header, "header"}, {n.Block, "block"},
-	} {
-		if f.on {
-			b.WriteString(" " + f.name)
-		}
-	}
-	if n.ID != 0 {
-		fmt.Fprintf(b, " #%d", n.ID)
-	}
-	b.WriteString("\n")
-	for _, c := range n.Children {
-		dump(b, c, depth+1)
 	}
 }
