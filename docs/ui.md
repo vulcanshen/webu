@@ -212,7 +212,7 @@ mode 裡換成 `Space:menu ?:help`、模式的鍵、最後 `Esc:<離開的動詞
 
 | 資料 | 形式 | 位置 |
 |---|---|---|
-| 設定 | `config.yaml`：`search_engine`（預設 DuckDuckGo html）、`download_dir`、`measure`（`full` 或 ≥ 20 的數字）、`restore_session`、`hide_secrets_in_preview`、`input_tab_width` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`、`$WEBU__CONFIG`） |
+| 設定 | `config.yaml`：`search_engine`（預設 DuckDuckGo html）、`download_dir`、`restore_session`、`hide_secrets_in_preview`、`input_tab_width` | `~/.config/webu`（`$XDG_CONFIG_HOME/webu`、`$WEBU__CONFIG`） |
 | session（狀態） | `session.yaml`：離開時開著的分頁 | 同上（`$WEBU__STATE`） |
 | 登入（狀態） | `cookies.json`：每一個收到的 cookie，`0600`；Settings 的 `C` 全部清掉，Cookies popup 的 `C` 清一個網站的 | 同 session |
 | 書籤 | `bookmarks.yaml`：flat yaml，`bookmarks:`（各帶 `folder`）+ `folders:`（讓空目錄留得住） | `~/.webu/datas`（`$WEBU__DATA`） |

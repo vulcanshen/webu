@@ -43,7 +43,7 @@ type readerMsg struct {
 func (m *AppModel) newReaderTab() *tab {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &tab{id: m.nextTabID, ctx: ctx, cancel: cancel, cursor: -1,
-		measure: m.cfg.TextWidth(), tabW: m.cfg.TabWidth(), tick: m.a.Tick,
+		tabW: m.cfg.TabWidth(), tick: m.a.Tick,
 		rc: m.rc, histAt: -1}
 	m.nextTabID++
 	return t

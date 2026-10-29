@@ -65,23 +65,6 @@ var settings = []setting{
 		get: func(c store.Config) string { return c.DownloadDir },
 		set: func(c *store.Config, v string) error { c.DownloadDir = v; return nil },
 		def: func(m *AppModel) string { return m.downloadDir() }},
-	{key: "measure", desc: "How wide a paragraph flows before it wraps: full, or a number of cells",
-		get: func(c store.Config) string {
-			if c.Measure <= store.MeasureFull {
-				return ""
-			}
-			return c.Measure.String()
-		},
-		set: func(c *store.Config, v string) error {
-			n, err := store.ParseMeasure(v)
-			if err != nil {
-				return errors.New("The measure " + strings.TrimPrefix(err.Error(), "measure "))
-			}
-			c.Measure = n
-			return nil
-		},
-		unit: "cells",
-		def:  func(*AppModel) string { return store.MeasureFull.String() }},
 	{key: "restore_session", desc: "reopen the tabs that were open when webu last quit",
 		on: func(c store.Config) bool { return c.Restore() },
 		flip: func(c *store.Config) {
@@ -233,8 +216,8 @@ func (m *AppModel) settingBox(i int) tea.Cmd {
 }
 
 // saveConfig writes config.yaml and applies what takes effect at once: the
-// browser is pointed at a new download dir, the pages are laid out again
-// for a new measure, the lib is told the family's keys.
+// pages are laid out again for a new tab width, the lib is told the
+// family's keys.
 func (m *AppModel) saveConfig(key string) tea.Cmd {
 	m.applyConfig()
 	m.refreshSettings()
@@ -243,8 +226,8 @@ func (m *AppModel) saveConfig(key string) tea.Cmd {
 	}
 	cmds := []tea.Cmd{m.toastOK("Saved " + key + " to config.yaml")}
 	switch key {
-	case "measure", "input_tab_width":
-		m.applyMeasure()
+	case "input_tab_width":
+		m.applyTabWidth()
 	}
 	return tea.Batch(cmds...)
 }
@@ -255,11 +238,11 @@ func (m *AppModel) applyConfig() {
 	m.a.InputTabWidth = m.cfg.TabWidth()
 }
 
-// applyMeasure gives every tab the measure and the tab width now in force
-// and lays it out again, cursor kept in view.
-func (m *AppModel) applyMeasure() {
+// applyTabWidth gives every tab the tab width now in force and lays it
+// out again, cursor kept in view.
+func (m *AppModel) applyTabWidth() {
 	for _, t := range m.tabs {
-		t.measure, t.tabW = m.cfg.TextWidth(), m.cfg.TabWidth()
+		t.tabW = m.cfg.TabWidth()
 		if t.root != nil {
 			t.relayout(m.pageW())
 			t.scrollToCursor(m.pageVisible())

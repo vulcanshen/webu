@@ -111,7 +111,10 @@ meanwhile. `Esc` quits instead, the reason on the terminal.
   `input_tab_width`, and a switch flips in place. `download_dir` is
   picked in the file picker, and a value in `config.yaml` that a setting
   will not take shows the setting's name in red. A number reads with its
-  unit: `4 spaces`, `96 cells`.
+  unit: `4 spaces`.
+- **`measure` is gone**, the width a paragraph wrapped at: a page now
+  always runs the panel's width. A `measure:` line left in `config.yaml`
+  is ignored.
 - `Enter` on a bookmark or a visit opens it in a new tab and stays on the
   list, saying where it went.
 - What a Space menu row opens — a question, a box to type in, a viewer —

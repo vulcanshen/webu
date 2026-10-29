@@ -55,8 +55,6 @@ type tab struct {
 	lastVisit string
 	// reloading is R in flight with a page on screen to keep.
 	reloading bool
-	// measure is the text width cap.
-	measure int
 	// tabW is how many spaces a Tab in a code block is: input_tab_width
 	// (tdp E3, reading content).
 	tabW int
@@ -132,15 +130,6 @@ func (t *tab) relayout(width int) { t.relayoutReader(width) }
 
 // rowRange is the stretch of the layout the panel may show: the page.
 func (t *tab) rowRange() (int, int) { return 0, len(t.lay.rows) - 1 }
-
-// textWidth is how wide text flows in this tab's layout: the measure, or
-// the panel when narrower.
-func (t *tab) textWidth() int {
-	if t.measure > 0 && t.measure < t.layW {
-		return t.measure
-	}
-	return t.layW
-}
 
 // scrollToCursor keeps the cursor's rows on screen; visible is how many page
 // rows the panel shows (0: unknown yet, keep top).

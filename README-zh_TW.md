@@ -153,8 +153,6 @@ webu help                             # 完整的命令列說明
 search_engine: https://html.duckduckgo.com/html/?q=
 # 下載存到哪。預設 ~/.webu/datas/downloads。
 download_dir: ~/Downloads
-# 段落多寬換行：full，或欄數（20 以上）。
-measure: full
 # 啟動時開回上次的分頁。
 restore_session: true
 # terminu 家族共用的 key，每個家族 app 都一樣：

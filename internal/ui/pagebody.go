@@ -307,9 +307,7 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 	case row.ground != "":
 		b.WriteString(lipgloss.NewStyle().Background(row.ground).Render(strings.Repeat(" ", max(0, innerW-used))))
 	case row.code:
-		span := min(innerW, max(used, t.textWidth()))
-		b.WriteString(st.codePad.Render(strings.Repeat(" ", max(0, span-used))))
-		b.WriteString(strings.Repeat(" ", max(0, innerW-span)))
+		b.WriteString(st.codePad.Render(strings.Repeat(" ", max(0, innerW-used))))
 	default:
 		b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
 	}

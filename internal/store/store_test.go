@@ -186,47 +186,12 @@ func TestHistoryIsNewestFirstAndDeletable(t *testing.T) {
 	}
 }
 
-// TestMeasure: the setting reads and writes both spellings — full for
-// the panel's own width, a number for a cap — and refuses the rest
-// (2026-09-22).
-func TestMeasure(t *testing.T) {
-	for _, in := range []string{"full", "FULL", " full ", ""} {
-		if m, err := ParseMeasure(in); err != nil || m != MeasureFull {
-			t.Errorf("%q should be full: %v %v", in, m, err)
-		}
-	}
-	if m, err := ParseMeasure("96"); err != nil || m != 96 {
-		t.Errorf("a number of cells: %v %v", m, err)
-	}
-	for _, in := range []string{"wide", "19", "-4", "96px"} {
-		if _, err := ParseMeasure(in); err == nil {
-			t.Errorf("%q should be refused", in)
-		}
-	}
-	if MeasureFull.String() != "full" || Measure(96).String() != "96" {
-		t.Errorf("spelling: %q %q", MeasureFull, Measure(96))
-	}
-	// Both spellings survive a trip through config.yaml.
-	for _, doc := range []struct {
-		yaml string
-		want Measure
-	}{{"measure: full\n", MeasureFull}, {"measure: 96\n", 96}} {
-		var c Config
-		if err := yaml.Unmarshal([]byte(doc.yaml), &c); err != nil || c.Measure != doc.want {
-			t.Fatalf("%q read back as %v (%v)", doc.yaml, c.Measure, err)
-		}
-		out, err := yaml.Marshal(c)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var back Config
-		if err := yaml.Unmarshal(out, &back); err != nil || back.Measure != doc.want {
-			t.Errorf("round trip of %q gave %q -> %v (%v)", doc.yaml, out, back.Measure, err)
-		}
-	}
-	// A cap only caps: full is zero, which the renderer reads as no cap.
-	if (Config{}).TextWidth() != 0 || (Config{Measure: 96}).TextWidth() != 96 {
-		t.Error("TextWidth should be 0 for full and the number otherwise")
+// An old config.yaml that still says measure (removed 2026-10-29) reads as
+// ever, the key ignored, rather than as a file that cannot be read.
+func TestAnOldMeasureKeyIsIgnored(t *testing.T) {
+	var c Config
+	if err := yaml.Unmarshal([]byte("measure: 96\nsearch_engine: https://example.com/?q=\n"), &c); err != nil || c.SearchEngine != "https://example.com/?q=" {
+		t.Fatalf("read back as %+v (%v)", c, err)
 	}
 }
 

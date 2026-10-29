@@ -291,19 +291,6 @@ func TestScreensAndSession(t *testing.T) {
 		t.Errorf("config.yaml after save: %+v", cfg)
 	}
 	d.key("j")
-	d.press("enter")
-	d.until("measure box", d.shows("SETTINGS: measure"))
-	d.key("backspace")
-	d.key("wide")
-	d.key("enter")
-	if d.m.cfg.Measure != 0 || !strings.Contains(d.view(), "20 or more") {
-		t.Fatalf("a bad measure should be refused in the box: %d\n%s", d.m.cfg.Measure, d.view())
-	}
-	// Esc takes a toast first (tdp K4), then the box.
-	for i := 0; i < 3 && strings.Contains(d.view(), "SETTINGS: measure"); i++ {
-		d.press("esc")
-	}
-	d.key("j")
 	d.key("enter") // restore_session's switch
 	if d.m.cfg.Restore() {
 		t.Fatalf("Enter should switch restore_session off:\n%s", d.view())

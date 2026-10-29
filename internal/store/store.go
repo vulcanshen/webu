@@ -7,10 +7,8 @@
 package store
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,14 +28,11 @@ type Bookmark struct {
 // Config is config.yaml, hand-written. webu reads it and does not write
 // it back — a shortcuts list used to live here and be edited from a popup;
 // it went with the Places panel (2026-09-20), and a `shortcuts:` key left
-// in an old file is ignored.
+// in an old file is ignored; so is `measure:`, the width a paragraph
+// wrapped at, which the reader never honoured (removed 2026-10-29, user).
 type Config struct {
 	SearchEngine string `yaml:"search_engine,omitempty"`
 	DownloadDir  string `yaml:"download_dir,omitempty"`
-	// Measure is how wide a paragraph flows in panel [2]: a number of
-	// cells, or full — the panel's own width. Full is the default
-	// (2026-09-22; it was a hundred cells).
-	Measure Measure `yaml:"measure,omitempty"`
 	// RestoreSession: reopen the tabs that were open when webu last quit.
 	// Absent means yes; a pointer so that "not set" and "set to false"
 	// are told apart, since the default is the true side (2026-09-21).
@@ -62,75 +57,6 @@ func (c Config) TabWidth() int {
 		return c.InputTabWidth
 	}
 	return 4
-}
-
-// Measure is the width a paragraph flows to in panel [2]: a number of
-// cells, or full — the panel's own width, whatever the terminal gives it.
-// Zero is full, and full is the default (2026-09-22, the user's call: a
-// cap the terminal did not ask for leaves a column of unused panel, and
-// the person who wants one can say so).
-//
-// In config.yaml it is written either way round:
-//
-//	measure: full
-//	measure: 96
-type Measure int
-
-// MeasureFull is the panel's own width, no cap.
-const MeasureFull Measure = 0
-
-// MeasureMin is the narrowest a cap may be: under this a line holds too
-// few words to read as prose.
-const MeasureMin = 20
-
-// String is the value as config.yaml spells it.
-func (m Measure) String() string {
-	if m <= MeasureFull {
-		return "full"
-	}
-	return strconv.Itoa(int(m))
-}
-
-// ParseMeasure reads what a person typed: "full" (or nothing) for the
-// panel's width, else a number of cells.
-func ParseMeasure(s string) (Measure, error) {
-	s = strings.ToLower(strings.TrimSpace(s))
-	if s == "" || s == "full" {
-		return MeasureFull, nil
-	}
-	n, err := strconv.Atoi(s)
-	if err != nil || n < MeasureMin {
-		return MeasureFull, fmt.Errorf("full, or a number of cells, %d or more", MeasureMin)
-	}
-	return Measure(n), nil
-}
-
-// UnmarshalYAML accepts both spellings, so a hand-written config.yaml can
-// say either.
-func (m *Measure) UnmarshalYAML(value *yaml.Node) error {
-	v, err := ParseMeasure(value.Value)
-	if err != nil {
-		return err
-	}
-	*m = v
-	return nil
-}
-
-// MarshalYAML writes back what the person would have typed.
-func (m Measure) MarshalYAML() (any, error) {
-	if m <= MeasureFull {
-		return "full", nil
-	}
-	return int(m), nil
-}
-
-// TextWidth is the measure in force, in cells; zero means the panel's
-// own width (renderOpts.measure reads it that way).
-func (c Config) TextWidth() int {
-	if c.Measure <= MeasureFull {
-		return int(MeasureFull)
-	}
-	return int(c.Measure)
 }
 
 // DefaultSearch is where a goto that is not a URL goes (ux.md §7).

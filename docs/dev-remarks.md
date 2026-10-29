@@ -107,7 +107,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 - **visual mode 是小寫 `v`**：`V` 保留給 splash（tdp S1）。
 - **[1] 與 [2] 的熱鍵各自歸各自的 panel**（tdp P3、tdp M4）：`H`／`L`、`b`、`o`、`/`、`n`／`N`、`f`、`v`、`w` 作用在頁面上，只在 [2] 按得到；`T`（新分頁）兩邊都有。全域動作只有切畫面（`W`／`B`／`H`／`D`／`S`）與離開。
 - **離開只在有下載進行中時先問**（tdp K9 的離開流程由 app 決定）：`syncQuit` 依下載數設 `App.Quit`。
-- **Settings 是一列一個值的 panel**（lib 的 `Values`）：文字設定開 TextInput（目前生效的值當灰字提議，`Backspace` 再 `Enter` 是預設）、`input_tab_width` 開 NumberInput、`download_dir` 開 file-picker 選目錄（從最近一層存在的目錄開始）、開關是原地翻的 checkbox，設好就存（tdp panel.12）。數字帶單位、寫完整的字（`4 spaces`、`96 cells`，tdp number.2）；`input_tab_width` 的輸入框打字列下面有單位列（`NumberInput.Unit`），清空就是預設（`Optional`）。設定名稱只是一兩個字，`?` 最前面有「每一列」一節寫每個 key 管什麼（`Field.Desc`，tdp panel.12）。家族共用的 `hide_secrets_in_preview`、`input_tab_width`（tdp E3）也在這裡，交給 lib 的 `App.HideSecretsInPreview`、`App.InputTabWidth`。`C` 清除所有登入（`cookies.json`）。
+- **Settings 是一列一個值的 panel**（lib 的 `Values`）：文字設定開 TextInput（目前生效的值當灰字提議，`Backspace` 再 `Enter` 是預設）、`input_tab_width` 開 NumberInput、`download_dir` 開 file-picker 選目錄（從最近一層存在的目錄開始）、開關是原地翻的 checkbox，設好就存（tdp panel.12）。數字帶單位、寫完整的字（`4 spaces`，tdp number.2）；`input_tab_width` 的輸入框打字列下面有單位列（`NumberInput.Unit`），清空就是預設（`Optional`）。設定名稱只是一兩個字，`?` 最前面有「每一列」一節寫每個 key 管什麼（`Field.Desc`，tdp panel.12）。`measure`（段落寬度上限）2026-10-29 拿掉（user）：閱讀器從來沒照它排，舊檔裡的 `measure:` 讀的時候略過。家族共用的 `hide_secrets_in_preview`、`input_tab_width`（tdp E3）也在這裡，交給 lib 的 `App.HideSecretsInPreview`、`App.InputTabWidth`。`C` 清除所有登入（`cookies.json`）。
 - **預設搜尋是 DuckDuckGo 的 HTML 端點**，因為 Google 對程式送來的搜尋回 reCAPTCHA。
 
 ## 已否決，不要重提

@@ -153,8 +153,6 @@ Select text and copy it. `h|j|k|l`, `w|e|b`, `0|$`, `gg|G` move; `v` starts a se
 search_engine: https://html.duckduckgo.com/html/?q=
 # Where downloads land. Default ~/.webu/datas/downloads.
 download_dir: ~/Downloads
-# How wide a paragraph runs before it wraps: full, or a number of columns (20+).
-measure: full
 # Reopen the last session's tabs on launch.
 restore_session: true
 # The terminu family's own keys, the same in every family app:
