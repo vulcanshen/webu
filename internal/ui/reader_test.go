@@ -440,7 +440,13 @@ func TestReaderSearchesAsTdp120Says(t *testing.T) {
 	if tb := m.shownTab(); tb.find == nil || len(tb.find.hits) == 0 {
 		t.Fatalf("the search found %v", tb.find)
 	}
+	// While it has hits, its status is on the bottom border, left of the
+	// scroll position (tdp note.3, v1.2.1); Esc takes it away with them.
+	d.until("the search's status", d.shows("/enough 1 of "+itoa(len(m.shownTab().find.hits))))
 	d.press("esc")
+	if strings.Contains(d.view(), "/enough") {
+		t.Errorf("Esc should take the search's status away:\n%s", d.view())
+	}
 	d.press("?")
 	if v := d.view(); !strings.Contains(v, "half a page up, down") || strings.Contains(v, "PgUp") {
 		t.Errorf("the key reference should not list PgUp:\n%s", v)
@@ -460,6 +466,16 @@ func TestReaderSearchesAsTdp120Says(t *testing.T) {
 	d.key("nowhere at all")
 	d.press("enter")
 	d.until("the toast", d.shows("Not on the page: nowhere at all"))
+	// Visual mode's search has its status on the bottom border too; the
+	// location row keeps the address (tdp note.3, panel.10, v1.2.1).
+	d.press("/")
+	d.key("enough")
+	d.press("enter")
+	d.settle()
+	want := "/enough " + itoa(m.sel.cur+1) + " of " + itoa(len(m.sel.matches))
+	if v := d.view(); len(m.sel.matches) == 0 || !strings.Contains(v, want) || !strings.Contains(v, glyphWeb+" "+srv.URL) {
+		t.Errorf("Visual mode's search status should be %q on the bottom border, the address on its row:\n%s", want, v)
+	}
 }
 
 // A page that cannot be reached is the panel's failure, its address still

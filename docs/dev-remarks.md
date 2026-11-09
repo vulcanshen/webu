@@ -1,6 +1,6 @@
 # webu 開發者備忘
 
-README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.2.0），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v1.2.0）上，是 terminu family 在瀏覽器領域的成員。
+README 只介紹這個工具怎麼用；這份收的是屬於開發者的部分：webu 裡面怎麼運作、設計為什麼這樣定、文件怎麼讀、怎麼建置與發布。webu 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)（tdp v1.2.1），畫面建在家族的共用 lib [terminu-go](https://github.com/vulcanshen/terminu-go)（v1.2.1）上，是 terminu family 在瀏覽器領域的成員。
 
 ---
 
@@ -86,7 +86,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 #### 兩套配色（`theme.go`）
 
-外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（tdp color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只有頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列是 [2] 的位置列（tdp panel.10，terminu 2026-10-29 確認）：Lavender、太長從前面截、只能看。頁面內容用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
+外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（tdp color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只有頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列是 [2] 的位置列（tdp panel.10，terminu 2026-10-29 確認）：lib 畫的（`Panel.Location`、`LocationGlyph`，`syncPage`；2026-11-09 user 定：照 lib，原本是 webu 自己畫在 body 第一列，第一次載入時還會被 lib 的 loading 那一句蓋掉），Lavender、太長只截網址、glyph 留著、只能看；loading 那一句與錯誤的兩句也是 lib 的（`LoadingText`、`Fail`）。`/` 找字有命中時，`syncPage` 把頁面或 visual mode 的搜尋狀態交給 `Panel.SearchStatus`，lib 畫在下框（tdp v1.2.1 note.3）。頁面內容用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
 
 ## 設計決定
 
@@ -134,10 +134,9 @@ webu 不跑 JavaScript，所以靠 script 才長出內容的網頁（app、dashb
 - 不在表單裡的 `<button>`：沒有 JavaScript 時多半什麼都不會發生，目前只 toast 說明
 - 媒體（圖片、影片、音訊只有 icon 與網址）
 - 頁面名字自帶 Nerd Font glyph 時看起來像多一格空白 —— 先放著
-- [2] 的網址列、loading 那一句、錯誤的兩句都是 lib 畫的（`Panel.Location`、`LoadingText`、`Fail`，`syncPage`；2026-11-09 user 定：照 lib，原本是 webu 自己畫在 body 第一列，第一次載入時還會被 lib 的 loading 那一句蓋掉）。兩點等 tdp 與 lib（已回報 terminu 與 terminu-go，terminu-go 說是 tdp 的缺漏，等 user 定案）：WB23 網址太長時 glyph 跟著被截掉（`TODO(lib WB23)`）；WB24 搜尋狀態（找什麼、第幾筆／共幾筆）沒有自己的地方，Visual mode 暫時把它寫在位置列、Lavender（原本 Yellow，`TODO(lib WB24)`）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
-webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21），再對齊 tdp v1.1.0、升到 terminu-go v1.1.0（2026-10-28），升到 terminu-go v1.1.1（2026-10-29，Visual>select 改用 lib 的 `EnterLayer`）、v1.1.3（tdp v1.1.2，Focus mode 連結的網址改用 inspect toast）、v1.1.4（tdp v1.1.3，webu 這邊沒有行為變化）、v1.2.0（tdp v1.2.0，2026-11-09，user 定的）。2026-10-28 起改成閱讀器，2026-10-29 拿掉 Chromium 與 DevTools 畫面。tdp 交給 webu 自己決定、webu 定得跟別的成員不一樣的地方列在下一節。
+webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21），再對齊 tdp v1.1.0、升到 terminu-go v1.1.0（2026-10-28），升到 terminu-go v1.1.1（2026-10-29，Visual>select 改用 lib 的 `EnterLayer`）、v1.1.3（tdp v1.1.2，Focus mode 連結的網址改用 inspect toast）、v1.1.4（tdp v1.1.3，webu 這邊沒有行為變化）、v1.2.0（tdp v1.2.0，2026-11-09，user 定的）、v1.2.1（tdp v1.2.1：位置列的 glyph 與搜尋狀態，webu 回報的 WB23、WB24，user 定案）。2026-10-28 起改成閱讀器，2026-10-29 拿掉 Chromium 與 DevTools 畫面。tdp 交給 webu 自己決定、webu 定得跟別的成員不一樣的地方列在下一節。
 
 ## tdp 交給 webu 決定的地方
 

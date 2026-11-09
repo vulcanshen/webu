@@ -374,20 +374,6 @@ func (s *selectMode) matchAt(row, col int) (in, current bool) {
 	return false, false
 }
 
-// status is the URL row's text while searching: /query and the count.
-func (s *selectMode) status() string {
-	if s.query == "" {
-		return ""
-	}
-	out := "/" + s.query
-	if len(s.matches) > 0 {
-		out += "  " + itoa(s.cur+1) + "/" + itoa(len(s.matches))
-	} else if s.query != "" {
-		out += "  0/0"
-	}
-	return out
-}
-
 // ------------------------------------------------------------ drawing
 
 // selectRows draws the page window with the character cursor, the

@@ -24,9 +24,13 @@ func (m *AppModel) syncPage() {
 	t := m.shownTab()
 	p.Loading = t != nil && t.working()
 	p.LoadingText, p.Location, p.Fail = "", "", nil
+	// The address is the location row, the lib's, after the web glyph,
+	// which a long address keeps (tdp panel.10).
+	p.LocationGlyph = glyphWeb
+	p.SearchStatus = m.pageSearchStatus(t)
 	if t != nil {
 		p.LoadingText = "loading " + nameOr(hostOf(t.url), "the page") + "…"
-		p.Location = m.pageLocation(t)
+		p.Location = t.url
 		if t.errText != "" {
 			// What went wrong, and the key that tries again (tdp
 			// panel.15).
@@ -41,16 +45,20 @@ func (m *AppModel) syncPage() {
 	}
 }
 
-// pageLocation is panel [2]'s location row (tdp panel.10), the lib's:
-// the page's address behind the web glyph, Lavender, cut at the front.
-// TODO(lib WB23): a long address cuts the glyph too. In Visual mode a
-// search's text and where it is take the row; TODO(lib WB24): a search's
-// status has no place of its own (it was Yellow here, webu's own row).
-func (m *AppModel) pageLocation(t *tab) string {
-	if st := m.sel.status(); m.sel.on && st != "" {
-		return st
+// pageSearchStatus is the status of panel [2]'s / search, Visual mode's
+// or the page's, which the lib draws on the bottom border left of the
+// scroll position while it has hits (tdp note.3): the text, the hit it is
+// on and how many. It goes with the hits.
+func (m *AppModel) pageSearchStatus(t *tab) terminu.SearchStatus {
+	switch {
+	case m.sel.on:
+		if len(m.sel.matches) > 0 {
+			return terminu.SearchStatus{Text: m.sel.query, Current: max(0, m.sel.cur), Count: len(m.sel.matches)}
+		}
+	case t != nil && t.find != nil && len(t.find.hits) > 0:
+		return terminu.SearchStatus{Text: t.find.query, Current: t.find.at, Count: len(t.find.hits)}
 	}
-	return glyphWeb + " " + t.url
+	return terminu.SearchStatus{}
 }
 
 // pageEsc is Esc on panel [2], one level up (tdp K4): reading, that is

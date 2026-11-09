@@ -114,10 +114,6 @@ func TestSelectSearchSmartCaseAndClick(t *testing.T) {
 	if s.cur != 0 {
 		t.Errorf("n wraps: cur %d", s.cur)
 	}
-	if st := s.status(); st != "/delta  1/2" {
-		t.Errorf("status %q", st)
-	}
-
 	find("Delta")
 	if len(s.matches) != 1 {
 		t.Errorf("a capital makes it case-sensitive: %d matches", len(s.matches))

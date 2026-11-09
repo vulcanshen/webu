@@ -88,10 +88,12 @@ lib 的清單，欄名 `Title`（user 2026-10-28：外框已經寫 TABS，原本
 
 #### 網址列
 
-`[2]` 的第一列，tdp panel.10 的位置列（2026-10-29，terminu 確認），lib 畫的（`Panel.Location`，2026-11-09 user 定：照 lib）：
-glyph（nf-md-web）與網址都是 Lavender；太長從前面截、保留尾端，glyph 也會被截掉（WB23，等 tdp 與 lib）；只能看，不能按、
-cursor 不停、捲動位置不算它；`[2]` 失焦時跟著淡化；載入中、出錯時照樣留在 loading 那一句與錯誤的兩句上面。visual mode 裡用
-`/` 找字時，這一列換成找的字與目前是第幾筆（`/query  2/5`，照 lib 的 Lavender；搜尋狀態該放哪裡等 tdp 與 lib，WB24）。
+`[2]` 的第一列，tdp panel.10 的位置列（2026-10-29，terminu 確認），lib 畫的（`Panel.Location`、`LocationGlyph`，2026-11-09 user
+定：照 lib）：glyph（nf-md-web）與網址都是 Lavender；太長只從前面截網址、保留尾端，glyph 留著（tdp v1.2.1 panel.10）；只能看，
+不能按、cursor 不停、捲動位置不算它；`[2]` 失焦時跟著淡化；載入中、出錯時照樣留在 loading 那一句與錯誤的兩句上面。
+
+`/` 找到字的時候（閱讀與 visual mode 都是），下框在捲動位置左邊寫找的字、目前第幾筆與共幾筆（`/query 2 of 5`，捲動位置的顏色，
+lib 畫的 `Panel.SearchStatus`；tdp v1.2.1 note.3），命中收掉就跟著不見。visual mode 原本把它寫在網址列。
 
 #### 頁面
 

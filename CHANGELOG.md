@@ -7,9 +7,12 @@ Each release names the version of terminu design (tdp) it follows.
 - The page's address stays on its row while the page first loads; it
   went with the loading line before. The row, the loading line and a
   page that could not be reached are drawn as the rest of the family
-  draws them. An address too long for the row now loses its globe with
-  its front, and in Visual mode a search's text and count are no longer
-  Yellow.
+  draws them; an address too long for the row keeps its globe.
+- A `/` search with hits shows what it found on the bottom border, left
+  of where you are on the page: `/goroutine 2 of 5`, on the page and in
+  Visual mode alike, gone with the hits. Visual mode wrote it on the
+  address row before.
+- On terminu-go v1.2.1, following tdp v1.2.1.
 
 ## v0.7.0 — tdp v1.2.0
 

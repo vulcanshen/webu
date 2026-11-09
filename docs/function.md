@@ -103,7 +103,7 @@ webu 不寫 HTML 引擎、不跑 JavaScript、不定義新 protocol。它用 Go 
 | 輸入網址 | 網址框（`o`）：目前的網址當灰字提議；不像網址的字當搜尋，預設 DuckDuckGo 的 HTML 版（2026-09-23：Google 對程式送來的搜尋一律回 reCAPTCHA；十二個引擎實測，DDG html 最乾淨） | `config.yaml` `search_engine` |
 | 上一頁下一頁 | `H\|L`：分頁自己的歷史，回到離開時的位置；`b` 麵包屑列出這個分頁走過的每一頁，選一頁直接跳過去 | 無 |
 | 正文／整頁 | `w` 切換 | 無 |
-| 頁內搜尋 | `/`：所有命中的字加底線，`n\|N` 走，`Esc` 收掉（finder 拿掉，2026-10-28） | 無 |
+| 頁內搜尋 | `/`：所有命中的字加底線，`n\|N` 走，`Esc` 收掉（finder 拿掉，2026-10-28）；下框寫找的字與第幾筆、共幾筆（tdp v1.2.1） | 無 |
 | 錯誤頁 | 抓不到（DNS、連線、TLS 憑證……）：[2] 用紅字寫原因，App Log 記一筆；重新載入失敗時原本的頁留著，toast 說沒載到 | 無 |
 | 登入 | GET 表單與簡單的帳號密碼 POST（`reader.md`「表單」）；每收到一個 cookie 就寫檔，session cookie 也存；Settings 的 `C` 清除登入資料 | `cookies.json`（狀態，`0600`） |
 | 這一頁的資訊 | [2] Space menu 最上面三項，沒有熱鍵：Source（抓下來的原始內容）、Cookies（這個網站的，`C` 清掉）、Requests（`curl -v` 的寫法）。2026-10-29 取代 DevTools；Console 與 web storage 沒有了 | 無 |
