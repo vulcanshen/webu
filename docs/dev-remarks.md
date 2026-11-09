@@ -134,7 +134,6 @@ webu 不跑 JavaScript，所以靠 script 才長出內容的網頁（app、dashb
 - 不在表單裡的 `<button>`：沒有 JavaScript 時多半什麼都不會發生，目前只 toast 說明
 - 媒體（圖片、影片、音訊只有 icon 與網址）
 - 頁面名字自帶 Nerd Font glyph 時看起來像多一格空白 —— 先放著
-- `docs/demo.gif` 是 2026-10-29 錄的，頁面還有行號、程式碼還是 webu 自己的配色：發版前重錄（user 2026-10-29：等 app 確認好、發版前再錄）
 - [2] 的網址列還是 webu 自己畫，沒換成 lib 的 `Panel.Location`、`Fail`（tdp E8）：lib 的位置列太長時會把網址前的 glyph 截掉，Visual mode 在這一列寫的找字狀態也沒地方放（錯誤的兩句因此也是自己畫：`Fail` 會蓋掉整個 body，網址列在 body 裡）。已回報 terminu（WB23），暫時維持；畫面照 panel.10、panel.15（2026-11-09）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
