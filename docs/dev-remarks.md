@@ -134,7 +134,8 @@ webu 不跑 JavaScript，所以靠 script 才長出內容的網頁（app、dashb
 - 不在表單裡的 `<button>`：沒有 JavaScript 時多半什麼都不會發生，目前只 toast 說明
 - 媒體（圖片、影片、音訊只有 icon 與網址）
 - 頁面名字自帶 Nerd Font glyph 時看起來像多一格空白 —— 先放著
-- `docs/demo.gif` 還是 Chromium 時期錄的：等 app 確認好、發版前再重錄（user 2026-10-29）
+- `docs/demo.gif` 是 2026-10-29 錄的，頁面還有行號、程式碼還是 webu 自己的配色：發版前重錄（user 2026-10-29：等 app 確認好、發版前再錄）
+- [2] 的網址列還是 webu 自己畫，沒換成 lib 的 `Panel.Location`、`Fail`（tdp E8）：lib 的位置列太長時會把網址前的 glyph 截掉，Visual mode 在這一列寫的找字狀態也沒地方放（錯誤的兩句因此也是自己畫：`Fail` 會蓋掉整個 body，網址列在 body 裡）。已回報 terminu（WB23），暫時維持；畫面照 panel.10、panel.15（2026-11-09）
 - 滑鼠：不做，terminu 家族只用鍵盤（2026-10-19 定案）
 
 webu 照 tdp v0.7.4 與 terminu-go v0.1.13 重構（2026-10-18），再對齊 tdp v0.8.0、升到 terminu-go v0.2.0、v0.2.1、v0.2.2（tdp v0.8.3）（2026-10-19），再對齊 tdp v0.9.0、v0.9.1，升到 terminu-go v0.4.0、v0.4.2（2026-10-20），再對齊 tdp v0.9.2、v0.9.3，升到 terminu-go v0.4.3、v0.4.4（2026-10-21），再對齊 tdp v1.1.0、升到 terminu-go v1.1.0（2026-10-28），升到 terminu-go v1.1.1（2026-10-29，Visual>select 改用 lib 的 `EnterLayer`）、v1.1.3（tdp v1.1.2，Focus mode 連結的網址改用 inspect toast）、v1.1.4（tdp v1.1.3，webu 這邊沒有行為變化）、v1.2.0（tdp v1.2.0，2026-11-09，user 定的）。2026-10-28 起改成閱讀器，2026-10-29 拿掉 Chromium 與 DevTools 畫面。tdp 交給 webu 自己決定、webu 定得跟別的成員不一樣的地方列在下一節。
