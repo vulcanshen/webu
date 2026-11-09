@@ -13,6 +13,7 @@ Each release names the version of terminu design (tdp) it follows.
 - A quote's bar is in the colour of its depth, as a heading's level is:
   each bar of a quote in a quote its own. A quote in a quote has one blank
   row before it, no longer two.
+- On terminu-go v1.2.0, following tdp v1.2.0.
 
 ## v0.6.0 — tdp v1.1.3
 
