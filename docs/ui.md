@@ -102,7 +102,7 @@ lib 的清單，欄名 `Title`（user 2026-10-28：外框已經寫 TABS，原本
 - **清單**：無序清單每一層都是 `-`（Blue），靠縮排分層；有序清單依層 `1.`、`a.`、`i.`，再回到數字輪迴。
 - **程式碼**：區塊是 Mantle 底、照語言上色（chroma；網頁沒標語言就讓 chroma 猜），語言名寫在右上角（Overlay0），Tab 畫成
   `input_tab_width` 格；行內程式碼是 Pink 字、Surface0 底。
-- **引用**：開頭一條 Lavender 的 `▎`（多層引用多條），Mantle 底。
+- **引用**：開頭一條 `▎`，顏色照深度、跟標題的層色同一組（多層引用多條），Mantle 底；引用裡的引用前面只空一列。
 - **表格**：資料表格畫成格子，表頭粗體、下面一條分隔線，不鋪底色；太寬切掉加 `…`。沒有 `<th>` 也沒有 `<caption>` 的表格當一般區塊。
 - **連結與圖片**：連結是 link icon＋字，Sapphire、底線；圖片是 image icon＋alt（沒有 alt 寫網址的檔名），Overlay0；包在連結裡的
   圖片用連結的顏色。Focus 到連結時，網址寫在 inspect toast 裡（lib 畫，標題 `INSPECT`，沒有計時，離開那一項就收）。
@@ -176,13 +176,12 @@ loading icon、錯誤列、`Esc` 一次一層都照 tdp，webu 不自己畫。�
 | 色 | 意思 |
 |---|---|
 | Text `#cdd6f4` | 段落 |
-| Peach、Rosewater、Green、Teal、Flamingo | 標題的底，依層輪迴（`levelInk`），字 Base |
+| Peach、Rosewater、Green、Teal、Flamingo | 標題的底，依層輪迴（`levelInk`），字 Base；引用的直槓 `▎` 依引用的深度用同一組 |
 | Sapphire `#74c7ec` | **可按的**：連結（加底線）、按鈕 |
 | Mauve `#cba6f7` | **可填的**：文字欄位、勾選框、單選、select |
 | Pink `#f5c2e7` | 行內程式碼的字，Surface0 `#313244` 底 |
 | Mantle `#181825` | 程式碼區塊、引用的底 |
 | Blue `#89b4fa` | 無序清單的 `-` |
-| Lavender `#b4befe` | 引用的直槓 `▎` |
 | Overlay0 `#6c7086` | 圖片、分隔線、表單的框線、程式碼區塊的語言名 |
 | 語法色 | 程式碼區塊裡（chroma）：key 與 string Pink、number Flamingo、常數與 keyword Sky、註解 Overlay0 斜體、標點 Overlay2 |
 

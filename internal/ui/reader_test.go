@@ -381,3 +381,27 @@ func TestReaderDownloadsAndMissingPages(t *testing.T) {
 	d.press("enter")
 	d.until("the toast", d.shows("404 Not Found"))
 }
+
+// A quote in a quote has one blank row before it, of the outer quote's bar,
+// and each bar is in the colour of its depth, a heading's colours, as catu
+// draws them (user 2026-11-09).
+func TestQuotesInQuotes(t *testing.T) {
+	quote := func(kids ...*ir.Node) *ir.Node { return &ir.Node{Kind: ir.Quote, Children: kids} }
+	lay := renderReader(doc(quote(para(text("Outer")), quote(para(text("Inner"))))), nil, 40, 4)
+	var rows []string
+	for _, r := range lay.rows {
+		rows = append(rows, strings.TrimRight(r.plain(), " "))
+	}
+	if got := strings.Join(rows, "|"); got != "▎ Outer|▎|▎ ▎ Inner" {
+		t.Fatalf("rows: %q", got)
+	}
+	var inks []lipgloss.Color
+	for _, sg := range lay.rows[2].segs {
+		if sg.kind == segQuoteBar {
+			inks = append(inks, sg.ink)
+		}
+	}
+	if len(inks) != 2 || inks[0] != levelColor(1) || inks[1] != levelColor(2) {
+		t.Errorf("the bars' colours: %v, want %v and %v", inks, levelColor(1), levelColor(2))
+	}
+}

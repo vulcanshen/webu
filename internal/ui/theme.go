@@ -64,12 +64,11 @@ const (
 	baseHex  = "#1e1e2e" // canvas; also dark text on a bright chip
 	crustHex = "#11111b" // recessed background of an inactive capsule
 	// The reader's grounds (docs/reader.md): code and quotes on Mantle,
-	// code in a line on Surface0; a list's icons Blue, a quote's bar
-	// Lavender.
+	// code in a line on Surface0; a list's icons Blue. A quote's bar is
+	// its depth's levelInk.
 	mantleHex   = "#181825"
 	surface0Hex = "#313244"
 	blueHex     = "#89b4fa"
-	lavenderHex = "#b4befe"
 )
 
 // ---- Page palette: the document's own structure, inside panel [2].

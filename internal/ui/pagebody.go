@@ -267,6 +267,9 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 			}
 		default:
 			style = st.styles[s.kind]
+			if s.ink != "" {
+				style = style.Foreground(s.ink)
+			}
 		}
 		// A reader row on its ground: the whole row, its ink with it. Code
 		// in a line keeps its own chip, but not in a heading, whose row is
@@ -396,7 +399,7 @@ func segStyles() map[segKind]lipgloss.Style {
 		segCheck:      lipgloss.NewStyle().Foreground(pageInput),
 		segMedia:      lipgloss.NewStyle().Foreground(pageMedia),
 		segBullet:     lipgloss.NewStyle().Foreground(lipgloss.Color(blueHex)),
-		segQuoteBar:   lipgloss.NewStyle().Foreground(lipgloss.Color(lavenderHex)),
+		segQuoteBar:   lipgloss.NewStyle().Foreground(levelColor(1)), // seg.ink: its depth's
 		segInlineCode: lipgloss.NewStyle().Foreground(pageCode).Background(lipgloss.Color(surface0Hex)),
 		segCode:       lipgloss.NewStyle().Foreground(pageCode),
 	}

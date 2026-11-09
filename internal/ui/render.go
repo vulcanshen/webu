@@ -55,6 +55,9 @@ type seg struct {
 	// attr is what the page marked this run up as — bold, italic, struck
 	// through — on top of whatever its kind draws (textAttr).
 	attr textAttr
+	// ink, when set, is the run's own colour over its kind's: a quote's
+	// bar, in the colour of its depth.
+	ink lipgloss.Color
 }
 
 // textAttr is the terminal's own text attributes, which is how webu draws

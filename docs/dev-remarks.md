@@ -66,7 +66,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 #### [2] 的畫法（`readerrender.go`、`pagebody.go`）
 
-`renderReader` 把內容樹畫成 `layout{rows, items, marks}`：block 斷行、inline 流式折行，每個 `seg` 記它是哪個 item；`row.ground`／`ink` 是整列的底色與字色，`row.chip` 是標題（字放在該層顏色上、左右各一格空白，不用膠囊的圓端：那是 tdp 的 title，P4）。清單一律短橫線，編號 1／a／i 輪流；code block 在 Mantle 底上、照語言上色、右上角寫語言；引用是 `▎` 加 Mantle 底；資料表格畫格子、表頭粗體；連結與圖片前面是 icon。頁面沒有行號，字左右各留一格（`pageMargin`，排版寬度扣兩格；Visual mode 畫一樣的邊距，進出 mode 字不會移）：2026-11-09 拿掉行號（user：照 catu 畫文件的方式，catu 的文件沒有行號）。`/` 找到的字加底線、目前那一筆是 cursor 色塊（`writeFound`）。
+`renderReader` 把內容樹畫成 `layout{rows, items, marks}`：block 斷行、inline 流式折行，每個 `seg` 記它是哪個 item；`row.ground`／`ink` 是整列的底色與字色，`row.chip` 是標題（字放在該層顏色上、左右各一格空白，不用膠囊的圓端：那是 tdp 的 title，P4）。清單一律短橫線，編號 1／a／i 輪流；code block 在 Mantle 底上、照語言上色、右上角寫語言；引用是 `▎` 加 Mantle 底，`▎` 的顏色照深度（`rctx.qdepth`，`levelColor`，存在 `seg.ink`；2026-11-09 照 catu，user），只有豎線的列就算空列（`blank`），引用裡的引用前面只空一列；資料表格畫格子、表頭粗體；連結與圖片前面是 icon。頁面沒有行號，字左右各留一格（`pageMargin`，排版寬度扣兩格；Visual mode 畫一樣的邊距，進出 mode 字不會移）：2026-11-09 拿掉行號（user：照 catu 畫文件的方式，catu 的文件沒有行號）。`/` 找到的字加底線、目前那一筆是 cursor 色塊（`writeFound`）。
 
 #### 麵包屑（`readerkeys.go` 的 `openBreadcrumb`）
 

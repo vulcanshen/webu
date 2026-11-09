@@ -58,6 +58,7 @@ type rcell struct {
 	r    rune
 	w    int
 	kind segKind
+	ink  lipgloss.Color
 	attr textAttr
 	item int
 }
@@ -71,6 +72,7 @@ type rctx struct {
 	ground         lipgloss.Color
 	tight          bool
 	udepth, odepth int // how deep in bulleted, in numbered lists
+	qdepth         int // how deep in quotes
 }
 
 func (c *rctx) next() []rcell {
@@ -82,7 +84,7 @@ func (c *rctx) next() []rcell {
 }
 
 func (c *rctx) inner() rctx {
-	return rctx{hang: c.hang, ground: c.ground, tight: c.tight, udepth: c.udepth, odepth: c.odepth}
+	return rctx{hang: c.hang, ground: c.ground, tight: c.tight, udepth: c.udepth, odepth: c.odepth, qdepth: c.qdepth}
 }
 
 func cells(s string, kind segKind, attr textAttr, item int) []rcell {
@@ -117,12 +119,12 @@ func (r *rrender) row(cs []rcell, ground, ink lipgloss.Color, code bool) {
 		col += c.w
 		if n := len(out.segs); n > 0 {
 			last := &out.segs[n-1]
-			if last.kind == c.kind && last.attr == c.attr && last.item == c.item {
+			if last.kind == c.kind && last.attr == c.attr && last.item == c.item && last.ink == c.ink {
 				last.text += string(c.r)
 				continue
 			}
 		}
-		out.segs = append(out.segs, seg{text: string(c.r), item: c.item, kind: c.kind, attr: c.attr})
+		out.segs = append(out.segs, seg{text: string(c.r), item: c.item, kind: c.kind, attr: c.attr, ink: c.ink})
 	}
 	r.lay.rows = append(r.lay.rows, out)
 }
@@ -133,8 +135,9 @@ func (r *rrender) blank(c *rctx) {
 	if c.tight || len(r.lay.rows) == 0 {
 		return
 	}
-	last := strings.TrimSpace(r.lay.rows[len(r.lay.rows)-1].plain())
-	if last == "" || last == strings.TrimSpace(plainCells(c.hang)) {
+	// A row of nothing but a quote's bars is a blank one already, so a
+	// quote in a quote has one before it, not one of each (as catu).
+	if strings.Trim(r.lay.rows[len(r.lay.rows)-1].plain(), "▎ ") == "" {
 		return
 	}
 	r.row(trimCells2(c.hang), c.ground, "", false)
@@ -290,10 +293,15 @@ func (r *rrender) block(n *ir.Node, c *rctx) {
 		r.code(n, c)
 	case ir.Quote:
 		r.blank(c)
+		// The bar is in the colour of the quote's depth, a heading's
+		// colours: each bar of a quote in a quote its own (as catu draws
+		// them; user 2026-11-09).
+		depth := c.qdepth + 1
 		bar := append(cells("▎", segQuoteBar, 0, -1), cells(" ", segPlain, 0, -1)...)
+		bar[0].ink = levelColor(depth)
 		used := false
 		in := rctx{head: append(append([]rcell{}, c.next()...), bar...), hang: append(append([]rcell{}, c.hang...), bar...),
-			used: &used, ground: lipgloss.Color(mantleHex), udepth: c.udepth, odepth: c.odepth}
+			used: &used, ground: lipgloss.Color(mantleHex), udepth: c.udepth, odepth: c.odepth, qdepth: depth}
 		r.blocks(n.Children, &in)
 	case ir.Separator:
 		r.blank(c)

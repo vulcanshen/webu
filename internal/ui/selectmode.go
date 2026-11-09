@@ -415,10 +415,14 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 		used, col := 0, 0
 		b.WriteString(margin)
 		for _, sg := range t.lay.rows[r].segs {
+			ink := styles[sg.kind]
+			if sg.ink != "" {
+				ink = ink.Foreground(sg.ink)
+			}
 			for _, ch := range sg.text {
 				// A control character is its name, in Red (tdp
 				// components.5), still one column of the text.
-				piece, style := string(ch), styles[sg.kind]
+				piece, style := string(ch), ink
 				if isControl(ch) {
 					piece, style = controlName(ch), controlStyle(false)
 				}
