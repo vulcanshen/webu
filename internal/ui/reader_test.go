@@ -393,8 +393,8 @@ func TestReaderDownloadsAndMissingPages(t *testing.T) {
 // A web page is drawn as a browser draws it (tdp components.5, v1.2.2):
 // in running text a Tab and a \n are white space; in a <pre> a Tab is
 // input_tab_width spaces and a \n a line break; any other control
-// character, a colour code's ESC among them, is its name in Red, and the
-// page gives nothing a colour.
+// character, a colour code's ESC and a form feed among them, is its name
+// in Red, and the page gives nothing a colour.
 func TestAPageIsDrawnAsABrowserDrawsIt(t *testing.T) {
 	// Colours on, or a test of one passes on plain text.
 	was := lipgloss.ColorProfile()
@@ -406,7 +406,7 @@ func TestAPageIsDrawnAsABrowserDrawsIt(t *testing.T) {
 			return
 		}
 		io.WriteString(w, "<html><head><title>Marks</title></head><body><h1>Marks</h1>"+
-			"<p>one\ttwo\nthree \x1b[31mred</p><pre>\tindented\nnext</pre></body></html>")
+			"<p>one\ttwo\nthree \x1b[31mred</p><p>page\fbreak</p><pre>\tindented\nnext</pre></body></html>")
 	}))
 	t.Cleanup(srv.Close)
 	d, m := readerAt(t, srv.URL+"/", t.TempDir())
@@ -414,6 +414,9 @@ func TestAPageIsDrawnAsABrowserDrawsIt(t *testing.T) {
 	v := d.view()
 	if !strings.Contains(v, `one two three \x1b[31mred`) {
 		t.Errorf("the paragraph should run on with spaces, its ESC by name:\n%s", v)
+	}
+	if !strings.Contains(v, "page"+controlName('\f')+"break") {
+		t.Errorf("a form feed is no white space: it should be drawn by name:\n%s", v)
 	}
 	if strings.Contains(v, `\t`) || strings.Contains(v, `\n`) {
 		t.Errorf("a Tab or a \\n should never be drawn by name on a page:\n%s", v)

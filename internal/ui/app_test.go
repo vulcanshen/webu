@@ -234,6 +234,10 @@ func TestScreensAndSession(t *testing.T) {
 	d.m.bmList.Select(bmRowID(bmRow{ref: 0}))
 	d.press("m")
 	d.until("move select", d.shows("MOVE TO"))
+	// Each folder by its path, the rows aligned (tdp finder.3).
+	if v := d.view(); !strings.Contains(v, "/dev/sub") || strings.Contains(v, "(no folder)") {
+		t.Errorf("the select should list the folders by their paths, / first:\n%s", v)
+	}
 	d.key("j")
 	d.key("j")
 	d.press("enter")

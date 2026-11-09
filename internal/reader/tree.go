@@ -549,12 +549,15 @@ func hasItem(n *ir.Node) bool {
 }
 
 // collapse is s with every run of white space one space, the way HTML
-// draws text outside a <pre>.
+// draws text outside a <pre>. White space is a space, a Tab and a \n
+// (tdp components.5, a document from markup); any other control
+// character stays, to be drawn by its name. The parser has made a \r a
+// \n already.
 func collapse(s string) string {
 	var b strings.Builder
 	space := false
 	for _, r := range s {
-		if r == ' ' || r == '\n' || r == '\t' || r == '\r' || r == '\f' {
+		if r == ' ' || r == '\n' || r == '\t' {
 			space = true
 			continue
 		}

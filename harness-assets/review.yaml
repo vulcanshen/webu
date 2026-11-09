@@ -1,4 +1,4 @@
-spec: 1
+spec: 2
 tasks:
   - id: 1
     accepted: true
@@ -9,8 +9,7 @@ tasks:
   - id: 4
     accepted: true
   - id: 5
-    accepted: false
-    reason: tdp 不清楚：網頁內文的控制字元歸 components.5 的哪一群沒寫；webu 當成「名字與短字」把 \t、\n、\x1b 都畫成紅色名字，若算「拿來讀的內容」，Tab 要畫成空白、\n 是換行
+    accepted: true
   - id: 6
     accepted: true
   - id: 7
@@ -32,8 +31,7 @@ tasks:
   - id: 15
     accepted: true
   - id: 16
-    accepted: false
-    reason: tdp 不清楚：Bookmarks 是多層、可收合的目錄樹，目錄本身是 cursor 停得上、能操作的項目；tdp panel.11 是一層的分組（標題 cursor 跳過），panel 各節都沒寫多層可收合的樹怎麼縮排、收合後怎麼畫、目錄算不算項目
+    accepted: true
   - id: 17
     accepted: true
   - id: 18

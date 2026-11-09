@@ -46,7 +46,7 @@ tasks:
       表格：排版用的照區塊讀，資料表畫成格子（Overlay0）、表頭粗體
       連結：link icon 加字，Sapphire、底線；圖片：image icon 加替代文字，Overlay0
       字左右各留一格，沒有行號
-      網頁照瀏覽器畫：一般文字裡的 Tab、\n（連同 \r、\f）跟空白一樣收成一格；<pre> 與程式碼區塊裡 Tab 畫成 input_tab_width 格空白、\n 換行；其他控制字元，包括顏色碼的 ESC，畫成它的名字、Red（\x1b），不送到終端機，網頁不給任何字上色
+      網頁照瀏覽器畫：一般文字裡的 Tab、\n 跟空白一樣收成一格（\r 由 HTML parser 先變成 \n）；<pre> 與程式碼區塊裡 Tab 畫成 input_tab_width 格空白、\n 換行；其他控制字元，包括顏色碼的 ESC 與 \f，畫成它的名字、Red（\x1b、\x0c），不送到終端機，網頁不給任何字上色
     test: [TestQuotesInQuotes, TestCodeInTheFamilysSyntaxColours, TestTrickyTextFromOutside, TestItemsAndAnchors, TestAPageIsDrawnAsABrowserDrawsIt]
   - id: 6
     spec: 1
@@ -137,9 +137,9 @@ tasks:
       Enter：在目錄上是 Into，進去，cursor 在第一列，App Log 記「Went to the folder …」；在書籤上是 Open，在背後開新分頁
       Esc：有 filter 時 lib 先清 filter；在目錄裡 Panel.OnEsc 回上一層，cursor 停在剛剛出來的目錄，不記 App Log；最上層 OnEsc 是 nil，Esc 什麼都不做，? 也不列 Esc
       換層時清掉 filter：清單、filter 與 N of M 都只算這一層
-      空的一層：最上層「No bookmarks yet」，目錄裡「Nothing in this folder」／「Press [a] to add a bookmark here, or [Esc] to go up」
-      a 在這一層加書籤（form：URL 與標題，然後 Add，預填目前頁）；[2] 的 A 也是，加在最上層，Bookmarks 畫面跟著回到最上層、cursor 在新的那一筆
-      A 在這一層新增目錄（TextInput，a/b/c 每層都建，cursor 在這一層新的那一列）；m 搬移（開目錄的 select，全部目錄依深度縮排），搬走的離開這一層，cursor 留在原位；r 改名（書籤改標題，目錄改那一層，下面的跟著）；空的或重複的名字留在框裡
+      空的一層：最上層「No bookmarks yet」／「Press [a] to add one, or [Space] to see what you can do here」，目錄裡「Nothing in this folder」／「Press [a] to add a bookmark here, or [Esc] to go up」
+      a 在這一層加書籤（form：URL 與標題，然後 Add，預填目前頁），cursor 在新的那一筆；[2] 的 A 也是，加在最上層，Bookmarks 畫面跟著回到最上層、cursor 在新的那一筆
+      A 在這一層新增目錄（TextInput，a/b/c 每層都建，cursor 在這一層新的那一列）；m 搬移（開目錄的 select，每個目錄寫它的路徑，跟位置列一樣，最上層 / 在最前面，各列對齊），搬走的離開這一層，cursor 留在原位；r 改名（書籤改標題，目錄改那一層，下面的跟著）；空的或重複的名字留在框裡
       x 刪除：開 confirm「Delete …?」，目錄連整棵樹，每次都問
       y 複製網址；I 匯入：file-picker 選瀏覽器的書籤匯出檔（Netscape 格式），匯到自己的目錄，畫面到那個目錄所在的那一層、cursor 在它上面；/ 過濾
       存在資料目錄的 bookmarks.yaml
@@ -184,7 +184,7 @@ tasks:
       狀態跟設定放一起（或 $WEBU__STATE）：session.yaml、cookies.json
       資料 ~/.webu/datas（$WEBU__DATA）：bookmarks.yaml、歷史、下載；快取 $WEBU__CACHE
       環境變數一律 WEBU__ 開頭，舊名字不讀
-      第一次啟動把在舊位置、新位置還沒有的檔搬過去（bookmarks.yaml 到資料、session.yaml 到狀態），Info toast 說從哪裡搬到哪裡，搬空的舊目錄拿掉；搬不動的照舊用原位置，error popup 寫兩個位置
+      第一次啟動把在舊位置、新位置還沒有的檔搬過去（bookmarks.yaml 到資料、session.yaml 到狀態），Info toast 說從哪裡搬到哪裡，搬空的舊目錄拿掉；搬不動的照舊用原位置，error popup 寫兩個位置；新位置已經有的不搬，舊的照樣留著、用新位置的，error popup 寫兩個位置、請使用者自己合併
       自己的檔讀不了：啟動時開 tgo 的 MoveAside，說是哪個檔、為什麼，問要不要搬到 .bak（.bak.1 起，不蓋過別的）、像第一次一樣開始；回答之前什麼都不開；Esc 離開，原因印在終端機
     test: [TestFilesGoWhereE3PutsThem, TestRelocateMovesTheOldFiles, TestRelocateThatFails, TestShort, TestAnOldMacCacheIsStillRead, TestOldNamesAreNotRead, TestDirsHonourOverrides, TestMovesOnTheFirstScreen, TestUnreadableFilesAreMovedAside, TestAnUnreadableFileGivesNothing]
   - id: 22
@@ -199,7 +199,7 @@ tasks:
     spec: 1
     implementation: |
       !（core key）打開 tgo 的 App Log；footer 寫 !:log，或還沒看的錯誤有幾個
-      記使用者做的事（每個從 menu、熱鍵或 Enter 跑的操作，用過去式）、每個 toast、抓不到的頁與原因、開回上次的分頁；不記移動 cursor、Space menu、?、!、過濾與找字、進出 mode、打進欄位的值
+      記使用者做的事（每個從 menu、熱鍵或 Enter 跑的操作，用過去式）、每個 toast（lib 記，同一句話；Focus mode 的 inspect toast 不記，lib 的 Mode.Inspect）、抓不到的頁與原因、開回上次的分頁；不記移動 cursor、Space menu、?、!、過濾與找字、進出 mode、打進欄位的值
     test: [TestTheAppLogHasWhatTheUserDid]
   - id: 24
     spec: 1

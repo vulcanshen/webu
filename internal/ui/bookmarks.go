@@ -19,7 +19,7 @@ import (
 // own in bookmarks.yaml so an empty folder exists. The screen is walked a
 // level at a time, as filu walks directories (tdp panel.10): Enter goes
 // into a folder, the location row naming it, Esc goes up. The Move select
-// lists every folder, indented by depth.
+// lists every folder by its path.
 
 // folderNames is every folder there is — declared, in use by a bookmark,
 // or an ancestor of either — in tree order: a parent right before what is
@@ -57,14 +57,6 @@ func folderLess(a, b string) bool {
 		}
 	}
 	return len(pa) < len(pb)
-}
-
-// folderDepth is how deep a path is: 0 for the top level, 1 for "dev".
-func folderDepth(f string) int {
-	if f == "" {
-		return 0
-	}
-	return strings.Count(f, "/") + 1
 }
 
 // folderBase is a path's own name.
@@ -311,21 +303,23 @@ func (m *AppModel) bmUp() tea.Cmd {
 	return nil
 }
 
-// moveSelect is m on a bookmark: the folders to move it to as a tree, the
-// top level first, the one it is in chosen.
+// moveSelect is m on a bookmark: the folders to move it to, each by its
+// path as the location row writes it, the top level (/) first, the one it
+// is in chosen. A path, not an indent: a select's rows are aligned (tdp
+// finder.3).
 func (m *AppModel) moveSelect(ref int) tea.Cmd {
 	if ref < 0 || ref >= len(m.bookmarks) {
 		return nil
 	}
 	now := m.bookmarks[ref].Folder
 	names := m.folderNames()
-	opts := []string{"(no folder)"}
+	opts := []string{"/"}
 	sel := 0
 	for i, f := range names {
 		if f == now {
 			sel = i + 1
 		}
-		opts = append(opts, strings.Repeat("  ", folderDepth(f)-1)+folderBase(f))
+		opts = append(opts, "/"+f)
 	}
 	return m.a.Select(terminu.Select{Title: "Move to", Subject: strings.TrimSpace(nameOr(m.bookmarks[ref].Title, m.bookmarks[ref].URL)),
 		Glyph: glyphFolder, Options: opts, Selected: sel,

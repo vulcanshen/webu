@@ -21,12 +21,13 @@ Each release names the version of terminu design (tdp) it follows.
   folder, the row at the top naming where you are (`/dev/go`), and `Esc`
   goes back up with the cursor on the folder you left. The list, its
   filter and its count are of that folder alone; `a` and `A` add there
-  (tdp v1.2.2).
+  (tdp v1.2.2). Moving one (`m`) lists the folders by their paths, the
+  way that row writes them, `/` the top level.
 - A web page's control characters are drawn as tdp v1.2.2 now says, as a
   browser shows the page: a Tab or a line break in running text is a
   space, in code it keeps its place, and any other, a colour code's ESC
-  among them, is its name in red. webu drew them so already; a test now
-  holds it.
+  among them, is its name in red. A form feed in running text, which
+  webu took for a space, is now drawn by its name too.
 - webu's records are kept with terminu-harness now (`harness-assets/`);
   the developer notes that were `docs/dev-remarks.md` are in the git
   history.
