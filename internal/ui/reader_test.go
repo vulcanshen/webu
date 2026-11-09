@@ -405,3 +405,58 @@ func TestQuotesInQuotes(t *testing.T) {
 		t.Errorf("the bars' colours: %v, want %v and %v", inks, levelColor(1), levelColor(2))
 	}
 }
+
+// tdp v1.2.0 on a page: / run from the Space menu has the menu under its
+// box, Esc going back to it, and closes it once the search runs (T1); a
+// search is not recorded in the App Log (note.7, the user's answer
+// of 2026-11-04); in Visual mode a search that finds nothing says so
+// (note.3) and the copy is Cop[y] (menu.4); no key reference lists
+// PgUp|PgDn beside u|d (K12).
+func TestReaderSearchesAsTdp120Says(t *testing.T) {
+	srv := site(t)
+	d, m := readerAt(t, srv.URL+"/", t.TempDir())
+	d.until("the first page", d.shows("Words of the first page"))
+	d.press("2")
+	d.press(" ")
+	d.until("the menu", d.shows("[R]eload"))
+	// The box is a gate: Esc on it goes back to the menu, and the two
+	// close together once the search runs.
+	d.press("/")
+	d.settle()
+	d.press("esc")
+	d.settle()
+	if !strings.Contains(d.view(), "[R]eload") {
+		t.Fatalf("Esc on the box should go back to the menu:\n%s", d.view())
+	}
+	d.press("/")
+	d.settle()
+	d.key("enough")
+	d.press("enter")
+	d.settle()
+	if strings.Contains(d.view(), "[R]eload") {
+		t.Fatalf("the menu should close once the search runs:\n%s", d.view())
+	}
+	if tb := m.shownTab(); tb.find == nil || len(tb.find.hits) == 0 {
+		t.Fatalf("the search found %v", tb.find)
+	}
+	d.press("esc")
+	d.press("?")
+	if v := d.view(); !strings.Contains(v, "half a page up, down") || strings.Contains(v, "PgUp") {
+		t.Errorf("the key reference should not list PgUp:\n%s", v)
+	}
+	d.press("esc")
+	d.press("!")
+	if v := d.view(); strings.Contains(v, "Searched") {
+		t.Errorf("a search should not be in the App Log:\n%s", v)
+	}
+	d.press("esc")
+
+	d.press("v")
+	d.press(" ")
+	d.until("the mode's menu", d.shows("Cop[y]"))
+	d.press("esc")
+	d.press("/")
+	d.key("nowhere at all")
+	d.press("enter")
+	d.until("the toast", d.shows("Not on the page: nowhere at all"))
+}

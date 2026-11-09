@@ -14,6 +14,13 @@ Each release names the version of terminu design (tdp) it follows.
   each bar of a quote in a quote its own. A quote in a quote has one blank
   row before it, no longer two.
 - On terminu-go v1.2.0, following tdp v1.2.0.
+- `/` run from a Space menu keeps the menu under its box, `Esc` going
+  back to it, and closes the two together once it runs, found or not; a
+  search in Visual mode that finds nothing says so. A search is no longer
+  recorded in the App Log, as the filter is not; one that finds nothing
+  is, by its toast.
+- Visual mode's copy is `Cop[y]` in its menu; the key references no longer
+  list `PgUp|PgDn` beside `u|d`, which they still move as.
 
 ## v0.6.0 — tdp v1.1.3
 

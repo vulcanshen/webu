@@ -178,7 +178,7 @@ func (b *pageBody) Uncover(rows int) {
 func (b *pageBody) MoveKeys() []terminu.KeyRow {
 	return []terminu.KeyRow{
 		{Key: "j|k", Desc: "a row down, up"},
-		{Key: "u|d", Desc: "half a page up, down (PgUp, PgDn too)"},
+		{Key: "u|d", Desc: "half a page up, down"}, // PgUp|PgDn too, unlisted (tdp K12)
 		{Key: "gg|G", Desc: "top, bottom of the page"},
 	}
 }

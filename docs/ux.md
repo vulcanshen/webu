@@ -32,7 +32,7 @@ label 裡怎麼標鍵照 tdp M5，由 lib 產生。
 | `Tab`、`1\|2` | `[1]` ↔ `[2]`；`1\|2` 直達（tdp K1、tdp K2） | 不作用，toast 說先按 `Esc` 離開模式（tdp K11） | 同 Focus mode |
 | `Enter` | **滑鼠左鍵在 terminal 的對應**（2026-09-21 定案）。`[1]`：`Read`，`[2]` 換成這個分頁、focus 送到 `[2]`（tdp K3 的明細）。`[2]`：閱讀時沒有被選的項目，`Enter` 不作用；要按頁面上的東西先 `f`（2026-10-28）。清單畫面與 Settings：各自的 `Enter`（§A.1） | 按下 focus 的項目，細表在 §A.0.K.1 | 按下字元游標所在的項目，並離開模式；那裡沒有可以按的，toast `Nothing to press here` |
 | `Esc` | **往上一層，一次一步，到頂不作用**（2026-09-23，tdp K4）：先關最上層的浮層（toast 也算，tdp F3）；`[2]` 有 `/` 找到的字時收掉；清單畫面上清掉篩選，不回 Web（回 Web 用 `W`，2026-10-18）；其他時候不作用 | 離開模式，focus 的項目不再標出 | 選取中（`Visual>select`）放掉選取、回到 `Visual`，游標留在原地；否則離開模式（tdp K11、tdp note.4，2026-10-29） |
-| `Space` | panel 的 Space menu（§A.1）；再按關閉；其他浮層上不作用（tdp K5） | **mode 的 Space menu**（tdp K11）：ITEM OPERATION 是 `Enter` Press、`o` Open in a new tab、`y` Copy its address；FOCUS MODE 是 `j\|k`、`gg\|G`（只列出）與 `Esc` Leave；`Esc` 只關這個 menu | **mode 的 Space menu**：ITEM OPERATION 是 `v` Select（選取中沒有：`v` 不作用，tdp note.4）、`y` Copy、`Enter` Press；VISUAL MODE 是移動鍵（只列出）、`/` Find、`n\|N` Next match 與 `Esc` Leave（選取中是 Unselect） |
+| `Space` | panel 的 Space menu（§A.1）；再按關閉；其他浮層上不作用（tdp K5） | **mode 的 Space menu**（tdp K11）：ITEM OPERATION 是 `Enter` Press、`o` Open in a new tab、`y` Copy its address；FOCUS MODE 是 `j\|k`、`gg\|G`（只列出）與 `Esc` Leave；`Esc` 只關這個 menu | **mode 的 Space menu**：ITEM OPERATION 是 `v` Select（選取中沒有：`v` 不作用，tdp note.4）、`y` Cop[y]（tdp menu.4）、`Enter` Press；VISUAL MODE 是移動鍵（只列出）、`/` Find、`n\|N` Next match 與 `Esc` Leave（選取中是 Unselect） |
 | `?` | 最前端 surface 的 key reference，唯讀、可捲動；再按關閉（tdp K6、tdp M4，§A.2） | mode 的 key reference：mode 的鍵（tdp K11） | 同 Focus mode |
 | `!` | App Log：webu 做了什麼、出了什麼錯（tdp K1） | 不作用（tdp K11） | 同 Focus mode |
 | `q`、`Ctrl-C` | 離開流程（§A.2，tdp K9） | 同左 | 同左 |
@@ -180,7 +180,7 @@ splash 彩蛋 `V` 不揭露（tdp S2）。
 | | 閱讀（不在任何 mode） | Focus mode（`f`） | Visual mode（`v`） |
 |---|---|---|---|
 | 游標 | 沒有：頁面捲動，像 `less` | 可以按的項目：連結、圖片、欄位、按鈕 | 字元 |
-| 移動 | `j\|k` 一列、`u\|d` 半頁（`PgUp\|PgDn` 也是）、`gg\|G` 頭尾 | `j\|k` 下一個、上一個，頭尾繞回（tdp K12）；`gg\|G` 第一個、最後一個 | `h\|j\|k\|l`、`w\|b\|e`、`0\|$`、`u\|d`、`gg\|G` |
+| 移動 | `j\|k` 一列、`u\|d` 半頁（`PgUp\|PgDn` 也是，不列出，tdp K12）、`gg\|G` 頭尾 | `j\|k` 下一個、上一個，頭尾繞回（tdp K12）；`gg\|G` 第一個、最後一個 | `h\|j\|k\|l`、`w\|b\|e`、`0\|$`、`u\|d`、`gg\|G` |
 | 進入時 | — | focus 畫面上第一個項目；頁面沒有可以按的，toast `Nothing to press on this page` | 字元游標在畫面最上面那一列 |
 | `Enter` | 不作用 | §A.0.K.1 | 按下字元游標所在的項目，離開模式 |
 | 複製 | `Y` 網址、`Yank markdown` | `y` 連結或圖片的網址 | `v` 開始選、`y` 複製並離開（沒有選取時複製游標那一列） |
@@ -267,7 +267,7 @@ bracket 印的就是要按的鍵，大小寫照按的（tdp M5）。
 | core | `Space` `?` `!` `Tab` `1\|2` `Enter` `Esc` `q\|Ctrl-C` |
 | 全域 | `W` `B` `H` `D` `S`、`q\|Ctrl-C`；`V`（splash，不揭露） |
 | `[1]` item / panel | `Enter` `c` `o` `r` `y` / `T` `X` `U` |
-| `[2]` 閱讀 | 移動 `j\|k` `u\|d` `gg\|G`（`PgUp\|PgDn`）；panel `R` `T` `H` `L` `b` `o` `/` `n` `N` `f` `v` `w` `A` `Z` `Y` `C`；menu-only：Source、Cookies、Requests、Yank markdown；`Esc` 收掉找到的字 |
+| `[2]` 閱讀 | 移動 `j\|k` `u\|d` `gg\|G`；panel `R` `T` `H` `L` `b` `o` `/` `n` `N` `f` `v` `w` `A` `Z` `Y` `C`；menu-only：Source、Cookies、Requests、Yank markdown；`Esc` 收掉找到的字 |
 | Focus mode | `j\|k` `gg\|G`、`Enter` `o` `y`、`Esc` |
 | Visual mode | `h\|j\|k\|l` `w\|b\|e` `0\|$` `u\|d` `gg\|G`、`v` `y` `Enter`、`/` `n\|N`、`Esc` |
 | Cookies viewer | `C` |
@@ -334,7 +334,7 @@ Cookies viewer 的 `C`、只有一個打字欄位的表單填完後的送出。
 `Enter` read · `c` close · `o` open in new tab · `r` reload · `y` yank URL · `T` new tab · `X` close others · `U` undo close
 
 ### `[2]` Page（閱讀）
-`j|k` 捲一列 · `u|d` 半頁（`PgUp|PgDn`）· `gg|G` 頭尾 · `R` reload · `T` new tab · `H|L` back / forward · `b` breadcrumb · `o` open · `/` find · `n|N` next / previous match · `f` Focus mode · `v` Visual mode · `w` full page / content only · `A` add bookmark · `Z` zoom · `Y` yank page url · `C` close · `Esc` 收掉找到的字 · menu-only：Source、Cookies（裡面 `C` 清除）、Requests、Yank markdown
+`j|k` 捲一列 · `u|d` 半頁 · `gg|G` 頭尾 · `R` reload · `T` new tab · `H|L` back / forward · `b` breadcrumb · `o` open · `/` find · `n|N` next / previous match · `f` Focus mode · `v` Visual mode · `w` full page / content only · `A` add bookmark · `Z` zoom · `Y` yank page url · `C` close · `Esc` 收掉找到的字 · menu-only：Source、Cookies（裡面 `C` 清除）、Requests、Yank markdown
 
 ### Focus mode
 `j|k` 下一個、上一個 · `gg|G` 第一個、最後一個 · `Enter` press · `o` open in a new tab · `y` copy its address · `Esc` leave

@@ -57,16 +57,20 @@ func (m *AppModel) readerFindBox() tea.Cmd {
 	return m.a.Text(terminu.TextInput{Title: "Find", Glyph: glyphSearch, Name: "The text",
 		Prompt: "Text to find on the page", Verb: "find", Old: old,
 		Done: m.cmdDone(func(v string) tea.Cmd {
+			// Run from the Space menu, the search closes it, found or not
+			// (tdp T1). It is not recorded in the App Log, as the filter is
+			// not; a search with no hit is, by its toast (tdp note.7, the
+			// user's answer of 2026-11-04, in tdp after v1.2.0).
+			closeAll := m.a.CloseAll()
 			if strings.TrimSpace(v) == "" {
 				t.find = nil
-				return nil
+				return closeAll
 			}
 			t.find = &readerFind{query: v}
 			t.find.hits = findHits(t, v)
-			m.did("Searched " + tabName(t) + " for " + v)
 			if len(t.find.hits) == 0 {
 				t.find = nil
-				return m.toast("Not on the page: " + v)
+				return tea.Batch(closeAll, m.toast("Not on the page: "+v))
 			}
 			t.find.at = 0
 			for i, h := range t.find.hits {
@@ -76,7 +80,7 @@ func (m *AppModel) readerFindBox() tea.Cmd {
 				}
 			}
 			m.readerShowHit(t)
-			return nil
+			return closeAll
 		})})
 }
 
@@ -340,7 +344,10 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 		hidden(panel("b", "Breadcrumb", "the pages this tab went through; pick one to go there", m.busy, m.openBreadcrumb),
 			func() bool { t := m.shownTab(); return t == nil || len(t.hist) < 2 }),
 		away(panel("o", "Open", "a URL or a search; this page's own is offered", nil, m.locationBox)),
-		away(panel("/", "Find", "text on the page; n|N step through it", noPage, m.readerFindBox)),
+		// Its box is a gate, as a confirm is: the menu stays under it,
+		// Esc going back to it, and the two close together once the
+		// search runs (tdp T1, v1.2.0).
+		panel("/", "Find", "text on the page; n|N step through it", noPage, m.readerFindBox),
 		panel("n", "Next match", "of the text found", noFind, func() tea.Cmd { return m.readerFindStep(1) }),
 		panel("N", "Previous match", "of the text found", noFind, func() tea.Cmd { return m.readerFindStep(-1) }),
 		panel("f", "Focus mode", "walk what can be pressed: links, images, fields, buttons", noPage, m.enterFocus),

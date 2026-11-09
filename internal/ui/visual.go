@@ -56,7 +56,7 @@ func (m *AppModel) visualKeys(selecting bool) []terminu.ModeKey {
 		key("h|j|k|l", "move by character and row", false, "h", "j", "k", "l", "←", "↓", "↑", "→"),
 		key("w|b|e", "next word, previous word, end of the word", false, "w", "b", "e"),
 		key("0|$", "start, end of the row", false, "0", "$"),
-		key("u|d", "half a page up, down (PgUp, PgDn too)", false, "u", "d", "PgUp", "PgDn"),
+		key("u|d", "half a page up, down", false, "u", "d", "PgUp", "PgDn"), // PgUp|PgDn unlisted (tdp K12)
 		key("gg|G", "top, bottom of the page", false, "g", "G"),
 	}
 	if !selecting {
@@ -66,7 +66,7 @@ func (m *AppModel) visualKeys(selecting bool) []terminu.ModeKey {
 	}
 	return append(keys,
 		// Named as the lib's own selection mode names it.
-		item(terminu.ModeKey{Key: "y", Desc: "copy", Label: "[y] Copy", Do: m.visualKey}),
+		item(terminu.ModeKey{Key: "y", Desc: "copy", Label: "Cop[y]", Do: m.visualKey}),
 		terminu.ModeKey{Key: "/", Desc: "find", Do: func(string) tea.Cmd { return m.visualSearch() }},
 		key("n|N", "next match", true, "n", "N"),
 		item(key("Enter", "press", true, "Enter")),
@@ -145,8 +145,14 @@ func (m *AppModel) visualSearch() tea.Cmd {
 	return m.a.Text(terminu.TextInput{Title: "Find", Glyph: glyphSearch, Name: "The text",
 		Prompt: "Text to find on the page", Verb: "find", Old: m.sel.query,
 		Done: func(v string) tea.Cmd {
+			// Run from the mode's Space menu, the search closes it, found
+			// or not (tdp T1).
+			closeAll := m.a.CloseAll()
 			m.sel.query = v
 			m.sel.search()
+			if v != "" && len(m.sel.matches) == 0 {
+				return tea.Batch(closeAll, m.toast("Not on the page: "+v))
+			}
 			m.sel.jumpMatch(m.sel.firstMatchFrom(m.sel.row, m.sel.col))
 			if t := m.shownTab(); t != nil {
 				vis := m.pageVisible()
@@ -154,6 +160,6 @@ func (m *AppModel) visualSearch() tea.Cmd {
 					t.top = max(0, m.sel.row-vis/2)
 				}
 			}
-			return nil
+			return closeAll
 		}})
 }
