@@ -34,7 +34,8 @@ func main() {
 	// `webu version` and `webu help` answer before anything else, so they
 	// work with no config.
 	if len(args) == 1 && args[0] == "version" {
-		fmt.Printf("webu %s\n", version.Display())
+		// The version alone, as its tag reads (harness project.4).
+		fmt.Println(version.Display())
 		return
 	}
 	if len(args) == 1 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {

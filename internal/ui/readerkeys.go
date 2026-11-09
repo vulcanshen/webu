@@ -319,7 +319,6 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 	// H and L are on the hint: how to go back and forward is not
 	// something to look up (user, 2026-10-28).
 	hint := func(a terminu.Action, verb string) terminu.Action { a.Hint = verb; return a }
-	hidden := func(a terminu.Action, h func() bool) terminu.Action { a.Hidden = h; return a }
 	noFind := func() bool { t := m.shownTab(); return t == nil || t.find == nil }
 	return []terminu.Action{
 		// What is left of DevTools (pageinfo.go): first in the menu, with
@@ -341,8 +340,10 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 			m.did("Went forward in " + tabName(m.shownTab()))
 			return m.shownTab().readerGo(1)
 		}), "forward"),
-		hidden(panel("b", "Breadcrumb", "the pages this tab went through; pick one to go there", m.busy, m.openBreadcrumb),
-			func() bool { t := m.shownTab(); return t == nil || len(t.hist) < 2 }),
+		// With one page there is nowhere to go yet: disabled, not gone,
+		// as Back and Forward are (tdp M6).
+		panel("b", "Breadcrumb", "the pages this tab went through; pick one to go there",
+			func() bool { t := m.shownTab(); return t == nil || len(t.hist) < 2 || m.busy() }, m.openBreadcrumb),
 		away(panel("o", "Open", "a URL or a search; this page's own is offered", nil, m.locationBox)),
 		// Its box is a gate, as a confirm is: the menu stays under it,
 		// Esc going back to it, and the two close together once the

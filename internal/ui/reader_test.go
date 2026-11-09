@@ -246,6 +246,13 @@ func TestReaderReadsAndFollows(t *testing.T) {
 	if v := d.view(); strings.Contains(v, "Site menu") || strings.Contains(v, "# First") {
 		t.Errorf("the content holds the site's menu, or a markdown symbol:\n%s", v)
 	}
+	// With one page in the tab there is nowhere to go back to yet: the
+	// breadcrumb is there, disabled, not gone (tdp M6).
+	for _, a := range m.pagePanel.Actions {
+		if a.Key == "b" && (a.Hidden != nil || a.Disabled == nil || !a.Disabled()) {
+			t.Errorf("b should be disabled on the first page, not hidden")
+		}
+	}
 	d.press("2")
 	d.press("w")
 	d.until("the full page", d.shows("Site menu"))

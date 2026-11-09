@@ -12,8 +12,13 @@ tasks:
     implementation: |
       `webu`：restore_session 開著時開回 session.yaml 記的分頁，只有原本顯示的那一個載入
       `webu <網址>…`：一個網址一個分頁，第一個在前面；不像網址的字照 search_engine 搜尋
-      `webu help` 印命令列說明，`webu version` 印版本（tgo 的 version／help）
-      不知道：help 的完整內容、version 印的格式
+      `webu version` 只印 internal/version 的 Display()，跟 tag 一樣（例：v0.7.0；本機建的是 dev）；`webu help`（也收 -h、--help）印命令列說明：
+        webu                     the last session's tabs
+        webu <url|words> ...     open each in a new tab, the first in front; words that are not a URL are searched
+        webu version             webu's version
+        webu help                this
+      兩個都在讀設定之前回答，沒有設定也能用、不開畫面
+      其他以 - 開頭的參數：stderr 印「webu: unknown option <參數>」加說明，結束碼 2
     test: [TestResolveURL, TestRoundTrips, commit: beb5b5d]
   - id: 3
     spec: 1
@@ -56,6 +61,7 @@ tasks:
       載入中：框上有 loading icon；頁面還沒有內容時，中間是 LoadingText「loading <host>…」
       抓不到（DNS、連線、憑證）：Panel.Fail，中間兩句，事實 Red、提示「Press [R] to retry」；App Log 記一筆
       位置列在 loading 與錯誤上面照樣留著；[2] 失焦時跟著淡化
+      R（[2] 的 panel 動作，Space menu 的 [R]eload）重新載入這一頁，App Log「Reloaded …」；沒有分頁或正在載入時停用
     test: [TestAPageThatCannotBeReached, TestTheAddressStaysWhileLoading]
   - id: 8
     spec: 1
@@ -80,7 +86,7 @@ tasks:
     spec: 1
     implementation: |
       H|L（[2] 的 panel 動作，寫在 hint 上）：沿著分頁自己的歷史上一頁、下一頁，回到離開時的位置；沒有上一頁或下一頁時停用；App Log「Went back in …」「Went forward in …」
-      b 麵包屑：開 tgo 的 Menu「Breadcrumb」，一列一頁「1. 標題」，目前那一頁寫「where the tab is now」，其他「go to it」，選了直接跳，不先問；歷史少於兩頁時這個動作藏起來
+      b 麵包屑：開 tgo 的 Menu「Breadcrumb」，一列一頁「1. 標題」，目前那一頁寫「where the tab is now」，其他「go to it」，選了直接跳，不先問；歷史少於兩頁（還沒有別頁可跳）時停用，跟 H|L 一樣
     test: [TestReaderReadsAndFollows, commit: b8b5e1c]
   - id: 11
     spec: 1
@@ -164,7 +170,7 @@ tasks:
     spec: 1
     implementation: |
       [2] 的 panel 動作 Y：這一頁的網址複製到剪貼簿；Yank markdown（Space menu，沒有熱鍵）：這一頁的內容轉成 markdown 複製；做完 Success toast
-      剪貼簿用系統的指令（macOS pbcopy），失敗時 error popup
+      剪貼簿用系統的指令（macOS pbcopy；Linux wl-copy、xclip 或 xsel）；成功 Success toast「Copied N lines」，失敗 Error toast「Copy failed: …」（缺工具時寫要裝什麼）
     test: [commit: bf34a3d]
   - id: 21
     spec: 1
@@ -182,6 +188,7 @@ tasks:
       舊版的 Chromium（快取裡的 chromium-<rev>，新舊兩個快取位置都看）：啟動時刪掉，App Log 寫刪了哪裡、多大，刪不乾淨寫 Warning
       資料目錄裡舊版留下的 profile/ 與 webu.log：不刪，每次啟動用 tgo 的 App.NoLongerUsed 在 App Log 寫一筆 INFO
       config.yaml 裡不再讀的 key（measure）：不刪，存檔時照樣寫回，每次啟動 App Log INFO「No longer used: measure in …; delete it if you don't need it」
+      CHANGELOG v0.6.0 那一段寫了這三件：舊的 Chromium 快取第一次啟動時刪掉、profile/ 與 webu.log 留給使用者、measure 留著並在 App Log 提
     test: [TestChromiumIsDropped, TestARetiredKeyIsKept, TestARetiredConfigKeyIsNamed]
   - id: 23
     spec: 1

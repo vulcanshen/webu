@@ -13,6 +13,12 @@ Each release names the version of terminu design (tdp) it follows.
   Visual mode alike, gone with the hits. Visual mode wrote it on the
   address row before.
 - On terminu-go v1.2.1, following tdp v1.2.1.
+- `webu version` prints the version alone, as its tag reads (`v0.7.0`).
+- The breadcrumb (`b`) is in the menu on a tab's first page too, disabled
+  until there is another page to go to; it was left out.
+- webu's records are kept with terminu-harness now (`harness-assets/`);
+  the developer notes that were `docs/dev-remarks.md` are in the git
+  history.
 
 ## v0.7.0 — tdp v1.2.0
 

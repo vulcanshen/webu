@@ -5,7 +5,7 @@ tasks:
   - id: 1
     spec: 1
     request: 五個畫面用大寫字母切換：Web、Bookmarks、History、Downloads、Settings；Web 畫面是分頁清單與頁面並排，頁面顯示分頁清單游標所在的那一頁
-    tdp: [tdp screen.1, tdp screen.3, tdp screen.5, tdp screen.6, tdp panel.1, tdp panel.4, tdp terms.2, tdp P5]
+    tdp: [tdp screen.1, tdp screen.3, tdp screen.5, tdp screen.6, tdp panel.1, tdp panel.4, tdp terms.2, tdp P5, tdp panel.13, tdp M4]
     remark:
       - |
         Web 畫面的版面（窄寬也是兩個 panel 並排；`Z` 讓 [2] 佔滿寬度）：
@@ -18,112 +18,117 @@ tasks:
   - id: 2
     spec: 1
     request: 命令列：`webu` 開回上次的分頁、給網址就一個網址一個分頁、不是網址的字拿去搜尋、`webu help` 印完整的命令列說明
-    tdp: [tdp E1, tdp E3, tdp P5]
+    tdp: [tdp E1, tdp E3, tdp P5, harness project.4]
     remark:
       - 上次的分頁存在狀態檔 session.yaml；設定 restore_session 決定要不要開回來
   - id: 3
     spec: 1
     request: 分頁清單：每個分頁前面是網站的記號（網站自己的 icon，沒有就是地球，顏色取自 favicon），可以到頁面、關閉、在新分頁再開、重新載入、複製網址、新分頁、關閉其他、重開剛關的
-    tdp: [tdp panel.5, tdp K3, tdp M5, tdp K12, tdp P5]
+    tdp: [tdp panel.5, tdp K3, tdp M5, tdp K12, tdp P5, tdp panel.13, tdp note.7]
     remark:
       - 網站記號的 icon 與顏色是領域的符號與顏色（tdp P5）
   - id: 4
     spec: 1
     request: 讀網頁：照原樣抓下來、不跑 JavaScript，顯示這一頁直接給的內容，網站外殼不顯示；`w` 切到整頁、再按回到正文
-    tdp: [tdp P5, tdp M5]
+    tdp: [tdp P5, tdp M5, tdp note.7]
     remark:
       - 怎麼挑正文是功能邏輯（tdp P5）
   - id: 5
     spec: 1
     request: 頁面畫成適合終端機的樣子：標題的字放在它那一層的顏色上，清單是短橫線或編號，程式碼依語言上色、寫出語言名，引用前面有直槓，表格畫成格子，連結與圖片前面有 icon；網頁裡的控制字元不直接送到終端機
-    tdp: [tdp P4, tdp P5, tdp color.1, tdp color.2, tdp components.5, tdp file-picker.3]
+    tdp: [tdp P4, tdp P5, tdp color.1, tdp color.2, tdp components.5, tdp file-picker.3, tdp F1]
     remark:
       - 照 catu 畫 markdown 的方式（user 2026-11-09）：沒有行號，字左右各留一格；引用的直槓依深度用標題的層色
       - 程式碼用家族共用的語法色（tdp file-picker.3）
+      - note: 網頁內文的控制字元該歸 components.5 的哪一群 tdp 沒寫；暫時照舊：頁面文字裡的畫成紅色名字，程式碼區塊與原始碼一行裡的 Tab 畫成空白
+        issue: tdp #2
   - id: 6
     spec: 1
     request: 像 `less` 一樣捲動：`j|k|u|d|gg|G`；下框顯示讀到哪
-    tdp: [tdp K12, tdp panel.1]
+    tdp: [tdp K12, tdp panel.1, tdp panel.5]
   - id: 7
     spec: 1
     request: 頁面最上面是網址；頁面還在來、或抓不到時，頁面中間說明，網址照樣在
-    tdp: [tdp panel.10, tdp panel.15, tdp T2]
+    tdp: [tdp panel.10, tdp panel.15, tdp T2, tdp E3, tdp F5, tdp M3, tdp M5, tdp M6, tdp note.7]
     remark:
       - 網址前面放 nf-md-web（tdp panel.10 讓 app 決定位置列的 glyph）
   - id: 8
     spec: 1
     request: 頁面上 `/` 找字、找到的都加底線，`n|N` 在找到的之間跳，`Esc` 收起來
-    tdp: [tdp note.3, tdp panel.14, tdp note.7, tdp T1, tdp K4]
+    tdp: [tdp note.3, tdp panel.14, tdp note.7, tdp T1, tdp K4, tdp note.2, tdp toast.2]
   - id: 9
     spec: 1
     request: Focus mode（`f`）：`j|k` 在連結、圖片、欄位、按鈕之間走，停在連結上時寫出它會去的網址，`Enter` 按下去；`o` 開在新分頁、`y` 複製網址
-    tdp: [tdp K11, tdp K12, tdp toast.4, tdp menu.4, tdp P6]
+    tdp: [tdp K11, tdp K12, tdp toast.4, tdp menu.4, tdp P6, tdp panel.3, tdp note.7]
   - id: 10
     spec: 1
     request: '`H|L` 沿著這個分頁自己的歷史上一頁、下一頁；`b` 是麵包屑：這個分頁走過的每一頁，選一頁就跳過去'
-    tdp: [tdp P5, tdp M5, tdp menu.1]
+    tdp: [tdp P5, tdp M5, tdp menu.1, tdp M6, tdp note.7]
     remark:
       - 麵包屑照 kbu 的做法（user 2026-10-29）
   - id: 11
     spec: 1
     request: '`o` 開網址框，用灰字提議目前的網址；不是網址的字拿去搜尋'
-    tdp: [tdp input.2, tdp input.5, tdp P5]
+    tdp: [tdp input.2, tdp input.5, tdp P5, tdp note.7]
     remark:
       - 預設搜尋 DuckDuckGo 的 HTML 版（Google 會對程式送來的搜尋跳 CAPTCHA）
   - id: 12
     spec: 1
     request: 表單做到搜尋框與簡單的帳密登入：填欄位、勾選、選選項、按按鈕送出；只有一個可以打字的欄位時，填完問要不要送出
-    tdp: [tdp input.10, tdp password, tdp select, tdp checkbox, tdp confirm, tdp P5]
+    tdp: [tdp input.10, tdp password, tdp select, tdp checkbox, tdp confirm, tdp P5, tdp F1, tdp K3, tdp note.7]
   - id: 13
     spec: 1
     request: 登入後一直有效：cookie 存起來，只有自己讀得到；可以清空
-    tdp: [tdp E3, tdp confirm, tdp F6]
+    tdp: [tdp E3, tdp confirm, tdp F6, tdp note.7]
   - id: 14
     spec: 1
     request: 看這一頁的原始碼、這個網站的 cookie（可以清掉）、載入這一頁發出的請求
-    tdp: [tdp note.2, tdp note.3, tdp M2, tdp F6, tdp P5]
+    tdp: [tdp note.2, tdp note.3, tdp M2, tdp F6, tdp P5, tdp confirm, tdp note.4, tdp note.7]
     remark:
       - 放在 [2] Space menu 最上面，沒有熱鍵（user 2026-10-29）
   - id: 15
     spec: 1
     request: 連到檔案的連結會下載；Downloads 畫面列出這次開啟以來的下載與進度，可以開檔、開來源頁、移除、複製路徑、清掉已完成的、過濾
-    tdp: [tdp screen.4, tdp panel.5, tdp panel.14, tdp P5]
+    tdp: [tdp screen.4, tdp panel.5, tdp panel.14, tdp P5, tdp screen.3, tdp toast.2, tdp E3]
   - id: 16
     spec: 1
     request: 有目錄的書籤：加目前頁、加目錄、搬移、改名、刪除、複製網址、匯入瀏覽器的書籤匯出檔、過濾
-    tdp: [tdp panel.5, tdp panel.11, tdp panel.14, tdp confirm, tdp form, tdp file-picker.1, tdp file-picker.6]
+    tdp: [tdp panel.5, tdp panel.11, tdp panel.14, tdp confirm, tdp form, tdp file-picker.1, tdp file-picker.6, tdp E3, tdp menu.1, tdp text]
+    remark:
+      - note: 多層、可收合的樹狀清單（目錄本身是能操作的項目）tdp 沒有寫法；暫時照舊：tgo List 畫目錄樹，每層縮排，Enter 收合或展開
+        issue: tdp #3
   - id: 17
     spec: 1
     request: 歷史：所有看過的頁，新的在上；開新分頁、刪除一筆、複製網址、清空、過濾
-    tdp: [tdp panel.5, tdp panel.14, tdp confirm]
+    tdp: [tdp panel.5, tdp panel.14, tdp confirm, tdp E3]
   - id: 18
     spec: 1
     request: Settings 畫面一列一個 config.yaml 的值，改了就存：搜尋引擎、下載目錄、要不要開回上次的分頁、家族共用的兩個 key
-    tdp: [tdp panel.12, tdp input.5, tdp number, tdp file-picker.7, tdp checkbox, tdp E3]
+    tdp: [tdp panel.12, tdp input.5, tdp number, tdp file-picker.7, tdp checkbox, tdp E3, tdp input.10]
   - id: 19
     spec: 1
     request: Visual mode（`v`）：逐字移動、選字、複製到系統剪貼簿、找字、按下游標所在的東西
-    tdp: [tdp K11, tdp K4, tdp menu.4, tdp color.1, tdp note.3, tdp T1]
+    tdp: [tdp K11, tdp K4, tdp menu.4, tdp color.1, tdp note.3, tdp T1, tdp note.4, tdp K12, tdp toast.2]
   - id: 20
     spec: 1
     request: 複製這一頁的網址，或把整頁輸出成 markdown 到剪貼簿
-    tdp: [tdp P5, tdp M3]
+    tdp: [tdp P5, tdp M3, tdp toast.1, tdp toast.2, tdp F5]
   - id: 21
     spec: 1
     request: 設定、狀態、資料放在固定的位置，可以用環境變數換；位置換了第一次啟動時搬過去並說明；自己的檔讀不了時先問要不要搬開再開始
-    tdp: [tdp E2, tdp E3]
+    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast.2, tdp note.6]
   - id: 22
     spec: 1
     request: 舊版留下的東西：舊版下載的 Chromium 快取第一次啟動時刪掉；不再用的檔與設定 key 留給使用者，每次啟動在 App Log 提一次
-    tdp: [tdp E3]
+    tdp: [tdp E3, tdp note.7, harness project.6]
   - id: 23
     spec: 1
     request: '`!` 打開 App Log：這次開 webu 以來做了什麼、出了什麼錯'
-    tdp: [tdp note.7, tdp F5]
+    tdp: [tdp note.7, tdp F5, tdp screen.2]
   - id: 24
     spec: 1
     request: 終端機要 Nerd Font 與 truecolor；至少 60×20，比這小時只顯示名稱、需要的大小與怎麼離開；icon 與 powerline 符號的寬度啟動時量，量錯可以用環境變數設
-    tdp: [tdp E4, tdp E5, tdp L1, tdp screen.7, tdp S1, tdp S5]
+    tdp: [tdp E4, tdp E5, tdp L1, tdp screen.7, tdp S1, tdp S5, tdp E7]
   - id: 25
     spec: 1
     request: 用 Homebrew 或安裝腳本裝、可以移除；發布在 GitHub
