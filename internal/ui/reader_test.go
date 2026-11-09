@@ -390,6 +390,47 @@ func TestReaderDownloadsAndMissingPages(t *testing.T) {
 	d.until("the toast", d.shows("404 Not Found"))
 }
 
+// A web page is drawn as a browser draws it (tdp components.5, v1.2.2):
+// in running text a Tab and a \n are white space; in a <pre> a Tab is
+// input_tab_width spaces and a \n a line break; any other control
+// character, a colour code's ESC among them, is its name in Red, and the
+// page gives nothing a colour.
+func TestAPageIsDrawnAsABrowserDrawsIt(t *testing.T) {
+	// Colours on, or a test of one passes on plain text.
+	was := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(0) // termenv.TrueColor
+	t.Cleanup(func() { lipgloss.SetColorProfile(was) })
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		io.WriteString(w, "<html><head><title>Marks</title></head><body><h1>Marks</h1>"+
+			"<p>one\ttwo\nthree \x1b[31mred</p><pre>\tindented\nnext</pre></body></html>")
+	}))
+	t.Cleanup(srv.Close)
+	d, m := readerAt(t, srv.URL+"/", t.TempDir())
+	d.until("the page", d.shows("one two three"))
+	v := d.view()
+	if !strings.Contains(v, `one two three \x1b[31mred`) {
+		t.Errorf("the paragraph should run on with spaces, its ESC by name:\n%s", v)
+	}
+	if strings.Contains(v, `\t`) || strings.Contains(v, `\n`) {
+		t.Errorf("a Tab or a \\n should never be drawn by name on a page:\n%s", v)
+	}
+	var indented, next bool
+	for _, l := range strings.Split(v, "\n") {
+		indented = indented || strings.Contains(l, "    indented") && !strings.Contains(l, "next")
+		next = next || strings.Contains(l, "next") && !strings.Contains(l, "indented")
+	}
+	if !indented || !next {
+		t.Errorf("the code should keep its indent, four spaces, and its two lines:\n%s", v)
+	}
+	if raw := strings.Join(m.a.Frame(), "\n"); !strings.Contains(raw, controlStyle(false).Render(`\x1b`)) {
+		t.Errorf("the ESC's name should be Red:\n%q", raw)
+	}
+}
+
 // A quote in a quote has one blank row before it, of the outer quote's bar,
 // and each bar is in the colour of its depth, a heading's colours, as catu
 // draws them (user 2026-11-09).

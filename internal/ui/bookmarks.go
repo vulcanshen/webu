@@ -16,9 +16,10 @@ import (
 
 // The Bookmarks screen's folders (ui.md §2, 2026-09-21): a path on each
 // bookmark — "dev/go" is go inside dev — plus the paths declared on their
-// own in bookmarks.yaml so an empty folder exists. The screen and the Move
-// select show them as a tree, indented by depth; Enter on a folder's row
-// folds it.
+// own in bookmarks.yaml so an empty folder exists. The screen is walked a
+// level at a time, as filu walks directories (tdp panel.10): Enter goes
+// into a folder, the location row naming it, Esc goes up. The Move select
+// lists every folder, indented by depth.
 
 // folderNames is every folder there is — declared, in use by a bookmark,
 // or an ancestor of either — in tree order: a parent right before what is
@@ -74,6 +75,28 @@ func folderBase(f string) string {
 	return f
 }
 
+// folderParent is the folder f is in: "" for the top level.
+func folderParent(f string) string {
+	if i := strings.LastIndex(f, "/"); i >= 0 {
+		return f[:i]
+	}
+	return ""
+}
+
+// folderChild is the folder right inside dir that path is in or is:
+// "dev" for "dev/go/std" from the top level.
+func folderChild(dir, path string) string {
+	rest := path
+	if dir != "" {
+		rest = strings.TrimPrefix(path, dir+"/")
+	}
+	first, _, _ := strings.Cut(rest, "/")
+	if dir == "" {
+		return first
+	}
+	return dir + "/" + first
+}
+
 // saveBookmarks writes bookmarks.yaml with every folder there is declared
 // — the ones made by hand, the ones a path implied, the ones a bookmark
 // sits in — so a folder, once it exists, exists until x on its row. It
@@ -87,18 +110,6 @@ func (m *AppModel) saveBookmarks() error {
 // inFolder reports whether path is f or inside it.
 func inFolder(path, f string) bool {
 	return path == f || strings.HasPrefix(path, f+"/")
-}
-
-// underFold reports whether some folder above f (not f itself) is folded,
-// which hides f and everything in it.
-func (m *AppModel) underFold(f string) bool {
-	parts := strings.Split(f, "/")
-	for i := 1; i < len(parts); i++ {
-		if m.foldedFolders[strings.Join(parts[:i], "/")] {
-			return true
-		}
-	}
-	return false
 }
 
 // bmRow is one row of the Bookmarks screen: a bookmark (ref is its index
@@ -117,15 +128,14 @@ func bmRowID(r bmRow) string {
 	return "b:" + strconv.Itoa(r.ref)
 }
 
-// buildBookmarks registers the Bookmarks screen (ui.md §2): a tree of
-// folders and bookmarks, Enter opening a bookmark in a new tab or a folder
-// open or shut.
+// buildBookmarks registers the Bookmarks screen (ui.md §2): one folder's
+// folders and bookmarks, Enter opening a bookmark in a new tab or going
+// into a folder, Esc going up a level.
 func (m *AppModel) buildBookmarks() {
 	m.bmList = &terminu.List{
-		Columns:    []terminu.Column{{Title: "Title", Shrink: true}, {Title: "URL", Shrink: true}},
-		Filterable: true,
-		EmptyFact:  "No bookmarks yet",
-		EmptyHint:  "Press [a] to add one, or [Space] to see what you can do here",
+		Columns:       []terminu.Column{{Title: "Title", Shrink: true}, {Title: "URL", Shrink: true}},
+		Filterable:    true,
+		LocationGlyph: glyphFolder,
 		// The delete questions name the row under the cursor.
 		OnMove: func(terminu.Row) tea.Cmd { m.bmPanel.Actions = m.bookmarkActions(); return nil },
 	}
@@ -154,50 +164,33 @@ func (m *AppModel) bmCurrent() (bmRow, bool) {
 	return bmRow{}, false
 }
 
-// refreshBookmarks lists the bookmarks as the screen draws them: the top
-// level first, then each folder as a row of its own with what is in it
-// under it, indented by depth. A folded folder is one row, with a count of
-// what it hides.
+// refreshBookmarks lists the folder the screen is in: its folders first,
+// as filu lists directories, then its bookmarks; the location row is its
+// path, "/" at the top level.
 func (m *AppModel) refreshBookmarks() {
 	if m.bmList == nil {
 		return
 	}
 	var rows []terminu.Row
-	book := func(i, depth int) {
-		b := m.bookmarks[i]
-		title := strings.Repeat("  ", depth) + nameOr(b.Title, b.URL)
-		rows = append(rows, terminu.Row{ID: bmRowID(bmRow{ref: i}), Cells: []string{title, b.URL}})
+	for _, f := range m.folderNames() {
+		if folderParent(f) == m.bmDir {
+			rows = append(rows, terminu.Row{ID: bmRowID(bmRow{folder: f, isFolder: true}),
+				Cells: []string{glyphFolder + " " + folderBase(f), ""}})
+		}
 	}
 	for i, b := range m.bookmarks {
-		if b.Folder == "" {
-			book(i, 0)
+		if b.Folder == m.bmDir {
+			rows = append(rows, terminu.Row{ID: bmRowID(bmRow{ref: i}), Cells: []string{nameOr(b.Title, b.URL), b.URL}})
 		}
 	}
-	for _, f := range m.folderNames() {
-		if m.underFold(f) {
-			continue
-		}
-		depth := folderDepth(f) - 1
-		name := strings.Repeat("  ", depth) + glyphFolder + " " + folderBase(f)
-		if m.foldedFolders[f] {
-			n := 0
-			for _, b := range m.bookmarks {
-				if inFolder(b.Folder, f) {
-					n++
-				}
-			}
-			shut := "(" + itoa(n) + " shut)"
-			rows = append(rows, terminu.Row{ID: bmRowID(bmRow{folder: f, isFolder: true}),
-				Cells:  []string{name + " " + shut, ""},
-				Styled: [][]terminu.Span{{{Text: name + " "}, {Text: shut, Style: terminu.Fg(terminu.Overlay0)}}, nil}})
-			continue
-		}
-		rows = append(rows, terminu.Row{ID: bmRowID(bmRow{folder: f, isFolder: true}), Cells: []string{name, ""}})
-		for i, b := range m.bookmarks {
-			if b.Folder == f {
-				book(i, folderDepth(f))
-			}
-		}
+	m.bmList.Location = "/" + m.bmDir
+	// Esc goes up from a folder; at the top there is no up, Esc does
+	// nothing and ? lists no Esc (terminu-go v1.2.2).
+	m.bmPanel.OnEsc = nil
+	m.bmList.EmptyFact, m.bmList.EmptyHint = "No bookmarks yet", "Press [a] to add one, or [Space] to see what you can do here"
+	if m.bmDir != "" {
+		m.bmPanel.OnEsc = m.bmUp
+		m.bmList.EmptyFact, m.bmList.EmptyHint = "Nothing in this folder", "Press [a] to add a bookmark here, or [Esc] to go up"
 	}
 	m.bmList.SetRows(rows)
 	// A row's ID is its index: after a delete the cursor keeps an ID that
@@ -210,14 +203,19 @@ func (m *AppModel) refreshBookmarks() {
 func (m *AppModel) bookmarkActions() []terminu.Action {
 	onFolder := func() bool { r, ok := m.bmCurrent(); return ok && r.isFolder }
 	return []terminu.Action{
-		{Key: "Enter", Label: "Open", Desc: "a bookmark in a new tab; a folder: open or shut", Scope: terminu.ItemScope, Hint: "open",
+		{Key: "Enter", Label: "Into", Desc: "this folder", Scope: terminu.ItemScope, Hint: "into",
+			Hidden: func() bool { return !onFolder() },
+			Do: m.do(func() tea.Cmd {
+				if r, ok := m.bmCurrent(); ok && r.isFolder {
+					m.did("Went to the folder " + r.folder)
+					m.bmGo(r.folder, "")
+				}
+				return nil
+			})},
+		{Key: "Enter", Label: "Open", Desc: "this bookmark in a new tab", Scope: terminu.ItemScope, Hint: "open", Hidden: onFolder,
 			Do: m.do(func() tea.Cmd {
 				r, ok := m.bmCurrent()
-				switch {
-				case !ok:
-					return nil
-				case r.isFolder:
-					m.toggleFolder(r.folder)
+				if !ok || r.isFolder {
 					return nil
 				}
 				// A bookmark opens in a NEW tab, never over the one the web
@@ -248,22 +246,10 @@ func (m *AppModel) bookmarkActions() []terminu.Action {
 				}
 				return nil
 			})},
-		{Key: "a", Label: "Add", Desc: "a bookmark, in the folder under the cursor", Scope: terminu.PanelScope, Hint: "add",
-			Do: m.do(func() tea.Cmd {
-				folder := ""
-				if r, ok := m.bmCurrent(); ok {
-					folder = r.folder
-				}
-				return m.startAddBookmark(folder)
-			})},
+		{Key: "a", Label: "Add", Desc: "a bookmark, in this folder", Scope: terminu.PanelScope, Hint: "add",
+			Do: m.do(func() tea.Cmd { return m.startAddBookmark(m.bmDir) })},
 		{Key: "A", Label: "Add folder", Desc: "a path like a/b/c makes each level", Scope: terminu.PanelScope,
-			Do: m.do(func() tea.Cmd {
-				parent := ""
-				if r, ok := m.bmCurrent(); ok {
-					parent = r.folder
-				}
-				return m.addFolderBox(parent)
-			})},
+			Do: m.do(func() tea.Cmd { return m.addFolderBox(m.bmDir) })},
 		{Key: "I", Label: "Import", Desc: "a browser's exported bookmarks", Scope: terminu.PanelScope, Do: m.startImport},
 	}
 }
@@ -300,19 +286,29 @@ func (m *AppModel) deleteAsk() *terminu.Ask {
 		Question: "Delete this bookmark?", Verb: "delete"}
 }
 
-// toggleFolder is Enter on a folder row: shut, or open again.
-func (m *AppModel) toggleFolder(path string) {
-	if m.foldedFolders == nil {
-		m.foldedFolders = map[string]bool{}
-	}
-	m.foldedFolders[path] = !m.foldedFolders[path]
-	if m.foldedFolders[path] {
-		m.did("Shut the folder " + path)
-	} else {
-		m.did("Opened the folder " + path)
+// bmGo puts the Bookmarks screen in folder dir with the cursor on the row
+// whose ID is focus, else on the first. A filter is of the level it was
+// typed on and goes with it (tdp panel.10).
+func (m *AppModel) bmGo(dir, focus string) {
+	m.bmDir = dir
+	if m.bmList.Filtering() {
+		m.bmList.ClearFilter()
 	}
 	m.refreshBookmarks()
-	m.bmList.Select(bmRowID(bmRow{folder: path, isFolder: true}))
+	if focus == "" || !m.bmList.Select(focus) {
+		if rows := m.bmList.Rows(); len(rows) > 0 {
+			m.bmList.Select(rows[0].ID)
+		}
+	}
+	m.bmPanel.Actions = m.bookmarkActions()
+}
+
+// bmUp is Esc in a bookmark folder once no filter is set: up a level, the
+// cursor on the folder it came out of (tdp panel.10, K4); the top level
+// has none. Going up is not an operation and is not logged (filu's way).
+func (m *AppModel) bmUp() tea.Cmd {
+	m.bmGo(folderParent(m.bmDir), bmRowID(bmRow{folder: m.bmDir, isFolder: true}))
+	return nil
 }
 
 // moveSelect is m on a bookmark: the folders to move it to as a tree, the
@@ -341,7 +337,8 @@ func (m *AppModel) moveSelect(ref int) tea.Cmd {
 }
 
 // moveBookmark puts bookmark ref in the folder the select chose (0 is the
-// top level), writes the file, and keeps the cursor on it.
+// top level) and writes the file. Moved to another folder, it leaves this
+// level and the cursor stays where it was, as with a delete.
 func (m *AppModel) moveBookmark(ref, idx int) tea.Cmd {
 	if ref < 0 || ref >= len(m.bookmarks) {
 		return nil
@@ -356,12 +353,12 @@ func (m *AppModel) moveBookmark(ref, idx int) tea.Cmd {
 	}
 	m.did("Moved " + oneLine(nameOr(m.bookmarks[ref].Title, m.bookmarks[ref].URL)) + " to " + nameOr(folder, "the top level"))
 	m.refreshBookmarks()
-	m.bmList.Select(bmRowID(bmRow{ref: ref}))
 	return nil
 }
 
-// addFolderBox is A: a folder where the cursor is, given as a name or a
-// path — "dir1/dir2/dir3" makes all three at once (revised 2026-09-21).
+// addFolderBox is A: a folder in the one the screen is in, given as a name
+// or a path — "dir1/dir2/dir3" makes all three at once (revised
+// 2026-09-21).
 func (m *AppModel) addFolderBox(parent string) tea.Cmd {
 	prompt := "Folder to add; a path like a/b/c makes each level"
 	if parent != "" {
@@ -390,14 +387,16 @@ func (m *AppModel) addFolderBox(parent string) tea.Cmd {
 		Done: m.cmdDone(func(v string) tea.Cmd { return m.addFolder(full(v)) })})
 }
 
-// addFolder makes the folder full and writes the file.
+// addFolder makes the folder full and writes the file. The cursor goes to
+// what was added on this level: full's row, or for a path the first new
+// level's, the rest inside it (tdp K3).
 func (m *AppModel) addFolder(full string) tea.Cmd {
 	m.folders = append(m.folders, full)
 	if err := m.saveBookmarks(); err != nil {
 		return m.saveFailed("bookmarks.yaml", err)
 	}
 	m.refreshBookmarks()
-	m.bmList.Select(bmRowID(bmRow{folder: full, isFolder: true}))
+	m.bmList.Select(bmRowID(bmRow{folder: folderChild(m.bmDir, full), isFolder: true}))
 	return m.toastOK("Folder " + full)
 }
 
@@ -460,9 +459,9 @@ func (m *AppModel) addBookmark(title, url string) tea.Cmd {
 	if err := m.saveBookmarks(); err != nil {
 		return m.saveFailed("bookmarks.yaml", err)
 	}
-	m.refreshBookmarks()
-	// The cursor goes to what was just added (tdp K3).
-	m.bmList.Select(bmRowID(bmRow{ref: len(m.bookmarks) - 1}))
+	// The cursor goes to what was just added (tdp K3): the screen goes to
+	// the top level, where it is.
+	m.bmGo("", bmRowID(bmRow{ref: len(m.bookmarks) - 1}))
 	return m.toastOK("Added " + strings.TrimSpace(nameOr(title, url)))
 }
 
@@ -592,8 +591,8 @@ func (m *AppModel) importBookmarks(root string, imp store.Import) tea.Cmd {
 	if err := m.saveBookmarks(); err != nil {
 		return m.saveFailed("bookmarks.yaml", err)
 	}
-	m.refreshBookmarks()
-	m.bmList.Select(bmRowID(bmRow{folder: root, isFolder: true}))
+	// The cursor goes to the import's folder (tdp K3), on the level it is.
+	m.bmGo(folderParent(root), bmRowID(bmRow{folder: root, isFolder: true}))
 	return m.toastOK(fmt.Sprintf("Imported %s and %s under %s",
 		plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"), root))
 }
@@ -665,7 +664,7 @@ func (m *AppModel) startRename(r bmRow) tea.Cmd {
 }
 
 // renameFolder moves folder old to to: every bookmark and folder under it
-// follows, folded or not.
+// follows.
 func (m *AppModel) renameFolder(old, to string) tea.Cmd {
 	if to == old {
 		return nil
@@ -681,14 +680,6 @@ func (m *AppModel) renameFolder(old, to string) tea.Cmd {
 			m.folders[i] = move(f)
 		}
 	}
-	folded := map[string]bool{}
-	for f, v := range m.foldedFolders {
-		if inFolder(f, old) {
-			f = move(f)
-		}
-		folded[f] = v
-	}
-	m.foldedFolders = folded
 	if err := m.saveBookmarks(); err != nil {
 		return m.saveFailed("bookmarks.yaml", err)
 	}

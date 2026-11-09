@@ -73,7 +73,7 @@ func TestTheAppLogHasWhatTheUserDid(t *testing.T) {
 	})
 	d.Press("2", "j", "Z", "Z", "B", "Enter", "!")
 	for _, want := range []string{"Zoomed in on the page", "Zoomed out to the tabs and the page",
-		"Switched to Bookmarks", "Shut the folder dev"} {
+		"Switched to Bookmarks", "Went to the folder dev"} {
 		if !d.Has(want) {
 			t.Errorf("the App Log should say %q:\n%s", want, strings.Join(d.Screen(), "\n"))
 		}

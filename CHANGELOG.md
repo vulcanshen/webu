@@ -12,10 +12,21 @@ Each release names the version of terminu design (tdp) it follows.
   of where you are on the page: `/goroutine 2 of 5`, on the page and in
   Visual mode alike, gone with the hits. Visual mode wrote it on the
   address row before.
-- On terminu-go v1.2.1, following tdp v1.2.1.
+- On terminu-go v1.2.2, following tdp v1.2.2.
 - `webu version` prints the version alone, as its tag reads (`v0.7.0`).
 - The breadcrumb (`b`) is in the menu on a tab's first page too, disabled
   until there is another page to go to; it was left out.
+- Bookmarks are walked a folder at a time, as a file manager walks
+  directories, no longer a tree whose folders fold: `Enter` goes into a
+  folder, the row at the top naming where you are (`/dev/go`), and `Esc`
+  goes back up with the cursor on the folder you left. The list, its
+  filter and its count are of that folder alone; `a` and `A` add there
+  (tdp v1.2.2).
+- A web page's control characters are drawn as tdp v1.2.2 now says, as a
+  browser shows the page: a Tab or a line break in running text is a
+  space, in code it keeps its place, and any other, a colour code's ESC
+  among them, is its name in red. webu drew them so already; a test now
+  holds it.
 - webu's records are kept with terminu-harness now (`harness-assets/`);
   the developer notes that were `docs/dev-remarks.md` are in the git
   history.

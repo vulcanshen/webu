@@ -77,8 +77,9 @@ type AppModel struct {
 	// dls is this session's downloads, oldest first: the Downloads screen
 	// lists them, the chip row counts the ones still running.
 	dls []download
-	// foldedFolders are the bookmark folder rows shut with Enter.
-	foldedFolders map[string]bool
+	// bmDir is the bookmark folder the Bookmarks screen is in: "" the top
+	// level (bookmarks.go).
+	bmDir string
 	// unread are webu's own files main could not read: each asked about at
 	// the start, moved aside or webu left (tdp E3). sessionUnread holds
 	// session.yaml back from being written while it is one of them.

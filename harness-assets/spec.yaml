@@ -1,6 +1,6 @@
-id: 1
-from: 0
-to: v1.2.1
+id: 2
+from: v1.2.1
+to: v1.2.2
 tasks:
   - id: 1
     spec: 1
@@ -34,13 +34,13 @@ tasks:
     remark:
       - 怎麼挑正文是功能邏輯（tdp P5）
   - id: 5
-    spec: 1
+    spec: 2
     request: 頁面畫成適合終端機的樣子：標題的字放在它那一層的顏色上，清單是短橫線或編號，程式碼依語言上色、寫出語言名，引用前面有直槓，表格畫成格子，連結與圖片前面有 icon；網頁裡的控制字元不直接送到終端機
     tdp: [tdp P4, tdp P5, tdp color.1, tdp color.2, tdp components.5, tdp file-picker.3, tdp F1]
     remark:
       - 照 catu 畫 markdown 的方式（user 2026-11-09）：沒有行號，字左右各留一格；引用的直槓依深度用標題的層色
       - 程式碼用家族共用的語法色（tdp file-picker.3）
-      - note: 網頁內文的控制字元該歸 components.5 的哪一群 tdp 沒寫；暫時照舊：頁面文字裡的畫成紅色名字，程式碼區塊與原始碼一行裡的 Tab 畫成空白
+      - note: 網頁內文的控制字元該歸 components.5 的哪一群 tdp 沒寫；tdp v1.2.2 的 components.5 新增「從標記語言畫出來的文件」一群回答了：一般文字裡的 Tab 與 \n 是空白，程式碼區塊裡 Tab 是 input_tab_width 格空白，其他控制字元畫成紅色的名字；webu 本來就這樣畫
         issue: tdp #2
   - id: 6
     spec: 1
@@ -91,11 +91,11 @@ tasks:
     request: 連到檔案的連結會下載；Downloads 畫面列出這次開啟以來的下載與進度，可以開檔、開來源頁、移除、複製路徑、清掉已完成的、過濾
     tdp: [tdp screen.4, tdp panel.5, tdp panel.14, tdp P5, tdp screen.3, tdp toast.2, tdp E3]
   - id: 16
-    spec: 1
+    spec: 2
     request: 有目錄的書籤：加目前頁、加目錄、搬移、改名、刪除、複製網址、匯入瀏覽器的書籤匯出檔、過濾
-    tdp: [tdp panel.5, tdp panel.11, tdp panel.14, tdp confirm, tdp form, tdp file-picker.1, tdp file-picker.6, tdp E3, tdp menu.1, tdp text]
+    tdp: [tdp panel.5, tdp panel.10, tdp panel.14, tdp K3, tdp K4, tdp confirm, tdp form, tdp file-picker.1, tdp file-picker.6, tdp E3, tdp menu.1, tdp text]
     remark:
-      - note: 多層、可收合的樹狀清單（目錄本身是能操作的項目）tdp 沒有寫法；暫時照舊：tgo List 畫目錄樹，每層縮排，Enter 收合或展開
+      - note: 多層、可收合的樹狀清單（目錄本身是能操作的項目）tdp 沒有寫法；tdp v1.2.2 的 panel.10「項目裡還有項目」回答了（user 選照 filu 一層一層進）：改成一層一層進，不再是可收合的樹
         issue: tdp #3
   - id: 17
     spec: 1

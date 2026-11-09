@@ -91,7 +91,7 @@ Then:
 Switch with a capital letter, or from `Space` › `Global operation`:
 
 - **`W` Web** — your tabs beside the page; the page shows the tab under the cursor in the tab list, and `Enter` there takes you to it. The page has its address on top and your position in the bottom border.
-- **`B` Bookmarks** — a folder tree; `a` adds the current page, `A` a folder, `m` moves, `r` renames, `I` imports a browser's bookmark export.
+- **`B` Bookmarks** — in folders, walked a level at a time like a file manager: `Enter` goes into a folder, `Esc` back up; `a` adds the current page here, `A` a folder, `m` moves, `r` renames, `I` imports a browser's bookmark export.
 - **`H` History** — every page you visited, newest first.
 - **`D` Downloads** — this session's downloads and their progress.
 - **`S` Settings** — `config.yaml`, a value a row, saved the moment it is set.
@@ -125,7 +125,7 @@ Forms work as far as a search box and a plain sign-in: in Focus mode `Enter` fil
 
 #### Bookmarks, History, Downloads, Settings
 
-- **Bookmarks** — `Enter` open in a new tab or fold a folder · `a` add · `A` add folder (`a/b/c` makes every level) · `m` move · `r` rename · `x` delete · `y` yank url · `I` import · `/` filter
+- **Bookmarks** — `Enter` open in a new tab, or into a folder · `Esc` up a level · `a` add · `A` add folder (`a/b/c` makes every level) · `m` move · `r` rename · `x` delete · `y` yank url · `I` import · `/` filter
 - **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `C` clear · `/` filter
 - **Downloads** — `Enter` open the file · `o` open its source · `x` remove · `y` yank path · `C` clear finished · `/` filter
 - **Settings** — `Enter` edit a value or flip a switch

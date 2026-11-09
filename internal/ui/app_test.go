@@ -221,15 +221,15 @@ func TestScreensAndSession(t *testing.T) {
 		t.Fatal("Esc should clear the filter")
 	}
 
-	// A makes a folder — a path makes every level; m moves the bookmark
-	// into one; Enter on a folder folds it.
+	// A makes a folder — a path makes every level, the cursor on the one
+	// on this level; m moves the bookmark into one, off this level.
 	d.press("A")
 	d.until("folder box", d.shows("ADD FOLDER"))
 	d.key("dev/sub")
 	d.press("enter")
 	d.until("folders made", func() bool { return len(d.m.folders) == 2 && d.m.folders[1] == "dev/sub" })
-	if r, ok := d.m.bmCurrent(); !ok || !r.isFolder || r.folder != "dev/sub" {
-		t.Fatalf("the cursor should land on the new folder: %+v", r)
+	if r, ok := d.m.bmCurrent(); !ok || !r.isFolder || r.folder != "dev" {
+		t.Fatalf("the cursor should land on the new folder on this level: %+v", r)
 	}
 	d.m.bmList.Select(bmRowID(bmRow{ref: 0}))
 	d.press("m")
@@ -238,20 +238,40 @@ func TestScreensAndSession(t *testing.T) {
 	d.key("j")
 	d.press("enter")
 	d.until("moved", func() bool { return d.m.bookmarks[0].Folder == "dev/sub" })
-	if r, ok := d.m.bmCurrent(); !ok || r.isFolder || r.ref != 0 {
-		t.Errorf("the cursor should follow the moved bookmark: %+v", r)
+	if v := d.view(); len(d.m.bmList.Rows()) != 1 || !strings.Contains(v, glyphFolder+" dev") || strings.Contains(v, "Hacker News") {
+		t.Errorf("the top level should have dev alone, the bookmark gone into dev/sub:\n%s", v)
 	}
-	if v := d.view(); !strings.Contains(v, glyphFolder+" dev") || !strings.Contains(v, glyphFolder+" sub") {
-		t.Errorf("both folders should be rows of their own:\n%s", v)
+
+	// The folders are walked a level at a time (tdp panel.10): Enter goes
+	// in, the location row naming the path; Esc clears a filter first,
+	// then goes up a level with the cursor on the folder it came out of,
+	// and at the top does nothing.
+	if v := d.view(); !strings.Contains(v, glyphFolder+" /") {
+		t.Errorf("the top level's location row should be /:\n%s", v)
+	}
+	if d.shows("Folder dev/sub")() {
+		d.key("esc") // A's toast, closed first (tdp K4)
 	}
 	d.m.bmList.Select(bmRowID(bmRow{folder: "dev", isFolder: true}))
 	d.key("enter")
-	if got := len(d.m.bmList.Rows()); got != 1 {
-		t.Fatalf("folded dev should leave one row, not %d", got)
+	d.key("enter") // sub, dev's only row
+	if v := d.view(); d.m.bmDir != "dev/sub" || !strings.Contains(v, glyphFolder+" /dev/sub") || !strings.Contains(v, "Hacker News") {
+		t.Fatalf("two levels in, the location row and the moved bookmark:\n%s", v)
 	}
-	d.key("enter")
-	if got := len(d.m.bmList.Rows()); got != 3 {
-		t.Fatalf("unfolded dev should show three rows, not %d", got)
+	d.key("/")
+	d.key("zz")
+	d.key("esc")
+	if d.m.bmList.Filtering() || d.m.bmDir != "dev/sub" {
+		t.Fatalf("the first Esc should clear the filter and stay in dev/sub, is in %q", d.m.bmDir)
+	}
+	for _, want := range []string{"dev/sub", "dev", "dev"} {
+		d.key("esc")
+		if r, ok := d.m.bmCurrent(); !ok || !r.isFolder || r.folder != want {
+			t.Fatalf("Esc should come out with the cursor on %s, is on %+v in %q", want, r, d.m.bmDir)
+		}
+	}
+	if d.m.bmDir != "" || d.m.a.Screen() != d.m.bmScreen || d.m.bmPanel.OnEsc != nil {
+		t.Errorf("at the top Esc does nothing, ? listing none: in %q", d.m.bmDir)
 	}
 
 	// Downloads: the chip row counts what is in flight, the screen lists
@@ -784,6 +804,8 @@ func TestRenameBookmarks(t *testing.T) {
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.key("B")
 
+	m.bmList.Select(bmRowID(bmRow{folder: "dev", isFolder: true}))
+	d.key("enter")
 	m.bmList.Select(bmRowID(bmRow{ref: 0}))
 	d.press("r")
 	d.until("title box", d.shows("RENAME BOOKMARK"))
@@ -791,7 +813,10 @@ func TestRenameBookmarks(t *testing.T) {
 	d.press("enter")
 	d.until("renamed", func() bool { return d.m.bookmarks[0].Title == "The Go site" })
 
-	m.bmList.Select(bmRowID(bmRow{folder: "dev", isFolder: true}))
+	// Up to the top, the cursor on dev; an Esc first closes the toast.
+	for i := 0; i < 3 && d.m.bmDir != ""; i++ {
+		d.key("esc")
+	}
 	d.press("r")
 	d.until("name box", d.shows("RENAME FOLDER"))
 	d.key("misc")

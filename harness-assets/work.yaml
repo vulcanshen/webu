@@ -36,7 +36,7 @@ tasks:
       w（[2] 的 panel 動作）：整頁與正文切換，App Log「Showed the full page of …」「Showed the content of …」
     test: [TestAnArticleLeavesTheSiteOut, TestAnArticleKeepsItsCodeLanguage, TestAListPageAndItsTables, TestWhatIsHiddenIsLeftOut, TestTextBig5AndDownloads, TestReaderReadsAndFollows]
   - id: 5
-    spec: 1
+    spec: 2
     implementation: |
       內容樹畫成 webu 自己的元件（[2] 的 Body）：
       標題：字是 Base，放在那一層的顏色上、左右各一格（Peach、Rosewater、Green、Teal、Flamingo 輪流）
@@ -46,8 +46,8 @@ tasks:
       表格：排版用的照區塊讀，資料表畫成格子（Overlay0）、表頭粗體
       連結：link icon 加字，Sapphire、底線；圖片：image icon 加替代文字，Overlay0
       字左右各留一格，沒有行號
-      網頁的控制字元畫成它的名字、Red（\t、\n、\x1b），不送到終端機
-    test: [TestQuotesInQuotes, TestCodeInTheFamilysSyntaxColours, TestTrickyTextFromOutside, TestItemsAndAnchors]
+      網頁照瀏覽器畫：一般文字裡的 Tab、\n（連同 \r、\f）跟空白一樣收成一格；<pre> 與程式碼區塊裡 Tab 畫成 input_tab_width 格空白、\n 換行；其他控制字元，包括顏色碼的 ESC，畫成它的名字、Red（\x1b），不送到終端機，網頁不給任何字上色
+    test: [TestQuotesInQuotes, TestCodeInTheFamilysSyntaxColours, TestTrickyTextFromOutside, TestItemsAndAnchors, TestAPageIsDrawnAsABrowserDrawsIt]
   - id: 6
     spec: 1
     implementation: |
@@ -130,15 +130,20 @@ tasks:
       404 等：toast 說沒有那一頁
     test: [TestReaderDownloadsAndMissingPages, TestTextBig5AndDownloads]
   - id: 16
-    spec: 1
+    spec: 2
     implementation: |
-      B Bookmarks 畫面：tgo List 的目錄樹，Enter 開新分頁或收合目錄
-      a 加目前頁（form：URL 與標題，然後 Add）；[2] 的 A 也是
-      A 新增目錄（TextInput，a/b/c 每層都建）；m 搬移（開目錄的 menu）；r 改名（書籤改標題，目錄改那一層，下面的跟著）；空的或重複的名字留在框裡
+      B Bookmarks 畫面（tgo List）：一次一層，像 filu 走目錄：先列這一層的目錄（目錄 icon 加名字），再列這一層的書籤
+      位置列：目錄 icon，加這一層的路徑，最上層是 /（例 /dev/go）
+      Enter：在目錄上是 Into，進去，cursor 在第一列，App Log 記「Went to the folder …」；在書籤上是 Open，在背後開新分頁
+      Esc：有 filter 時 lib 先清 filter；在目錄裡 Panel.OnEsc 回上一層，cursor 停在剛剛出來的目錄，不記 App Log；最上層 OnEsc 是 nil，Esc 什麼都不做，? 也不列 Esc
+      換層時清掉 filter：清單、filter 與 N of M 都只算這一層
+      空的一層：最上層「No bookmarks yet」，目錄裡「Nothing in this folder」／「Press [a] to add a bookmark here, or [Esc] to go up」
+      a 在這一層加書籤（form：URL 與標題，然後 Add，預填目前頁）；[2] 的 A 也是，加在最上層，Bookmarks 畫面跟著回到最上層、cursor 在新的那一筆
+      A 在這一層新增目錄（TextInput，a/b/c 每層都建，cursor 在這一層新的那一列）；m 搬移（開目錄的 select，全部目錄依深度縮排），搬走的離開這一層，cursor 留在原位；r 改名（書籤改標題，目錄改那一層，下面的跟著）；空的或重複的名字留在框裡
       x 刪除：開 confirm「Delete …?」，目錄連整棵樹，每次都問
-      y 複製網址；I 匯入：file-picker 選瀏覽器的書籤匯出檔（Netscape 格式），匯到自己的目錄；/ 過濾
+      y 複製網址；I 匯入：file-picker 選瀏覽器的書籤匯出檔（Netscape 格式），匯到自己的目錄，畫面到那個目錄所在的那一層、cursor 在它上面；/ 過濾
       存在資料目錄的 bookmarks.yaml
-    test: [TestImportBookmarks, TestParseNetscape, TestDeleteFolderTree, TestDeleteAsksAboutTheRowUnderTheCursor, TestRenameBookmarks]
+    test: [TestImportBookmarks, TestParseNetscape, TestDeleteFolderTree, TestDeleteAsksAboutTheRowUnderTheCursor, TestRenameBookmarks, TestScreensAndSession]
   - id: 17
     spec: 1
     implementation: |
