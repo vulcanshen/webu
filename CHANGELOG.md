@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v0.8.0 — tdp v1.2.2
 
 - The page's address stays on its row while the page first loads; it
   went with the loading line before. The row, the loading line and a
