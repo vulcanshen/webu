@@ -2,6 +2,35 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## v0.7.0 — tdp v1.2.0
+
+Everything since v0.6.0, the beta v0.7.0-beta.1 included.
+
+- **The page has no line numbers**: its text keeps a cell off the frame on
+  either side, as a document in catu does, and gets the columns the
+  numbers took.
+- A code block in a page's content names the language the page gave it,
+  and is coloured as that language; it was a guess, and a Go block could
+  read `gdscript3`.
+- A quote's bar is in the colour of its depth, as a heading's level is:
+  each bar of a quote in a quote its own. A quote in a quote has one blank
+  row before it, no longer two.
+- On terminu-go v1.2.0, following tdp v1.2.0. The repository's templates
+  are terminu-harness's, where tdp v1.2.0 moved them.
+- `go install` is no longer a way to install webu: what it builds has no
+  version and says `dev`. Homebrew, `install.sh` and the GitHub release
+  are, a beta from its pre-release.
+- `/` run from a Space menu keeps the menu under its box, `Esc` going
+  back to it, and closes the two together once it runs, found or not; a
+  search in Visual mode that finds nothing says so. A search is no longer
+  recorded in the App Log, as the filter is not; one that finds nothing
+  is, by its toast.
+- Code is in the terminu family's syntax colours, catppuccin-mocha's with
+  its bold, italic and underline, as in catu and every member's preview
+  and viewer; webu had colours of its own.
+- Visual mode's copy is `Cop[y]` in its menu; the key references no longer
+  list `PgUp|PgDn` beside `u|d`, which they still move as.
+
 ## v0.7.0-beta.1 — tdp v1.2.0
 
 - **The page has no line numbers**: its text keeps a cell off the frame on
