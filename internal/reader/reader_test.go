@@ -58,6 +58,19 @@ func TestAnArticleLeavesTheSiteOut(t *testing.T) {
 	}
 }
 
+// A code block in an article keeps the language its class names, which
+// Readability would strip from what it picks (it read as gdscript3).
+func TestAnArticleKeepsItsCodeLanguage(t *testing.T) {
+	d := page(t, "https://example.com/post", `<html><body><article><h1>The post</h1><p>`+prose+`</p>
+<pre><code class="language-go">x := 1</code></pre><p>`+prose+`</p></article></body></html>`)
+	if d.Picked != "article" {
+		t.Fatalf("picked %q", d.Picked)
+	}
+	if content := md(d, d.Content); !strings.Contains(content, "```go\nx := 1\n```") {
+		t.Errorf("the code block should keep its language:\n%s", content)
+	}
+}
+
 // A page that is no article — a list of links — is the page less its
 // navigation, header, footer and sidebars; a table it laid itself out
 // with is its rows, a line each, and a table of data stays one.

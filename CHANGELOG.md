@@ -7,6 +7,9 @@ Each release names the version of terminu design (tdp) it follows.
 - **The page has no line numbers**: its text keeps a cell off the frame on
   either side, as a document in catu does, and gets the columns the
   numbers took.
+- A code block in a page's content names the language the page gave it,
+  and is coloured as that language; it was a guess, and a Go block could
+  read `gdscript3`.
 
 ## v0.6.0 — tdp v1.1.3
 

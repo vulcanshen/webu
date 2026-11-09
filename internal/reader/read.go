@@ -90,7 +90,11 @@ func Read(r *Response) (*Doc, error) {
 	d.Whole = d.build(shared, bodyNode, nil)
 
 	if readability.CheckDocument(doc) {
-		if art, err := readability.FromDocument(doc, r.URL); err == nil && art.Node != nil {
+		// Readability strips the class names of what it picks unless told
+		// not to, and a code block's names its language ("language-go").
+		p := readability.NewParser()
+		p.KeepClasses = true
+		if art, err := p.ParseDocument(doc, r.URL); err == nil && art.Node != nil {
 			d.Content, d.Picked = d.build(shared, art.Node, nil), "article"
 			if t := strings.TrimSpace(art.Title()); t != "" {
 				d.Title = t

@@ -61,7 +61,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 - **Client**：`http.DefaultTransport` 複製一份，`ResponseHeaderTimeout` 30 秒、沒有整體的 timeout（大檔下載不被切斷）；外面包一層 `recorder`，請求的 context 帶著 `reader.Requests`（`Record`）就記下每個請求，轉址每一跳一筆（Requests popup）。不送 `Accept-Encoding`：Go 自己要 gzip、自己解，brotli 它解不了，就不讓伺服器給。UA 是瀏覽器的字串、尾巴接 `webu`（`ui.readerUA`）。
 - **Jar**：Go 的 `cookiejar`（`publicsuffix`）做比對，每一個收到的 cookie 另外寫進 `cookies.json`（`0600`、原子寫入），session cookie 也存，免得每次啟動重登。`Site` 是可註冊網域（IP 與 localhost 就是自己），`SiteCookies` / `ClearSite` 給 Cookies popup；`Clear` 給 Settings 的 `C`。值不進 App Log。
-- **Read**：先整份轉成 UTF-8 留在 `Doc.Source`（Source popup），不是 HTML 的照原樣當一個 code block；HTML 先 `absolutize`（照 `<base>`）、讀 `<title>` 與 `<link rel=icon>`、`clean` 拿掉看不到的，Readability 挑得到就用（`Picked = "article"`），否則整頁減掉 `chrome`（導覽、頁首、頁尾、側欄）。`Whole` 是整個 `<body>`（`w`）。
+- **Read**：先整份轉成 UTF-8 留在 `Doc.Source`（Source popup），不是 HTML 的照原樣當一個 code block；HTML 先 `absolutize`（照 `<base>`）、讀 `<title>` 與 `<link rel=icon>`、`clean` 拿掉看不到的，Readability 挑得到就用（`Picked = "article"`；parser 設 `KeepClasses`：它預設把挑到的內容的 class 清掉，code block 的 `language-go` 就沒了，只能讓 chroma 猜，2026-11-09 修），否則整頁減掉 `chrome`（導覽、頁首、頁尾、側欄）。`Whole` 是整個 `<body>`（`w`）。
 - **tree.go**：HTML → 內容樹。連結沒字就不畫、圖片帶 alt、清單有 `Marker`、表格分排版用與資料、表單的欄位與表單本身另存一張表（`Doc.Field`），同一個欄位在正文與整頁裡是同一份。
 
 #### [2] 的畫法（`readerrender.go`、`pagebody.go`）
