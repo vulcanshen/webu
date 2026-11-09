@@ -41,8 +41,6 @@ brew install vulcanshen/tap/webu
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/install.sh | sh
 ```
 
-從原始碼建置見 [docs/dev-remarks.md](docs/dev-remarks.md)。
-
 有四件事要知道：
 
 - **終端機必須用 [Nerd Font](https://www.nerdfonts.com/)** —— 連結、欄位、面板與網站記號都用它的 glyph 畫。
@@ -178,7 +176,6 @@ input_tab_width: 4
 ## 更多
 
 - [CHANGELOG.md](CHANGELOG.md) —— 每個版本改了什麼。
-- [docs/dev-remarks.md](docs/dev-remarks.md) —— webu 內部怎麼運作、設計文件、從原始碼建置。
 
 ## terminu family
 

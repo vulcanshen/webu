@@ -1,0 +1,206 @@
+tasks:
+  - id: 1
+    spec: 1
+    implementation: |
+      畫面 chip 列五個畫面（tgo 的 screen）：W Web、B Bookmarks、H History、D Downloads、S Settings；大寫字母或 Space › Global operation 切換，lib 記 App Log「Switched to …」
+      Web 畫面：[1] TABS（tgo List）與 [2] PAGE（app 自己的 Body）並排；窄寬門檻 60 欄，webu 畫得出來的寬度都是兩個 panel 並排
+      [2] 顯示 [1] 游標所在的分頁；[1] 的 Enter 把 focus 送到 [2]
+      Z（[2] 的 panel 動作）：[2] 佔滿寬度，再按還原；App Log「Zoomed in on the page」「Zoomed out to the tabs and the page」
+    test: [TestScreensAndSession]
+  - id: 2
+    spec: 1
+    implementation: |
+      `webu`：restore_session 開著時開回 session.yaml 記的分頁，只有原本顯示的那一個載入
+      `webu <網址>…`：一個網址一個分頁，第一個在前面；不像網址的字照 search_engine 搜尋
+      `webu help` 印命令列說明，`webu version` 印版本（tgo 的 version／help）
+      不知道：help 的完整內容、version 印的格式
+    test: [TestResolveURL, TestRoundTrips, commit: beb5b5d]
+  - id: 3
+    spec: 1
+    implementation: |
+      [1] TABS 是 tgo List，一列一個分頁：網站記號加頁面標題；記號是網站在 Nerd Font 裡的 icon（GitHub、Wikipedia、Go…），沒有就是地球，顏色是 favicon 的主色，知道之前是 Blue
+      panel 動作：Enter 到頁面、c 關閉（App Log「Closed the tab …」）、o 在新分頁再開（「Opened … in a new tab」）、r 重新載入（「Reloaded …」）、y 複製網址、T 新分頁、X 關閉其他、U 重開剛關的
+      favicon 抓來後讀 ICO（1／4／8／24／32 bit）或 PNG 算主色
+    test: [TestSiteMarks, TestIconColor, commit: b1f2eda]
+  - id: 4
+    spec: 1
+    implementation: |
+      net/http 抓網頁（跟著轉址、cookie jar、x/net/html/charset 轉 UTF-8），x/net/html 解析，不跑 JavaScript
+      挑內容：Readability 挑得到就用（保留 class，code block 的語言才在）；挑不到就是整頁減掉導覽、頁首、頁尾、側欄；cookie 告示、看不到的元素不顯示
+      不是 HTML 的（JSON、YAML、純文字…）整份當一個 code block
+      w（[2] 的 panel 動作）：整頁與正文切換，App Log「Showed the full page of …」「Showed the content of …」
+    test: [TestAnArticleLeavesTheSiteOut, TestAnArticleKeepsItsCodeLanguage, TestAListPageAndItsTables, TestWhatIsHiddenIsLeftOut, TestTextBig5AndDownloads, TestReaderReadsAndFollows]
+  - id: 5
+    spec: 1
+    implementation: |
+      內容樹畫成 webu 自己的元件（[2] 的 Body）：
+      標題：字是 Base，放在那一層的顏色上、左右各一格（Peach、Rosewater、Green、Teal、Flamingo 輪流）
+      清單：無序是 Blue 的短橫線，有序依深度 1.／a.／i.
+      程式碼區塊：Mantle 底，用 tgo 的 Syntax 上色（tdp file-picker.3），右上角寫語言名（Overlay0）；網頁沒標語言時讓 chroma 猜
+      引用：開頭 ▎，顏色是那一層的標題色，Mantle 底；引用裡的引用前面只空一列
+      表格：排版用的照區塊讀，資料表畫成格子（Overlay0）、表頭粗體
+      連結：link icon 加字，Sapphire、底線；圖片：image icon 加替代文字，Overlay0
+      字左右各留一格，沒有行號
+      網頁的控制字元畫成它的名字、Red（\t、\n、\x1b），不送到終端機
+    test: [TestQuotesInQuotes, TestCodeInTheFamilysSyntaxColours, TestTrickyTextFromOutside, TestItemsAndAnchors]
+  - id: 6
+    spec: 1
+    implementation: |
+      [2] 沒有 cursor（二維內容，捲動）：j|k 一列、u|d 半頁（PgUp|PgDn 一樣，不列出）、gg|G 頭尾
+      下框寫捲動位置「1-24 of 310」（Body 的 Scroll）
+    test: [commit: 0311a52]
+  - id: 7
+    spec: 1
+    implementation: |
+      [2] 的位置列是 tgo 的 Panel.Location：網址，前面是 Panel.LocationGlyph（nf-md-web），Lavender，太長只從前面截網址，glyph 留著
+      載入中：框上有 loading icon；頁面還沒有內容時，中間是 LoadingText「loading <host>…」
+      抓不到（DNS、連線、憑證）：Panel.Fail，中間兩句，事實 Red、提示「Press [R] to retry」；App Log 記一筆
+      位置列在 loading 與錯誤上面照樣留著；[2] 失焦時跟著淡化
+    test: [TestAPageThatCannotBeReached, TestTheAddressStaysWhileLoading]
+  - id: 8
+    spec: 1
+    implementation: |
+      / （[2] 的 panel 動作，也在 Space menu）：開 tgo 的 TextInput「Find」問要找的字；Space menu 留在輸入框底下，Esc 回到 menu，Enter 執行後兩個一起關（App.CloseAll）
+      找到的都加底線，目前那一筆是 cursor 色塊；n|N 下一個、上一個，頭尾繞回，捲到看得見
+      有命中時 Panel.SearchStatus 讓 lib 在下框捲動位置左邊寫「/<字> 2 of 5」
+      找不到：Info toast「Not on the page: <字>」
+      Esc 收掉找到的（K4，往上一層）
+      找字不記進 App Log（找不到時 toast 自己會記）
+    test: [TestReaderSearchesAsTdp120Says, TestReaderReadsAndFollows]
+  - id: 9
+    spec: 1
+    implementation: |
+      f 進 Focus mode（tgo 的 Mode，框與模式名 Yellow）；Esc 離開
+      j|k 照閱讀順序走連結、圖片、欄位、按鈕，頭尾繞回；gg|G 第一個、最後一個；cursor 是 panel cursor 色塊
+      停在連結上時 inspect toast（Mode.Inspect）寫它會去的網址；toast 蓋到的列會捲開
+      mode 的 Space menu：Enter Press、o Open in a new tab、y Copy its address
+      Enter 在連結上直接開（App Log「Followed the link to …」），離開 Focus mode
+    test: [TestFocusModeWraps, TestInspectToastUncoversTheLastRow, TestReaderReadsAndFollows]
+  - id: 10
+    spec: 1
+    implementation: |
+      H|L（[2] 的 panel 動作，寫在 hint 上）：沿著分頁自己的歷史上一頁、下一頁，回到離開時的位置；沒有上一頁或下一頁時停用；App Log「Went back in …」「Went forward in …」
+      b 麵包屑：開 tgo 的 Menu「Breadcrumb」，一列一頁「1. 標題」，目前那一頁寫「where the tab is now」，其他「go to it」，選了直接跳，不先問；歷史少於兩頁時這個動作藏起來
+    test: [TestReaderReadsAndFollows, commit: b8b5e1c]
+  - id: 11
+    spec: 1
+    implementation: |
+      o（[2] 的 panel 動作）：開 tgo 的 TextInput「Location」，目前的網址當灰字提議（Tab 接過來改、Backspace 不要它、直接打字從頭打）
+      Enter：像網址的就開，不像的照 config.yaml 的 search_engine 搜尋（預設 https://html.duckduckgo.com/html/?q=）；App Log「Went to …」
+    test: [TestLocationOffersThePageURL, TestResolveURL]
+  - id: 12
+    spec: 1
+    implementation: |
+      表單畫在頁面上（Form 的框、欄位的 label 與值）；在 Focus mode 裡 Enter：
+      文字欄位開 tgo 的 TextInput（密碼欄位用 password，值不顯示），App Log 只記「Typed into <欄位>」，不記值
+      checkbox 原地勾選（「Ticked …」「Unticked …」），radio 與 select 開選項（「Chose …」）
+      按鈕：送出表單，hidden 欄位一起送；GET 放在網址、POST 放在 body；App Log「Sent … to …」
+      只有一個可以打字的欄位時，填完開 confirm 問要不要送出
+      需要 JavaScript 的登入、別的網站帳號、CAPTCHA、兩步驟都不支援
+    test: [TestFormsAreSent, TestReaderSignsInAndSearches]
+  - id: 13
+    spec: 1
+    implementation: |
+      每收到一個 cookie 就寫進狀態目錄的 cookies.json（0600、原子寫入），session cookie 也存；下次啟動讀回來
+      S › Clear sign-in data：開 confirm，Enter 清掉所有網站的 cookie
+      cookie 的值不進 App Log
+      cookies.json 讀不了時照 E3 問要不要搬開
+    test: [TestCookiesAreKept, TestReaderSignsInAndSearches]
+  - id: 14
+    spec: 1
+    implementation: |
+      [2] Space menu 最上面三列，沒有熱鍵：
+      Source：tgo 的 Viewer，抓下來的原始內容，照內容類型上色；App Log「Read the source of …」
+      Cookies：Viewer，這個網站（可註冊網域，IP 與 localhost 是自己）的 cookie；C 開 confirm「Clear N cookies?」再清；App Log「Read the cookies of …」
+      Requests：Viewer，載入這一頁發出的請求，curl -v 的寫法：每一次轉址、兩個方向的 header；App Log「Read the requests of …」
+      三個 viewer 都有 lib 的 / 搜尋與 v 選取
+    test: [TestReaderPageInfo, TestRequestsAndSource, TestSiteCookies]
+  - id: 15
+    spec: 1
+    implementation: |
+      連到檔案的連結：下載到 download_dir（預設 ~/.webu/datas/downloads），Downloads 多一列
+      chip 列右端（statusbar）寫幾個下載中，分隔線從左邊填 Green 當進度條
+      D Downloads 畫面（tgo List）：Enter 用桌面的 app 開檔（只有下載完成的）、o 開來源頁、x 移除（還在下載的停掉）、y 複製路徑、C 清掉已完成與已取消的、/ 過濾
+      404 等：toast 說沒有那一頁
+    test: [TestReaderDownloadsAndMissingPages, TestTextBig5AndDownloads]
+  - id: 16
+    spec: 1
+    implementation: |
+      B Bookmarks 畫面：tgo List 的目錄樹，Enter 開新分頁或收合目錄
+      a 加目前頁（form：URL 與標題，然後 Add）；[2] 的 A 也是
+      A 新增目錄（TextInput，a/b/c 每層都建）；m 搬移（開目錄的 menu）；r 改名（書籤改標題，目錄改那一層，下面的跟著）；空的或重複的名字留在框裡
+      x 刪除：開 confirm「Delete …?」，目錄連整棵樹，每次都問
+      y 複製網址；I 匯入：file-picker 選瀏覽器的書籤匯出檔（Netscape 格式），匯到自己的目錄；/ 過濾
+      存在資料目錄的 bookmarks.yaml
+    test: [TestImportBookmarks, TestParseNetscape, TestDeleteFolderTree, TestDeleteAsksAboutTheRowUnderTheCursor, TestRenameBookmarks]
+  - id: 17
+    spec: 1
+    implementation: |
+      H History 畫面（tgo List）：看過的頁，新的在上
+      Enter 在背後開新分頁、x 刪除這一筆、y 複製網址、C 清空（先問；沒有紀錄時停用）、/ 過濾
+      存在資料目錄
+    test: [TestHistoryIsNewestFirstAndDeletable]
+  - id: 18
+    spec: 1
+    implementation: |
+      S Settings 畫面是 tgo 的 Values，一列一個 config.yaml 的值，設好就存：
+      search_engine、文字設定開 TextInput，目前生效的值當灰字提議，Backspace 再 Enter 是預設
+      download_dir 開 file-picker 選目錄；restore_session 是原地翻的開關
+      家族共用的 hide_secrets_in_preview（開關）與 input_tab_width（NumberInput，單位 spaces）
+      config.yaml 裡 Settings 不認得的值，那一列的名字畫 Red
+    test: [TestSettingsCoverConfig]
+  - id: 19
+    spec: 1
+    implementation: |
+      v（[2] 的 panel 動作）進 Visual mode（tgo 的 Mode，框 Yellow、右上角 Visual）；從畫面頂端開始的逐字 cursor
+      h|j|k|l、w|b|e、0|$、u|d、gg|G 移動；v 開始選取，進 Visual>select 這一層（EnterLayer），選取中 v 不作用
+      y Cop[y]：選的字複製到系統剪貼簿，Success toast
+      / 開 TextInput「Find」：找到的加底線，n|N 走；找不到 Info toast「Not on the page: …」；有命中時 Panel.SearchStatus 在下框寫狀態；從 mode 的 Space menu 跑時 Done 呼叫 App.CloseAll
+      Enter 按下 cursor 所在的東西
+      Esc：選取中先放掉選取回到 Visual，沒有選取時離開
+      mode 的 Space menu：Select、Copy、Press 在最前面；只有選的範圍是 Yellow
+    test: [TestSelectMotionsAndYank, TestSelectSearchSmartCaseAndClick, TestSelectRowsDrawTheCursor, TestVisualModeGoesBackALayer, TestReaderSearchesAsTdp120Says]
+  - id: 20
+    spec: 1
+    implementation: |
+      [2] 的 panel 動作 Y：這一頁的網址複製到剪貼簿；Yank markdown（Space menu，沒有熱鍵）：這一頁的內容轉成 markdown 複製；做完 Success toast
+      剪貼簿用系統的指令（macOS pbcopy），失敗時 error popup
+    test: [commit: bf34a3d]
+  - id: 21
+    spec: 1
+    implementation: |
+      設定 ~/.config/webu（$XDG_CONFIG_HOME/webu，或 $WEBU__CONFIG）：config.yaml
+      狀態跟設定放一起（或 $WEBU__STATE）：session.yaml、cookies.json
+      資料 ~/.webu/datas（$WEBU__DATA）：bookmarks.yaml、歷史、下載；快取 $WEBU__CACHE
+      環境變數一律 WEBU__ 開頭，舊名字不讀
+      第一次啟動把在舊位置、新位置還沒有的檔搬過去（bookmarks.yaml 到資料、session.yaml 到狀態），Info toast 說從哪裡搬到哪裡，搬空的舊目錄拿掉；搬不動的照舊用原位置，error popup 寫兩個位置
+      自己的檔讀不了：啟動時開 tgo 的 MoveAside，說是哪個檔、為什麼，問要不要搬到 .bak（.bak.1 起，不蓋過別的）、像第一次一樣開始；回答之前什麼都不開；Esc 離開，原因印在終端機
+    test: [TestFilesGoWhereE3PutsThem, TestRelocateMovesTheOldFiles, TestRelocateThatFails, TestShort, TestAnOldMacCacheIsStillRead, TestOldNamesAreNotRead, TestDirsHonourOverrides, TestMovesOnTheFirstScreen, TestUnreadableFilesAreMovedAside, TestAnUnreadableFileGivesNothing]
+  - id: 22
+    spec: 1
+    implementation: |
+      舊版的 Chromium（快取裡的 chromium-<rev>，新舊兩個快取位置都看）：啟動時刪掉，App Log 寫刪了哪裡、多大，刪不乾淨寫 Warning
+      資料目錄裡舊版留下的 profile/ 與 webu.log：不刪，每次啟動用 tgo 的 App.NoLongerUsed 在 App Log 寫一筆 INFO
+      config.yaml 裡不再讀的 key（measure）：不刪，存檔時照樣寫回，每次啟動 App Log INFO「No longer used: measure in …; delete it if you don't need it」
+    test: [TestChromiumIsDropped, TestARetiredKeyIsKept, TestARetiredConfigKeyIsNamed]
+  - id: 23
+    spec: 1
+    implementation: |
+      !（core key）打開 tgo 的 App Log；footer 寫 !:log，或還沒看的錯誤有幾個
+      記使用者做的事（每個從 menu、熱鍵或 Enter 跑的操作，用過去式）、每個 toast、抓不到的頁與原因、開回上次的分頁；不記移動 cursor、Space menu、?、!、過濾與找字、進出 mode、打進欄位的值
+    test: [TestTheAppLogHasWhatTheUserDid]
+  - id: 24
+    spec: 1
+    implementation: |
+      最低 60×20：比這小時只顯示名稱、需要的大小與按兩次 Ctrl-C 離開，其他鍵不作用，拉大就回原本的畫面（tgo）
+      icon 與 powerline 符號的寬度啟動時量（tgo）；WEBU__ICON_WIDTH、WEBU__POWERLINE_WIDTH 優先，再來是家族共用的 TERMINU__ 兩個
+      V 開 splash，畫 docs/icon.svg
+      README 與安裝腳本寫明要 Nerd Font 與 truecolor
+    test: [TestUnderTheLeastSize, TestEveryPopupFits, TestTDP, TestTheSplashDrawsDocsIcon]
+  - id: 25
+    spec: 1
+    implementation: |
+      repo 照家族範本（harness project）：family.mk、.github/workflows/release.yml、.goreleaser.yaml、install.sh、uninstall.sh、internal/version/version.go、.gitignore
+      發布：goreleaser 建 darwin／linux 的 amd64／arm64，推 Homebrew tap vulcanshen/homebrew-tap；beta 是 GitHub pre-release、不進 tap
+      install.sh 裝到 ~/.local/bin（root 是 /usr/local/bin）；uninstall.sh 刪設定與資料之前先問
+    test: [check: repo]

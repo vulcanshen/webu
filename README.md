@@ -41,8 +41,6 @@ brew install vulcanshen/tap/webu
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/install.sh | sh
 ```
 
-Building from source is in [docs/dev-remarks.md](docs/dev-remarks.md).
-
 Four things to know:
 
 - **A [Nerd Font](https://www.nerdfonts.com/) is required** in your terminal — links, fields, panels and site marks are drawn with its glyphs.
@@ -179,7 +177,6 @@ An older webu ran its own Chromium. The one it downloaded into the cache (macOS 
 ## More
 
 - [CHANGELOG.md](CHANGELOG.md) — what changed in each release.
-- [docs/dev-remarks.md](docs/dev-remarks.md) — how webu works inside, the design documents, and building from source.
 
 ## terminu family
 
