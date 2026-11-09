@@ -100,7 +100,7 @@ lib 的清單，欄名 `Title`（user 2026-10-28：外框已經寫 TABS，原本
   Peach、Rosewater、Green、Teal、Flamingo，第六層起輪迴（Yellow 是 Visual mode 選取範圍的顏色，2026-10-29 換成 Rosewater）；標題裡的連結、程式碼畫在同一條上。
 - **段落**：Text；粗體、斜體、刪除線、標記用終端機的粗體、斜體、刪除線、反白。
 - **清單**：無序清單每一層都是 `-`（Blue），靠縮排分層；有序清單依層 `1.`、`a.`、`i.`，再回到數字輪迴。
-- **程式碼**：區塊是 Mantle 底、照語言上色（chroma；網頁沒標語言就讓 chroma 猜），語言名寫在右上角（Overlay0），Tab 畫成
+- **程式碼**：區塊是 Mantle 底、照語言上色（家族的 `terminu.Syntax`；網頁沒標語言就讓 chroma 猜），語言名寫在右上角（Overlay0），Tab 畫成
   `input_tab_width` 格；行內程式碼是 Pink 字、Surface0 底。
 - **引用**：開頭一條 `▎`，顏色照深度、跟標題的層色同一組（多層引用多條），Mantle 底；引用裡的引用前面只空一列。
 - **表格**：資料表格畫成格子，表頭粗體、下面一條分隔線，不鋪底色；太寬切掉加 `…`。沒有 `<th>` 也沒有 `<caption>` 的表格當一般區塊。
@@ -183,7 +183,7 @@ loading icon、錯誤列、`Esc` 一次一層都照 tdp，webu 不自己畫。�
 | Mantle `#181825` | 程式碼區塊、引用的底 |
 | Blue `#89b4fa` | 無序清單的 `-` |
 | Overlay0 `#6c7086` | 圖片、分隔線、表單的框線、程式碼區塊的語言名 |
-| 語法色 | 程式碼區塊裡（chroma）：key 與 string Pink、number Flamingo、常數與 keyword Sky、註解 Overlay0 斜體、標點 Overlay2 |
+| 語法色 | 程式碼區塊裡：家族的 `terminu.Syntax`（tdp file-picker.3、note.2），catppuccin-mocha 的字色、粗體、斜體與底線，不畫它的底色，跟 catu 與每個成員的預覽、viewer 一樣（2026-11-09，user） |
 
 ---
 

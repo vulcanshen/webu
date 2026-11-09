@@ -265,9 +265,13 @@ func (m *AppModel) rowLine(t *tab, i, innerW int, st rowStyles) string {
 			if style, ok = st.codeStyles[s.kind]; !ok {
 				style = st.codeStyles[segCode]
 			}
+			if s.ink != "" && !t.loading {
+				style = style.Foreground(s.ink)
+			}
 		default:
 			style = st.styles[s.kind]
-			if s.ink != "" {
+			// A run's own ink dims with the rest while the page loads.
+			if s.ink != "" && !t.loading {
 				style = style.Foreground(s.ink)
 			}
 		}
@@ -405,22 +409,12 @@ func segStyles() map[segKind]lipgloss.Style {
 	}
 }
 
-// codeStyles is the syntax palette inside a code block, every entry on the
-// code ground.
+// codeStyles is the code ground's: Text on it, each run's syntax colour
+// its ink (highlight.go).
 func codeStyles() map[segKind]lipgloss.Style {
 	on := func(c lipgloss.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c).Background(pageCodeBg) }
 	return map[segKind]lipgloss.Style{
-		segCode:        on(pageText),
-		segCodeKey:     on(pageCode),
-		segCodeString:  on(pageCode),
-		segCodeNumber:  on(lipgloss.Color("#f2cdcd")), // flamingo
-		segCodeConst:   on(lipgloss.Color("#89dceb")), // sky: true / false / null
-		segCodeKeyword: on(lipgloss.Color("#89dceb")),
-		segCodeComment: on(pageDim).Italic(true),
-		segCodePunct:   on(lipgloss.Color("#9399b2")), // overlay2
-		segCodeHeading: on(pageText).Bold(true),
-		segCodeStrong:  on(pageText).Bold(true),
-		segCodeEmph:    on(pageText).Italic(true),
+		segCode: on(pageText),
 	}
 }
 

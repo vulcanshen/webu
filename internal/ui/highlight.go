@@ -1,21 +1,24 @@
 package ui
 
 import (
+	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
-	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
+	"github.com/charmbracelet/lipgloss"
+	terminu "github.com/vulcanshen/terminu-go"
 )
 
-// Syntax colour for the text documents webu draws as one code block —
-// JSON, YAML, TOML, Markdown, XML, JavaScript, CSS — through chroma, the
-// family's lexer (sshu and filu use it in their viewers). A token becomes a
-// segment of one of the code kinds below; the colours are in segStyles.
-//
-// Only what is a different KIND of thing gets a colour: a key, a string,
-// a number, a constant, a comment. Punctuation dims. Everything else is
-// text. That keeps a JSON document readable as key / value at a glance
-// without turning it into a Christmas tree.
+// Syntax colour for a code block, and for the text documents webu draws as
+// one — JSON, YAML, TOML, Markdown, XML, JavaScript, CSS — is the family's:
+// terminu.Syntax (tdp file-picker.3, note.2), catppuccin-mocha's colours,
+// bold, italic and underline, with the gaps chroma leaves filled one way,
+// so that code looks the same here as in every family member's preview and
+// viewer, catu's among them (user 2026-11-09; webu had a palette of its
+// own). Each line comes back in colour, and its runs become segments of
+// the code kind, each with its ink and its bold, italic and underline.
 
 // guessLang is chroma's guess at what language text is in, for a code
 // block the page did not name (docs/reader.md); "" when it cannot say.
@@ -26,69 +29,112 @@ func guessLang(text string) string {
 	return ""
 }
 
-// highlightLines lexes text as lang and returns one segment list per line.
-// nil when there is no lexer for lang, and the caller draws plain.
-func highlightLines(lang, text string) [][]seg {
-	if lang == "" {
+// syntaxLines is text in lang's syntax colours, one segment list per line;
+// a lang that names no language leaves it plain, in Text. An escape in
+// the page's own text is not taken for colour: it goes through as a
+// stand-in and comes back as itself, for the row to name (tdp
+// components.5).
+func syntaxLines(lang, text string) [][]seg {
+	esc := escStandIn(text)
+	if esc == "" {
 		return nil
 	}
-	lexer := lexers.Get(lang)
-	if lexer == nil {
-		return nil
-	}
-	it, err := chroma.Coalesce(lexer).Tokenise(nil, text)
-	if err != nil {
-		return nil
-	}
-	data := lang == "json" || lang == "yaml" || lang == "toml"
-	lines := [][]seg{{}}
-	for tok := it(); tok != chroma.EOF; tok = it() {
-		kind := tokenKind(tok.Type, data)
-		parts := strings.Split(tok.Value, "\n")
-		for i, p := range parts {
-			if i > 0 {
-				lines = append(lines, []seg{})
-			}
-			if p == "" {
-				continue
-			}
-			last := len(lines) - 1
-			lines[last] = append(lines[last], seg{text: p, item: -1, kind: kind})
+	lines := terminu.Syntax(lang, strings.Split(strings.ReplaceAll(text, "\x1b", esc), "\n"))
+	out := make([][]seg, len(lines))
+	for i, l := range lines {
+		out[i] = sgrRuns(l)
+		for k := range out[i] {
+			out[i][k].text = strings.ReplaceAll(out[i][k].text, esc, "\x1b")
 		}
 	}
-	return lines
+	return out
 }
 
-// tokenKind maps a chroma token type to a segment kind. In a data format
-// every Name is a key (JSON: NameTag; TOML: NameOther; YAML: NameTag);
-// in a program only the tag-like names are.
-func tokenKind(t chroma.TokenType, data bool) segKind {
-	switch {
-	case t.InCategory(chroma.Comment):
-		return segCodeComment
-	case t.InSubCategory(chroma.LiteralString), t == chroma.LiteralDate:
-		return segCodeString
-	case t.InSubCategory(chroma.LiteralNumber):
-		return segCodeNumber
-	case t == chroma.KeywordConstant:
-		return segCodeConst
-	case t.InCategory(chroma.Keyword):
-		return segCodeKeyword
-	case t.InCategory(chroma.Name):
-		if data || t == chroma.NameTag || t == chroma.NameAttribute {
-			return segCodeKey
+// escStandIn is a character text does not have, to carry its escapes
+// through the colouring; "" when it has them all.
+func escStandIn(text string) string {
+	for _, c := range []string{"\uFFFC", "\uFFFD", "\uE000"} {
+		if !strings.Contains(text, c) {
+			return c
 		}
-		return segCode
-	case t.InCategory(chroma.Punctuation), t.InCategory(chroma.Operator):
-		return segCodePunct
-	case t == chroma.GenericHeading, t == chroma.GenericSubheading:
-		return segCodeHeading
-	case t == chroma.GenericStrong:
-		return segCodeStrong
-	case t == chroma.GenericEmph:
-		return segCodeEmph
 	}
-	return segCode
+	return ""
+}
+
+var sgrSeq = regexp.MustCompile(`\x1b\[[0-9;:]*m`)
+
+// sgrRuns is a line in colour as segments of the code kind: each run of
+// one look, its ink and its bold, italic and underline.
+func sgrRuns(line string) []seg {
+	var out []seg
+	cur := seg{item: -1, kind: segCode}
+	add := func(s string) {
+		if s == "" {
+			return
+		}
+		if n := len(out); n > 0 && out[n-1].ink == cur.ink && out[n-1].attr == cur.attr {
+			out[n-1].text += s
+			return
+		}
+		run := cur
+		run.text = s
+		out = append(out, run)
+	}
+	for line != "" {
+		at := sgrSeq.FindStringIndex(line)
+		if at == nil {
+			add(line)
+			break
+		}
+		add(line[:at[0]])
+		cur = applySGR(cur, line[at[0]+2:at[1]-1])
+		line = line[at[1]:]
+	}
+	return out
+}
+
+// applySGR is s after one SGR sequence's parameters, as Syntax writes
+// them: a 24-bit colour, bold, italic, underline and their resets.
+func applySGR(s seg, params string) seg {
+	ps := strings.FieldsFunc(params, func(r rune) bool { return r == ';' || r == ':' })
+	if len(ps) == 0 {
+		ps = []string{"0"}
+	}
+	n := func(i int) int {
+		if i >= len(ps) {
+			return -1
+		}
+		v, _ := strconv.Atoi(ps[i])
+		return v
+	}
+	for i := 0; i < len(ps); i++ {
+		switch p := n(i); {
+		case p == 0:
+			s.ink, s.attr = "", 0
+		case p == 1:
+			s.attr |= attrBold
+		case p == 3:
+			s.attr |= attrItalic
+		case p == 4:
+			s.attr |= attrUnderline
+		case p == 22:
+			s.attr &^= attrBold
+		case p == 23:
+			s.attr &^= attrItalic
+		case p == 24:
+			s.attr &^= attrUnderline
+		case p == 39:
+			s.ink = ""
+		case (p == 38 || p == 48) && n(i+1) == 2:
+			if p == 38 && i+4 < len(ps) {
+				s.ink = lipgloss.Color(fmt.Sprintf("#%02x%02x%02x", n(i+2), n(i+3), n(i+4)))
+			}
+			i += 4
+		case (p == 38 || p == 48) && n(i+1) == 5:
+			i += 2
+		}
+	}
+	return s
 }
 
 // langFor is the chroma lexer name for a document's content type, or ""

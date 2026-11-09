@@ -28,17 +28,6 @@ const (
 	segCheck
 	segMedia
 	segCode
-	// Inside a code block with a language (highlight.go).
-	segCodeKey
-	segCodeString
-	segCodeNumber
-	segCodeConst
-	segCodeKeyword
-	segCodeComment
-	segCodePunct
-	segCodeHeading
-	segCodeStrong
-	segCodeEmph
 	// The reader's elements (docs/reader.md): a bulleted list's icon, a
 	// quote's bar, code inside a line.
 	segBullet
@@ -56,7 +45,7 @@ type seg struct {
 	// through — on top of whatever its kind draws (textAttr).
 	attr textAttr
 	// ink, when set, is the run's own colour over its kind's: a quote's
-	// bar, in the colour of its depth.
+	// bar, in the colour of its depth; code, in its syntax colour.
 	ink lipgloss.Color
 }
 

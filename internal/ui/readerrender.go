@@ -422,7 +422,10 @@ func (r *rrender) code(n *ir.Node, c *rctx) {
 		r.row(append(append([]rcell{}, pre...), append(cells(strings.Repeat(" ", pad), segPlain, 0, -1), cells(lang, segDim, 0, -1)...)...), ground, "", false)
 		pre = c.hang
 	}
-	lines := highlightLines(lang, text)
+	var lines [][]seg
+	if lang != "" {
+		lines = syntaxLines(lang, text)
+	}
 	if lines == nil {
 		for _, l := range strings.Split(text, "\n") {
 			lines = append(lines, []seg{{text: l, kind: segCode, item: -1}})
@@ -434,7 +437,11 @@ func (r *rrender) code(n *ir.Node, c *rctx) {
 		}
 		rc := append([]rcell{}, pre...)
 		for _, s := range line {
-			rc = append(rc, cells(s.text, s.kind, 0, -1)...)
+			run := cells(s.text, s.kind, s.attr, -1)
+			for k := range run {
+				run[k].ink = s.ink
+			}
+			rc = append(rc, run...)
 		}
 		r.row(rc, ground, "", true)
 	}

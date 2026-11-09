@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/vulcanshen/webu/internal/ir"
 )
 
@@ -157,32 +158,42 @@ func TestSelectRowsDrawTheCursor(t *testing.T) {
 	}
 }
 
-func TestHighlightJSONKeysAndValues(t *testing.T) {
-	lines := highlightLines("json", "{\n  \"a\": 1,\n  \"b\": \"x\",\n  \"c\": true\n}")
+// Code is in the family's syntax colours (terminu.Syntax): a JSON key, a
+// number, a string and a constant each its own ink, every character kept;
+// an escape in the page's text stays itself, for the row to name (tdp
+// components.5), and a language no lexer knows is plain.
+func TestCodeInTheFamilysSyntaxColours(t *testing.T) {
+	lines := syntaxLines("json", "{\n  \"a\": 1,\n  \"b\": \"x\",\n  \"c\": true\n}")
 	if len(lines) != 5 {
 		t.Fatalf("lines: %d", len(lines))
 	}
-	kinds := map[string]segKind{}
-	for _, l := range lines {
-		for _, s := range l {
-			kinds[strings.TrimSpace(s.text)] = s.kind
+	inks := map[string]lipgloss.Color{}
+	var all strings.Builder
+	for i, l := range lines {
+		if i > 0 {
+			all.WriteString("\n")
+		}
+		for _, sg := range l {
+			inks[strings.TrimSpace(sg.text)] = sg.ink
+			all.WriteString(sg.text)
 		}
 	}
-	if kinds[`"a"`] != segCodeKey || kinds["1"] != segCodeNumber || kinds[`"x"`] != segCodeString || kinds["true"] != segCodeConst {
-		t.Errorf("kinds: %v", kinds)
+	if all.String() != "{\n  \"a\": 1,\n  \"b\": \"x\",\n  \"c\": true\n}" {
+		t.Errorf("the text changed: %q", all.String())
 	}
-	if highlightLines("", "x") != nil || highlightLines("no-such-language", "x") != nil {
-		t.Error("no lexer means no highlight, not a crash")
+	key, num, str, con := inks[`"a"`], inks["1"], inks[`"x"`], inks["true"]
+	if key == "" || num == "" || str == "" || con == "" || key == num || num == str || str == con {
+		t.Errorf("inks: %v", inks)
 	}
-	// YAML and TOML keys are keys too.
-	y := highlightLines("yaml", "name: webu\nport: 8080\n")
-	found := false
-	for _, s := range y[0] {
-		if strings.TrimSpace(s.text) == "name" && s.kind == segCodeKey {
-			found = true
-		}
+	esc := syntaxLines("go", "x := \"\x1b[31m\"")
+	var got strings.Builder
+	for _, sg := range esc[0] {
+		got.WriteString(sg.text)
 	}
-	if !found {
-		t.Errorf("yaml key not marked: %+v", y[0])
+	if got.String() != "x := \"\x1b[31m\"" {
+		t.Errorf("an escape in the text should stay itself: %q", got.String())
+	}
+	if l := syntaxLines("no-such-language", "x"); len(l) != 1 || len(l[0]) != 1 || l[0][0].text != "x" {
+		t.Errorf("a language no lexer knows should be plain: %+v", l)
 	}
 }

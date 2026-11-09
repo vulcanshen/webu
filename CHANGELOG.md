@@ -19,6 +19,9 @@ Each release names the version of terminu design (tdp) it follows.
   search in Visual mode that finds nothing says so. A search is no longer
   recorded in the App Log, as the filter is not; one that finds nothing
   is, by its toast.
+- Code is in the terminu family's syntax colours, catppuccin-mocha's with
+  its bold, italic and underline, as in catu and every member's preview
+  and viewer; webu had colours of its own.
 - Visual mode's copy is `Cop[y]` in its menu; the key references no longer
   list `PgUp|PgDn` beside `u|d`, which they still move as.
 
