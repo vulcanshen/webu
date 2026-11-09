@@ -169,7 +169,7 @@ make build     # → ./webu（CGO_ENABLED=0、-trimpath、strip；版本是 dev�
 ./webu
 ```
 
-開發用的小工具放在頂層的 `tools/`（tdp project 允許，不算 app 本身）：`tools/mddump` 是閱讀器的實驗工具（`make mddump URL=…`，有自己的 `go.mod`）：`net/http` 抓一頁、Readability 挑內容、`html-to-markdown/v2` 轉 markdown 印出來，當基準量 webu 自己的規則；`-whole` 照轉整個 `<body>` 對照，`-save`／`-file` 存下與重放 HTML。維護者自己的 Claude Code 檔案（`CLAUDE.md`、`.claude/`）照 tdp project.3 不進 git。
+開發用的小工具放在頂層的 `tools/`（terminu-harness 的 project 允許，不算 app 本身）：`tools/mddump` 是閱讀器的實驗工具（`make mddump URL=…`，有自己的 `go.mod`）：`net/http` 抓一頁、Readability 挑內容、`html-to-markdown/v2` 轉 markdown 印出來，當基準量 webu 自己的規則；`-whole` 照轉整個 `<body>` 對照，`-save`／`-file` 存下與重放 HTML。維護者自己的 Claude Code 檔案（`CLAUDE.md`、`.claude/`）照 terminu-harness 的 project.3 不進 git。
 
 同時改 terminu-go 時，在 repo 旁邊放 `../terminu-go`，用不進版控的 `go.work` 接上：`go work init . ../terminu-go`。`make check` 有 `go.work` 時會多跑 `check-lib`（關掉 `go.work`、照 `go.mod` 寫的 tag 編譯與測試），過不了就是用到了 lib 還沒發版的東西。
 
@@ -183,7 +183,7 @@ make gif                從 .local/demos/demo.tape 重錄 docs/demo.gif（VHS、
 make snapshot           goreleaser 本機打包到 dist/
 ```
 
-`make` 列出全部：家族共用的 target 在 `family.mk`（tdp project 的範本，不在 webu 裡改），webu 自己的（`mddump`）在 `Makefile` 最後一段。
+`make` 列出全部：家族共用的 target 在 `family.mk`（terminu-harness 的範本，tdp v1.2.0 從 tdp 搬過去；不在 webu 裡改），webu 自己的（`mddump`）在 `Makefile` 最後一段。
 
 - **`go test ./...`**：reader（取頁、轉址與請求紀錄、cookie 存檔與一個網站的 cookie、表單、favicon 的顏色）、store、paths（搬家、刪掉舊的 Chromium）、ui。
 - **閱讀器的 UI 測試**（`internal/ui/reader_test.go`）：`httptest` 架一個小網站，走過讀頁、跟連結、`H|L`、`w`、`/` 找字、Focus mode、表單、登入的 cookie（`0600`）、搜尋框、下載、404、網站記號、Source／Cookies／Requests 三個 popup。
@@ -196,10 +196,10 @@ make snapshot           goreleaser 本機打包到 dist/
 
 ## 發布
 
-照 tdp project 的「發布」：`make check` 通過 → CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C` → commit、打 tag `vX.Y.Z` → push commit 與 tag。`release.yml`（範本）在 ubuntu 與 macOS 跑 `go test -race`、goreleaser 建置並推 Homebrew tap（`vulcanshen/homebrew-tap` 的 `webu.rb`），再用 CHANGELOG 那一段蓋過 release 的內文（awk 抓 `## <tag>` 那一段）。0.5.0 以前的 CHANGELOG 標題照當時的寫法（`## [0.5.0] — 2026-10-06`），不改。
+照 terminu-harness 的 project.7「發布」：`make check` 通過 → CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C` → commit、打 tag `vX.Y.Z` → push commit 與 tag。`release.yml`（範本）在 ubuntu 與 macOS 跑 `go test -race`、goreleaser 建置並推 Homebrew tap（`vulcanshen/homebrew-tap` 的 `webu.rb`），再用 CHANGELOG 那一段蓋過 release 的內文（awk 抓 `## <tag>` 那一段）。0.5.0 以前的 CHANGELOG 標題照當時的寫法（`## [0.5.0] — 2026-10-06`），不改。
 
 - **平台**：Chromium 拿掉之後沒有平台限制，`.goreleaser.yaml` 範本留給 app 的 `ignore` 是空的（`[]`），linux/arm64 也建；`install.sh` 在 app 自己的段不擋任何平台。
-- **beta**：stable 之前可以先發 `vX.Y.Z-beta.N`（N 從 1 起），步驟一樣，CHANGELOG 標題是 `## vX.Y.Z-beta.N — tdp vA.B.C`。`.goreleaser.yaml` 的 `prerelease: auto` 讓它成為 GitHub pre-release，`skip_upload: auto` 讓 tap 不動，所以 brew 與 `install.sh`（抓 latest release）還是 stable；要裝 beta 用 `go install …@vX.Y.Z-beta.N`。stable 那一段要涵蓋上一個 stable 以來的全部，beta 的也算進去。0.6.0 先發 beta，沒問題再發 v0.6.0（user 2026-10-29 選的）。v0.6.0-beta.1 的 CI 失敗（測試依賴折行的位置），release 沒建出來；照 filu 的做法燒掉這個號碼：tag 留著，CHANGELOG 不留它的標題（它沒發出去），改發 v0.6.0-beta.2。v0.6.0 的段落照 project.6 涵蓋 0.5.0 以來的全部（就是 beta.2 那段，tdp 版號改成 v1.1.3），beta.2 那段照發出去的樣子留著。
+- **beta**：stable 之前可以先發 `vX.Y.Z-beta.N`（N 從 1 起），步驟一樣，CHANGELOG 標題是 `## vX.Y.Z-beta.N — tdp vA.B.C`。`.goreleaser.yaml` 的 `prerelease: auto` 讓它成為 GitHub pre-release，`skip_upload: auto` 讓 tap 不動，所以 brew 與 `install.sh`（抓 latest release）還是 stable；要裝 beta 就從它在 GitHub 的 pre-release 下載（家族不再提供 `go install`：它建出來的執行檔沒有版號，印的是 dev；terminu-harness v1.2.1）。stable 那一段要涵蓋上一個 stable 以來的全部，beta 的也算進去。0.6.0 先發 beta，沒問題再發 v0.6.0（user 2026-10-29 選的）。v0.6.0-beta.1 的 CI 失敗（測試依賴折行的位置），release 沒建出來；照 filu 的做法燒掉這個號碼：tag 留著，CHANGELOG 不留它的標題（它沒發出去），改發 v0.6.0-beta.2。v0.6.0 的段落照 project.6（當時在 tdp，現在在 terminu-harness）涵蓋 0.5.0 以來的全部（就是 beta.2 那段，tdp 版號改成 v1.1.3），beta.2 那段照發出去的樣子留著。
 - **token**：goreleaser 讀 `GITHUB_TOKEN`；workflow 在 secret `ACTION_TOKEN` 有設時用它（內建的 token 寫不了 tap）。
 - **`make release-check`**：goreleaser 把 `brews` 標成 deprecated，只有這個警告不算失敗。
 - 發布後確認資產時看 `repos/<owner>/<repo>/releases/<id>/assets`；`gh release view` 與 `releases/tags/<tag>` 的 assets 剛發布時可能還是空的。**不要對已經成功的 run 重跑 release job** —— goreleaser 會因為資產已存在而失敗；真的要重來，先刪掉資產再重跑。

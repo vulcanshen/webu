@@ -41,12 +41,6 @@ brew install vulcanshen/tap/webu
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/install.sh | sh
 ```
 
-**Go**:
-
-```bash
-go install github.com/vulcanshen/webu/cmd/webu@latest
-```
-
 Building from source is in [docs/dev-remarks.md](docs/dev-remarks.md).
 
 Four things to know:

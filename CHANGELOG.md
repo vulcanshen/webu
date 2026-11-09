@@ -13,7 +13,11 @@ Each release names the version of terminu design (tdp) it follows.
 - A quote's bar is in the colour of its depth, as a heading's level is:
   each bar of a quote in a quote its own. A quote in a quote has one blank
   row before it, no longer two.
-- On terminu-go v1.2.0, following tdp v1.2.0.
+- On terminu-go v1.2.0, following tdp v1.2.0. The repository's templates
+  are terminu-harness's, where tdp v1.2.0 moved them.
+- `go install` is no longer a way to install webu: what it builds has no
+  version and says `dev`. Homebrew, `install.sh` and the GitHub release
+  are, a beta from its pre-release.
 - `/` run from a Space menu keeps the menu under its box, `Esc` going
   back to it, and closes the two together once it runs, found or not; a
   search in Visual mode that finds nothing says so. A search is no longer

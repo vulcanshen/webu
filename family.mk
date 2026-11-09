@@ -1,6 +1,6 @@
-# family.mk — terminu family 共用的 make target（tdp project/family.mk）
+# family.mk — terminu family 共用的 make target（harness project/family.mk）
 #
-# 全家族同一份，不在 app 裡改：要改先改 tdp，再複製到每個 app。
+# 全家族同一份，不在 app 裡改：要改先改 terminu-harness，再複製到每個 app。
 # app 的 Makefile 先設變數、再 include 它，自己的 target 寫在 include 後面：
 #
 #   BINARY := kamonu

@@ -1,4 +1,4 @@
-# terminu family template (tdp project/goreleaser.yaml), copied to an app's
+# terminu family template (harness project/goreleaser.yaml), copied to an app's
 # .goreleaser.yaml. Replace webu with the app's name and fill the lines
 # marked "app:". An app with a Windows build uncomments the lines marked
 # "Windows"; nothing else changes.

@@ -2,7 +2,7 @@
 # webu installer for macOS / Linux.
 # Usage: curl -fsSL https://raw.githubusercontent.com/vulcanshen/webu/main/install.sh | sh
 #
-# terminu family template (tdp project/install.sh). Replace webu; set
+# terminu family template (harness project/install.sh). Replace webu; set
 # WINDOWS; the blocks marked "app's own" are the app's, the rest stays as it is.
 
 set -e

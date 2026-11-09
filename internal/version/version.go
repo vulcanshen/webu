@@ -3,7 +3,7 @@
 // go.mod's module path, its /vN included from v2 on).
 // A local `go build` / `make build` produces a "dev" build.
 //
-// terminu family template (tdp project/version.go), copied to an app's
+// terminu family template (harness project/version.go), copied to an app's
 // internal/version/version.go; replace webu.
 package version
 

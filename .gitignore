@@ -1,4 +1,4 @@
-# terminu family template (tdp project/gitignore), copied to an app's
+# terminu family template (harness project/gitignore), copied to an app's
 # .gitignore; replace webu. The app's own lines go below the last one.
 /webu
 /dist/
