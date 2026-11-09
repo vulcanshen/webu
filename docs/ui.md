@@ -88,9 +88,10 @@ lib 的清單，欄名 `Title`（user 2026-10-28：外框已經寫 TABS，原本
 
 #### 網址列
 
-`[2]` 的第一列，tdp panel.10 的位置列（2026-10-29，terminu 確認）：glyph（nf-md-web）與網址都是 Lavender；太長從前面截、
-保留尾端；只能看，不能按、cursor 不停、捲動位置不算它；`[2]` 失焦時跟著淡化。visual mode 裡用 `/` 找字時，這一列換成找的字與
-目前是第幾筆（`/query  2/5`，Yellow）。
+`[2]` 的第一列，tdp panel.10 的位置列（2026-10-29，terminu 確認），lib 畫的（`Panel.Location`，2026-11-09 user 定：照 lib）：
+glyph（nf-md-web）與網址都是 Lavender；太長從前面截、保留尾端，glyph 也會被截掉（WB23，等 tdp 與 lib）；只能看，不能按、
+cursor 不停、捲動位置不算它；`[2]` 失焦時跟著淡化；載入中、出錯時照樣留在 loading 那一句與錯誤的兩句上面。visual mode 裡用
+`/` 找字時，這一列換成找的字與目前是第幾筆（`/query  2/5`，照 lib 的 Lavender；搜尋狀態該放哪裡等 tdp 與 lib，WB24）。
 
 #### 頁面
 
@@ -167,7 +168,7 @@ loading icon、錯誤列、`Esc` 一次一層都照 tdp，webu 不自己畫。�
 | Lavender | `[2]` 的網址列（使用者足跡：位置列，tdp panel.10） |
 | Green | `[1]` 裡 `[2]` 正在顯示的分頁；chip 列右端的下載數與進度條（tdp 的「生效中」、進行中的工作） |
 | Overlay0 | `[1]` 裡還沒載入的分頁 |
-| Yellow | Focus mode、Visual mode 的框與模式名；visual mode 的選取範圍、網址列上的找字狀態 |
+| Yellow | Focus mode、Visual mode 的框與模式名；visual mode 的選取範圍 |
 | Subtext1 底、Base 粗體 | cursor 色塊：Focus 中的項目、`/` 找到的目前那一筆 |
 | Red | 頁面上畫成名字的控制字元（tdp components.5） |
 

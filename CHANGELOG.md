@@ -2,6 +2,15 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- The page's address stays on its row while the page first loads; it
+  went with the loading line before. The row, the loading line and a
+  page that could not be reached are drawn as the rest of the family
+  draws them. An address too long for the row now loses its globe with
+  its front, and in Visual mode a search's text and count are no longer
+  Yellow.
+
 ## v0.7.0 — tdp v1.2.0
 
 Everything since v0.6.0, the beta v0.7.0-beta.1 included.

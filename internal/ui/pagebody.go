@@ -31,58 +31,20 @@ func (b *pageBody) Draw(w, h int, focused bool) []string {
 	if t == nil {
 		return terminu.EmptyState(w, h, "No page", "Press [o] to enter a location, or [T] for a new tab")
 	}
-	out := make([]string, 0, h)
-	out = append(out, m.urlRow(t, w))
-	rest := h - len(out)
+	// The address is the panel's location row, drawn by the lib over
+	// whatever is here (syncPage, tdp panel.10).
+	var out []string
 	switch {
 	case m.sel.on && t.root != nil:
-		out = append(out, m.selectRows(t, w, rest)...)
-	case t.errText != "":
-		// What went wrong, in Red, and the key that tries again
-		// (tdp panel.15).
-		out = append(out, stateRows(w, rest, terminu.Fg(terminu.Red).Render(t.errText),
-			terminu.Fg(terminu.Overlay0).Render("Press [R] to retry"))...)
-	case t.root == nil && t.working():
-		out = append(out, stateRows(w, rest, terminu.Fg(terminu.Overlay0).Render("loading…"), "")...)
+		out = m.selectRows(t, w, h)
+	case b.Empty():
+		// The lib draws the loading line or the failure (tdp panel.15).
 	case t.root == nil:
-		out = append(out, terminu.EmptyState(w, rest, "Nothing here yet", "Press [R] to load it")...)
+		out = terminu.EmptyState(w, h, "Nothing here yet", "Press [R] to load it")
 	default:
-		out = append(out, m.pageRows(t, w, rest)...)
+		out = m.pageRows(t, w, h)
 	}
 	return terminu.Pad2(out, w, h)
-}
-
-// stateRows is a fact and a hint, centred: an empty panel's two sentences
-// (tdp screen.8), already coloured.
-func stateRows(w, h int, fact, hint string) []string {
-	out := make([]string, max(h, 0))
-	for i := range out {
-		out[i] = spaces(w)
-	}
-	lines := []string{fact}
-	if hint != "" {
-		lines = append(lines, "", hint)
-	}
-	top := max((h-len(lines))/2, 0)
-	for i, l := range lines {
-		if top+i < h {
-			out[top+i] = terminu.Center(clipANSI(l, w), w)
-		}
-	}
-	return out
-}
-
-// urlRow is the page's address, behind the web glyph: where the panel is,
-// its location row (tdp panel.10), Lavender and cut at the front. In visual mode a search shows its query and where it
-// is instead.
-func (m *AppModel) urlRow(t *tab, w int) string {
-	if st := m.sel.status(); m.sel.on && st != "" {
-		sel := lipgloss.NewStyle().Foreground(selectColor)
-		return " " + sel.Render(truncate(st, w-1)) + spaces(w-1-dispW(truncate(st, w-1)))
-	}
-	lead := " " + glyphWeb + " "
-	shown := terminu.TruncateLeft(terminu.Escape(t.url), max(1, w-dispW(lead)))
-	return terminu.Pad(terminu.Fg(terminu.Lavender).Render(lead+shown), w)
 }
 
 // Key moves the cursor (tdp K12); the panel's actions take the rest.
@@ -120,11 +82,11 @@ func moveName(key string) string {
 	return key
 }
 
-// Empty reports a page that has not come yet: the lib draws the loading
-// icon and the panel's LoadingText in its middle (tdp panel.15).
+// Empty reports a page that has not come yet, or could not: the lib draws
+// the panel's LoadingText or Fail in its middle (tdp panel.15).
 func (b *pageBody) Empty() bool {
 	t := b.m.shownTab()
-	return t != nil && t.root == nil && t.working()
+	return t != nil && t.root == nil && (t.working() || t.errText != "")
 }
 
 // HasItem reports whether the cursor is on something item operations
@@ -145,7 +107,7 @@ func (b *pageBody) Scroll() string {
 	if t == nil || t.root == nil || m.sel.on {
 		return ""
 	}
-	vis := max(1, b.h-1) // under the URL row
+	vis := max(1, b.h)
 	lo, hi := t.rowRange()
 	total := hi - lo + 1
 	if total <= vis {

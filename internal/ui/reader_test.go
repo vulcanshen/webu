@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -459,4 +460,33 @@ func TestReaderSearchesAsTdp120Says(t *testing.T) {
 	d.key("nowhere at all")
 	d.press("enter")
 	d.until("the toast", d.shows("Not on the page: nowhere at all"))
+}
+
+// A page that cannot be reached is the panel's failure, its address still
+// on the location row over it (tdp panel.10, panel.15): the lib draws both
+// (user 2026-11-09, WB23).
+func TestAPageThatCannotBeReached(t *testing.T) {
+	d, _ := readerAt(t, "http://127.0.0.1:1/", t.TempDir())
+	d.until("the failure", d.shows("Press [R] to retry"))
+	if !strings.Contains(d.view(), glyphWeb+" http://127.0.0.1:1/") {
+		t.Errorf("the address should stay over the failure:\n%s", d.view())
+	}
+}
+
+// While a page is on its way and nothing of it is here yet, its address
+// stays on the location row over the loading line (tdp panel.10): the
+// lib's row, which the loading line does not cover, as webu's own did.
+func TestTheAddressStaysWhileLoading(t *testing.T) {
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-release
+		fmt.Fprint(w, "<html><body><p>Late words.</p></body></html>")
+	}))
+	t.Cleanup(srv.Close)
+	t.Cleanup(func() { close(release) })
+	d, _ := readerAt(t, srv.URL+"/slow", t.TempDir())
+	d.until("the loading line", d.shows("loading 127.0.0.1"))
+	if !strings.Contains(d.view(), glyphWeb+" "+srv.URL+"/slow") {
+		t.Errorf("the address should stay while the page loads:\n%s", d.view())
+	}
 }

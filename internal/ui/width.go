@@ -43,18 +43,6 @@ func truncate(s string, w int) string {
 	return b.String() + strings.Repeat(" ", w-1-used) + "…"
 }
 
-// clipANSI cuts a possibly-styled string to w cells without severing an
-// escape sequence: truncate() is for plain text.
-func clipANSI(s string, w int) string {
-	if w <= 0 {
-		return ""
-	}
-	if dispW(s) <= w {
-		return s
-	}
-	return terminu.Cut(s, 0, w)
-}
-
 // padLeft fits s into exactly w cells, right-aligned.
 func padLeft(s string, w int) string {
 	s = truncate(s, w)

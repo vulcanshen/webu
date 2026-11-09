@@ -14,8 +14,8 @@ import (
 // page or the cursor moves (syncPage), so the Space menu, the key
 // reference and the hint always speak of what is under the cursor now.
 
-// syncPage puts the shown tab into panel [2]'s frame: the loading icon,
-// the actions.
+// syncPage puts the shown tab into panel [2]'s frame: its location row,
+// the loading icon, what failed, the actions.
 func (m *AppModel) syncPage() {
 	p := m.pagePanel
 	if p == nil {
@@ -23,9 +23,15 @@ func (m *AppModel) syncPage() {
 	}
 	t := m.shownTab()
 	p.Loading = t != nil && t.working()
-	p.LoadingText = ""
+	p.LoadingText, p.Location, p.Fail = "", "", nil
 	if t != nil {
 		p.LoadingText = "loading " + nameOr(hostOf(t.url), "the page") + "…"
+		p.Location = m.pageLocation(t)
+		if t.errText != "" {
+			// What went wrong, and the key that tries again (tdp
+			// panel.15).
+			p.Fail = &terminu.Failure{Fact: t.errText, Hint: "Press [R] to retry"}
+		}
 	}
 	p.Actions = m.pageActions(t)
 	// Esc is listed, and does something, only where there is a level up.
@@ -33,6 +39,18 @@ func (m *AppModel) syncPage() {
 	if t != nil && t.find != nil {
 		p.OnEsc = m.do(m.pageEsc)
 	}
+}
+
+// pageLocation is panel [2]'s location row (tdp panel.10), the lib's:
+// the page's address behind the web glyph, Lavender, cut at the front.
+// TODO(lib WB23): a long address cuts the glyph too. In Visual mode a
+// search's text and where it is take the row; TODO(lib WB24): a search's
+// status has no place of its own (it was Yellow here, webu's own row).
+func (m *AppModel) pageLocation(t *tab) string {
+	if st := m.sel.status(); m.sel.on && st != "" {
+		return st
+	}
+	return glyphWeb + " " + t.url
 }
 
 // pageEsc is Esc on panel [2], one level up (tdp K4): reading, that is
