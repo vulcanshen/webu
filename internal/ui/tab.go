@@ -32,9 +32,6 @@ type tab struct {
 	loading    bool
 	navigating bool
 	errText    string // a load that failed: DNS, connection, certificate
-	// gutter is how many columns the line-number column takes off the
-	// left of the panel; the layout was made at what it left (relayout).
-	gutter int
 	// canBack and canForward: whether the tab's history has a page before
 	// and after this one — what dims Back and Forward (tdp M6).
 	canBack, canForward bool

@@ -19,7 +19,7 @@ webu fetches a web page and lays out what the page itself presents in your termi
 ## Why webu
 
 - **The page, not the site.** What the page presents — the article, the documentation, the answer — and not its navigation, sidebars, footers or cookie notices. `w` shows the full page when you want it.
-- **Drawn for a terminal.** A heading's words on its level's colour, lists with dashes and numbers, code coloured by its language, quotes, tables as grids, an icon before each link and image, line numbers down the left.
+- **Drawn for a terminal.** A heading's words on its level's colour, lists with dashes and numbers, code coloured by its language, quotes, tables as grids, an icon before each link and image.
 - **Read the way `less` reads.** `j|k|u|d|gg|G` scroll, `/` finds and `n|N` step through what it found; `f` is Focus mode, which walks what can be pressed — links, images, fields, buttons.
 - **Forms as far as they go without JavaScript**: a search box, a plain sign-in. The cookies are kept, so you stay signed in.
 - **Light.** No browser to download or run: a page is a request.
@@ -98,7 +98,7 @@ Then:
 
 Switch with a capital letter, or from `Space` › `Global operation`:
 
-- **`W` Web** — your tabs beside the page; the page shows the tab under the cursor in the tab list, and `Enter` there takes you to it. The page has its address on top, line numbers down the left and your position in the bottom border.
+- **`W` Web** — your tabs beside the page; the page shows the tab under the cursor in the tab list, and `Enter` there takes you to it. The page has its address on top and your position in the bottom border.
 - **`B` Bookmarks** — a folder tree; `a` adds the current page, `A` a folder, `m` moves, `r` renames, `I` imports a browser's bookmark export.
 - **`H` History** — every page you visited, newest first.
 - **`D` Downloads** — this session's downloads and their progress.

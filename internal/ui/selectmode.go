@@ -406,14 +406,14 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 
 	out := make([]string, 0, innerH)
 	end := min(len(t.lay.rows), t.top+innerH)
-	// The same line numbers the page has: the sheet is the page, and
-	// entering this mode must not shift every line a column left.
-	gut := t.gutter
-	innerW -= gut
+	// The same margins the page has: the sheet is the page, and entering
+	// this mode must not shift every line a column.
+	margin := strings.Repeat(" ", pageMargin)
+	innerW -= 2 * pageMargin
 	for r := t.top; r < end; r++ {
 		var b strings.Builder
 		used, col := 0, 0
-		b.WriteString(lineNum(r+1, gut, false))
+		b.WriteString(margin)
 		for _, sg := range t.lay.rows[r].segs {
 			for _, ch := range sg.text {
 				// A control character is its name, in Red (tdp
@@ -449,10 +449,11 @@ func (m *AppModel) selectRows(t *tab, innerW, innerH int) []string {
 			used++
 		}
 		b.WriteString(strings.Repeat(" ", max(0, innerW-used)))
+		b.WriteString(margin)
 		out = append(out, b.String())
 	}
 	for len(out) < innerH {
-		out = append(out, strings.Repeat(" ", innerW+gut))
+		out = append(out, strings.Repeat(" ", innerW+2*pageMargin))
 	}
 	return out
 }

@@ -2,6 +2,12 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- **The page has no line numbers**: its text keeps a cell off the frame on
+  either side, as a document in catu does, and gets the columns the
+  numbers took.
+
 ## v0.6.0 — tdp v1.1.3
 
 Everything since v0.5.0, the beta v0.6.0-beta.2 included;

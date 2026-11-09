@@ -104,7 +104,6 @@ webu 不寫 HTML 引擎、不跑 JavaScript、不定義新 protocol。它用 Go 
 | 上一頁下一頁 | `H\|L`：分頁自己的歷史，回到離開時的位置；`b` 麵包屑列出這個分頁走過的每一頁，選一頁直接跳過去 | 無 |
 | 正文／整頁 | `w` 切換 | 無 |
 | 頁內搜尋 | `/`：所有命中的字加底線，`n\|N` 走，`Esc` 收掉（finder 拿掉，2026-10-28） | 無 |
-| 行號 | [2] 的頁面左邊有行號 | 無 |
 | 錯誤頁 | 抓不到（DNS、連線、TLS 憑證……）：[2] 用紅字寫原因，App Log 記一筆；重新載入失敗時原本的頁留著，toast 說沒載到 | 無 |
 | 登入 | GET 表單與簡單的帳號密碼 POST（`reader.md`「表單」）；每收到一個 cookie 就寫檔，session cookie 也存；Settings 的 `C` 清除登入資料 | `cookies.json`（狀態，`0600`） |
 | 這一頁的資訊 | [2] Space menu 最上面三項，沒有熱鍵：Source（抓下來的原始內容）、Cookies（這個網站的，`C` 清掉）、Requests（`curl -v` 的寫法）。2026-10-29 取代 DevTools；Console 與 web storage 沒有了 | 無 |

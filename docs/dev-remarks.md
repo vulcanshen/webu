@@ -39,7 +39,7 @@ internal/reader/     閱讀器：Client（net/http、transport 記請求 request
 internal/ir/         內容樹：Node、Kind
 internal/ui/         TUI，建在 terminu-go 上：app.go（AppModel、向 lib 登記、onMsg、sync）、
                      web.go（Web 畫面：[1] Tabs、版面）、siteicon.go（[1] 的網站記號）、
-                     pagebody.go（[2] 的 Body：網址列、內容、行號）、pageactions.go（[2] 的動作、Enter）、
+                     pagebody.go（[2] 的 Body：網址列、內容）、pageactions.go（[2] 的動作、Enter）、
                      reader.go（分頁載入、歷史、表單、下載）、readerrender.go（內容樹 → rows / items）、
                      readerkeys.go（捲動、/ 找字、Focus mode、[2] 的 panel 動作）、pageinfo.go（Source、
                      Cookies、Requests）、render.go（row、seg、layout 的型別）、visual.go + selectmode.go
@@ -66,7 +66,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 #### [2] 的畫法（`readerrender.go`、`pagebody.go`）
 
-`renderReader` 把內容樹畫成 `layout{rows, items, marks}`：block 斷行、inline 流式折行，每個 `seg` 記它是哪個 item；`row.ground`／`ink` 是整列的底色與字色，`row.chip` 是標題（字放在該層顏色上、左右各一格空白，不用膠囊的圓端：那是 tdp 的 title，P4）。清單一律短橫線，編號 1／a／i 輪流；code block 在 Mantle 底上、照語言上色、右上角寫語言；引用是 `▎` 加 Mantle 底；資料表格畫格子、表頭粗體；連結與圖片前面是 icon。行號（`lineNumW`／`lineNum`）從文字寬扣、面板寬不變，顏色是 Overlay0。`/` 找到的字加底線、目前那一筆是 cursor 色塊（`writeFound`）。
+`renderReader` 把內容樹畫成 `layout{rows, items, marks}`：block 斷行、inline 流式折行，每個 `seg` 記它是哪個 item；`row.ground`／`ink` 是整列的底色與字色，`row.chip` 是標題（字放在該層顏色上、左右各一格空白，不用膠囊的圓端：那是 tdp 的 title，P4）。清單一律短橫線，編號 1／a／i 輪流；code block 在 Mantle 底上、照語言上色、右上角寫語言；引用是 `▎` 加 Mantle 底；資料表格畫格子、表頭粗體；連結與圖片前面是 icon。頁面沒有行號，字左右各留一格（`pageMargin`，排版寬度扣兩格；Visual mode 畫一樣的邊距，進出 mode 字不會移）：2026-11-09 拿掉行號（user：照 catu 畫文件的方式，catu 的文件沒有行號）。`/` 找到的字加底線、目前那一筆是 cursor 色塊（`writeFound`）。
 
 #### 麵包屑（`readerkeys.go` 的 `openBreadcrumb`）
 
@@ -86,7 +86,7 @@ tools/mddump/        實驗：抓一頁、Readability 挑內容、印成 markdow
 
 #### 兩套配色（`theme.go`）
 
-外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（tdp color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只有頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列是 [2] 的位置列（tdp panel.10，terminu 2026-10-29 確認）：Lavender、太長從前面截、只能看；行號 Overlay0。頁面內容用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
+外殼的顏色（框、膠囊、cursor、hint、footer、popup 的層色）與淡化都是 terminu-go 的（tdp color）：失焦的 panel 與 popup 底下的一切由 lib 改寫 SGR 淡化（tdp F8、tdp T2）。`theme.go` 只有頁面自己的配色（Page palette：`pageText` / `pageClick` / `pageInput` / `pageCode` / `pageMedia` / `pageInvalid` / `levelInk`…）與頁面內容用的 glyph；網址列是 [2] 的位置列（tdp panel.10，terminu 2026-10-29 確認）：Lavender、太長從前面截、只能看。頁面內容用 lip gloss 上色，lib 淡化時照樣改得到它的 SGR。
 
 ## 設計決定
 

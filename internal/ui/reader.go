@@ -214,16 +214,10 @@ func (m *AppModel) remark(t *tab) {
 	t.scrollToCursor(m.pageVisible())
 }
 
-// relayoutReader lays the tab's page out at width, behind the column of
-// line numbers.
+// relayoutReader lays the tab's page out at width, less its margins.
 func (t *tab) relayoutReader(width int) {
-	draw := func(g int) layout { return renderReader(t.root, t.doc, max(1, width-g), t.tabW) }
-	g := t.gutter
-	lay := draw(g)
-	if g2 := lineNumW(len(lay.rows)); g2 != g {
-		g, lay = g2, draw(g2)
-	}
-	t.lay, t.gutter, t.layW = lay, g, width
+	t.lay = renderReader(t.root, t.doc, max(1, width-2*pageMargin), t.tabW)
+	t.layW = width
 	if t.find != nil {
 		// The rows moved: the hits are found again, the one the search was
 		// on kept as near as there is.

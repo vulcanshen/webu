@@ -196,17 +196,13 @@ func (m *AppModel) pageRows(t *tab, innerW, innerH int) []string {
 	// does not run on past the end of what is being read (section.go).
 	lo, hi := t.rowRange()
 	end := min(hi+1, t.top+innerH)
-	// The line numbers count from what the panel is SHOWING, not from the
-	// page behind it: inside a section, or inside a list item, the panel
-	// is that thing, and "line 5" has to mean the fifth line of what is
-	// being read (2026-09-23).
-	gut := t.gutter
-	innerW -= gut
+	margin := strings.Repeat(" ", pageMargin)
+	innerW -= 2 * pageMargin
 	for i := max(t.top, lo); i < end; i++ {
-		out = append(out, lineNum(i-lo+1, gut, t.loading)+m.rowLine(t, i, innerW, st))
+		out = append(out, margin+m.rowLine(t, i, innerW, st)+margin)
 	}
 	for len(out) < innerH {
-		out = append(out, strings.Repeat(" ", innerW+gut))
+		out = append(out, strings.Repeat(" ", innerW+2*pageMargin))
 	}
 	return out
 }
@@ -425,27 +421,7 @@ func codeStyles() map[segKind]lipgloss.Style {
 	}
 }
 
-// lineNumW is how wide the line-number column is for a page of n rows:
-// the digits, a space to keep the number off the frame and one to keep it
-// off the text. Every page has one: [go] takes you to a line by it.
-func lineNumW(n int) int {
-	if n <= 0 {
-		return 0
-	}
-	return len(itoa(n)) + 2 // a cell off the frame, a cell off the text
-}
-
-// lineNum draws one: right-aligned in the gutter, dim while the page is on
-// its way like everything else on it.
-func lineNum(n, w int, dimmed bool) string {
-	if w <= 0 {
-		return ""
-	}
-	// Dim: the numbers are where the text is, not the text (user,
-	// 2026-10-28).
-	ink := pageDim
-	if dimmed {
-		ink = dimColor
-	}
-	return lipgloss.NewStyle().Foreground(ink).Render(" " + padLeft(itoa(n), w-2) + " ")
-}
+// pageMargin is the cells either side of the page's text, off the frame.
+// The page has no line numbers, as a document in catu has none (user
+// 2026-11-09).
+const pageMargin = 1

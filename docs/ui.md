@@ -19,10 +19,10 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ← 分隔線；下載中從左邊填 Green 當進度條
 ┌[1] TABS──────────────┐┏[2] PAGE━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 │ TITLE                │┃ 󰖟 https://en.wikipedia.org/wiki/Terminal_emulator                    ┃  ← 網址列：位置列，Lavender
-│  Example Domain     │┃   1  Terminal emulator                                               ┃  ← 行號（Overlay0）＋頁面：h1 的字在 Peach 上
-│  Terminal emulator  │┃   2                                                                  ┃
-│                      │┃   3 A terminal emulator is a computer program that emulates a        ┃
-│                      │┃   4 󰌷 video terminal within some other display architecture.         ┃  ← 連結：link icon＋字，Sapphire、底線
+│  Example Domain     │┃  Terminal emulator                                                   ┃  ← 頁面，左右各留一格：h1 的字在 Peach 上
+│  Terminal emulator  │┃                                                                      ┃
+│                      │┃ A terminal emulator is a computer program that emulates a            ┃
+│                      │┃ 󰌷 video terminal within some other display architecture.             ┃  ← 連結：link icon＋字，Sapphire、底線
 └─ Enter:read c:close ─┘┗━ H:back L:forward ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1-24 of 310 ━┛  ← hint、捲動位置（lib）
 Space:menu ?:help !:log Tab|1–2:panels q:quit                                                     ← footer（lib）
 ```
@@ -41,7 +41,7 @@ chip 列下面一條分隔線，下載中從左邊填 Green 當進度條。最�
 | zoom | `[2]` 的 `Z`：有 focus 的面板佔滿寬度，`Tab`、數字鍵照樣換面板、換到的也佔滿，在 `[2]` 再按 `Z` 還原（tdp screen.6 的預設） |
 | chrome | chip 列 + 分隔線 + footer 共 3 列（lib）；`[2]` 的框上下 2 列、網址列 1 列，頁面拿其餘 |
 | 寬度穩定 | 每一列都恰好是終端機寬：`TestTDP` 在各種尺寸、icon 一格／兩格下走過每個畫面與 popup，`TestEveryPopupFits`、`TestUnderTheLeastSize` 縮到最低尺寸以下（tdp L4、E5、E6）。網址從前面截，分頁標題截斷不折行 |
-| 行號欄 | `[2]` 的頁面都有（2026-09-23）；寬度是位數加前後各一格，依頁面的列數；最多排兩次（先用上一次的寬度排，位數變了再排一次） |
+| 邊距 | `[2]` 頁面的字左右各留一格（`pageMargin`），排版寬度扣兩格。2026-09-23 起左邊有行號，2026-11-09 拿掉（user：照 catu 畫文件的方式） |
 
 ---
 
@@ -94,8 +94,7 @@ lib 的清單，欄名 `Title`（user 2026-10-28：外框已經寫 TABS，原本
 
 #### 頁面
 
-網址列以下是頁面：左邊是行號欄（Overlay0，user 2026-10-28：行號說的是字在哪，不是字本身），右邊是內容樹畫成的 webu 元件
-（`readerrender.go`）。規格以 `reader.md`「元件」為準，這裡是摘要：
+網址列以下是頁面：內容樹畫成的 webu 元件（`readerrender.go`），左右各留一格，沒有行號（2026-11-09，user：照 catu 畫文件的方式）。規格以 `reader.md`「元件」為準，這裡是摘要：
 
 - **標題**：字（Base、粗體）放在該層的顏色上、左右各一格空白，不畫圓端（user 2026-10-28：圓端是 tdp 的膠囊，P4）；顏色依層
   Peach、Rosewater、Green、Teal、Flamingo，第六層起輪迴（Yellow 是 Visual mode 選取範圍的顏色，2026-10-29 換成 Rosewater）；標題裡的連結、程式碼畫在同一條上。
@@ -184,7 +183,7 @@ loading icon、錯誤列、`Esc` 一次一層都照 tdp，webu 不自己畫。�
 | Mantle `#181825` | 程式碼區塊、引用的底 |
 | Blue `#89b4fa` | 無序清單的 `-` |
 | Lavender `#b4befe` | 引用的直槓 `▎` |
-| Overlay0 `#6c7086` | 行號、圖片、分隔線、表單的框線、程式碼區塊的語言名 |
+| Overlay0 `#6c7086` | 圖片、分隔線、表單的框線、程式碼區塊的語言名 |
 | 語法色 | 程式碼區塊裡（chroma）：key 與 string Pink、number Flamingo、常數與 keyword Sky、註解 Overlay0 斜體、標點 Overlay2 |
 
 ---
