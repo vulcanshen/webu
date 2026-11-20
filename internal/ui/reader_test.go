@@ -113,7 +113,7 @@ func TestSiteMarks(t *testing.T) {
 }
 
 // [2]'s Space menu starts with what is left of DevTools, no key to any:
-// the page's source, its site's cookies (C clearing them, asked first)
+// the page's source, its site's cookies (X clearing them, asked first)
 // and what loading it asked for, a redirect among it (user, 2026-10-29).
 func TestReaderPageInfo(t *testing.T) {
 	srv := site(t)
@@ -148,7 +148,7 @@ func TestReaderPageInfo(t *testing.T) {
 	m.rc.Jar.SetCookies(u, []*http.Cookie{{Name: "session", Value: "me", Path: "/"}})
 	d.action("Cookies")
 	d.until("the cookie", d.shows("session=me"))
-	d.press("C")
+	d.press("X") // many cookies go, on X (tdp K13)
 	d.until("the question", d.shows("Clear 1 cookie?"))
 	d.press("enter")
 	d.until("cleared", d.shows("No cookies for 127.0.0.1"))
@@ -177,26 +177,30 @@ func TestFocusModeWraps(t *testing.T) {
 	}
 }
 
-// A link on the last row, the page scrolled to its end, still shows above
-// the inspect toast: the page scrolls past its end by as many rows as the
-// toast covers (tdp toast.4, as terminu-go's List does).
-func TestInspectToastUncoversTheLastRow(t *testing.T) {
+// A link on the last row, the page scrolled to its end: its note's head
+// and the note go above it, the page not scrolled past its end (tdp
+// panel.18).
+func TestALinkNoteOnTheLastRow(t *testing.T) {
 	srv := site(t)
 	d, m := readerAt(t, srv.URL+"/long", t.TempDir())
 	d.until("the long page", d.shows("A paragraph of the long page."))
 	d.press("2")
 	d.press("f")
 	d.key("G")
-	d.until("the inspect toast", d.shows("INSPECT"))
+	d.until("the note's head", d.shows(glyphNoteHead))
 	if !strings.Contains(d.view(), "the end link") {
-		t.Errorf("the last link should show above the inspect toast:\n%s", d.view())
+		t.Errorf("the last link should be in sight:\n%s", d.view())
 	}
-	d.press("esc")
-	d.until("the toast gone", func() bool { return !strings.Contains(d.view(), "INSPECT") })
+	d.press("i")
+	d.until("the note", d.shows(srv.URL+"/two"))
 	if tb := m.shownTab(); tb.top > len(tb.lay.rows)-m.pageVisible() {
-		t.Errorf("with the toast gone the page should sit on its end again: top %d of %d rows, %d in sight", tb.top, len(tb.lay.rows), m.pageVisible())
+		t.Errorf("the page should sit on its end: top %d of %d rows, %d in sight", tb.top, len(tb.lay.rows), m.pageVisible())
 	}
 }
+
+// glyphNoteHead is nf-md-information_outline, on an item's note's head and
+// its title (tdp panel.18).
+const glyphNoteHead = "\U000F02FD"
 
 // readerAt is webu with a reader tab at url, its files in scratch
 // directories, its downloads in dl.
@@ -277,10 +281,21 @@ func TestReaderReadsAndFollows(t *testing.T) {
 	}
 
 	readerOn(d, "/two")
-	// Where the link goes is the inspect toast's, not the frame's.
-	d.until("the inspect toast", d.shows("INSPECT"))
+	// Where the link goes is its note's (tdp panel.18): its head under the
+	// link, i opening it, Esc back to the head, still in Focus mode.
+	d.until("the note's head", d.shows(glyphNoteHead))
+	if strings.Contains(d.view(), srv.URL+"/two") {
+		t.Errorf("the note should be shut until i:\n%s", d.view())
+	}
+	d.press("i")
+	d.until("the note", d.shows("NOTE"))
 	if !strings.Contains(d.view(), srv.URL+"/two") {
-		t.Errorf("the inspect toast should say where the link goes:\n%s", d.view())
+		t.Errorf("the note should say where the link goes:\n%s", d.view())
+	}
+	d.press("esc")
+	d.until("the note shut", func() bool { return !d.shows("NOTE")() })
+	if m.pagePanel.InMode() == nil {
+		t.Fatal("Esc on the note should shut it alone, Focus mode kept")
 	}
 	d.press("enter")
 	d.until("the second page", d.shows("The second page."))
@@ -555,5 +570,35 @@ func TestTheAddressStaysWhileLoading(t *testing.T) {
 	d.until("the loading line", d.shows("loading 127.0.0.1"))
 	if !strings.Contains(d.view(), glyphWeb+" "+srv.URL+"/slow") {
 		t.Errorf("the address should stay while the page loads:\n%s", d.view())
+	}
+}
+
+// Closing the other tabs is on C, not X: a closed tab reopens with U, and x
+// and X are for removing for good alone (tdp K13, K13-5).
+func TestCloseOthersIsOnC(t *testing.T) {
+	srv := site(t)
+	d, m := readerAt(t, srv.URL+"/two", t.TempDir())
+	d.until("the page", d.shows("The second page."))
+	for _, p := range []string{"/old", "/long"} {
+		tb := m.newTab()
+		tb.url, tb.pending = srv.URL+p, true
+		m.tabs = append(m.tabs, tb)
+	}
+	m.sync()
+	d.press("1")
+	d.press(" ")
+	d.until("the menu", d.shows("[C]lose others"))
+	d.press("esc")
+	d.press("X")
+	if len(m.tabs) != 3 {
+		t.Fatalf("X should close nothing, %d tabs left", len(m.tabs))
+	}
+	d.press("C")
+	if len(m.tabs) != 1 {
+		t.Fatalf("C should close the other tabs, %d left", len(m.tabs))
+	}
+	d.press("U")
+	if len(m.tabs) != 2 {
+		t.Errorf("U should reopen one, %d tabs", len(m.tabs))
 	}
 }

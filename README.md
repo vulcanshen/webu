@@ -48,6 +48,8 @@ Four things to know:
 - **The terminal needs at least 60×20** — in a smaller window webu shows only its name, the size it needs and how to quit (`Ctrl-C` twice), and everything comes back as the window grows.
 - **Icon width**: some terminal and font pairs move the cursor two cells for a Nerd Font icon instead of one, and some do the same for the powerline symbols (the ends of the capsules on the frames, the arrow at the end of the cursor). webu measures both when it starts; if the frames still come out crooked, set them yourself: `WEBU__ICON_WIDTH=2` (or `1`) and `WEBU__POWERLINE_WIDTH` for webu alone, or `TERMINU__ICON_WIDTH` and `TERMINU__POWERLINE_WIDTH`, which every terminu family app reads — set them once and they all follow (the `WEBU__` ones come first). Inside another family app's terminal (kbu, filu, sshu), that app sets the `TERMINU__` ones for webu.
 
+To update, run `webu update`: it brings webu to its latest release the way it was installed (Homebrew, or the install script's download replaced).
+
 To uninstall (it asks before removing your settings and data):
 
 ```bash
@@ -61,6 +63,7 @@ webu                                  # reopen the last session's tabs
 webu https://go.dev/doc/effective_go  # read a page
 webu go.dev lobste.rs                 # one tab each
 webu "terminal browser"               # anything that is not a URL is searched
+webu update                           # bring webu to its latest release
 webu help                             # the whole command line
 ```
 
@@ -111,23 +114,23 @@ Every letter below is also a row in that place's `Space` menu, printed exactly a
 
 #### Tabs
 
-The page follows the cursor. Each tab starts with its site's mark — the site's own icon, or a globe — in the colour of its favicon. `Enter` go to the page · `c` close · `o` open again in a new tab · `r` reload · `y` yank url · `T` new tab · `X` close the others · `U` reopen the last closed
+The page follows the cursor. Each tab starts with its site's mark — the site's own icon, or a globe — in the colour of its favicon. `Enter` go to the page · `c` close · `o` open again in a new tab · `r` reload · `y` yank url · `T` new tab · `C` close the others · `U` reopen the last closed
 
 #### Page
 
-A page is fetched as it is, without running its JavaScript, and what it presents is shown, the site around it — navigation, sidebars, footers, cookie notices — left out ([`docs/reader.md`](docs/reader.md)). `j|k|u|d|gg|G` scroll; `/` finds text, `n|N` step through it and `Esc` puts it away; `f` is Focus mode, where `j|k` go from one link, image, field or button to the next, an inspect toast says where a link goes, and `Enter` presses it — a link opens at once. `H|L` go back and forward along the tab's own history, and `b` is its breadcrumb — every page the tab went through, by its title, this one marked; pick one to go there; `o` is the address box; `w` shows the full page, and again its content; `v` is Visual mode. A link to a file downloads it.
+A page is fetched as it is, without running its JavaScript, and what it presents is shown, the site around it — navigation, sidebars, footers, cookie notices — left out ([`docs/reader.md`](docs/reader.md)). `j|k|u|d|gg|G` scroll; `/` finds text, `n|N` step through it and `Esc` puts it away; `f` is Focus mode, where `j|k` go from one link, image, field or button to the next, a link's note says where it goes (its head shows under the link, `i` opens it), and `Enter` presses it — a link opens at once. `H|L` go back and forward along the tab's own history, and `b` is its breadcrumb — every page the tab went through, by its title, this one marked; pick one to go there; `o` is the address box; `w` shows the full page, and again its content; `v` is Visual mode. A link to a file downloads it.
 
 Forms work as far as a search box and a plain sign-in: in Focus mode `Enter` fills a field, ticks a box or chooses an option, and `Enter` on the button sends the form; a form with one box to type in offers to send itself. A sign-in that needs JavaScript, another site's account, a CAPTCHA or a second step does not work.
 
-`Space` starts with **Source** (the page as it came), **Cookies** (its site's; `C` there clears them) and **Requests** (what loading the page asked for: each redirect, the headers both ways). Then `R` reload · `T` new tab · `H|L` back / forward · `b` breadcrumb · `o` open · `/` find · `n|N` next / previous match · `f` Focus mode · `v` Visual mode · `w` full page · `A` bookmark it · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab. In Focus mode `o` opens the focused link in a new tab and `y` copies its address.
+`Space` starts with **Source** (the page as it came), **Cookies** (its site's; `X` there clears them) and **Requests** (what loading the page asked for: each redirect, the headers both ways). Then `R` reload · `T` new tab · `H|L` back / forward · `b` breadcrumb · `o` open · `/` find · `n|N` next / previous match · `f` Focus mode · `v` Visual mode · `w` full page · `A` bookmark it · `Z` zoom · `Y` yank the url · `Yank markdown` · `C` close the tab. In Focus mode `o` opens the focused link in a new tab and `y` copies its address.
 
 `o` opens the address box with the current URL on offer, in grey: `Tab` takes it to edit, `Backspace` drops it, typing starts afresh.
 
 #### Bookmarks, History, Downloads, Settings
 
 - **Bookmarks** — `Enter` open in a new tab, or into a folder · `Esc` up a level · `a` add · `A` add folder (`a/b/c` makes every level) · `m` move · `r` rename · `x` delete · `y` yank url · `I` import · `/` filter
-- **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `C` clear · `/` filter
-- **Downloads** — `Enter` open the file · `o` open its source · `x` remove · `y` yank path · `C` clear finished · `/` filter
+- **History** — `Enter` open in a new tab · `x` delete · `y` yank url · `X` clear · `/` filter
+- **Downloads** — `Enter` open the file · `o` open its source · `x` remove · `y` yank path · `X` clear finished · `/` filter
 - **Settings** — `Enter` edit a value or flip a switch
 
 #### Visual mode (`v`)
@@ -163,7 +166,7 @@ Where things are kept:
 | state | `session.yaml`, the tabs open when webu last quit; `cookies.json`, where the pages you read have signed you in (only you can read it; `S` › `Clear sign-in data` empties it) | with the settings (or `$WEBU__STATE`) |
 | data | `bookmarks.yaml`, the history, downloads | `~/.webu/datas` (`$WEBU__DATA`) |
 
-`config.yaml` and `bookmarks.yaml` are plain YAML you can edit by hand. When a new version of webu keeps something in a new place, the first start moves it there and says from where to where; if it cannot, webu says so and goes on using the old place. A file of webu's own that will not read (a broken `config.yaml`, say) is offered to be moved aside to `.bak` at the start, webu then starting as it does the first time — nothing opens before you answer; or webu quits and says why. `!` opens the App Log: what webu did and what went wrong this time, toasts included.
+`config.yaml` and `bookmarks.yaml` are plain YAML you can edit by hand. When a new version of webu keeps something in a new place, the first start moves it there and says from where to where; if it cannot, webu says so and goes on using the old place. A file of webu's own that will not read (a broken `config.yaml`, say) is offered to be moved aside to `.bak` at the start, webu then starting as it does the first time — nothing opens before you answer; or webu quits and says why. A value webu cannot use (a word where a number goes, a search engine that is not a URL) or an entry it cannot (a bookmark with no URL) costs only itself: the file is copied to `.bak` and written again with the default in its place, a toast saying so and the App Log naming each one. A key webu does not read (an old one, or a typo) is kept, named in the App Log at every start. `!` opens the App Log: what webu did and what went wrong this time, toasts included.
 
 An older webu ran its own Chromium. The one it downloaded into the cache (macOS `~/Library/Caches/webu`, Linux `~/.cache/webu`) is deleted at the first start, the App Log saying so; its profile (`profile/`) and its log (`webu.log`) in `~/.webu/datas` are left for you, named in the App Log at every start until you delete them.
 

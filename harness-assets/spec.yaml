@@ -1,11 +1,11 @@
-id: 2
-from: v1.2.1
-to: v1.2.2
+id: 3
+from: v1.2.2
+to: v1.2.20
 tasks:
   - id: 1
     spec: 1
     request: 五個畫面用大寫字母切換：Web、Bookmarks、History、Downloads、Settings；Web 畫面是分頁清單與頁面並排，頁面顯示分頁清單游標所在的那一頁
-    tdp: [tdp screen.1, tdp screen.3, tdp screen.5, tdp screen.6, tdp panel.1, tdp panel.4, tdp terms.2, tdp P5, tdp panel.13, tdp M4, tdp note.7]
+    tdp: [tdp screen.1, tdp screen.3, tdp screen.5, tdp screen.6, tdp panel.1, tdp panel.4, tdp terms.2, tdp P5, tdp panel.13, tdp M4, tdp note.7, tdp K13]
     remark:
       - |
         Web 畫面的版面（窄寬也是兩個 panel 並排；`Z` 讓 [2] 佔滿寬度）：
@@ -16,15 +16,15 @@ tasks:
         └──────────────┘┗━ H:back L:forward ━━━ 1-24 of 310 ━┛
       - 畫面鍵 W、B、H、D、S 是領域熱鍵（tdp P5）
   - id: 2
-    spec: 1
-    request: 命令列：`webu` 開回上次的分頁、給網址就一個網址一個分頁、不是網址的字拿去搜尋、`webu help` 印完整的命令列說明
-    tdp: [tdp E1, tdp E3, tdp P5, harness project.4]
+    spec: 3
+    request: 命令列：`webu` 開回上次的分頁、給網址就一個網址一個分頁、不是網址的字拿去搜尋、`webu update` 更新到最新版、`webu help` 印完整的命令列說明
+    tdp: [tdp E1, tdp E3, tdp E6, tdp M5, tdp P5, harness project.4]
     remark:
       - 上次的分頁存在狀態檔 session.yaml；設定 restore_session 決定要不要開回來
   - id: 3
-    spec: 1
+    spec: 3
     request: 分頁清單：每個分頁前面是網站的記號（網站自己的 icon，沒有就是地球，顏色取自 favicon），可以到頁面、關閉、在新分頁再開、重新載入、複製網址、新分頁、關閉其他、重開剛關的
-    tdp: [tdp panel.5, tdp K3, tdp M5, tdp K12, tdp P5, tdp panel.13, tdp note.7]
+    tdp: [tdp panel.5, tdp K3, tdp M5, tdp K12, tdp K13, tdp P5, tdp panel.13, tdp note.7]
     remark:
       - 網站記號的 icon 與顏色是領域的符號與顏色（tdp P5）
   - id: 4
@@ -57,9 +57,11 @@ tasks:
     request: 頁面上 `/` 找字、找到的都加底線，`n|N` 在找到的之間跳，`Esc` 收起來
     tdp: [tdp note.3, tdp panel.14, tdp note.7, tdp T1, tdp K4, tdp note.2, tdp toast.2]
   - id: 9
-    spec: 1
-    request: Focus mode（`f`）：`j|k` 在連結、圖片、欄位、按鈕之間走，停在連結上時寫出它會去的網址，`Enter` 按下去；`o` 開在新分頁、`y` 複製網址
-    tdp: [tdp K11, tdp K12, tdp toast.4, tdp menu.4, tdp P6, tdp panel.3, tdp note.7]
+    spec: 3
+    request: Focus mode（`f`）：`j|k` 在連結、圖片、欄位、按鈕之間走，停在連結上時，連結的 note 寫它會去的網址（`i` 打開），`Enter` 按下去；`o` 開在新分頁、`y` 複製網址
+    tdp: [tdp K11, tdp K12, tdp K13, tdp menu.4, tdp P6, tdp panel.3, tdp note.7]
+    remark:
+      - note: 連結的 note 照 tdp main 的 panel.18（項目的 note，取代 toast.4 的 inspect toast）與 K13 的 i；tdp v1.2.20 還沒有這兩條，check 只認 v1.2.20 的編號，所以先寫在這裡；tdp 發版、terminu-go 對到它之後改引 tdp panel.18
   - id: 10
     spec: 1
     request: '`H|L` 沿著這個分頁自己的歷史上一頁、下一頁；`b` 是麵包屑：這個分頁走過的每一頁，選一頁就跳過去'
@@ -77,30 +79,30 @@ tasks:
     request: 表單做到搜尋框與簡單的帳密登入：填欄位、勾選、選選項、按按鈕送出；只有一個可以打字的欄位時，填完問要不要送出
     tdp: [tdp input.10, tdp password, tdp select, tdp checkbox, tdp confirm, tdp P5, tdp F1, tdp K3, tdp note.7]
   - id: 13
-    spec: 1
+    spec: 3
     request: 登入後一直有效：cookie 存起來，只有自己讀得到；可以清空
-    tdp: [tdp E3, tdp confirm, tdp F6, tdp note.7]
+    tdp: [tdp E3, tdp confirm, tdp F6, tdp note.7, tdp K13]
   - id: 14
-    spec: 1
+    spec: 3
     request: 看這一頁的原始碼、這個網站的 cookie（可以清掉）、載入這一頁發出的請求
-    tdp: [tdp note.2, tdp note.3, tdp M2, tdp F6, tdp P5, tdp confirm, tdp note.4, tdp note.7]
+    tdp: [tdp note.2, tdp note.3, tdp M2, tdp F6, tdp P5, tdp confirm, tdp note.4, tdp note.7, tdp K13, tdp M5]
     remark:
       - 放在 [2] Space menu 最上面，沒有熱鍵（user 2026-10-29）
   - id: 15
-    spec: 1
+    spec: 3
     request: 連到檔案的連結會下載；Downloads 畫面列出這次開啟以來的下載與進度，可以開檔、開來源頁、移除、複製路徑、清掉已完成的、過濾
-    tdp: [tdp screen.4, tdp panel.5, tdp panel.14, tdp P5, tdp screen.3, tdp toast.2, tdp E3, tdp M6]
+    tdp: [tdp screen.4, tdp panel.5, tdp panel.14, tdp P5, tdp screen.3, tdp toast.2, tdp E3, tdp M6, tdp K13]
   - id: 16
-    spec: 2
+    spec: 3
     request: 有目錄的書籤：加目前頁、加目錄、搬移、改名、刪除、複製網址、匯入瀏覽器的書籤匯出檔、過濾
-    tdp: [tdp panel.5, tdp panel.10, tdp panel.14, tdp K3, tdp K4, tdp confirm, tdp form, tdp file-picker.1, tdp file-picker.6, tdp E3, tdp menu.1, tdp text, tdp screen.8, tdp select, tdp finder.3, tdp note.7]
+    tdp: [tdp panel.5, tdp panel.10, tdp panel.14, tdp K3, tdp K4, tdp confirm, tdp form, tdp file-picker.1, tdp file-picker.6, tdp E3, tdp menu.1, tdp text, tdp screen.8, tdp select, tdp finder.3, tdp note.7, tdp K13]
     remark:
       - note: 多層、可收合的樹狀清單（目錄本身是能操作的項目）tdp 沒有寫法；tdp v1.2.2 的 panel.10「項目裡還有項目」回答了（user 選照 filu 一層一層進）：改成一層一層進，不再是可收合的樹
         issue: tdp #3
   - id: 17
-    spec: 1
+    spec: 3
     request: 歷史：所有看過的頁，新的在上；開新分頁、刪除一筆、複製網址、清空、過濾
-    tdp: [tdp panel.5, tdp panel.14, tdp confirm, tdp E3, tdp M6]
+    tdp: [tdp panel.5, tdp panel.14, tdp confirm, tdp E3, tdp M6, tdp K13]
   - id: 18
     spec: 1
     request: Settings 畫面一列一個 config.yaml 的值，改了就存：搜尋引擎、下載目錄、要不要開回上次的分頁、家族共用的兩個 key
@@ -114,17 +116,17 @@ tasks:
     request: 複製這一頁的網址，或把整頁輸出成 markdown 到剪貼簿
     tdp: [tdp P5, tdp M3, tdp toast.1, tdp toast.2, tdp F5]
   - id: 21
-    spec: 1
-    request: 設定、狀態、資料放在固定的位置，可以用環境變數換；位置換了第一次啟動時搬過去並說明；自己的檔讀不了時先問要不要搬開再開始
-    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast.2, tdp note.6]
+    spec: 3
+    request: 設定、狀態、資料放在固定的位置，可以用環境變數換；位置換了第一次啟動時搬過去並說明；自己的檔讀不了時先問要不要搬開再開始；讀得到但有用不了的值時留一份 .bak、換成預設值並說明
+    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast.2, tdp note.6, tdp note.7]
   - id: 22
-    spec: 1
-    request: 舊版留下的東西：舊版下載的 Chromium 快取第一次啟動時刪掉；不再用的檔與設定 key 留給使用者，每次啟動在 App Log 提一次
+    spec: 3
+    request: 舊版留下的東西：舊版下載的 Chromium 快取第一次啟動時刪掉；不再用的檔與設定 key、從來不讀的 key（打錯的）留給使用者，每次啟動在 App Log 提一次
     tdp: [tdp E3, tdp note.7, harness project.6]
   - id: 23
-    spec: 1
+    spec: 3
     request: '`!` 打開 App Log：這次開 webu 以來做了什麼、出了什麼錯'
-    tdp: [tdp note.7, tdp F5, tdp screen.2, tdp toast.4]
+    tdp: [tdp note.7, tdp F5, tdp screen.2, tdp toast.2]
   - id: 24
     spec: 1
     request: 終端機要 Nerd Font 與 truecolor；至少 60×20，比這小時只顯示名稱、需要的大小與怎麼離開；icon 與 powerline 符號的寬度啟動時量，量錯可以用環境變數設

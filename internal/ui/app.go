@@ -90,6 +90,10 @@ type AppModel struct {
 	// which main deleted.
 	moves   []paths.Move
 	dropped []paths.Dropped
+	// misfits are webu's own files main found values or entries in that
+	// webu cannot use, copied to .bak and written again without them: said
+	// on the first frame (tdp E3).
+	misfits []Misfits
 
 	// The screens (web.go, bookmarks.go, history.go, downloads.go,
 	// settings.go).
@@ -250,9 +254,27 @@ func (m *AppModel) startNews() tea.Cmd {
 		stuck = append(stuck, mv.What+" could not be moved from "+paths.Short(mv.From)+" to "+paths.Short(mv.To)+": "+
 			mv.Err.Error()+". webu keeps using it where it is; move it yourself.")
 	}
+	// What the start has to say comes in the order it happened: the moves,
+	// then the files written again without what did not fit (tdp E3). The
+	// lib logs each row, and a WARN for each value or entry.
+	var notices []terminu.Notice
 	if len(moved) > 0 {
-		// The toast goes into the App Log by itself (tdp note.7).
-		cmds = append(cmds, m.toast("Moved "+strings.Join(moved, "; ")))
+		notices = append(notices, terminu.Notice{Kind: terminu.Info, Text: "Moved " + strings.Join(moved, "; ")})
+	}
+	for _, f := range m.misfits {
+		bad := make([]terminu.Misfit, 0, len(f.Bad))
+		for _, b := range f.Bad {
+			bad = append(bad, terminu.Misfit{Key: b.Key, Was: b.Was, Now: b.Now})
+		}
+		if f.Err != nil {
+			// The copy could not be made: the file is left as it was, its
+			// defaults for this run only, and the next start finds them again.
+			notices = append(notices, terminu.Notice{Kind: terminu.Error, Text: f.Err.Error()})
+		}
+		notices = append(notices, terminu.MisfitNotice(f.Path, f.Copy, bad...))
+	}
+	if len(notices) > 0 {
+		cmds = append(cmds, m.a.Notify(notices...))
 	}
 	if len(stuck) > 0 {
 		// A row each (tdp components.5): webu's own text holds no line break.
@@ -278,6 +300,11 @@ func (m *AppModel) startNews() tea.Cmd {
 	// start while it is there (store.RetiredKeys; user 2026-10-29).
 	for _, k := range m.cfg.Retired() {
 		m.a.Log(terminu.Info, "No longer used: "+k+" in "+paths.Short(store.Path("config.yaml"))+"; delete it if you don't need it")
+	}
+	// A key webu never read (a typo) is kept the same way, the entry saying
+	// Not read (tdp E3).
+	for _, k := range m.cfg.Unknown() {
+		m.a.Log(terminu.Info, "Not read: "+k+" in "+paths.Short(store.Path("config.yaml"))+"; delete it if you don't need it")
 	}
 	return tea.Batch(cmds...)
 }
@@ -554,6 +581,24 @@ func (m *AppModel) WithUnread(files []Unread) *AppModel {
 // popup names both places of one it could not move.
 func (m *AppModel) WithMoves(moves []paths.Move) *AppModel {
 	m.moves = moves
+	return m
+}
+
+// Misfits is one of webu's own files that held values or entries webu
+// cannot use (tdp E3, a value that does not fit): where it is, the copy
+// main kept of it, why the copy or the writing again failed when one did
+// (Copy then ""), and what did not fit.
+type Misfits struct {
+	Path, Copy string
+	Err        error
+	Bad        []store.Misfit
+}
+
+// WithMisfits are the files main copied to .bak and wrote again without
+// what did not fit: a Warning toast on the first frame names each file and
+// its copy, and the App Log has a WARN for each value or entry.
+func (m *AppModel) WithMisfits(files []Misfits) *AppModel {
+	m.misfits = files
 	return m
 }
 

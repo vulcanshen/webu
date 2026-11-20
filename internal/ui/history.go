@@ -39,7 +39,7 @@ func (m *AppModel) buildHistory() {
 			}},
 		{Key: "x", Label: "Delete", Desc: "this visit from the history", Scope: terminu.ItemScope, Hint: "delete",
 			Do: m.do(m.deleteVisit)},
-		{Key: "C", Label: "Clear", Desc: "every visit ever recorded", Scope: terminu.PanelScope,
+		{Key: "X", Label: "Clear", Desc: "every visit ever recorded", Scope: terminu.PanelScope,
 			Disabled: func() bool { return len(m.history) == 0 },
 			Ask: &terminu.Ask{Title: "Clear history", Details: []string{"Every visit ever recorded goes; this is the only way the log shrinks."},
 				Question: "Clear the whole history?", Verb: "clear", Warn: []int{0}},

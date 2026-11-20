@@ -114,7 +114,7 @@ func (m *AppModel) buildSettings() {
 			})},
 		// The reader's cookies (docs/reader.md): signed out of every site
 		// at once, the file gone.
-		{Key: "C", Label: "Clear sign-in data", Desc: "every site's cookies: signed out everywhere", Scope: terminu.PanelScope,
+		{Key: "X", Label: "Clear sign-in data", Desc: "every site's cookies: signed out everywhere", Scope: terminu.PanelScope,
 			Ask: &terminu.Ask{Title: "Clear sign-in data", Details: []string{"Every site webu is signed in to signs you out."},
 				Question: "Clear the sign-in data?", Verb: "clear", Warn: []int{0}},
 			Do: m.do(func() tea.Cmd {

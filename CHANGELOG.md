@@ -2,6 +2,42 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- `webu update` brings webu to its latest release the way it was
+  installed: Homebrew upgrades it, an install script's or a download's
+  file is replaced. A build from source says to update it there.
+- The command line speaks as the family's do: a wrong option prints
+  `webu: Unknown option "-x"`, a blank line and the usage, exit status
+  2; the exit status is 0, 1 or 2, an outside interrupt leaving as `q`
+  does (it was 130).
+- Clearing many at once is on `X`, as in every family app (tdp K13):
+  History's Clear, Downloads' Clear, Settings' Clear sign-in data and the
+  Cookies viewer's clear were on `C`. Closing the other tabs moves
+  from `X` to `C`: a closed tab reopens, and `x` and `X` are only for
+  what goes for good.
+- A value in `config.yaml` webu cannot use (a word where a number goes,
+  a search engine that is not a URL) no longer stops the start with the
+  file to be moved aside: the file is copied to `config.yaml.bak` and
+  written again with the default in its place, a Warning saying so and
+  the App Log naming each value. The same goes for a bookmark with no
+  URL, a folder listed twice or written with empty levels, a visit or a
+  last-session tab with no URL.
+- A key in `config.yaml` webu never read (a typo) is kept and named in
+  the App Log at every start, `Not read`, as a key it no longer reads is.
+- Adding, renaming or importing a bookmark clears the Bookmarks filter
+  first, so the cursor lands on what was added even when the filter hid
+  it.
+- In Focus mode, where a link goes is the link's note, no longer a
+  toast: a small head under the link says there is one, `i` opens it
+  under the link, where it can be searched and copied, and `Esc` shuts
+  it.
+- Toasts stack, three at most, the newest at the bottom: one no longer
+  replaces the one before it unread. `Esc` closes the oldest first, and
+  the same words again count up on the toast already showing.
+- On terminu-go v1.2.22-beta.3, following tdp v1.2.20 and what tdp has
+  added since.
+
 ## v0.8.0 — tdp v1.2.2
 
 - The page's address stays on its row while the page first loads; it

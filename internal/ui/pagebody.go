@@ -31,6 +31,9 @@ func (b *pageBody) Draw(w, h int, focused bool) []string {
 	if t == nil {
 		return terminu.EmptyState(w, h, "No page", "Press [o] to enter a location, or [T] for a new tab")
 	}
+	// The page never scrolls past its end: a jump to a row near it (a
+	// section, a search hit) shows the end at the bottom.
+	t.top = clamp(t.top, 0, max(0, len(t.lay.rows)-m.pageVisible()))
 	// The address is the panel's location row, drawn by the lib over
 	// whatever is here (syncPage, tdp panel.10).
 	var out []string
@@ -99,8 +102,28 @@ func (b *pageBody) HasItem() bool {
 	return t.current() != nil
 }
 
+// NoteAt is where the item under Focus mode's cursor was at the last Draw
+// (terminu.NoteSpot, tdp panel.18): its first and last rows in sight and
+// the cell its text starts at, for its note's head; not ok with no item
+// under the cursor, or none of it in sight.
+func (b *pageBody) NoteAt() (top, bottom, col int, ok bool) {
+	m := b.m
+	t := m.shownTab()
+	if t == nil || t.root == nil || m.sel.on || t.cursor < 0 || t.cursor >= len(t.lay.items) {
+		return 0, 0, 0, false
+	}
+	it := t.lay.items[t.cursor]
+	lo, _ := t.rowRange()
+	first := max(t.top, lo) // the body's row 0 (pageRows)
+	top, bottom = it.first-first, it.last-first
+	if bottom < 0 || top >= b.h {
+		return 0, 0, 0, false
+	}
+	return max(top, 0), min(bottom, b.h-1), pageMargin + it.col, true
+}
+
 // Scroll is where the panel is (tdp panel.1): the rows in sight. Where a
-// focused link goes is the inspect toast's (focusInspect).
+// focused link goes is its note's (focusNote, NoteAt).
 func (b *pageBody) Scroll() string {
 	m := b.m
 	t := m.shownTab()
@@ -115,24 +138,6 @@ func (b *pageBody) Scroll() string {
 	}
 	from := t.top - lo + 1
 	return itoa(from) + "-" + itoa(min(total, from+vis-1)) + " of " + itoa(total)
-}
-
-// Uncover keeps the item under Focus mode's cursor above the rows at the
-// bottom the inspect toast covers, which the lib says before each Draw
-// (tdp toast.4); 0 is none. Covered, the page may scroll past its end by
-// those rows, so its last item still shows above the toast; uncovered, it
-// sits on its end again — as terminu-go's List does.
-func (b *pageBody) Uncover(rows int) {
-	t := b.m.shownTab()
-	if t == nil {
-		return
-	}
-	vis := b.m.pageVisible()
-	if rows > 0 && t.cursor >= 0 {
-		t.scrollToCursor(max(1, vis-rows))
-		return
-	}
-	t.top = clamp(t.top, 0, max(0, len(t.lay.rows)-vis))
 }
 
 // MoveKeys are the page's movement keys (tdp K6, tdp K12): reading, they

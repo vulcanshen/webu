@@ -215,17 +215,18 @@ func (m *AppModel) focusMode() *terminu.Mode {
 			key("o", "open in a new tab", true, "o"),
 			key("y", "copy its address", true, "y"),
 		},
-		Exit:    "leave",
-		Pause:   true,
-		Inspect: m.focusInspect,
-		OnExit:  func() tea.Cmd { m.leaveFocus(); return nil },
+		Exit:   "leave",
+		Pause:  true,
+		Note:   m.focusNote,
+		OnExit: func() tea.Cmd { m.leaveFocus(); return nil },
 	}
 }
 
-// focusInspect is the inspect toast of the item under Focus mode's cursor
-// (tdp toast.4, terminu-go's Mode.Inspect): where a link goes. A field, a
-// button or an image on its own has nothing to show (user, 2026-10-29).
-func (m *AppModel) focusInspect() []string {
+// focusNote is the note of the item under Focus mode's cursor (tdp
+// panel.18, terminu-go's Mode.Note): where a link goes, its head under the
+// link and i opening it. A field, a button or an image on its own has
+// none (user, 2026-10-29).
+func (m *AppModel) focusNote() []string {
 	if t := m.shownTab(); t != nil {
 		if n := t.current(); n != nil && n.Kind == ir.Link && n.URL != "" {
 			return []string{n.URL}
@@ -324,7 +325,7 @@ func (m *AppModel) readerPanelActions(t *tab) []terminu.Action {
 		// What is left of DevTools (pageinfo.go): first in the menu, with
 		// no key (user, 2026-10-29).
 		panel("", "Source", "the page's HTML, as it came", noPage, m.showSource),
-		panel("", "Cookies", "this site's; C in it clears them", noPage, m.showCookies),
+		panel("", "Cookies", "this site's; [X] in it clears them", noPage, m.showCookies),
 		panel("", "Requests", "what loading this page asked for", noPage, m.showRequests),
 		panel("R", "Reload", "this page", func() bool { return m.shownTab() == nil || m.busy() }, func() tea.Cmd {
 			t := m.shownTab()

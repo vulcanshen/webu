@@ -6,12 +6,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
-	"os/signal"
+	"path/filepath"
 	"strings"
-	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
+	terminu "github.com/vulcanshen/terminu-go"
 	"github.com/vulcanshen/webu/internal/paths"
 	"github.com/vulcanshen/webu/internal/reader"
 	"github.com/vulcanshen/webu/internal/store"
@@ -19,36 +20,54 @@ import (
 	"github.com/vulcanshen/webu/internal/version"
 )
 
-// usage is `webu help`: the whole command line (function.md §12).
+// usage is `webu help`: the whole command line (tdp E1).
 const usage = `webu — a terminal browser
 
   webu                     the last session's tabs
   webu <url|words> ...     open each in a new tab, the first in front;
                            words that are not a URL are searched
   webu version             webu's version
+  webu update              bring webu to its latest release
   webu help                this
 `
 
-func main() {
-	args := os.Args[1:]
-	// `webu version` and `webu help` answer before anything else, so they
-	// work with no config.
-	if len(args) == 1 && args[0] == "version" {
-		// The version alone, as its tag reads (harness project.4).
-		fmt.Println(version.Display())
-		return
-	}
-	if len(args) == 1 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
-		fmt.Print(usage)
-		return
+// command runs what the command line asks for that is not the TUI (tdp
+// E1): results on stdout, errors on stderr after "webu: ", a wrong use
+// with the usage and status 2. It reports whether it handled args, and
+// the exit status.
+func command(args []string, stdout, stderr io.Writer) (status int, handled bool) {
+	// version, update and help answer before anything else, so they work
+	// with no config.
+	if len(args) == 1 {
+		switch args[0] {
+		case "version", "-v", "--version":
+			// The version alone, as its tag reads (harness project.4).
+			fmt.Fprintln(stdout, version.Display())
+			return 0, true
+		case "help", "-h", "--help":
+			fmt.Fprint(stdout, usage)
+			return 0, true
+		case "update":
+			return terminu.SelfUpdate{App: "webu", Version: version.Version, Owner: "vulcanshen", Tap: "vulcanshen/tap",
+				Source: "git pull && make install"}.Run(stdout, stderr), true
+		}
 	}
 	// Anything else is what to open: URLs, or words to search for, a new
-	// tab each — the command line is the Location box (function.md §12).
+	// tab each — the command line is the Location box. An option webu has
+	// not got is a wrong use.
 	for _, a := range args {
 		if strings.HasPrefix(a, "-") {
-			fmt.Fprintf(os.Stderr, "webu: unknown option %s\n\n%s", a, usage)
-			os.Exit(2)
+			fmt.Fprintf(stderr, "webu: Unknown option %q\n\n%s", a, usage)
+			return 2, true
 		}
+	}
+	return 0, false
+}
+
+func main() {
+	args := os.Args[1:]
+	if status, handled := command(args, os.Stdout, os.Stderr); handled {
+		os.Exit(status)
 	}
 	startURLs := args
 
@@ -63,10 +82,37 @@ func main() {
 	// frame (tdp E3: MOVE ASIDE, or leave), not gone on with — a later save
 	// would write over it — and not a line on a terminal the screen is
 	// about to cover.
-	bookmarks, folders, bmErr := store.LoadBookmarks()
-	cfg, cfgErr := store.LoadConfig()
-	history, histErr := store.LoadHistory()
-	session, sessErr := store.LoadSession()
+	bookmarks, folders, bmBad, bmErr := store.LoadBookmarksChecked()
+	cfg, cfgBad, cfgErr := store.LoadConfigChecked()
+	history, histBad, histErr := store.LoadHistoryChecked()
+	session, sessBad, sessErr := store.LoadSessionChecked()
+	// One that reads but holds values or entries webu cannot use is copied
+	// to .bak and written again without them, and the first frame says so
+	// (tdp E3, a value that does not fit). When the copy cannot be made the
+	// file is left as it was, its defaults for this run only.
+	var misfits []ui.Misfits
+	for _, f := range []struct {
+		name  string
+		bad   []store.Misfit
+		write func() error
+	}{
+		{"config.yaml", cfgBad, func() error { return store.SaveConfig(cfg) }},
+		{"bookmarks.yaml", bmBad, func() error { return store.SaveBookmarks(bookmarks, folders) }},
+		{"history.yaml", histBad, func() error { return store.SaveHistory(history) }},
+		{"session.yaml", sessBad, func() error { return store.SaveSession(session) }},
+	} {
+		if len(f.bad) == 0 {
+			continue
+		}
+		mf := ui.Misfits{Path: store.Path(f.name), Bad: f.bad}
+		if mf.Copy, mf.Err = terminu.KeepAside(mf.Path); mf.Err == nil {
+			if err := f.write(); err != nil {
+				mf.Err = fmt.Errorf("%s could not be written again: %w; yours kept in %s", f.name, err, filepath.Base(mf.Copy))
+				mf.Copy = ""
+			}
+		}
+		misfits = append(misfits, mf)
+	}
 	// The reader's cookies (docs/reader.md). One that will not read is
 	// asked about like the rest; meanwhile the jar is empty, and nothing
 	// is written over the file before the answer.
@@ -91,36 +137,33 @@ func main() {
 		session = store.Session{}
 	}
 	app := ui.New(startURLs...).WithStore(bookmarks, folders, cfg, history).WithSession(session).
-		WithUnread(unread).WithMoves(moves).WithDropped(dropped).WithReader(reader.NewClient(jar, ""))
-
-	// Whatever door the program leaves through — q, an outside SIGINT or
-	// SIGTERM, the terminal closing — the session is written. Bubble Tea
-	// quits on SIGINT and SIGTERM itself; the terminal closing is SIGHUP,
-	// which it leaves alone, so it is turned into the SIGTERM it does know.
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP)
-	go func() {
-		<-sig
-		_ = syscall.Kill(os.Getpid(), syscall.SIGTERM)
-	}()
+		WithUnread(unread).WithMisfits(misfits).WithMoves(moves).WithDropped(dropped).WithReader(reader.NewClient(jar, ""))
 
 	// The lib asks the terminal how wide an icon is before it takes the
-	// screen (tdp E5); version and help never ask.
+	// screen (tdp E5); version and help never ask. Whatever door the
+	// program leaves through — q, an outside SIGINT or SIGTERM, the
+	// terminal closing (the lib turns SIGHUP into leaving) — Run returns
+	// and the session is written.
 	runErr := app.Run()
-	// The session is written on every way out, q or a signal, so the tabs
-	// come back next time (ux.md §6) — but not over a session.yaml that
-	// could not be read and was not moved aside.
+	// An outside SIGINT is leaving too, as a hangup is: the exit status is
+	// 0, 1 or 2 (tdp E1).
+	if errors.Is(runErr, tea.ErrInterrupted) {
+		runErr = nil
+	}
+	status := 0
+	// The session is written on every way out, so the tabs come back next
+	// time — but not over a session.yaml that could not be read and was
+	// not moved aside.
 	if app.SessionWritable() {
 		if err := store.SaveSession(app.Session()); err != nil {
 			fmt.Fprintln(os.Stderr, "webu: session.yaml:", err)
+			status = 1
 		}
 	}
 	app.Close()
-	switch {
-	case errors.Is(runErr, tea.ErrInterrupted):
-		os.Exit(130)
-	case runErr != nil:
+	if runErr != nil {
 		fmt.Fprintln(os.Stderr, "webu:", runErr)
-		os.Exit(1)
+		status = 1
 	}
+	os.Exit(status)
 }

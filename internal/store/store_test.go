@@ -3,6 +3,7 @@ package store
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -221,7 +222,7 @@ func TestAnUnreadableFileGivesNothing(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(cfgDir, "config.yaml", "restore_session: false\ndownload_dir: /x\ninput_tab_width: wide\n")
+	write(cfgDir, "config.yaml", "restore_session: false\ndownload_dir: /x\ninput_tab_width: [4\n")
 	if c, err := LoadConfig(); err == nil || c.RestoreSession != nil || c.DownloadDir != "" {
 		t.Errorf("config.yaml: %+v, %v", c, err)
 	}
@@ -232,5 +233,74 @@ func TestAnUnreadableFileGivesNothing(t *testing.T) {
 	write(cfgDir, "session.yaml", "tabs:\n  - url: https://a\nshown: wide\n")
 	if s, err := LoadSession(); err == nil || len(s.Tabs) != 0 {
 		t.Errorf("session.yaml: %+v, %v", s, err)
+	}
+}
+
+// A value or an entry webu cannot use is not a file that cannot be read
+// (tdp E3, a value that does not fit): the rest of the file is read, the
+// default used in its place or the entry taken out, and each one named.
+// A key webu never read is kept, as one it no longer reads is.
+func TestValuesThatDoNotFit(t *testing.T) {
+	cfgDir, data := t.TempDir(), t.TempDir()
+	t.Setenv("WEBU__CONFIG", cfgDir)
+	t.Setenv("WEBU__DATA", data)
+	t.Setenv("WEBU__STATE", "")
+	write := func(dir, name, body string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	write(cfgDir, "config.yaml", "restore_session: maybe\ndownload_dir: /x\ninput_tab_width: wide\nsearch_engine: duckduckgo\nrefesh: 3\nmeasure: 80\nhide_secrets_in_preview: true\n")
+	c, bad, err := LoadConfigChecked()
+	if err != nil || c.DownloadDir != "/x" || !c.HideSecretsInPreview || !c.Restore() || c.TabWidth() != 4 || c.Search() != DefaultSearch {
+		t.Errorf("config.yaml: the rest read, the defaults in place of the three: %+v, %v", c, err)
+	}
+	want := []Misfit{{"restore_session", "maybe", "true"}, {"input_tab_width", "wide", "4"}, {"search_engine", "duckduckgo", DefaultSearch}}
+	if !slices.Equal(bad, want) {
+		t.Errorf("config.yaml's misfits: %+v, want %+v", bad, want)
+	}
+	if u, r := c.Unknown(), c.Retired(); !slices.Equal(u, []string{"refesh"}) || !slices.Equal(r, []string{"measure"}) {
+		t.Errorf("never read %v, no longer read %v", u, r)
+	}
+	// Written again, the keys webu does not read stay; the misfits do not.
+	if err := SaveConfig(c); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := os.ReadFile(filepath.Join(cfgDir, "config.yaml"))
+	if s := string(raw); !strings.Contains(s, "refesh: 3") || !strings.Contains(s, "measure: 80") || strings.Contains(s, "maybe") || strings.Contains(s, "wide") {
+		t.Errorf("config.yaml written again:\n%s", s)
+	}
+	if _, bad, err := LoadConfigChecked(); err != nil || len(bad) != 0 {
+		t.Errorf("written again, nothing more to say: %+v, %v", bad, err)
+	}
+
+	write(data, "bookmarks.yaml", "bookmarks:\n  - title: A\n    url: https://a\n    folder: \" dev / /go \"\n  - title: no url\n  - title: B\n    url: https://b\n    folder: /\nfolders: [dev, \"\", dev, \"a//b\"]\n")
+	list, folders, bad, err := LoadBookmarksChecked()
+	if err != nil || len(list) != 2 || list[0].Folder != "dev/go" || list[1].Folder != "" || !slices.Equal(folders, []string{"dev", "a/b"}) {
+		t.Errorf("bookmarks.yaml: %+v %v, %v", list, folders, err)
+	}
+	want = []Misfit{{"bookmark 1 folder", " dev / /go ", "dev/go"}, {Key: "bookmark 2 (url \"\")"},
+		{Key: "folder 2 (\"\")"}, {Key: "folder 3 (\"dev\")"}, {"folder 4", "a//b", "a/b"}}
+	if !slices.Equal(bad, want) {
+		t.Errorf("bookmarks.yaml's misfits: %+v, want %+v", bad, want)
+	}
+
+	write(data, "history.yaml", "- at: 2026-11-01T10:00:00Z\n  url: https://a\n- at: 2026-11-02T10:00:00Z\n  url: \"\"\n")
+	visits, bad, err := LoadHistoryChecked()
+	if err != nil || len(visits) != 1 || visits[0].URL != "https://a" || !slices.Equal(bad, []Misfit{{Key: "visit 2 (url \"\")"}}) {
+		t.Errorf("history.yaml: %+v, %+v, %v", visits, bad, err)
+	}
+	if err := SaveHistory(visits); err != nil {
+		t.Fatal(err)
+	}
+	if v, bad, err := LoadHistoryChecked(); err != nil || len(v) != 1 || len(bad) != 0 {
+		t.Errorf("history.yaml written again: %+v, %+v, %v", v, bad, err)
+	}
+
+	write(cfgDir, "session.yaml", "tabs:\n  - url: https://a\n  - url: \"\"\nshown: 5\n")
+	s, bad, err := LoadSessionChecked()
+	if err != nil || len(s.Tabs) != 1 || s.Shown != 0 || !slices.Equal(bad, []Misfit{{Key: "tab 2 (url \"\")"}, {"shown", "5", "0"}}) {
+		t.Errorf("session.yaml: %+v, %+v, %v", s, bad, err)
 	}
 }

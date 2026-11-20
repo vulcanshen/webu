@@ -8,25 +8,29 @@ tasks:
       Z（[2] 的 panel 動作）：[2] 佔滿寬度，再按還原；App Log「Zoomed in on the page」「Zoomed out to the tabs and the page」
     test: [TestScreensAndSession]
   - id: 2
-    spec: 1
+    spec: 3
     implementation: |
       `webu`：restore_session 開著時開回 session.yaml 記的分頁，只有原本顯示的那一個載入
       `webu <網址>…`：一個網址一個分頁，第一個在前面；不像網址的字照 search_engine 搜尋
-      `webu version` 只印 internal/version 的 Display()，跟 tag 一樣（例：v0.7.0；本機建的是 dev）；`webu help`（也收 -h、--help）印命令列說明：
+      `webu version`（也收 -v、--version）只印 internal/version 的 Display()，跟 tag 一樣（例：v0.7.0；本機建的是 dev）；`webu help`（也收 -h、--help）印命令列說明：
         webu                     the last session's tabs
         webu <url|words> ...     open each in a new tab, the first in front; words that are not a URL are searched
         webu version             webu's version
+        webu update              bring webu to its latest release
         webu help                this
-      兩個都在讀設定之前回答，沒有設定也能用、不開畫面
-      其他以 - 開頭的參數：stderr 印「webu: unknown option <參數>」加說明，結束碼 2
-    test: [TestResolveURL, TestRoundTrips, commit: beb5b5d]
+      `webu update`：tgo 的 terminu.SelfUpdate（App webu、Owner vulcanshen、Tap vulcanshen/tap、Source `git pull && make install`），照當初的裝法更新到最新的正式版：Homebrew 跑 brew upgrade vulcanshen/tap/webu；安裝腳本或下載的，下載這個系統的那一份、對過 checksums.txt 換掉執行檔；已經是最新版或比最新版新（beta）說一句，exit 0；本機建的（dev）說到原始碼那邊更新，句子裡的指令用反引號（「webu: This webu is built from source: update it there (`git pull && make install`)」），exit 1；沒有權限寫執行檔所在的地方說怎麼做，exit 1，不要 sudo
+      version、update、help 都在讀設定之前回答，沒有設定也能用、不開畫面
+      其他以 - 開頭的參數是用錯：stderr 印「webu: Unknown option "<參數>"」、空一行、再印說明，exit 2
+      結果寫 stdout，錯誤寫 stderr、一件一行、開頭 webu: ；exit status 只有 0、1、2：畫面結束後 session.yaml 寫不進去、或畫面回了錯誤（讀不了的檔按 Esc 離開）是 1；外面送來的 SIGINT 跟關掉終端機（lib 處理 SIGHUP）一樣算離開，0
+    test: [TestCommandLine, TestResolveURL, TestRoundTrips, commit: beb5b5d]
   - id: 3
-    spec: 1
+    spec: 3
     implementation: |
       [1] TABS 是 tgo List，一列一個分頁：網站記號加頁面標題；記號是網站在 Nerd Font 裡的 icon（GitHub、Wikipedia、Go…），沒有就是地球，顏色是 favicon 的主色，知道之前是 Blue
-      panel 動作：Enter 到頁面、c 關閉（App Log「Closed the tab …」）、o 在新分頁再開（「Opened … in a new tab」）、r 重新載入（「Reloaded …」）、y 複製網址、T 新分頁、X 關閉其他、U 重開剛關的
+      panel 動作：Enter 到頁面、c 關閉（App Log「Closed the tab …」）、o 在新分頁再開（「Opened … in a new tab」）、r 重新載入（「Reloaded …」）、y 複製網址、T 新分頁、C 關閉其他、U 重開剛關的
+      關掉的分頁 U 開得回來，不是永久拿掉：關一個在 c、關其他在 C，不用 x、X（tdp K13，K13-5）
       favicon 抓來後讀 ICO（1／4／8／24／32 bit）或 PNG 算主色
-    test: [TestSiteMarks, TestIconColor, commit: b1f2eda]
+    test: [TestSiteMarks, TestIconColor, TestCloseOthersIsOnC, commit: b1f2eda]
   - id: 4
     spec: 1
     implementation: |
@@ -74,14 +78,16 @@ tasks:
       找字不記進 App Log（找不到時 toast 自己會記）
     test: [TestReaderSearchesAsTdp120Says, TestReaderReadsAndFollows]
   - id: 9
-    spec: 1
+    spec: 3
     implementation: |
       f 進 Focus mode（tgo 的 Mode，框與模式名 Yellow）；Esc 離開
       j|k 照閱讀順序走連結、圖片、欄位、按鈕，頭尾繞回；gg|G 第一個、最後一個；cursor 是 panel cursor 色塊
-      停在連結上時 inspect toast（Mode.Inspect）寫它會去的網址；toast 蓋到的列會捲開
+      停在連結上時，連結有 note（tgo 的 Mode.Note，tdp panel.18）寫它會去的網址：cursor 停在連結上時 lib 在連結正下方畫 note 的小標（nf-md-information_outline 與 i），蓋在下一列上、不收鍵；i 打開 NOTE viewer，接在連結下面、focus 在裡面，可以捲、/ 找字、v 選取複製；Esc 關回小標，還在 Focus mode。連結在最後一列、下面沒空間時小標與 note 開在上面。欄位、按鈕、單獨的圖片沒有 note
+      page 的 Body 實作 tgo 的 NoteSpot（NoteAt）：游標所在那一項畫在第幾列到第幾列、字從第幾格開始；不在畫面上時沒有
+      i 是 note 的鍵（tdp K13），webu 沒有別的動作用 i；lib 把 i 放進 Focus mode 的鍵，? 列得出來
       mode 的 Space menu：Enter Press、o Open in a new tab、y Copy its address
       Enter 在連結上直接開（App Log「Followed the link to …」），離開 Focus mode
-    test: [TestFocusModeWraps, TestInspectToastUncoversTheLastRow, TestReaderReadsAndFollows]
+    test: [TestFocusModeWraps, TestALinkNoteOnTheLastRow, TestReaderReadsAndFollows]
   - id: 10
     spec: 1
     implementation: |
@@ -105,38 +111,39 @@ tasks:
       需要 JavaScript 的登入、別的網站帳號、CAPTCHA、兩步驟都不支援
     test: [TestFormsAreSent, TestReaderSignsInAndSearches]
   - id: 13
-    spec: 1
+    spec: 3
     implementation: |
       每收到一個 cookie 就寫進狀態目錄的 cookies.json（0600、原子寫入），session cookie 也存；下次啟動讀回來
-      S › Clear sign-in data：開 confirm，Enter 清掉所有網站的 cookie
+      S › X Clear sign-in data（一次刪很多在 X，tdp K13）：開 confirm，Enter 清掉所有網站的 cookie
       cookie 的值不進 App Log
       cookies.json 讀不了時照 E3 問要不要搬開
     test: [TestCookiesAreKept, TestReaderSignsInAndSearches]
   - id: 14
-    spec: 1
+    spec: 3
     implementation: |
       [2] Space menu 最上面三列，沒有熱鍵：
       Source：tgo 的 Viewer，抓下來的原始內容，照內容類型上色；App Log「Read the source of …」
-      Cookies：Viewer，這個網站（可註冊網域，IP 與 localhost 是自己）的 cookie；C 開 confirm「Clear N cookies?」再清；App Log「Read the cookies of …」
+      Cookies：Viewer，這個網站（可註冊網域，IP 與 localhost 是自己）的 cookie；X 開 confirm「Clear N cookies?」再清（一次刪很多在 X，tdp K13；menu 那一列的說明寫「this site's; [X] in it clears them」）；App Log「Read the cookies of …」
       Requests：Viewer，載入這一頁發出的請求，curl -v 的寫法：每一次轉址、兩個方向的 header；App Log「Read the requests of …」
       三個 viewer 都有 lib 的 / 搜尋與 v 選取
     test: [TestReaderPageInfo, TestRequestsAndSource, TestSiteCookies]
   - id: 15
-    spec: 1
+    spec: 3
     implementation: |
       連到檔案的連結：下載到 download_dir（預設 ~/.webu/datas/downloads），Downloads 多一列
       chip 列右端（statusbar）寫幾個下載中，分隔線從左邊填 Green 當進度條
-      D Downloads 畫面（tgo List）：Enter 用桌面的 app 開檔（只有下載完成的）、o 開來源頁、x 移除（還在下載的停掉）、y 複製路徑、C 清掉已完成與已取消的、/ 過濾
+      D Downloads 畫面（tgo List）：Enter 用桌面的 app 開檔（只有下載完成的）、o 開來源頁、x 移除（還在下載的停掉）、y 複製路徑、X 清掉已完成與已取消的（一次刪很多在 X，tdp K13）、/ 過濾
       404 等：toast 說沒有那一頁
     test: [TestReaderDownloadsAndMissingPages, TestTextBig5AndDownloads]
   - id: 16
-    spec: 2
+    spec: 3
     implementation: |
       B Bookmarks 畫面（tgo List）：一次一層，像 filu 走目錄：先列這一層的目錄（目錄 icon 加名字），再列這一層的書籤
       位置列：目錄 icon，加這一層的路徑，最上層是 /（例 /dev/go）
       Enter：在目錄上是 Into，進去，cursor 在第一列，App Log 記「Went to the folder …」；在書籤上是 Open，在背後開新分頁
       Esc：有 filter 時 lib 先清 filter；在目錄裡 Panel.OnEsc 回上一層，cursor 停在剛剛出來的目錄，不記 App Log；最上層 OnEsc 是 nil，Esc 什麼都不做，? 也不列 Esc
       換層時清掉 filter：清單、filter 與 N of M 都只算這一層
+      app 自己把 cursor 放到某一項的動作（a、A、r 改名、I 匯入，與 [2] 的 A 加書籤之後）都經過 bmGo：先清掉 filter，不管那一項有沒有被藏住，再換清單、移 cursor
       空的一層：最上層「No bookmarks yet」／「Press [a] to add one, or [Space] to see what you can do here」，目錄裡「Nothing in this folder」／「Press [a] to add a bookmark here, or [Esc] to go up」
       a 在這一層加書籤（form：URL 與標題，然後 Add，預填目前頁），cursor 在新的那一筆；[2] 的 A 也是，加在最上層，Bookmarks 畫面跟著回到最上層、cursor 在新的那一筆
       A 在這一層新增目錄（TextInput，a/b/c 每層都建，cursor 在這一層新的那一列）；m 搬移（開目錄的 select，每個目錄寫它的路徑，跟位置列一樣，最上層 / 在最前面，各列對齊），搬走的離開這一層，cursor 留在原位；r 改名（書籤改標題，目錄改那一層，下面的跟著）；空的或重複的名字留在框裡
@@ -145,10 +152,10 @@ tasks:
       存在資料目錄的 bookmarks.yaml
     test: [TestImportBookmarks, TestParseNetscape, TestDeleteFolderTree, TestDeleteAsksAboutTheRowUnderTheCursor, TestRenameBookmarks, TestScreensAndSession]
   - id: 17
-    spec: 1
+    spec: 3
     implementation: |
       H History 畫面（tgo List）：看過的頁，新的在上
-      Enter 在背後開新分頁、x 刪除這一筆、y 複製網址、C 清空（先問；沒有紀錄時停用）、/ 過濾
+      Enter 在背後開新分頁、x 刪除這一筆、y 複製網址、X 清空（先問；沒有紀錄時停用；一次刪很多在 X，tdp K13）、/ 過濾
       存在資料目錄
     test: [TestHistoryIsNewestFirstAndDeletable]
   - id: 18
@@ -178,7 +185,7 @@ tasks:
       剪貼簿用系統的指令（macOS pbcopy；Linux wl-copy、xclip 或 xsel）；成功 Success toast「Copied N lines」，失敗 Error toast「Copy failed: …」（缺工具時寫要裝什麼）
     test: [commit: bf34a3d]
   - id: 21
-    spec: 1
+    spec: 3
     implementation: |
       設定 ~/.config/webu（$XDG_CONFIG_HOME/webu，或 $WEBU__CONFIG）：config.yaml
       狀態跟設定放一起（或 $WEBU__STATE）：session.yaml、cookies.json
@@ -186,20 +193,24 @@ tasks:
       環境變數一律 WEBU__ 開頭，舊名字不讀
       第一次啟動把在舊位置、新位置還沒有的檔搬過去（bookmarks.yaml 到資料、session.yaml 到狀態），Info toast 說從哪裡搬到哪裡，搬空的舊目錄拿掉；搬不動的照舊用原位置，error popup 寫兩個位置；新位置已經有的不搬，舊的照樣留著、用新位置的，error popup 寫兩個位置、請使用者自己合併
       自己的檔讀不了：啟動時開 tgo 的 MoveAside，說是哪個檔、為什麼，問要不要搬到 .bak（.bak.1 起，不蓋過別的）、像第一次一樣開始；回答之前什麼都不開；Esc 離開，原因印在終端機
-    test: [TestFilesGoWhereE3PutsThem, TestRelocateMovesTheOldFiles, TestRelocateThatFails, TestShort, TestAnOldMacCacheIsStillRead, TestOldNamesAreNotRead, TestDirsHonourOverrides, TestMovesOnTheFirstScreen, TestUnreadableFilesAreMovedAside, TestAnUnreadableFileGivesNothing]
+      讀得到、但有 webu 用不了的值或對不上的一筆（tdp E3 a value that does not fit）不算讀不了：config.yaml 一個 key 一個 key 讀，型別不對的、search_engine 不是網址（沒有 ://，跟 Settings 一樣）、input_tab_width 不在 0–16 的用預設值；bookmarks.yaml 沒有網址的書籤拿掉，目錄寫成一層一層（去掉空白與空的層：「 dev / /go 」是 dev/go），整理完是空的或重複的目錄拿掉，書籤的目錄整理完是空的（「/」）就是最上層、不算；history.yaml 沒有網址的一筆拿掉；session.yaml 沒有網址的分頁拿掉、shown 不在範圍裡用 0。YAML 壞了、或整個檔不是 key 與值的，才是讀不了
+      這樣的檔在啟動時（main，開畫面之前）用 tgo 的 KeepAside 複製到 .bak（.bak.1 起，不蓋過別的），再不帶那些值寫回去；第一個畫面用 tgo 的 App.Notify 與 MisfitNotice 說：Warning toast 寫檔名與副本（「1 value in config.yaml did not fit: defaults used, yours kept in config.yaml.bak」），App Log 每一個值或一筆一條 WARN（「config.yaml: restore_session "maybe" did not fit; using "true"」、「bookmarks.yaml: bookmark 2 (url "") did not fit; taken out」）；搬了位置的 Info 在它前面，照發生的順序，每一件是自己的 toast、疊起來（tgo 的 Notify，tdp toast.2）
+      副本做不了時檔案照舊不動，這一次用預設值：Error 寫 KeepAside 的原因（「bookmarks.yaml.bak could not be made: …; bookmarks.yaml left as it was」），每一個照樣一條 WARN，下次啟動再找到；副本做好了、寫回去失敗時也是 Error，說副本在哪
+    test: [TestFilesGoWhereE3PutsThem, TestRelocateMovesTheOldFiles, TestRelocateThatFails, TestShort, TestAnOldMacCacheIsStillRead, TestOldNamesAreNotRead, TestDirsHonourOverrides, TestMovesOnTheFirstScreen, TestUnreadableFilesAreMovedAside, TestAnUnreadableFileGivesNothing, TestValuesThatDoNotFit, TestValuesThatDoNotFitOnTheFirstScreen]
   - id: 22
-    spec: 1
+    spec: 3
     implementation: |
       舊版的 Chromium（快取裡的 chromium-<rev>，新舊兩個快取位置都看）：啟動時刪掉，App Log 寫刪了哪裡、多大，刪不乾淨寫 Warning
       資料目錄裡舊版留下的 profile/ 與 webu.log：不刪，每次啟動用 tgo 的 App.NoLongerUsed 在 App Log 寫一筆 INFO
       config.yaml 裡不再讀的 key（measure）：不刪，存檔時照樣寫回，每次啟動 App Log INFO「No longer used: measure in …; delete it if you don't need it」
+      config.yaml 裡 webu 從來不讀的 key（打錯的，例 refesh）一樣：不刪，存檔時照樣寫回（Config.Rest），每次啟動 App Log INFO「Not read: refesh in …; delete it if you don't need it」
       CHANGELOG v0.6.0 那一段寫了這三件：舊的 Chromium 快取第一次啟動時刪掉、profile/ 與 webu.log 留給使用者、measure 留著並在 App Log 提
-    test: [TestChromiumIsDropped, TestARetiredKeyIsKept, TestARetiredConfigKeyIsNamed]
+    test: [TestChromiumIsDropped, TestARetiredKeyIsKept, TestARetiredConfigKeyIsNamed, TestValuesThatDoNotFit]
   - id: 23
-    spec: 1
+    spec: 3
     implementation: |
       !（core key）打開 tgo 的 App Log；footer 寫 !:log，或還沒看的錯誤有幾個
-      記使用者做的事（每個從 menu、熱鍵或 Enter 跑的操作，用過去式）、每個 toast（lib 記，同一句話；Focus mode 的 inspect toast 不記，lib 的 Mode.Inspect）、抓不到的頁與原因、開回上次的分頁；不記移動 cursor、Space menu、?、!、過濾與找字、進出 mode、打進欄位的值
+      記使用者做的事（每個從 menu、熱鍵或 Enter 跑的操作，用過去式）、每個 toast（lib 記，同一句話；疊起來的、同一句話合併計數的，每一次都記）、抓不到的頁與原因、開回上次的分頁；不記移動 cursor、Space menu、?、!、過濾與找字、進出 mode、打進欄位的值
     test: [TestTheAppLogHasWhatTheUserDid]
   - id: 24
     spec: 1

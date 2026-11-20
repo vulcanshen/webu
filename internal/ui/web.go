@@ -233,7 +233,9 @@ func (m *AppModel) tabActions() []terminu.Action {
 			}},
 		// A new tab is another page: its URL box clears the menu (tdp T1).
 		{Key: "T", Label: "Tab", Desc: "a new one, at a URL", Scope: terminu.PanelScope, Hint: "new tab", Clear: true, Do: m.newTabBox},
-		{Key: "X", Label: "Close others", Desc: "every tab but this one", Scope: terminu.PanelScope,
+		// Not on X: closed tabs reopen, and x and X are for removing for good
+		// alone (tdp K13).
+		{Key: "C", Label: "Close others", Desc: "every tab but this one", Scope: terminu.PanelScope,
 			Disabled: func() bool { return len(m.tabs) < 2 }, Hidden: none,
 			Do: m.do(m.closeOthers)},
 		{Key: "U", Label: "Undo close", Desc: "reopen the last closed tab", Scope: terminu.PanelScope,

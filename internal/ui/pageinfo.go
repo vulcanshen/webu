@@ -30,7 +30,7 @@ func (m *AppModel) showSource() tea.Cmd {
 		Lines: strings.Split(t.doc.Source, "\n"), Lang: t.doc.Type, Select: selection()})
 }
 
-// showCookies is the cookies of the page's site, C clearing them.
+// showCookies is the cookies of the page's site, X clearing them (tdp K13).
 func (m *AppModel) showCookies() tea.Cmd {
 	host := m.shownTab().doc.URL.Hostname()
 	site := reader.Site(host)
@@ -38,7 +38,7 @@ func (m *AppModel) showCookies() tea.Cmd {
 	cookies := m.rc.Jar.SiteCookies(host)
 	v := &terminu.Viewer{Title: "Cookies", Subject: site, Glyph: glyphCookie, Lines: cookieLines(site, cookies), Select: selection()}
 	if len(cookies) > 0 {
-		v.Keys = []terminu.ViewerKey{{Key: "C", Desc: "clear", Do: func() tea.Cmd {
+		v.Keys = []terminu.ViewerKey{{Key: "X", Desc: "clear", Do: func() tea.Cmd {
 			return m.a.Confirm(terminu.Ask{Title: "Clear cookies", Subject: site,
 				Details:  []string{"Signed out of " + site + ", every page of it."},
 				Question: "Clear " + plural(len(cookies), "cookie") + "?", Verb: "clear", Warn: []int{0}}, func() tea.Cmd {

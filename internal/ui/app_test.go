@@ -222,14 +222,22 @@ func TestScreensAndSession(t *testing.T) {
 	}
 
 	// A makes a folder — a path makes every level, the cursor on the one
-	// on this level; m moves the bookmark into one, off this level.
+	// on this level; m moves the bookmark into one, off this level. A
+	// filter hiding everything is cleared first: an action of webu's own
+	// that puts the cursor on an item clears it (tdp panel.14).
+	d.key("/")
+	d.key("zz")
+	d.key("tab") // to the list, empty
+	if !d.m.bmList.Filtering() {
+		t.Fatal("/ should filter")
+	}
 	d.press("A")
 	d.until("folder box", d.shows("ADD FOLDER"))
 	d.key("dev/sub")
 	d.press("enter")
 	d.until("folders made", func() bool { return len(d.m.folders) == 2 && d.m.folders[1] == "dev/sub" })
-	if r, ok := d.m.bmCurrent(); !ok || !r.isFolder || r.folder != "dev" {
-		t.Fatalf("the cursor should land on the new folder on this level: %+v", r)
+	if r, ok := d.m.bmCurrent(); !ok || !r.isFolder || r.folder != "dev" || d.m.bmList.Filtering() {
+		t.Fatalf("the filter cleared, the cursor should land on the new folder on this level: %+v, filtering %v", r, d.m.bmList.Filtering())
 	}
 	d.m.bmList.Select(bmRowID(bmRow{ref: 0}))
 	d.press("m")
@@ -298,7 +306,7 @@ func TestScreensAndSession(t *testing.T) {
 		t.Errorf("the finished row:\n%s", d.view())
 	}
 	d.settle()
-	d.key("C") // clear the done ones
+	d.key("X") // clear the done ones: many rows go, on X (tdp K13)
 	if len(d.m.dls) != 0 || len(d.m.dlList.Rows()) != 0 {
 		t.Errorf("after clear: %+v", d.m.dls)
 	}
@@ -738,13 +746,13 @@ func TestUnreadableFilesAreMovedAside(t *testing.T) {
 
 // A key config.yaml still has that webu no longer reads is named in the App
 // Log at every start, as a file no longer used is, and a save keeps it
-// (tdp E3, user 2026-10-29).
+// (tdp E3, user 2026-10-29); one it never read, Not read.
 func TestARetiredConfigKeyIsNamed(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("WEBU__CONFIG", dir)
 	t.Setenv("WEBU__DATA", t.TempDir())
 	t.Setenv("WEBU__STATE", "")
-	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("measure: 96\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("measure: 96\nrefesh: 3\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := store.LoadConfig()
@@ -757,11 +765,13 @@ func TestARetiredConfigKeyIsNamed(t *testing.T) {
 	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 	d.press("!")
 	d.until("the App Log", d.showsWrapped("No longer used: measure in "+paths.Short(store.Path("config.yaml"))+"; delete it if you don't need it"))
+	// A key webu never read (a typo) is kept the same way, Not read.
+	d.until("the typo", d.showsWrapped("Not read: refesh in "+paths.Short(store.Path("config.yaml"))+"; delete it if you don't need it"))
 	if err := store.SaveConfig(m.cfg); err != nil {
 		t.Fatal(err)
 	}
-	if raw, _ := os.ReadFile(filepath.Join(dir, "config.yaml")); !strings.Contains(string(raw), "measure: 96") {
-		t.Errorf("a save should keep the retired key:\n%s", raw)
+	if raw, _ := os.ReadFile(filepath.Join(dir, "config.yaml")); !strings.Contains(string(raw), "measure: 96") || !strings.Contains(string(raw), "refesh: 3") {
+		t.Errorf("a save should keep the retired key and the typo:\n%s", raw)
 	}
 }
 
@@ -791,6 +801,29 @@ func TestMovesOnTheFirstScreen(t *testing.T) {
 		if !strings.Contains(v, want) {
 			t.Errorf("the popup should name %q:\n%s", want, v)
 		}
+	}
+}
+
+// A file main wrote again without what did not fit is a Warning toast on
+// the first screen naming the file and its copy, each value or entry a
+// WARN in the App Log; one whose copy could not be made says so in an
+// Error, its values still WARNs (tdp E3, a value that does not fit).
+func TestValuesThatDoNotFitOnTheFirstScreen(t *testing.T) {
+	t.Setenv("WEBU__CONFIG", t.TempDir())
+	t.Setenv("WEBU__DATA", t.TempDir())
+	m := New("").WithMisfits([]Misfits{
+		{Path: "/c/config.yaml", Copy: "/c/config.yaml.bak", Bad: []store.Misfit{{Key: "restore_session", Was: "maybe", Now: "true"}}},
+		{Path: "/d/bookmarks.yaml", Err: errors.New("bookmarks.yaml.bak could not be made: read-only file system; bookmarks.yaml left as it was"),
+			Bad: []store.Misfit{{Key: `bookmark 2 (url "")`}}},
+	})
+	d := newDriver(t, m)
+	d.settle()
+	d.send(tea.WindowSizeMsg{Width: 120, Height: 30})
+	d.until("the toast", d.showsWrapped("1 value in config.yaml did not fit: defaults used, yours kept in config.yaml.bak"))
+	d.until("the copy that failed", d.showsWrapped("bookmarks.yaml.bak could not be made: read-only file system; bookmarks.yaml left as it was"))
+	d.press("!")
+	for _, want := range []string{`config.yaml: restore_session "maybe" did not fit; using "true"`, `bookmarks.yaml: bookmark 2 (url "") did not fit; taken out`} {
+		d.until("the App Log's "+want, d.showsWrapped(want))
 	}
 }
 

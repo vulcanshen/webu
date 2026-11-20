@@ -359,7 +359,7 @@ func (m *AppModel) addFolderBox(parent string) tea.Cmd {
 		prompt += ", inside " + parent
 	}
 	full := func(v string) string {
-		p := cleanFolderPath(v)
+		p := store.CleanFolder(v)
 		if p != "" && parent != "" {
 			p = parent + "/" + p
 		}
@@ -389,8 +389,9 @@ func (m *AppModel) addFolder(full string) tea.Cmd {
 	if err := m.saveBookmarks(); err != nil {
 		return m.saveFailed("bookmarks.yaml", err)
 	}
-	m.refreshBookmarks()
-	m.bmList.Select(bmRowID(bmRow{folder: folderChild(m.bmDir, full), isFolder: true}))
+	// An action of webu's own that puts the cursor on an item clears the
+	// filter first (tdp panel.14); bmGo does.
+	m.bmGo(m.bmDir, bmRowID(bmRow{folder: folderChild(m.bmDir, full), isFolder: true}))
 	return m.toastOK("Folder " + full)
 }
 
@@ -506,8 +507,7 @@ func (m *AppModel) startAddBookmark(folder string) tea.Cmd {
 			if err := m.saveBookmarks(); err != nil {
 				return nil, errors.New("bookmarks.yaml: " + err.Error())
 			}
-			m.refreshBookmarks()
-			m.bmList.Select(bmRowID(bmRow{ref: len(m.bookmarks) - 1}))
+			m.bmGo(folder, bmRowID(bmRow{ref: len(m.bookmarks) - 1})) // the filter cleared first (tdp panel.14)
 			return m.toastOK("Added " + strings.TrimSpace(b.Title)), nil
 		}})
 }
@@ -552,7 +552,7 @@ func (m *AppModel) importPicked(path string) tea.Cmd {
 		filepath.Base(path), plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"))
 	return m.a.Text(terminu.TextInput{Title: "Import bookmarks", Glyph: glyphFolder, Name: "The folder", Prompt: prompt, Verb: "import",
 		Check: func(v string) error {
-			root := cleanFolderPath(v)
+			root := store.CleanFolder(v)
 			if root == "" {
 				return errors.New("The folder needs a name: the import goes under it")
 			}
@@ -563,7 +563,7 @@ func (m *AppModel) importPicked(path string) tea.Cmd {
 			}
 			return nil
 		},
-		Done: m.cmdDone(func(v string) tea.Cmd { return m.importBookmarks(cleanFolderPath(v), imp) })})
+		Done: m.cmdDone(func(v string) tea.Cmd { return m.importBookmarks(store.CleanFolder(v), imp) })})
 }
 
 // importBookmarks puts an import under root — a folder that did not exist,
@@ -589,18 +589,6 @@ func (m *AppModel) importBookmarks(root string, imp store.Import) tea.Cmd {
 	m.bmGo(folderParent(root), bmRowID(bmRow{folder: root, isFolder: true}))
 	return m.toastOK(fmt.Sprintf("Imported %s and %s under %s",
 		plural(len(imp.Bookmarks), "bookmark"), plural(len(imp.Folders), "folder"), root))
-}
-
-// cleanFolderPath trims a typed folder path to its parts: blanks and empty
-// levels dropped, so " a / /b " is a/b.
-func cleanFolderPath(path string) string {
-	var parts []string
-	for _, p := range strings.Split(path, "/") {
-		if p = strings.TrimSpace(p); p != "" {
-			parts = append(parts, p)
-		}
-	}
-	return strings.Join(parts, "/")
 }
 
 // ---- Rename (2026-09-21): r on a bookmark's row, or a folder's
@@ -651,8 +639,7 @@ func (m *AppModel) startRename(r bmRow) tea.Cmd {
 			if err := m.saveBookmarks(); err != nil {
 				return m.saveFailed("bookmarks.yaml", err)
 			}
-			m.refreshBookmarks()
-			m.bmList.Select(bmRowID(bmRow{ref: ref}))
+			m.bmGo(m.bmDir, bmRowID(bmRow{ref: ref})) // the filter cleared first (tdp panel.14)
 			return m.toastOK("Renamed to " + strings.TrimSpace(v))
 		})})
 }
@@ -677,7 +664,6 @@ func (m *AppModel) renameFolder(old, to string) tea.Cmd {
 	if err := m.saveBookmarks(); err != nil {
 		return m.saveFailed("bookmarks.yaml", err)
 	}
-	m.refreshBookmarks()
-	m.bmList.Select(bmRowID(bmRow{folder: to, isFolder: true}))
+	m.bmGo(m.bmDir, bmRowID(bmRow{folder: to, isFolder: true})) // the filter cleared first (tdp panel.14)
 	return m.toastOK("Folder " + old + " is now " + to)
 }

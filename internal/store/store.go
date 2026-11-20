@@ -9,6 +9,7 @@ package store
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -79,6 +80,19 @@ func (c Config) Retired() []string {
 			out = append(out, k)
 		}
 	}
+	return out
+}
+
+// Unknown is which keys of c's file webu never read (a typo, say), in
+// order; RetiredKeys are not among them.
+func (c Config) Unknown() []string {
+	var out []string
+	for k := range c.Rest {
+		if !slices.Contains(RetiredKeys, k) {
+			out = append(out, k)
+		}
+	}
+	slices.Sort(out)
 	return out
 }
 
@@ -250,33 +264,26 @@ type bookmarksFile struct {
 
 // LoadBookmarks returns the bookmarks and the folders declared on their own.
 func LoadBookmarks() ([]Bookmark, []string, error) {
-	var f bookmarksFile
-	if err := loadYAML("bookmarks.yaml", &f); err != nil {
-		return nil, nil, err
-	}
-	return f.Bookmarks, f.Folders, nil
+	list, folders, _, err := LoadBookmarksChecked()
+	return list, folders, err
 }
 
 func SaveBookmarks(list []Bookmark, folders []string) error {
 	return saveYAML("bookmarks.yaml", bookmarksFile{Bookmarks: list, Folders: folders})
 }
 
+// LoadConfig is config.yaml, a value webu cannot use left at its default
+// (LoadConfigChecked).
 func LoadConfig() (Config, error) {
-	var c Config
-	if err := loadYAML("config.yaml", &c); err != nil {
-		return Config{}, err
-	}
-	return c, nil
+	c, _, err := LoadConfigChecked()
+	return c, err
 }
 
 func SaveConfig(c Config) error { return saveYAML("config.yaml", c) }
 
 func LoadSession() (Session, error) {
-	var s Session
-	if err := loadYAML("session.yaml", &s); err != nil {
-		return Session{}, err
-	}
-	return s, nil
+	s, _, err := LoadSessionChecked()
+	return s, err
 }
 
 func SaveSession(s Session) error { return saveYAML("session.yaml", s) }
@@ -323,8 +330,15 @@ func clean(s string) string {
 	return strings.NewReplacer("\t", " ", "\n", " ", "\r", " ").Replace(s)
 }
 
-// LoadHistory returns every visit, newest first.
+// LoadHistory returns every visit, newest first, one with no URL left out
+// (LoadHistoryChecked).
 func LoadHistory() ([]Visit, error) {
+	v, _, err := LoadHistoryChecked()
+	return v, err
+}
+
+// loadHistory is every visit in the file, newest first.
+func loadHistory() ([]Visit, error) {
 	p, err := path("history.yaml")
 	if err != nil {
 		return nil, err

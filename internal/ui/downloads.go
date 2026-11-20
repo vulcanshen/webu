@@ -76,7 +76,7 @@ func (m *AppModel) buildDownloads() {
 			}},
 		{Key: "x", Label: "Remove", Desc: "the row; a download still running is stopped", Scope: terminu.ItemScope, Hint: "remove",
 			Do: m.do(m.removeDownload)},
-		{Key: "C", Label: "Clear", Desc: "the finished and cancelled rows", Scope: terminu.PanelScope,
+		{Key: "X", Label: "Clear", Desc: "the finished and cancelled rows", Scope: terminu.PanelScope,
 			Disabled: func() bool {
 				for _, d := range m.dls {
 					if d.state != dlRunning {
