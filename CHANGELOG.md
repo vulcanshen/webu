@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v0.9.0 — tdp v1.3.0
 
 - `webu update` brings webu to its latest release the way it was
   installed: Homebrew upgrades it, an install script's or a download's
@@ -35,8 +35,7 @@ Each release names the version of terminu design (tdp) it follows.
 - Toasts stack, three at most, the newest at the bottom: one no longer
   replaces the one before it unread. `Esc` closes the oldest first, and
   the same words again count up on the toast already showing.
-- On terminu-go v1.2.22-beta.3, following tdp v1.2.20 and what tdp has
-  added since.
+- On terminu-go v1.3.0, following tdp v1.3.0.
 
 ## v0.8.0 — tdp v1.2.2
 

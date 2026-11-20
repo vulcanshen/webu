@@ -78,7 +78,7 @@ tasks:
       找字不記進 App Log（找不到時 toast 自己會記）
     test: [TestReaderSearchesAsTdp120Says, TestReaderReadsAndFollows]
   - id: 9
-    spec: 3
+    spec: 4
     implementation: |
       f 進 Focus mode（tgo 的 Mode，框與模式名 Yellow）；Esc 離開
       j|k 照閱讀順序走連結、圖片、欄位、按鈕，頭尾繞回；gg|G 第一個、最後一個；cursor 是 panel cursor 色塊
